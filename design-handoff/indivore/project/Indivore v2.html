@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Indivore v2 — Field notebook for Formosan languages</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; }
+    body { font-family: Manrope, system-ui, sans-serif; }
+    #root { width: 100%; height: 100%; }
+  </style>
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Starter components + Indivore code -->
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="browser-window.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <script type="text/babel" src="indivore-tokens.jsx"></script>
+  <script type="text/babel" src="indivore-ui-v2.jsx"></script>
+  <script type="text/babel" src="indivore-screens-v2.jsx"></script>
+  <script type="text/babel" src="indivore-desktop.jsx"></script>
+  <script type="text/babel" src="indivore-system.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+    (() => {
+    const {
+      DesignCanvas, DCSection, DCArtboard,
+      IOSDevice, BrowserWindow,
+      TweaksPanel, useTweaks, TweakSection, TweakColor, TweakRadio, TweakSelect, TweakSlider,
+      TOKENS: T,
+      Icon, Chip, Card, Button, BottomNav, IvStatusBar, LangAvatar, Wordmark,
+      ScreenDashboard, ScreenCapture, ScreenReview, ScreenDictionary, ScreenTranslate, ScreenSettings,
+      LANGS,
+      DesktopApp, DesignSystemBoard,
+    } = window;
+
+    // ─── Indivore app — full interactive mobile prototype ────
+    function IndivoreApp({ defaultTab = 'dashboard', initialLang }) {
+      const [tab, setTab] = React.useState(defaultTab);
+      const [lang, setLang] = React.useState(initialLang || LANGS[0]);
+
+      const showNav = tab !== 'settings';
+
+      const goSettings = () => setTab('settings');
+      const goHome = () => setTab('dashboard');
+
+      const screens = {
+        dashboard: <ScreenDashboard onTab={setTab} onCapture={() => setTab('capture')} lang={lang} />,
+        capture:   <ScreenCapture lang={lang} onHome={goHome} onSettings={goSettings} onSaved={() => { setTimeout(goHome, 200); }} />,
+        review:    <ScreenReview lang={lang} onHome={goHome} onSettings={goSettings} />,
+        dict:      <ScreenDictionary lang={lang} onHome={goHome} onSettings={goSettings} />,
+        translate: <ScreenTranslate lang={lang} onHome={goHome} onSettings={goSettings} />,
+        settings:  <ScreenSettings lang={lang} onSelectLang={(l) => { setLang(l); setTab('dashboard'); }} onBack={goHome} onHome={goHome} />,
+        learn:     <EmptyLearnScreen lang={lang} onHome={goHome} onSettings={goSettings} />,
+      };
+
+      return (
+        <div className="iv" style={{
+          height: '100%', width: '100%', background: T.cream, position: 'relative',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <IvStatusBar />
+          <div className="iv-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            {screens[tab]}
+          </div>
+          {showNav && <BottomNav tab={tab} onTab={setTab} />}
+        </div>
+      );
+    }
+
+    // Learn — content type placeholders (lessons, patterns, essays, dialogues, videos, podcasts)
+    function EmptyLearnScreen({ lang, onHome, onSettings }) {
+      const { ScreenHeader } = window;
+      const items = [
+        { id: 'lessons',   label: 'Lessons',   icon: 'learn',   sub: 'Step-by-step',     tone: T.crimson,    bg: T.crimsonBg,  count: 24, badge: '4 / 24' },
+        { id: 'patterns',  label: 'Patterns',  icon: 'wave',    sub: 'Grammar shapes',    tone: T.sage,       bg: T.sageBg,     count: 18 },
+        { id: 'essays',    label: 'Essays',    icon: 'note',    sub: 'Long reads',        tone: T.terra,      bg: T.terraBg,    count: 12 },
+        { id: 'dialogues', label: 'Dialogues', icon: 'speaker', sub: 'Two-speaker',       tone: T.amber,      bg: T.amberBg,    count: 16 },
+        { id: 'videos',    label: 'Videos',    icon: 'play',    sub: 'With subtitles',    tone: T.crimsonDp,  bg: T.crimsonBg,  count: 8 },
+        { id: 'podcasts',  label: 'Podcasts',  icon: 'mic',     sub: 'Listen on the go',  tone: T.sageDp,     bg: T.sageBg,     count: 6 },
+      ];
+      return (
+        <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <ScreenHeader lang={lang} title="Learn" onHome={onHome} onSettings={onSettings} />
+
+          {/* Continue card */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 14px', borderRadius: 16,
+            background: T.ink, color: T.cream,
+            boxShadow: '0 1px 0 rgba(255,255,255,0.1) inset, 0 8px 22px rgba(40,30,20,0.18)',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 999, background: T.sage,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="play" size={14} color="#fff" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11.5, opacity: 0.6, fontFamily: T.fMono, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Continue</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Greetings · Lesson 5</div>
+            </div>
+            <Icon name="arrow-r" size={17} color={T.cream} strokeWidth={2} />
+          </div>
+
+          {/* 2-col grid of content types */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {items.map((it) => (
+              <Card key={it.id} pad={14} raised onClick={() => {}}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, background: it.bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: it.tone, marginBottom: 12,
+                }}>
+                  <Icon name={it.icon} size={18} strokeWidth={1.8} />
+                </div>
+                <div className="serif" style={{ fontSize: 17, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em' }}>{it.label}</div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 1 }}>{it.sub}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+                  <span className="mono" style={{ fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {it.badge || `${it.count} items`}
+                  </span>
+                  <Icon name="chevron" size={13} color={T.inkFaint} />
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div style={{
+            textAlign: 'center', fontFamily: T.fMono, fontSize: 10.5,
+            color: T.inkFaint, marginTop: 4, letterSpacing: '0.05em', padding: '0 20px', lineHeight: 1.5,
+          }}>
+            Learning content is community-curated · contributions welcome
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Wrap each mobile artboard with an iOS frame ─────────
+    function MobileBoard({ tab, lang }) {
+      return (
+        <div style={{
+          width: '100%', height: '100%', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'transparent', padding: 16,
+        }}>
+          <div style={{
+            width: 390, height: 844, borderRadius: 48, overflow: 'hidden',
+            position: 'relative', background: T.cream,
+            boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 30px 70px rgba(60,40,20,0.18), 0 0 0 1px rgba(40,30,20,0.1)',
+            fontFamily: T.fSans, WebkitFontSmoothing: 'antialiased',
+          }}>
+            {/* dynamic island */}
+            <div style={{
+              position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+              width: 126, height: 36, borderRadius: 24, background: '#1a1410', zIndex: 50,
+            }} />
+            <IndivoreApp defaultTab={tab} initialLang={lang} />
+            {/* home indicator */}
+            <div style={{
+              position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+              width: 134, height: 5, borderRadius: 100,
+              background: 'rgba(40,30,20,0.3)', zIndex: 60, pointerEvents: 'none',
+            }} />
+          </div>
+        </div>
+      );
+    }
+
+    function DesktopBoard() {
+      return (
+        <div style={{
+          width: '100%', height: '100%', padding: 24,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            width: '100%', height: '100%', borderRadius: 16, overflow: 'hidden',
+            border: `1px solid ${T.line}`,
+            boxShadow: '0 30px 70px rgba(60,40,20,0.16), 0 0 0 1px rgba(40,30,20,0.06)',
+            background: T.cream,
+          }}>
+            {/* Browser-ish topbar */}
+            <div style={{
+              height: 36, background: T.paper, borderBottom: `1px solid ${T.line}`,
+              display: 'flex', alignItems: 'center', padding: '0 14px', gap: 10,
+            }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ width: 11, height: 11, borderRadius: 999, background: '#E76A66' }} />
+                <div style={{ width: 11, height: 11, borderRadius: 999, background: '#E7B449' }} />
+                <div style={{ width: 11, height: 11, borderRadius: 999, background: '#76C26A' }} />
+              </div>
+              <div style={{
+                flex: 1, height: 22, margin: '0 14px',
+                background: T.cream, borderRadius: 6,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                fontSize: 11, color: T.inkMute, fontFamily: T.fMono,
+              }}>
+                <Icon name="leaf" size={11} color={T.inkMute} strokeWidth={1.8} />
+                indivore.app
+              </div>
+            </div>
+            <div style={{ height: 'calc(100% - 36px)' }}>
+              <DesktopApp lang={LANGS[0]} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Tweaks ──────────────────────────────────────────────
+    // Font + warmth filter only — these propagate cleanly without remounting state.
+
+    function TweakedApp() {
+      const [t, setTweak] = useTweaks(/*EDITMODE-BEGIN*/{
+        "displayFont": "Newsreader",
+        "uiFont": "Manrope",
+        "warmth": 0.1,
+        "grain": true
+      }/*EDITMODE-END*/);
+
+      // Apply font choices via a root-level style override.
+      React.useEffect(() => {
+        let s = document.getElementById('indivore-font-override');
+        if (!s) {
+          s = document.createElement('style');
+          s.id = 'indivore-font-override';
+          document.head.appendChild(s);
+        }
+        s.textContent = `
+          .iv, .iv input, .iv textarea, .iv button { font-family: ${t.uiFont}, "Helvetica Neue", system-ui, sans-serif !important; }
+          .iv .serif, .iv h1, .iv h2, .iv h3 { font-family: ${t.displayFont}, "Source Serif Pro", Georgia, serif !important; }
+        `;
+      }, [t.displayFont, t.uiFont]);
+
+      // Warmth applies a CSS filter to the canvas world
+      const filter = `sepia(${Math.abs(t.warmth) * 0.6}) hue-rotate(${t.warmth < 0 ? '-' : ''}${Math.abs(t.warmth) * 12}deg) saturate(${1 + t.warmth * 0.15})`;
+
+      return (
+        <React.Fragment>
+          <div style={{ width: '100%', height: '100%', filter: t.warmth !== 0 ? filter : 'none' }}>
+            <IndivoreCanvas />
+          </div>
+          <TweaksPanel title="Tweaks">
+            <TweakSection title="Typography">
+              <TweakSelect label="Display"
+                value={t.displayFont}
+                onChange={(v) => setTweak('displayFont', v)}
+                options={[
+                  { value: 'Newsreader',     label: 'Newsreader (default)' },
+                  { value: 'Source Serif 4', label: 'Source Serif 4' },
+                  { value: 'Lora',           label: 'Lora' },
+                  { value: 'Cormorant Garamond', label: 'Cormorant Garamond' },
+                ]} />
+              <TweakSelect label="UI"
+                value={t.uiFont}
+                onChange={(v) => setTweak('uiFont', v)}
+                options={[
+                  { value: 'Manrope',     label: 'Manrope (default)' },
+                  { value: 'Public Sans', label: 'Public Sans' },
+                  { value: 'DM Sans',     label: 'DM Sans' },
+                  { value: 'Inter Tight', label: 'Inter Tight' },
+                ]} />
+            </TweakSection>
+            <TweakSection title="Warmth">
+              <TweakSlider label="Warmth"
+                value={t.warmth}
+                onChange={(v) => setTweak('warmth', v)}
+                min={-1} max={1} step={0.1} />
+            </TweakSection>
+          </TweaksPanel>
+        </React.Fragment>
+      );
+    }
+
+    function IndivoreCanvas() {
+      return (
+        <DesignCanvas>
+          <DCSection id="mobile" title="Indivore · mobile" subtitle="iPhone · interactive · tap any tab">
+            <DCArtboard id="dashboard"  label="01 · Dashboard"  width={460} height={920}>
+              <MobileBoard tab="dashboard" lang={LANGS[0]} />
+            </DCArtboard>
+            <DCArtboard id="capture"    label="02 · Capture · SeMi" width={460} height={920}>
+              <MobileBoard tab="capture" lang={LANGS[0]} />
+            </DCArtboard>
+            <DCArtboard id="review"     label="03 · Review · flashcards" width={460} height={920}>
+              <MobileBoard tab="review" lang={LANGS[0]} />
+            </DCArtboard>
+            <DCArtboard id="dict"       label="04 · Dictionary" width={460} height={920}>
+              <MobileBoard tab="dict" lang={LANGS[0]} />
+            </DCArtboard>
+            <DCArtboard id="translate"  label="05 · Translate" width={460} height={920}>
+              <MobileBoard tab="translate" lang={LANGS[0]} />
+            </DCArtboard>
+            <DCArtboard id="settings"   label="06 · Settings · language" width={460} height={920}>
+              <MobileBoard tab="settings" lang={LANGS[0]} />
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="desktop" title="Indivore · desktop" subtitle="Sidebar nav + 2-column dashboard">
+            <DCArtboard id="desktop-dash" label="Desktop · dashboard" width={1280} height={820}>
+              <DesktopBoard />
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="system" title="Design system" subtitle="Tokens · type · components · states">
+            <DCArtboard id="ds" label="System reference" width={1080} height={1340}>
+              <DesignSystemBoard />
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<TweakedApp />);
+    })();
+  </script>
+</body>
+</html>
