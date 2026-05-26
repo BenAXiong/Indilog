@@ -1,10 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Chip, LangAvatar, Icon } from '@/components/ui'
 import { SETTINGS_LANGS } from '@/lib/mock-data'
+import type { User } from '@supabase/supabase-js'
+
+type Profile = {
+  active_study_language: string
+  default_dialect: string | null
+  ui_locale: string
+  daily_goal: number
+}
 
 const ACCOUNT_ROWS = [
   { label: 'Export notebook', icon: 'bookmark' as const },
@@ -13,9 +23,52 @@ const ACCOUNT_ROWS = [
 ]
 
 export default function SettingsPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
   const [activeLang, setActiveLang] = useState('ami')
   const [goal, setGoal] = useState(20)
   const [locale, setLocale] = useState('en')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      if (!user) return
+      supabase
+        .from('ind_profiles')
+        .select('active_study_language, default_dialect, ui_locale, daily_goal')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (!data) return
+          setActiveLang(data.active_study_language)
+          setLocale(data.ui_locale)
+          setGoal(data.daily_goal)
+        })
+    })
+  }, [])
+
+  const saveProfile = useCallback(async (patch: Partial<Profile>) => {
+    if (!user) return
+    setSaving(true)
+    const supabase = createClient()
+    await supabase.from('ind_profiles').update(patch).eq('user_id', user.id)
+    setSaving(false)
+  }, [user])
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  function handleRowClick(label: string) {
+    if (label === 'Sign out') handleSignOut()
+  }
+
+  const displayName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '—'
+  const displayEmail = user?.email ?? '—'
 
   return (
     <div style={{ padding: '4px 0 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -50,10 +103,10 @@ export default function SettingsPage() {
             <Icon name="user" size={22} strokeWidth={1.6} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>Panay Kusui</div>
-            <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 1 }}>panay@indivore.app</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{displayName}</div>
+            <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 1 }}>{displayEmail}</div>
           </div>
-          <Chip size="sm" tone="sage">synced</Chip>
+          <Chip size="sm" tone="sage">{saving ? 'saving…' : 'synced'}</Chip>
         </Card>
       </div>
 
@@ -69,7 +122,10 @@ export default function SettingsPage() {
             return (
               <button
                 key={l.code}
-                onClick={() => setActiveLang(l.code)}
+                onClick={() => {
+                  setActiveLang(l.code)
+                  saveProfile({ active_study_language: l.code })
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%',
                   padding: '12px 14px', textAlign: 'left',
@@ -130,21 +186,25 @@ export default function SettingsPage() {
                 if (isActive) labelColor = T.cream
                 else if (o.soon) labelColor = T.inkFaint
                 return (
-                <button
-                  key={o.id}
-                  disabled={o.soon}
-                  onClick={() => !o.soon && setLocale(o.id)}
-                  style={{
-                    flex: 1, padding: '8px', borderRadius: 10,
-                    background: isActive ? T.ink : T.paper,
-                    color: labelColor,
-                    border: `1px solid ${isActive ? T.ink : T.lineSoft}`,
-                    fontSize: 13, fontWeight: 500,
-                    cursor: o.soon ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {o.label}{o.soon ? ' · soon' : ''}
-                </button>
+                  <button
+                    key={o.id}
+                    disabled={o.soon}
+                    onClick={() => {
+                      if (o.soon) return
+                      setLocale(o.id)
+                      saveProfile({ ui_locale: o.id })
+                    }}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: 10,
+                      background: isActive ? T.ink : T.paper,
+                      color: labelColor,
+                      border: `1px solid ${isActive ? T.ink : T.lineSoft}`,
+                      fontSize: 13, fontWeight: 500,
+                      cursor: o.soon ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {o.label}{o.soon ? ' · soon' : ''}
+                  </button>
                 )
               })}
             </div>
@@ -164,6 +224,8 @@ export default function SettingsPage() {
             <input
               type="range" min="5" max="50" step="5" value={goal}
               onChange={e => setGoal(Number(e.target.value))}
+              onMouseUp={e => saveProfile({ daily_goal: Number((e.target as HTMLInputElement).value) })}
+              onTouchEnd={e => saveProfile({ daily_goal: Number((e.target as HTMLInputElement).value) })}
               style={{ width: '100%', accentColor: T.crimson }}
             />
             <div style={{
@@ -186,6 +248,7 @@ export default function SettingsPage() {
           {ACCOUNT_ROWS.map((row, i, arr) => (
             <button
               key={row.label}
+              onClick={() => handleRowClick(row.label)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12, width: '100%',
                 padding: '13px 14px', textAlign: 'left',
