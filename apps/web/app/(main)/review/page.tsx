@@ -1,46 +1,63 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { T } from '@/lib/tokens'
-import { Card, SectionHead, Chip, Icon, Button } from '@/components/ui'
+import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { ACTIVE_LANG, REVIEW_CARDS, DIALOGUES } from '@/lib/mock-data'
+import { ACTIVE_LANG } from '@/lib/mock-data'
+import {
+  ensureFlashcards, listDueFlashcards, rateCard,
+  type FlashcardWithItem, type Rating,
+} from '@/lib/db/flashcards'
+import { listItems, type Item } from '@/lib/db/items'
 
-type ReviewKind = 'comp' | 'expr' | 'dialogue'
+const RATINGS: { id: Rating; label: string; sub: string; color: string }[] = [
+  { id: 'again', label: 'Again', sub: '<10m', color: T.crimson },
+  { id: 'hard',  label: 'Hard',  sub: '1d',   color: T.terra },
+  { id: 'good',  label: 'Good',  sub: '3d',   color: T.sage },
+  { id: 'easy',  label: 'Easy',  sub: '7d',   color: T.amber },
+]
 
 // ─── Review Session ───────────────────────────────────────────
-function ReviewSession({ kind, onExit }: { kind: ReviewKind; onExit: () => void }) {
-  const lang = ACTIVE_LANG
-  const [revealed, setRevealed] = useState(false)
+function ReviewSession({
+  cards,
+  onExit,
+}: {
+  cards: FlashcardWithItem[]
+  onExit: (reviewed: number) => void
+}) {
   const [cardIdx, setCardIdx] = useState(0)
+  const [revealed, setRevealed] = useState(false)
   const [flipping, setFlipping] = useState(false)
+  const [reviewed, setReviewed] = useState(0)
 
-  const card = REVIEW_CARDS[cardIdx % REVIEW_CARDS.length]
-  const total = kind === 'comp' ? 8 : kind === 'expr' ? 4 : 10
-  const kindLabel = kind === 'comp' ? 'Comprehension' : kind === 'expr' ? 'Expression' : 'Dialogue drill'
-  const kindTone  = kind === 'comp' ? T.crimson : kind === 'expr' ? T.sageDp : T.terra
+  const card = cards[cardIdx]
+  const total = cards.length
 
-  const ratings = [
-    { id: 'again', label: 'Again', sub: '<10m', color: T.crimson },
-    { id: 'hard',  label: 'Hard',  sub: '1d',   color: T.terra },
-    { id: 'good',  label: 'Good',  sub: '3d',   color: T.sage },
-    { id: 'easy',  label: 'Easy',  sub: '7d',   color: T.amber },
-  ]
-
-  const handleRate = () => {
+  const handleRate = async (rating: Rating) => {
+    await rateCard(card.id, rating)
     setFlipping(true)
     setTimeout(() => {
-      setRevealed(false)
-      setCardIdx(i => i + 1)
+      const next = cardIdx + 1
+      setReviewed(r => r + 1)
       setFlipping(false)
+      setRevealed(false)
+      if (next >= total) {
+        onExit(reviewed + 1)
+      } else {
+        setCardIdx(next)
+      }
     }, 300)
   }
+
+  const lang = card.ind_items
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Session header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
-        <button onClick={onExit} aria-label="Back to review" style={{
+        <button onClick={() => onExit(reviewed)} aria-label="Back" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
@@ -48,21 +65,15 @@ function ReviewSession({ kind, onExit }: { kind: ReviewKind; onExit: () => void 
           <Icon name="arrow-l" size={17} strokeWidth={1.8} />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: kindTone,
-            textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
-          }}>
-            {kindLabel}
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.amber, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+            Flashcards
           </div>
           <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>
-            {lang.name}{lang.dialect ? ` · ${lang.dialect}` : ''}
+            {lang.language}{lang.dialect ? ` · ${lang.dialect}` : ''}
           </div>
         </div>
-        <span style={{
-          fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute,
-          textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600,
-        }}>
-          {(cardIdx % REVIEW_CARDS.length) + 1} / {total}
+        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+          {cardIdx + 1} / {total}
         </span>
       </div>
 
@@ -71,7 +82,7 @@ function ReviewSession({ kind, onExit }: { kind: ReviewKind; onExit: () => void 
         {Array.from({ length: total }).map((_, i) => (
           <div key={i} style={{
             flex: 1, height: 4, borderRadius: 999,
-            background: i < cardIdx ? T.sage : i === cardIdx ? kindTone : T.lineSoft,
+            background: i < cardIdx ? T.sage : i === cardIdx ? T.amber : T.lineSoft,
             transition: 'background .3s',
           }} />
         ))}
@@ -81,7 +92,7 @@ function ReviewSession({ kind, onExit }: { kind: ReviewKind; onExit: () => void 
       <div
         className={flipping ? 'animate-iv-flip' : ''}
         style={{
-          background: T.paperHi, borderRadius: 22, padding: '24px 20px',
+          background: T.paperHi, borderRadius: 22, padding: '28px 22px',
           border: `1px solid ${T.lineSoft}`, minHeight: 240,
           position: 'relative', overflow: 'hidden',
           boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 6px rgba(80,40,20,0.05), 0 12px 28px rgba(80,40,20,0.08)',
@@ -89,46 +100,20 @@ function ReviewSession({ kind, onExit }: { kind: ReviewKind; onExit: () => void 
       >
         <div style={{ position: 'absolute', top: 14, right: 14 }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {card.pos}
+            {card.ind_items.type}
           </span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 16 }}>
-          <div>
-            <div style={{
-              fontFamily: 'Newsreader, Georgia, serif',
-              fontSize: 38, fontWeight: 500, color: T.ink,
-              letterSpacing: '-0.025em', lineHeight: 1.1,
-            }}>
-              {kind === 'expr' && !revealed
-                ? <span style={{ fontStyle: 'italic', color: T.inkSoft }}>{card.back}</span>
-                : card.front
-              }
-            </div>
-            <button style={{
-              marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 10px 6px 8px', borderRadius: 999, background: T.paper,
-              border: `1px solid ${T.lineSoft}`, color: T.inkSoft, fontSize: 12, fontWeight: 500,
-              cursor: 'pointer',
-            }}>
-              <Icon name="speaker" size={13} strokeWidth={1.8} />
-              Hear it
-            </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 8 }}>
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 36, fontWeight: 500, color: T.ink, letterSpacing: '-0.025em', lineHeight: 1.15 }}>
+            {card.front}
           </div>
 
           {revealed ? (
             <div className="animate-iv-rise" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ height: 1, background: T.lineSoft }} />
-              <div style={{ fontSize: 17, fontWeight: 500, color: T.ink, lineHeight: 1.3 }}>
-                {kind === 'expr' ? card.front : card.back}
-              </div>
-              <div style={{
-                padding: '10px 12px', background: T.paper, borderRadius: 10,
-                borderLeft: `2.5px solid ${kindTone}`,
-              }}>
-                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 14, fontStyle: 'italic', color: T.ink, lineHeight: 1.35 }}>
-                  {card.ex}
-                </div>
+              <div style={{ fontSize: 16, fontWeight: 500, color: T.ink, lineHeight: 1.4 }}>
+                {card.back}
               </div>
             </div>
           ) : (
@@ -149,23 +134,21 @@ function ReviewSession({ kind, onExit }: { kind: ReviewKind; onExit: () => void 
       {/* Rating buttons */}
       {revealed && (
         <div className="animate-iv-rise" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-          {ratings.map((r) => (
+          {RATINGS.map(r => (
             <button
-              key={r.id} onClick={handleRate}
+              key={r.id}
+              onClick={() => handleRate(r.id)}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                 padding: '10px 4px', borderRadius: 12,
                 background: T.paperHi, border: `1.5px solid ${r.color}`,
-                color: r.color, fontWeight: 600, cursor: 'pointer',
-                transition: 'all .15s',
+                color: r.color, fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = r.color; (e.currentTarget as HTMLButtonElement).style.color = '#fff' }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = T.paperHi; (e.currentTarget as HTMLButtonElement).style.color = r.color }}
             >
               <span style={{ fontSize: 12.5 }}>{r.label}</span>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, opacity: 0.7, fontWeight: 500 }}>
-                {r.sub}
-              </span>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, opacity: 0.7, fontWeight: 500 }}>{r.sub}</span>
             </button>
           ))}
         </div>
@@ -177,141 +160,168 @@ function ReviewSession({ kind, onExit }: { kind: ReviewKind; onExit: () => void 
 // ─── Review Landing ───────────────────────────────────────────
 export default function ReviewPage() {
   const lang = ACTIVE_LANG
-  const [mode, setMode] = useState<'landing' | 'reviewing'>('landing')
-  const [reviewKind, setReviewKind] = useState<ReviewKind>('comp')
+  const [mode, setMode] = useState<'landing' | 'reviewing' | 'done'>('landing')
+  const [dueCards, setDueCards] = useState<FlashcardWithItem[]>([])
+  const [savedItems, setSavedItems] = useState<Item[]>([])
+  const [loading, setLoading] = useState(true)
+  const [lastReviewed, setLastReviewed] = useState(0)
 
-  if (mode === 'reviewing') {
-    return <ReviewSession kind={reviewKind} onExit={() => setMode('landing')} />
+  async function loadData() {
+    await ensureFlashcards()
+    const [cards, items] = await Promise.all([
+      listDueFlashcards(),
+      listItems({ limit: 10 }),
+    ])
+    setDueCards(cards)
+    setSavedItems(items)
+    setLoading(false)
   }
 
-  const startOptions = [
-    {
-      id: 'comp' as ReviewKind, label: 'Comprehension', sub: 'See the meaning — say the sentence',
-      due: 8, icon: 'dict' as const, tone: T.crimson, bg: T.crimsonBg, border: '#EFCAB8',
-    },
-    {
-      id: 'expr' as ReviewKind, label: 'Expression', sub: 'Hear the sentence — guess the sentence',
-      due: 4, icon: 'mic' as const, tone: T.sageDp, bg: T.sageBg, border: '#D2D8AE',
-    },
-  ]
+  useEffect(() => { loadData() }, [])
+
+  function handleSessionExit(reviewed: number) {
+    setLastReviewed(reviewed)
+    setMode(reviewed > 0 ? 'done' : 'landing')
+    loadData()
+  }
+
+  if (mode === 'reviewing' && dueCards.length > 0) {
+    return <ReviewSession cards={dueCards} onExit={handleSessionExit} />
+  }
+
+  const typeColor = (t: string) => {
+    if (t === 'word')     return { color: T.crimson, bg: T.crimsonBg, border: '#EFCAB8' }
+    if (t === 'sentence') return { color: T.sage,    bg: T.sageBg,    border: '#D2D8AE' }
+    return                       { color: T.amber,   bg: T.amberBg,   border: '#EBD49A' }
+  }
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <ScreenHeader title="Review" langName={lang.name} langDialect={lang.dialect} />
 
+      {/* Done banner */}
+      {mode === 'done' && (
+        <div className="animate-iv-rise" style={{
+          padding: '16px 18px', borderRadius: 16,
+          background: `linear-gradient(135deg, ${T.sage}, ${T.sageDp})`,
+          color: '#fff', display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <div style={{ width: 40, height: 40, borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="check" size={20} color="#fff" strokeWidth={2} />
+          </div>
+          <div>
+            <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 600 }}>
+              {lastReviewed} card{lastReviewed !== 1 ? 's' : ''} reviewed
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>
+              {dueCards.length > 0 ? `${dueCards.length} more due` : 'All caught up for now'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Due today card */}
       <Card raised pad={16}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute,
-            textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
-          }}>
-            Due today
-          </span>
-          <Chip size="sm" tone="amber" icon="flame">8 / 20 done</Chip>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 8 }}>
-          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 38, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-            12
-          </span>
-          <span style={{ fontSize: 14, color: T.inkSoft }}>cards · ~6 min</span>
-        </div>
-        <div style={{ height: 6, background: T.lineSoft, borderRadius: 999, overflow: 'hidden', marginTop: 12 }}>
-          <div style={{
-            width: '40%', height: '100%',
-            background: `linear-gradient(90deg, ${T.amber}, ${T.terra}, ${T.crimson})`,
-            borderRadius: 999,
-          }} />
-        </div>
+        {loading ? (
+          <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="animate-iv-shimmer" style={{ width: 120, height: 16, borderRadius: 8, background: T.lineSoft }} />
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+                Due now
+              </span>
+              {dueCards.length > 0 && (
+                <span style={{ fontSize: 11.5, color: T.amber, fontWeight: 500 }}>
+                  ~{Math.ceil(dueCards.length * 0.5)} min
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 8 }}>
+              <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 38, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                {dueCards.length}
+              </span>
+              <span style={{ fontSize: 14, color: T.inkSoft }}>
+                {dueCards.length === 1 ? 'card' : 'cards'}
+              </span>
+            </div>
+
+            {dueCards.length > 0 ? (
+              <Button
+                variant="primary" size="lg" icon="play"
+                style={{ width: '100%', marginTop: 14 }}
+                onClick={() => setMode('reviewing')}
+              >
+                Start review
+              </Button>
+            ) : (
+              <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
+                <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>All caught up!</div>
+                <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 3 }}>
+                  Capture more items to generate new cards.
+                </div>
+                <Link href="/capture" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 10, fontSize: 12.5, color: T.crimson, fontWeight: 600, textDecoration: 'none' }}>
+                  <Icon name="capture" size={13} color={T.crimson} strokeWidth={2} />
+                  Go to Capture
+                </Link>
+              </div>
+            )}
+          </>
+        )}
       </Card>
 
-      {/* Start review */}
-      <div>
-        <SectionHead title="Start review" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {startOptions.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => { setReviewKind(opt.id); setMode('reviewing') }}
-              style={{
-                display: 'flex', flexDirection: 'column', gap: 4,
-                padding: '16px 14px 14px', borderRadius: 16,
-                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                textAlign: 'left', position: 'relative', overflow: 'hidden',
-                boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 2px rgba(80,40,20,0.04), 0 4px 12px rgba(80,40,20,0.05)',
-                cursor: 'pointer', transition: 'transform .12s',
-              }}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: 10, background: opt.bg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: opt.tone, marginBottom: 8, border: `1px solid ${opt.border}`,
-              }}>
-                <Icon name={opt.icon} size={17} strokeWidth={1.8} />
-              </div>
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 17, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em' }}>
-                {opt.label}
-              </div>
-              <div style={{ fontSize: 11.5, color: T.inkSoft, lineHeight: 1.3 }}>{opt.sub}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-                <span style={{
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
-                  color: opt.tone, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
+      {/* Saved items */}
+      {savedItems.length > 0 && (
+        <div>
+          <SectionHead title="Your notebook" action={`${savedItems.length} shown`} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {savedItems.map(item => {
+              const tc = typeColor(item.type)
+              return (
+                <div key={item.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '11px 14px', background: T.paperHi,
+                  border: `1px solid ${T.lineSoft}`, borderRadius: 12,
+                  boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
                 }}>
-                  {opt.due} due
-                </span>
-                <div style={{
-                  width: 26, height: 26, borderRadius: 999, background: opt.tone,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Icon name="play" size={10} color="#fff" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{
+                      fontFamily: 'Newsreader, Georgia, serif',
+                      fontSize: 15, fontWeight: 500, color: T.ink,
+                      display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {item.text}
+                    </span>
+                    <span style={{ fontSize: 11.5, color: T.inkSoft, display: 'block', marginTop: 2 }}>
+                      {item.language}{item.dialect ? ` · ${item.dialect}` : ''}
+                    </span>
+                  </div>
+                  <span style={{
+                    padding: '2px 7px', borderRadius: 999,
+                    background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`,
+                    fontSize: 10.5, fontWeight: 500, flexShrink: 0,
+                  }}>
+                    {item.type}
+                  </span>
                 </div>
-              </div>
-            </button>
-          ))}
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Dialogue drill */}
-      <div>
-        <SectionHead title="Dialogue drill" action="See all" />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {DIALOGUES.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => { setReviewKind('dialogue'); setMode('reviewing') }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '13px 14px', borderRadius: 14,
-                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                textAlign: 'left', width: '100%', cursor: 'pointer',
-                boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset, 0 1px 2px rgba(80,40,20,0.03)',
-              }}
-            >
-              <div style={{
-                width: 40, height: 40, borderRadius: 12, background: d.bg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: d.color, flexShrink: 0,
-              }}>
-                <Icon name="speaker" size={18} strokeWidth={1.8} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em' }}>
-                  {d.title}
-                </div>
-                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 1 }}>{d.sub}</div>
-              </div>
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute,
-                textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600,
-              }}>
-                {d.phrases} phrases
-              </span>
-              <Icon name="chevron" size={14} color={T.inkFaint} />
-            </button>
-          ))}
+      {/* Empty notebook state */}
+      {!loading && savedItems.length === 0 && (
+        <div style={{ padding: '32px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
+          <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>Nothing in your notebook yet.</div>
+          <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>Captured items become flashcards automatically.</div>
+          <Link href="/capture" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 12, fontSize: 12.5, color: T.crimson, fontWeight: 600, textDecoration: 'none' }}>
+            <Icon name="capture" size={13} color={T.crimson} strokeWidth={2} />
+            Start capturing
+          </Link>
         </div>
-      </div>
+      )}
     </div>
   )
 }
