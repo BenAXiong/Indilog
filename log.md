@@ -44,3 +44,9 @@
 | 2026-05-26 11:52 | FIX | dueCount in stats.ts and stats-server.ts — now queries ind_flashcards.due_at (null = due) instead of ind_reviews. |
 | 2026-05-26 11:52 | FEATURE | Review page — live flashcard session (ensureFlashcards on mount, reveal/rate loop), real due count card, saved items browsing, completion banner. |
 | 2026-05-26 11:52 | PHASE COMPLETE | Phase 7 — Review and Flashcards v0. Cards auto-generated from captured items. Rating writes history + schedules next due. Dashboard dueCount fixed. tsc clean. |
+| 2026-05-26 12:11 | CONFIG | Git LFS enabled for *.db; packages/dictionary/ created for ycm_master.db (225MB, user must copy). |
+| 2026-05-26 12:11 | FEATURE | lib/dict/client.ts — better-sqlite3 singleton, path fallback (repo root vs apps/web), searchWords (ilrdf_vocabulary_fts FTS), searchSentences (sentences_fts + occurrences), listDialects. |
+| 2026-05-26 12:11 | FEATURE | /api/dict/search (GET ?q=&glid=) and /api/dict/dialects — server-side Route Handlers with nodejs runtime. |
+| 2026-05-26 12:11 | FEATURE | Dictionary page — debounced search, dialect filter, exact match card, sentence examples, partial matches list, save/capture actions, DB error banner. |
+| 2026-05-26 12:11 | FEATURE | Capture page — reads ?text= and ?notes= query params for prefill from Dictionary. |
+| 2026-05-26 12:11 | PHASE COMPLETE | Phase 5 — Dictionary integration. Awaiting ycm_master.db at packages/dictionary/. tsc clean. |

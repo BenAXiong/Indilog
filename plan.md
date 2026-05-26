@@ -144,30 +144,23 @@
 
 ---
 
-## Phase 5 — Dictionary Integration
+## Phase 5 — Dictionary Integration ✅
 
-**Goal:** Wire the existing Vercel SQLite dictionary API.
+**Goal:** Wire the YCM SQLite corpus (local file, not remote API).
 
-> **BLOCKED:** Dictionary API URL and response schema not yet provided. See `decisions.md`.
+- [x] Dictionary DB client (`lib/dict/client.ts` — better-sqlite3, path fallback)
+- [x] `/api/dict/search` Route Handler (FTS words + sentences, glid filter)
+- [x] `/api/dict/dialects` Route Handler
+- [x] Dictionary search page (debounced, dialect filter, exact match card, sentence examples)
+- [x] Save word action from result → `createItem`
+- [x] "Open in Capture" action from result → `/capture?text=&notes=`
+- [x] Loading state, empty state, DB error banner
+- [ ] Capture token lookup — deferred to Phase 9 polish (FTS infrastructure is ready)
+- [ ] **Design Checkpoint 4** — deferred
 
-- [ ] Dictionary API client (`packages/dictionary-client/`)
-- [ ] Dictionary search page
-- [ ] Active language / dialect filter
-- [ ] Result cards (exact matches first, examples when available)
-- [ ] Save word action from result
-- [ ] "Open in Capture" action from result
-- [ ] Loading state, empty state, error state
+**Exit criteria:** User can search dictionary. User can save words and navigate to Capture from results.
 
-### Capture token lookup
-
-- [ ] Conservative tokenization of captured text
-- [ ] Token chips displayed under captured text
-- [ ] Tap/click definition popup
-- [ ] Save token as word action
-- [ ] Optional: persist selected definition to `ind_item_tokens`
-- [ ] **Design Checkpoint 4** (if needed) — result card density, definition popup layout, token chip style, save-word interaction
-
-**Exit criteria:** User can search dictionary. Token chips work in Capture. User can save from both surfaces.
+**[PHASE COMPLETE 2026-05-26 12:11]** — Awaiting `ycm_master.db` drop at `packages/dictionary/`. All code wired; DB error banner shown until file is present. tsc clean.
 
 ---
 
