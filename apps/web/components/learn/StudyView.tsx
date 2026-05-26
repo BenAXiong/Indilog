@@ -3,13 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
-import { ACTIVE_LANG } from '@/lib/mock-data'
+import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import {
-  getGlid, getDefaultDialect, getDialectsForLang, getGrmptsDialect
+  getGlid, getDefaultDialect, getGrmptsDialect
 } from '@/lib/learn/lang-bridge'
 import { createItem } from '@/lib/db/items'
 import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/completions'
-import { getProfile, updateDefaultDialect } from '@/lib/db/profiles'
 import type { CurriculumRow } from '@/lib/learn/db'
 import Icon from '@/components/ui/Icon'
 import StudyCard from './StudyCard'
@@ -27,7 +26,7 @@ const SOURCE_NAMES: Record<Source, string> = {
 type Props = { source: Source }
 
 export default function StudyView({ source }: Props) {
-  const lang     = ACTIVE_LANG
+  const { lang, dialect: profileDialect } = useActiveLang()
   const langCode = lang.code
   const glid     = getGlid(langCode) ?? '01'
 
@@ -61,22 +60,7 @@ export default function StudyView({ source }: Props) {
     setZhModeState(savedZhMode)
     setLookupOnState(savedLookup)
 
-    // Dialect — grmpts always uses language-level dialect (not sub-dialect)
-    if (source === 'grmpts') {
-      setDialect(getGrmptsDialect(langCode) ?? '')
-    } else {
-      const savedDialect = localStorage.getItem(`iv_learn_dialect_${glid}`)
-      const hardDefault = getDefaultDialect(langCode) ?? ''
-      if (savedDialect) {
-        setDialect(savedDialect)
-      } else {
-        getProfile().then(profile => {
-          const resolved = profile?.default_dialect || hardDefault
-          setDialect(resolved)
-          localStorage.setItem(`iv_learn_dialect_${glid}`, resolved)
-        }).catch(() => setDialect(hardDefault))
-      }
-    }
+    // Dialect — grmpts uses language-level dialect; others use profile (set in Settings)
 
     // Selection
     if (source === 'twelve') {
@@ -99,6 +83,15 @@ export default function StudyView({ source }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ── Dialect from profile ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (source === 'grmpts') {
+      setDialect(getGrmptsDialect(langCode) ?? '')
+    } else {
+      setDialect(profileDialect || getDefaultDialect(langCode) || '')
+    }
+  }, [source, langCode, profileDialect])
+
   // ── Load completions ────────────────────────────────────────────────────────
   useEffect(() => {
     fetchCompletions(langCode, source).then(setCompletions)
@@ -117,28 +110,14 @@ export default function StudyView({ source }: Props) {
     }
   }, [source, dialect, titleZh])
 
-  // ── Fetch first title_zh for twelve (Level 1 Lesson 1) ─────────────────────
-  useEffect(() => {
-    if (source === 'twelve' && !titleZh && dialect) {
-      fetch('/api/geometry?source=twelve')
-        .then(r => r.json())
-        .then((d: { titles: Record<string, Record<string, string>> }) => {
-          const t = d.titles[level]?.[lesson]
-          if (t) setTitleZh(t)
-        })
-        .catch(() => {})
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, dialect])
-
   // ── Fetch curriculum data ───────────────────────────────────────────────────
   useEffect(() => {
     if (!dialect) return
     let apiTitleZh = ''
     let apiLevel = level
     if (source === 'twelve') {
-      if (!titleZh) return
-      apiTitleZh = titleZh
+      // DB categories are "Level X Lesson Y" — build directly, no geometry lookup needed
+      apiTitleZh = `Level ${level} Lesson ${lesson}`
     } else if (source === 'grmpts') {
       apiTitleZh = pattern
       apiLevel = level
@@ -156,24 +135,16 @@ export default function StudyView({ source }: Props) {
       .then((d: { results: CurriculumRow[] }) => setResults(d.results ?? []))
       .catch(() => setResults([]))
       .finally(() => setLoading(false))
-  }, [source, dialect, titleZh, pattern, level])
+  }, [source, dialect, level, lesson, titleZh, pattern])
 
   // ── Item key for completions ────────────────────────────────────────────────
   const itemKey = source === 'twelve'
     ? `Level ${level} Lesson ${lesson}`
     : source === 'grmpts'
-      ? pattern
+      ? `${level}::${pattern}`
       : titleZh
 
   const completed = completions.has(itemKey)
-
-  // ── Dialect change (persists to localStorage + ind_profiles) ───────────────
-  const changeDialect = (d: string) => {
-    setDialect(d)
-    localStorage.setItem(`iv_learn_dialect_${glid}`, d)
-    updateDefaultDialect(d).catch(() => {})
-  }
-  void changeDialect // referenced below when dialect picker is wired up
 
   // ── Save settings to localStorage ──────────────────────────────────────────
   const setZhMode = (m: ZhMode) => {
@@ -245,14 +216,6 @@ export default function StudyView({ source }: Props) {
       const [lv, ls] = key.split('::')
       setLevel(lv); setLesson(ls)
       localStorage.setItem(`iv_learn_sel_lessons_${glid}`, `Level ${lv} Lesson ${ls}`)
-      // Resolve title_zh
-      fetch('/api/geometry?source=twelve')
-        .then(r => r.json())
-        .then((d: { titles: Record<string, Record<string, string>> }) => {
-          const t = d.titles[lv]?.[ls]
-          if (t) setTitleZh(t)
-        })
-        .catch(() => {})
     } else if (source === 'grmpts') {
       const [lv, pt] = key.split('::')
       setLevel(lv); setPattern(pt)
@@ -272,13 +235,6 @@ export default function StudyView({ source }: Props) {
   const handleTwelveSelect = (lv: string, ls: string) => {
     setLevel(lv); setLesson(ls)
     localStorage.setItem(`iv_learn_sel_lessons_${glid}`, `Level ${lv} Lesson ${ls}`)
-    fetch('/api/geometry?source=twelve')
-      .then(r => r.json())
-      .then((d: { titles: Record<string, Record<string, string>> }) => {
-        const t = d.titles[lv]?.[ls]
-        if (t) setTitleZh(t)
-      })
-      .catch(() => {})
   }
 
   const handleGrmptsSelect = (lv: string, pt: string) => {

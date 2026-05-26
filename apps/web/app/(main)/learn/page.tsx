@@ -5,16 +5,11 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import Icon, { type IconName } from '@/components/ui/Icon'
-import { ACTIVE_LANG } from '@/lib/mock-data'
-import { getGlid, getDialectsForLang, getDefaultDialect } from '@/lib/learn/lang-bridge'
-import { shortDialectLabel } from '@/lib/learn/dialects'
-import { getProfile, updateDefaultDialect } from '@/lib/db/profiles'
+import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { getGlid } from '@/lib/learn/lang-bridge'
 import { fetchCompletions } from '@/lib/db/completions'
 
-// Completable item counts per source (used for progress denominator)
-const TOTALS = { twelve: 120, grmpts: 11, essay: 60, dialogue: 60 }
-
-type Source = keyof typeof TOTALS
+type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
 
 type SourceCardProps = {
   href: string
@@ -22,15 +17,12 @@ type SourceCardProps = {
   title: string
   completed: number
   total: number
-  cursor?: string
+  nextLabel?: string
   hasDue?: boolean
-  dialect: string
-  glid: string
 }
 
-function SourceCard({ href, icon, title, completed, total, cursor, hasDue, dialect, glid }: Readonly<SourceCardProps>) {
-  const pct   = total > 0 ? Math.round((completed / total) * 100) : 0
-  const label = shortDialectLabel(dialect, glid)
+function SourceCard({ href, icon, title, completed, total, nextLabel, hasDue }: Readonly<SourceCardProps>) {
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0
 
   return (
     <Link href={href} style={{
@@ -41,7 +33,6 @@ function SourceCard({ href, icon, title, completed, total, cursor, hasDue, diale
       borderLeft: hasDue ? `3px solid ${T.crimson}` : `1px solid ${T.lineSoft}`,
       boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 3px rgba(80,40,20,0.05)',
     }}>
-      {/* Icon */}
       <div style={{
         width: 44, height: 44, borderRadius: 13, flexShrink: 0,
         background: T.crimsonBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -49,23 +40,20 @@ function SourceCard({ href, icon, title, completed, total, cursor, hasDue, diale
         <Icon name={icon} size={22} color={T.crimson} strokeWidth={1.6} />
       </div>
 
-      {/* Middle */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <span style={{
             fontFamily: 'Newsreader, Georgia, serif',
             fontSize: 17, fontWeight: 500, color: T.ink,
           }}>{title}</span>
-          {label && (
+          {nextLabel && (
             <span style={{
-              fontSize: 10.5, color: T.inkMute,
               fontFamily: '"JetBrains Mono", monospace',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120,
-            }}>{label}</span>
+              fontSize: 10.5, color: T.inkMute, flexShrink: 0,
+            }}>Next: {nextLabel}</span>
           )}
         </div>
 
-        {/* Progress bar */}
         <div style={{ height: 3, borderRadius: 999, background: T.lineSoft, overflow: 'hidden' }}>
           <div style={{
             height: '100%', borderRadius: 999,
@@ -87,16 +75,7 @@ function SourceCard({ href, icon, title, completed, total, cursor, hasDue, diale
         </div>
       </div>
 
-      {/* Right */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-        {cursor && (
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 10, color: T.inkMute,
-          }}>{cursor} ▸</span>
-        )}
-        <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
-      </div>
+      <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
     </Link>
   )
 }
@@ -123,113 +102,101 @@ function NewCard() {
   )
 }
 
+type GrmptsGeo = { levels: string[]; counts: Record<string, Record<string, number>>; labels: Record<string, string> }
+type EssayGeo  = { items: Array<{ title_zh: string; available: boolean }> }
+type TwelveGeo = { levels: string[]; classes: number[] }
+
 export default function LearnPage() {
-  const lang     = ACTIVE_LANG
+  const { lang, dialect, dialectLabel } = useActiveLang()
   const langCode = lang.code
-  const glid     = getGlid(langCode) ?? '01'
-  const dialects = getDialectsForLang(langCode)
 
-  const [dialect,   setDialect] = useState('')
-  const [counts,    setCounts]       = useState<Record<Source, number>>({
-    twelve: 0, grmpts: 0, essay: 0, dialogue: 0,
-  })
+  const [counts,     setCounts]     = useState<Record<Source, number>>({ twelve: 0, grmpts: 0, essay: 0, dialogue: 0 })
+  const [totals,     setTotals]     = useState<Record<Source, number>>({ twelve: 120, grmpts: 41, essay: 60, dialogue: 60 })
+  const [nextLabels, setNextLabels] = useState<Partial<Record<Source, string>>>({})
 
-  // Init dialect
   useEffect(() => {
-    const saved = localStorage.getItem(`iv_learn_dialect_${glid}`)
-    if (saved) {
-      setDialect(saved)
-    } else {
-      getProfile()
-        .then(p => {
-          const d = p?.default_dialect || getDefaultDialect(langCode) || dialects[0] || ''
-          setDialect(d)
-          if (d) localStorage.setItem(`iv_learn_dialect_${glid}`, d)
-        })
-        .catch(() => {
-          const d = getDefaultDialect(langCode) || dialects[0] || ''
-          setDialect(d)
-        })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (!langCode) return
+    const glid = getGlid(langCode) ?? '01'
+    const enc  = encodeURIComponent(dialect ?? '')
 
-  // Fetch completion counts
-  useEffect(() => {
     Promise.all([
       fetchCompletions(langCode, 'twelve'),
       fetchCompletions(langCode, 'grmpts'),
       fetchCompletions(langCode, 'essay'),
       fetchCompletions(langCode, 'dialogue'),
-    ]).then(([t, g, e, d]) => {
-      setCounts({ twelve: t.size, grmpts: g.size, essay: e.size, dialogue: d.size })
-    }).catch(() => {})
-  }, [langCode])
+      fetch('/api/geometry?source=twelve').then(r => r.json()) as Promise<TwelveGeo>,
+      fetch(`/api/geometry?source=grmpts&glid=${glid}`).then(r => r.json()) as Promise<GrmptsGeo>,
+      fetch(`/api/geometry?source=essay&dialect=${enc}`).then(r => r.json()) as Promise<EssayGeo>,
+      fetch(`/api/geometry?source=dialogue&dialect=${enc}`).then(r => r.json()) as Promise<EssayGeo>,
+    ]).then(([tc, gc, ec, dc, tgeo, ggeo, egeo, dgeo]) => {
+      const gTotal = ggeo.levels.reduce((sum, lv) => sum + Object.keys(ggeo.counts[lv] ?? {}).length, 0)
+      const eTotal = egeo.items.filter(i => i.available).length
+      const dTotal = dgeo.items.filter(i => i.available).length
 
-  const changeDialect = (d: string) => {
-    setDialect(d)
-    localStorage.setItem(`iv_learn_dialect_${glid}`, d)
-    updateDefaultDialect(d).catch(() => {})
-  }
+      setCounts({ twelve: tc.size, grmpts: gc.size, essay: ec.size, dialogue: dc.size })
+      setTotals({ twelve: 120, grmpts: gTotal, essay: eTotal, dialogue: dTotal })
+
+      const twelveNext = (() => {
+        for (const lv of tgeo.levels) {
+          for (const cl of tgeo.classes) {
+            if (!tc.has(`Level ${lv} Lesson ${cl}`)) return `L${lv} · ${cl}`
+          }
+        }
+        return ''
+      })()
+
+      const grmptsNext = (() => {
+        for (const lv of ggeo.levels) {
+          for (const pt of Object.keys(ggeo.counts[lv] ?? {}).sort()) {
+            if (!gc.has(`${lv}::${pt}`)) {
+              const label = ggeo.labels[pt] ?? pt
+              return `L${lv} · ${label}`
+            }
+          }
+        }
+        return ''
+      })()
+
+      const findNext = (items: EssayGeo['items'], done: Set<string>) => {
+        const item = items.find(i => i.available && !done.has(i.title_zh))
+        if (!item) return ''
+        return item.title_zh.length > 12 ? item.title_zh.slice(0, 11) + '…' : item.title_zh
+      }
+
+      setNextLabels({
+        twelve:   twelveNext,
+        grmpts:   grmptsNext,
+        essay:    findNext(egeo.items, ec),
+        dialogue: findNext(dgeo.items, dc),
+      })
+    }).catch(() => {})
+  }, [langCode, dialect])
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <ScreenHeader title="Learn" langName={lang.name} langDialect={lang.dialect} />
+      <ScreenHeader title="Learn" langName={lang.name} langDialect={dialectLabel} />
 
-      {/* Dialect selector */}
-      {dialects.length > 1 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{
-            fontSize: 10, fontFamily: '"JetBrains Mono", monospace',
-            color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em',
-          }}>Dialect</span>
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-            {dialects.map(d => {
-              const label = shortDialectLabel(d, glid)
-              const active = dialect === d
-              return (
-                <button
-                  key={d}
-                  onClick={() => changeDialect(d)}
-                  style={{
-                    height: 28, padding: '0 10px', borderRadius: 999, flexShrink: 0,
-                    background: active ? T.ink : T.paperHi,
-                    border: `1px solid ${active ? T.ink : T.line}`,
-                    color: active ? T.cream : T.inkSoft,
-                    fontSize: 12, fontWeight: active ? 600 : 400,
-                    fontFamily: 'inherit', cursor: 'pointer',
-                    transition: 'all .12s',
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Collection cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <SourceCard
           href="/learn/lessons"   icon="learn"  title="Lessons"
-          completed={counts.twelve}   total={TOTALS.twelve}
-          dialect={dialect} glid={glid} hasDue={counts.twelve < TOTALS.twelve}
+          completed={counts.twelve}   total={totals.twelve}
+          nextLabel={nextLabels.twelve}
+          hasDue={counts.twelve < totals.twelve}
         />
         <SourceCard
           href="/learn/patterns"  icon="layers" title="Patterns"
-          completed={counts.grmpts}   total={TOTALS.grmpts}
-          dialect={dialect} glid={glid}
+          completed={counts.grmpts}   total={totals.grmpts}
+          nextLabel={nextLabels.grmpts}
         />
         <SourceCard
           href="/learn/essays"    icon="pen"    title="Essays"
-          completed={counts.essay}    total={TOTALS.essay}
-          dialect={dialect} glid={glid}
+          completed={counts.essay}    total={totals.essay}
+          nextLabel={nextLabels.essay}
         />
         <SourceCard
           href="/learn/dialogues" icon="wave"   title="Dialogs"
-          completed={counts.dialogue} total={TOTALS.dialogue}
-          dialect={dialect} glid={glid}
+          completed={counts.dialogue} total={totals.dialogue}
+          nextLabel={nextLabels.dialogue}
         />
         <NewCard />
       </div>
