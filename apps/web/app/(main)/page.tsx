@@ -165,7 +165,7 @@ function ActivityHeatmap() {
 
 export default async function DashboardPage() {
   const lang = ACTIVE_LANG
-  const stats = await getDashboardStats()
+  const stats = await getDashboardStats(lang.code)
 
   return (
     <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -248,8 +248,8 @@ export default async function DashboardPage() {
           <Stat value={stats.dueCount}      label="Due today" icon="review"  accent={T.amber} />
           <Stat value={stats.capturedToday} label="Today"     icon="learn"   accent={T.terra} />
         </div>
-        <div style={{ marginTop: 8, opacity: 0.5 }}>
-          <Stat value="—" label="Lessons" icon="learn" accent={T.inkFaint} />
+        <div style={{ marginTop: 8, opacity: stats.lessonsCompleted > 0 ? 1 : 0.5 }}>
+          <Stat value={stats.lessonsCompleted > 0 ? stats.lessonsCompleted : '—'} label="Lessons" icon="learn" accent={T.terra} />
         </div>
       </div>
 

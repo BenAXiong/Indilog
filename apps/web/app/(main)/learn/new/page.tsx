@@ -1,0 +1,291 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { T } from '@/lib/tokens'
+import { LANGUAGES } from '@/lib/languages'
+import Icon from '@/components/ui/Icon'
+import LangAvatar from '@/components/ui/LangAvatar'
+import CollectionEditor from '@/components/learn/CollectionEditor'
+import ImportDropzone from '@/components/learn/ImportDropzone'
+import { saveCollection, type LevelInput } from '@/lib/db/collections'
+
+type Method = 'manual' | 'import'
+type Step   = 'identity' | 'method' | 'editor'
+
+const INITIAL_LEVELS: LevelInput[] = [{ lessons: [{ title: '', cards: [{ ab: '', zh: '' }] }] }]
+
+export default function NewCollectionPage() {
+  const router = useRouter()
+
+  const [step,     setStep]     = useState<Step>('identity')
+  const [method,   setMethod]   = useState<Method>('manual')
+  const [name,     setName]     = useState('')
+  const [langCode, setLangCode] = useState('ami')
+  const [levels,   setLevels]   = useState<LevelInput[]>(INITIAL_LEVELS)
+  const [saving,   setSaving]   = useState(false)
+  const [error,    setError]    = useState<string | null>(null)
+
+  // ── Step 1 → 2 ──────────────────────────────────────────────────────────────
+  const canContinue = name.trim().length > 0
+
+  const handleSave = async () => {
+    const hasCards = levels.some(lv =>
+      lv.lessons.some(ls => ls.cards.some(c => c.ab.trim()))
+    )
+    if (!hasCards) { setError('Add at least one card with indigenous text.'); return }
+    setError(null)
+    setSaving(true)
+    const id = await saveCollection(name.trim(), langCode, levels)
+    setSaving(false)
+    if (id) { router.push('/learn') }
+    else     { setError('Failed to save. Please try again.') }
+  }
+
+  const handleImportParsed = (result: {
+    name: string; language: string; levels: LevelInput[]; totalCards: number
+  }) => {
+    setName(prev => prev || result.name)
+    setLangCode(result.language)
+    setLevels(result.levels)
+    setMethod('manual')
+    setStep('editor')
+  }
+
+  return (
+    <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4, marginBottom: 24 }}>
+        <Link href="/learn" style={{
+          width: 34, height: 34, borderRadius: 999, flexShrink: 0,
+          background: T.paperHi, border: `1px solid ${T.line}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: T.inkSoft, textDecoration: 'none',
+        }}>
+          <Icon name="arrow-l" size={16} strokeWidth={2} />
+        </Link>
+        <span style={{
+          fontFamily: 'Newsreader, Georgia, serif',
+          fontSize: 24, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em',
+        }}>
+          New collection
+        </span>
+      </div>
+
+      {/* ── Step 1: Identity ─────────────────────────────────────────────────── */}
+      {step === 'identity' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <Field label="Collection name">
+            <input
+              autoFocus
+              placeholder="e.g. Market vocabulary"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && canContinue && setStep('method')}
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field label="Language">
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
+            }}>
+              {LANGUAGES.map(lang => (
+                <button
+                  key={lang.code}
+                  onClick={() => setLangCode(lang.code)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: 5, padding: '8px 4px', borderRadius: 12,
+                    background: langCode === lang.code ? T.crimsonBg : T.paperHi,
+                    border: `1.5px solid ${langCode === lang.code ? T.crimson : T.lineSoft}`,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <LangAvatar letter={lang.letter} color={lang.color} size={28} />
+                  <span style={{
+                    fontSize: 10, color: langCode === lang.code ? T.crimsonDp : T.inkSoft,
+                    fontWeight: langCode === lang.code ? 700 : 400,
+                  }}>
+                    {lang.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <button
+            onClick={() => setStep('method')}
+            disabled={!canContinue}
+            style={primaryBtnStyle(!canContinue)}
+          >
+            Continue <Icon name="arrow-r" size={17} strokeWidth={2} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Step 2: Method ───────────────────────────────────────────────────── */}
+      {step === 'method' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 15, color: T.inkSoft, margin: 0 }}>
+            How do you want to add content?
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <MethodCard
+              icon="pen"
+              title="Add manually"
+              desc="Build cards in the editor"
+              active={method === 'manual'}
+              onClick={() => { setMethod('manual'); setStep('editor') }}
+            />
+            <MethodCard
+              icon="archive"
+              title="Import file"
+              desc=".json format"
+              active={method === 'import'}
+              onClick={() => { setMethod('import'); setStep('editor') }}
+            />
+            <MethodCard
+              icon="capture"
+              title="From captures"
+              desc="Coming soon"
+              disabled
+              onClick={() => {}}
+            />
+          </div>
+
+          <button
+            onClick={() => setStep('identity')}
+            style={{
+              height: 36, padding: '0 14px', borderRadius: 10, fontSize: 13,
+              background: 'transparent', border: `1px solid ${T.line}`,
+              color: T.inkSoft, cursor: 'pointer', fontFamily: 'inherit',
+              alignSelf: 'flex-start',
+            }}
+          >
+            ← Back
+          </button>
+        </div>
+      )}
+
+      {/* ── Step 3: Editor or Import ─────────────────────────────────────────── */}
+      {step === 'editor' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Summary bar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 14px', background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+            borderRadius: 12,
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{name}</div>
+              <div style={{ fontSize: 12, color: T.inkMute }}>
+                {LANGUAGES.find(l => l.code === langCode)?.name ?? langCode}
+              </div>
+            </div>
+            <button
+              onClick={() => setStep('identity')}
+              style={{
+                height: 30, padding: '0 10px', borderRadius: 8, fontSize: 12,
+                background: 'transparent', border: `1px solid ${T.lineSoft}`,
+                color: T.inkMute, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Edit
+            </button>
+          </div>
+
+          {method === 'import' ? (
+            <ImportDropzone onParsed={handleImportParsed} />
+          ) : (
+            <>
+              <CollectionEditor levels={levels} onChange={setLevels} />
+
+              {error && (
+                <div style={{
+                  padding: '10px 14px', borderRadius: 10,
+                  background: T.crimsonBg, border: `1px solid #EFCAB8`,
+                  fontSize: 13, color: T.crimsonDp,
+                }}>{error}</div>
+              )}
+
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={primaryBtnStyle(saving)}
+              >
+                {saving ? 'Saving…' : 'Save collection'}
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={() => setStep('method')}
+            style={{
+              height: 36, padding: '0 14px', borderRadius: 10, fontSize: 13,
+              background: 'transparent', border: `1px solid ${T.line}`,
+              color: T.inkSoft, cursor: 'pointer', fontFamily: 'inherit',
+              alignSelf: 'flex-start',
+            }}
+          >
+            ← Back
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <label style={{
+        fontSize: 12, fontWeight: 600, color: T.inkMute,
+        fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.06em',
+      }}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function MethodCard({ icon, title, desc, active, disabled, onClick }: {
+  icon: Parameters<typeof Icon>[0]['name']
+  title: string; desc: string; active?: boolean; disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={!disabled ? onClick : undefined}
+      disabled={disabled}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+        gap: 6, padding: '14px', borderRadius: 14, cursor: disabled ? 'default' : 'pointer',
+        background: active ? T.crimsonBg : T.paperHi,
+        border: `1.5px solid ${active ? T.crimson : T.lineSoft}`,
+        opacity: disabled ? 0.4 : 1, fontFamily: 'inherit', textAlign: 'left',
+      }}
+    >
+      <Icon name={icon} size={20} strokeWidth={1.6} color={active ? T.crimson : T.inkSoft} />
+      <span style={{ fontSize: 14, fontWeight: 600, color: active ? T.crimsonDp : T.ink }}>{title}</span>
+      <span style={{ fontSize: 12, color: T.inkFaint }}>{desc}</span>
+    </button>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  height: 44, padding: '0 14px', borderRadius: 12, fontSize: 15,
+  background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+  color: T.ink, fontFamily: 'inherit', outline: 'none', width: '100%',
+}
+
+const primaryBtnStyle = (disabled: boolean): React.CSSProperties => ({
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  height: 48, borderRadius: 14, fontSize: 15, fontWeight: 600,
+  background: disabled ? T.lineSoft : T.crimson, color: disabled ? T.inkFaint : '#fff',
+  border: 'none', cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit',
+  opacity: disabled ? 0.6 : 1,
+})
