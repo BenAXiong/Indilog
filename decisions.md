@@ -6,6 +6,55 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-L01 · Learn available for all 16 languages
+**Decision:** Learn is enabled for all 16 officially recognized Formosan languages, not only the 6 FormoBank translation-supported ones. The `ycm_master.db` corpus covers all 16 via GLID families.
+**Date:** 2026-05-26
+
+---
+
+### DEC-L02 · Saved view in Learn shows all captured sentences for the language
+**Decision:** The "Saved" source tab in Learn shows all `ind_items` of type `sentence` for the active study language — not only sentences captured from within Learn. This gives full context (items captured via Capture, saved from Dictionary, saved from Learn all appear together).
+**Date:** 2026-05-26
+
+---
+
+### DEC-L03 · Grammar comparison mode deferred
+**Decision:** The grmpts side-by-side pattern comparison feature (desktop-only, multi-column) is deferred beyond Phase 10. Complex state management, desktop-only use case.
+**Date:** 2026-05-26
+
+---
+
+### DEC-L04 · corpus_geometry.json is a static repo file
+**Decision:** `corpus_geometry.json` is checked into the repo at `apps/web/lib/learn/corpus_geometry.json`. It represents stable curriculum structure (lesson counts, alignment keys) that changes only when the YCM corpus is updated. No live API fetch.
+**Date:** 2026-05-26
+
+---
+
+### DEC-L05 · Lesson completion stored in ind_completions (Supabase)
+**Decision:** Lesson/pattern/essay/dialogue completion state is stored server-side in a new `ind_completions` table, not in localStorage. Reasons: cross-device sync, queryable for Dashboard stats, enables future streaks and milestones. YCM used localStorage — Indivore has Supabase so use it.
+**Date:** 2026-05-26
+**Schema:** `(user_id, language, source, item_key, completed_at)` with a UNIQUE constraint on `(user_id, language, source, item_key)`.
+
+---
+
+### DEC-L06 · Learn routing: single /learn route, no per-language URL segments
+**Decision:** Learn lives at `/learn` and always operates on `ind_profiles.active_study_language`. No `/:language/learn` routing. YCM uses per-language URLs because it's a multi-language portal; Indivore is a single-active-language notebook. Cursor state (selected lesson, pattern, etc.) is persisted in localStorage keyed by GLID, so switching languages in Settings resumes where the user left off per language.
+**Date:** 2026-05-26
+
+---
+
+### DEC-L07 · Dialect persistence: ind_profiles.default_dialect
+**Decision:** The dialect selected in Learn is persisted in `ind_profiles.default_dialect` (already in schema, was deferred in Phase 2). The stored value is the Chinese dialect name matching `occurrences.dialect_name` directly (e.g. `"南勢阿美語"`). This field is wired up as part of the Learn feature (Phase L0).
+**Date:** 2026-05-26
+
+---
+
+### DEC-L08 · Word lookup is a separate cross-app feature
+**Decision:** Full word lookup (tap token → definition panel, hover tooltip on desktop, sticky panel on mobile) is designed as a standalone `WordLookup` component usable across Learn, Capture, and Dictionary. It will be built after Learn v1 ships. Learn v1 may use a simplified placeholder (tap → opens Dictionary tab).
+**Date:** 2026-05-26
+
+---
+
 ### DEC-P1-01 · No separate Library route in Phase 1
 **Decision:** The design handoff showed "saved items" content but no explicit Library tab in the BottomNav. Recent captured material is surfaced in the Dashboard "Recent Captures" section. No `/library` route created in Phase 1; if a dedicated Library screen is needed it can be added in Phase 3 alongside real saved-material CRUD.
 **Date:** 2026-05-26

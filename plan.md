@@ -263,10 +263,50 @@
 
 These are intentionally not in v0:
 
-- Learned-lessons full implementation
+- Learned-lessons full implementation → Phase 10
 - Streak polish
 - Advanced source/speaker fields
 - Token definition persistence
 - Multiple flashcard card types
 - Full desktop polish
 - Public sharing, social, admin, classroom, lesson system, offline sync, batch import
+
+---
+
+## Phase 10 — Learn Feature v1
+
+**Goal:** Full structured study experience backed by `ycm_master.db`. Four content sources: 12-level curriculum, grammar patterns, essays, dialogues. Sentences saveable into `ind_items` → feeds flashcard queue.
+
+> Full spec: `docs/learn-feature.md`
+
+### Phase L0 — Assets & Data Bridge
+- [ ] Copy `corpus_geometry.json` → `apps/web/lib/learn/`
+- [ ] Copy `grmpts_type_labels.json` → `apps/web/lib/learn/`
+- [ ] Create `lib/learn/dialects.ts` (GLID maps)
+- [ ] Create `lib/learn/lang-bridge.ts` (Indivore code → GLID)
+- [ ] Wire `ind_profiles.default_dialect` for Learn dialect persistence
+
+### Phase L1 — API Routes
+- [ ] `lib/learn/db.ts` — SQLite curriculum query functions
+- [ ] `/api/curriculum` — four source variants + audio URL repair
+- [ ] `/api/lookup` — exact-match ILRDF word lookup
+- [ ] `ind_completions` migration (cross-device lesson completion)
+
+### Phase L2 — Learn Page UI
+- [ ] Source tab bar (mobile bottom strip / desktop horizontal)
+- [ ] Content selector per source (lesson grid, pattern list, essay/dialogue groups)
+- [ ] Data fetch loop (source + selection + dialect → results)
+- [ ] Prev / Next navigation
+- [ ] Study card component: ab text, zh reveal/hide, audio, copy, save, mark-complete
+- [ ] Settings panel (zh visibility, layout, lookup toggle)
+- [ ] Saved view (filters `ind_items` by language + sentence type)
+
+### Phase L3 — Lookup + Polish
+- [ ] Inline word lookup on study card tokens → `/api/lookup`
+- [ ] Completion counts → Dashboard Lessons stat (real data replaces "—")
+- [ ] Mobile spacing pass
+- [ ] Accessibility pass
+
+**Deferred from Phase 10:** grammar comparison mode, language dashboard, full cross-app WordLookup component.
+
+**Exit criteria:** User can navigate all four sources for their active language, study cards render with audio and zh toggle, saving a sentence creates an item in the notebook and a reviewable flashcard, completed lessons persist cross-device.
