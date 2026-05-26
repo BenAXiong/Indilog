@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Button, SectionHead, Icon, Toast } from '@/components/ui'
@@ -34,7 +34,7 @@ function typeColor(t: string) {
   return                       { color: T.amber,   bg: T.amberBg,   border: '#EBD49A' }
 }
 
-export default function CapturePage() {
+function CapturePageInner() {
   const lang = ACTIVE_LANG
   const searchParams = useSearchParams()
   const [activeLanguage, setActiveLanguage] = useState(lang.code)
@@ -441,5 +441,13 @@ export default function CapturePage() {
       {saved && <Toast tone="sage">{savedMsg}</Toast>}
       {error && <Toast tone="amber">Failed to save — try again</Toast>}
     </div>
+  )
+}
+
+export default function CapturePage() {
+  return (
+    <Suspense>
+      <CapturePageInner />
+    </Suspense>
   )
 }
