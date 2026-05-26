@@ -57,3 +57,12 @@
 | 2026-05-26 13:15 | FEATURE | PWA icon — ornate book logo (icon128.png) placed at app/icon.png, app/apple-icon.png, public/icon.png, public/icons/icon-{192,512}.png. manifest.json updated. |
 | 2026-05-26 13:15 | FEATURE | Phase 8 — QuickAction CTA on Dashboard: crimson card → /review if dueCount > 0, sage card → /capture otherwise. Lessons stat row added (dimmed placeholder). |
 | 2026-05-26 13:15 | PHASE COMPLETE | Phase 8 — Dashboard completion. All stats real. Quick resume action contextual. tsc clean. |
+| 2026-05-26 14:00 | FEATURE | Learn L0 — corpus_geometry.json (400KB), lang-bridge.ts (GLID mapping, dialect helpers), dialects.ts (DIALECT_TO_EN, GLID_FAMILIES, shortDialectLabel). |
+| 2026-05-26 14:00 | FEATURE | Learn L1 — ind_completions migration (item_key, RLS, get_completion_count RPC); ind_learn_collections + ind_learn_cards migration; /api/curriculum, /api/geometry, /api/lookup routes (nodejs runtime, better-sqlite3). |
+| 2026-05-26 14:00 | FEATURE | Learn L2 — StudyView ('use client', 4 sources), StudyCard (tokenized lookup, zh-blur), ActionBar (fixed above BottomNav), ContentSheet (62dvh sheet, level/lesson/pattern/essay navigation), SettingsPanel (zh-mode, lookup toggle), LookupInline (ILRDF word lookup). |
+| 2026-05-26 14:00 | FEATURE | Learn L3 — /learn/new 3-step creation flow (CollectionEditor, ImportDropzone); hub page redesigned (single-column, dialect selector, live completion %, icon+progress bars); dialect persisted to ind_profiles.default_dialect + localStorage; dashboard Lessons stat wired to get_completion_count. |
+| 2026-05-26 14:00 | FIX | Learn — grmpts dialect bug: StudyView now always uses getGrmptsDialect() for patterns (language-level dialect, not sub-dialect). |
+| 2026-05-26 14:00 | FIX | Learn — hub dialect pills use shortDialectLabel() to strip family name (e.g. "Nanshi Amis" → "Nanshi"). |
+| 2026-05-26 14:00 | REFACTOR | ScreenHeader — replaced CSS blob home icon with actual app icon.png. |
+| 2026-05-26 14:00 | PHASE COMPLETE | Learn L0–L3 — full study view for all 4 sources, collection creation, hub with progress. Merged feat/learn → main. |
+| 2026-05-26 14:10 | REFACTOR | Login page — replaced tagline and disclaimer text with --- placeholders (landing copy TBD). |

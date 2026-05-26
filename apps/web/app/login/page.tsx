@@ -27,14 +27,7 @@ export default function LoginPage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, maxWidth: 320, width: '100%' }}>
         <Wordmark size={32} />
 
-        <div style={{ textAlign: 'center' }}>
-          <p style={{
-            fontFamily: 'Newsreader, Georgia, serif',
-            fontSize: 18, color: T.inkSoft, lineHeight: 1.5,
-          }}>
-            Your Formosan language notebook.
-          </p>
-        </div>
+        <p style={{ fontSize: 14, color: T.inkFaint, letterSpacing: '0.1em' }}>---</p>
 
         <button
           onClick={handleGoogleSignIn}
@@ -52,9 +45,7 @@ export default function LoginPage() {
           {loading ? 'Signing in…' : 'Continue with Google'}
         </button>
 
-        <p style={{ fontSize: 11.5, color: T.inkFaint, textAlign: 'center', lineHeight: 1.6 }}>
-          By signing in you agree to store your study data in this app.
-        </p>
+        <p style={{ fontSize: 11.5, color: T.inkFaint, letterSpacing: '0.1em' }}>---</p>
       </div>
     </div>
   )
