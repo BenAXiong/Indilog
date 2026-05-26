@@ -196,23 +196,25 @@
 
 ---
 
-## Phase 7 — Review and Flashcards v0
+## Phase 7 — Review and Flashcards v0 ✅
 
 **Goal:** Saved material → reviewable cards.
 
-- [ ] Generate flashcards from saved words and sentences
-- [ ] Review queue (due cards, ordered by due date)
-- [ ] Flashcard screen with reveal action
-- [ ] Rating buttons: Again / Hard / Good / Easy
-- [ ] Simple scheduling algorithm (not full SRS — interval multipliers are enough)
-- [ ] Write review history row after each rating
-- [ ] Update `ind_daily_stats` reviewed count
-- [ ] Dashboard review stats (due count, reviewed today)
-- [ ] Basic streak logic (if time allows)
-- [ ] Saved-material browsing inside Review tab
-- [ ] **Design Checkpoint 6** (if session feels awkward) — card layout, reveal interaction, rating placement, daily progress
+- [x] Generate flashcards from saved words and sentences
+- [x] Review queue (due cards, ordered by due date)
+- [x] Flashcard screen with reveal action
+- [x] Rating buttons: Again / Hard / Good / Easy
+- [x] Simple scheduling algorithm (fixed intervals: 10m / 1d / 3d / 7d)
+- [x] Write review history row after each rating
+- [x] Update `ind_daily_stats` reviewed count
+- [x] Dashboard review stats (due count, reviewed today)
+- [ ] Basic streak logic (deferred to Phase 9 polish)
+- [x] Saved-material browsing inside Review tab
+- [ ] **Design Checkpoint 6** — deferred (core session works; polish in Phase 9)
 
 **Exit criteria:** User can review due cards. Ratings update due dates. Dashboard reflects reviewed counts.
+
+**[PHASE COMPLETE 2026-05-26 11:52]** — Flashcards auto-generated from items. Live review session with reveal/rate. Completion banner. Dashboard dueCount fixed. tsc clean.
 
 ---
 
