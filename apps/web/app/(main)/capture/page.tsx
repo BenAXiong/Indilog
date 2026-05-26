@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Button, SectionHead, Icon, Toast } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { ACTIVE_LANG } from '@/lib/mock-data'
+import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import { createItem, updateItem, listItems, type Item, type ItemType } from '@/lib/db/items'
 import { createClient } from '@/lib/supabase/client'
 import { incrementCapturedToday } from '@/lib/db/stats'
@@ -35,11 +35,9 @@ function typeColor(t: string) {
 }
 
 function CapturePageInner() {
-  const lang = ACTIVE_LANG
+  const { lang, dialectLabel } = useActiveLang()
   const searchParams = useSearchParams()
-  const [activeLanguage, setActiveLanguage] = useState(lang.code)
-  const [activeLangName, setActiveLangName] = useState(lang.name)
-  const [activeLangDialect, setActiveLangDialect] = useState(lang.dialect)
+  const [activeLanguage, setActiveLanguage] = useState('ami')
   const [userId, setUserId] = useState<string | null>(null)
 
   // Form state — prefill from ?text= and ?notes= (e.g. from Dictionary "Add context")
@@ -164,8 +162,8 @@ function CapturePageInner() {
     <div style={{ padding: '4px 18px 120px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <ScreenHeader
         title="Capture"
-        langName={activeLangName}
-        langDialect={activeLangDialect}
+        langName={lang.name}
+        langDialect={dialectLabel}
       />
 
       {/* Editing banner */}
@@ -395,7 +393,7 @@ function CapturePageInner() {
               }}
             >
               <Icon name="check" size={12} color={T.inkSoft} strokeWidth={2} />
-              Set {activeLangName} as default
+              Set {lang.name} as default
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, Stat, SectionHead, LangAvatar, Icon, Wordmark } from '@/components/ui'
-import { ACTIVE_LANG } from '@/lib/mock-data'
 import { getDashboardStats } from '@/lib/db/stats-server'
+import { getActiveLangServer } from '@/lib/db/profiles-server'
 
 function QuickAction({ dueCount, capturedTotal }: { dueCount: number; capturedTotal: number }) {
   const hasCards = dueCount > 0
@@ -164,7 +164,7 @@ function ActivityHeatmap() {
 }
 
 export default async function DashboardPage() {
-  const lang = ACTIVE_LANG
+  const { lang, dialectLabel } = await getActiveLangServer()
   const stats = await getDashboardStats(lang.code)
 
   return (
@@ -192,8 +192,8 @@ export default async function DashboardPage() {
             <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 19, fontWeight: 600, color: T.ink }}>
               {lang.name}
             </span>
-            {lang.dialect && (
-              <span style={{ fontSize: 12, color: T.inkSoft }}>· {lang.dialect}</span>
+            {dialectLabel && (
+              <span style={{ fontSize: 12, color: T.inkSoft }}>· {dialectLabel}</span>
             )}
           </div>
         </div>

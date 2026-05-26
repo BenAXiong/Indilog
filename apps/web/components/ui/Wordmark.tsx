@@ -28,7 +28,7 @@ export default function Wordmark({ size = 22, color = T.ink }: WordmarkProps) {
         style={{ flexShrink: 0 }}
         priority
       />
-      Indivore
+      Indilog
     </span>
   )
 }

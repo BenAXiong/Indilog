@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { ACTIVE_LANG } from '@/lib/mock-data'
+import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import { TRANSLATION_LANGUAGES, getValidTargets, isPairSupported } from '@/lib/translation-pairs'
 import { createItem } from '@/lib/db/items'
 
@@ -15,7 +15,7 @@ function langLabel(code: string): string {
 }
 
 export default function TranslatePage() {
-  const lang = ACTIVE_LANG
+  const { lang, dialectLabel } = useActiveLang()
   const [src, setSrc] = useState('zho_Hant')
   const [tgt, setTgt] = useState('ami_Latn')
   const [text, setText] = useState('')
@@ -89,7 +89,7 @@ export default function TranslatePage() {
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <ScreenHeader title="Translate" langName={lang.name} langDialect={lang.dialect} />
+      <ScreenHeader title="Translate" langName={lang.name} langDialect={dialectLabel} />
 
       <div style={{ fontSize: 12, color: T.inkMute, lineHeight: 1.4, padding: '0 4px', marginTop: -6 }}>
         Traditional Chinese ↔ Formosan · draft translation only

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { ACTIVE_LANG } from '@/lib/mock-data'
+import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import {
   ensureFlashcards, listDueFlashcards, rateCard,
   type FlashcardWithItem, type Rating,
@@ -159,7 +159,7 @@ function ReviewSession({
 
 // ─── Review Landing ───────────────────────────────────────────
 export default function ReviewPage() {
-  const lang = ACTIVE_LANG
+  const { lang, dialectLabel } = useActiveLang()
   const [mode, setMode] = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [dueCards, setDueCards] = useState<FlashcardWithItem[]>([])
   const [savedItems, setSavedItems] = useState<Item[]>([])
@@ -197,7 +197,7 @@ export default function ReviewPage() {
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <ScreenHeader title="Review" langName={lang.name} langDialect={lang.dialect} />
+      <ScreenHeader title="Review" langName={lang.name} langDialect={dialectLabel} />
 
       {/* Done banner */}
       {mode === 'done' && (

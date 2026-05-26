@@ -310,3 +310,64 @@ These are intentionally not in v0:
 **Deferred from Phase 10:** grammar comparison mode, language dashboard, full cross-app WordLookup component.
 
 **Exit criteria:** User can navigate all four sources for their active language, study cards render with audio and zh toggle, saving a sentence creates an item in the notebook and a reviewable flashcard, completed lessons persist cross-device.
+
+---
+
+## Corpus Data Issues (Blocked — Needs Citadel)
+
+> Discovered 2026-05-27. These are NOT Indivore code bugs. They are upstream data pipeline problems in YCM/Citadel that produce `corpus_geometry.json` and `ycm_master.db`. Indivore cannot fix these without either: (a) changes to the Citadel crystallizer, or (b) a clean re-scrape.
+
+---
+
+### Issue 1 — Essay and Dialogue Topics: Wrong Count and Polluted Titles
+
+**Symptom:** `corpus_geometry.json` has 73 essay topics and 61 dialogue topics instead of 60 each.
+
+**Root cause (confirmed by reading `geometry_crystallizer.py`):**
+
+1. **`max_len` alignment bloat.** The crystallizer computes `max_len = max(categories per dialect)`. If any one dialect has more categories than others, all slots are created up to that dialect's count. Sparse slots (indices 71–72 for essays, index 60 for dialogues) end up with only 1–2 dialects in their `alignment` map — they are essentially unpublished or test content from one dialect that leaked into the shared geometry.
+
+2. **Vocabulary words scraped as topics.** Some TIDs contain a single vocabulary word as their first sentence (e.g. `七點`, `走路`, `排隊`). The crystallizer title heuristic picks `data[0]["ch"]` if `len < 20`, so these become topic titles instead of proper sentence fragments. The real cause is that the essay scraper grabbed vocabulary-entry TIDs alongside sentence TIDs — likely from the `S2` section of the master `ES*.json` files, which may index vocabulary rather than full-sentence content.
+
+3. **Duplicate inferred titles.** 11 essay titles and 3 dialogue titles appear more than once (e.g. `我的名字是Ljumeg。` 3×, `這辣椒很辣…` 3×). This is a consequence of the same Chinese sentence appearing in multiple TIDs.
+
+**What to ask/check in Citadel:**
+
+- [ ] In `essay_scraper.py`: does it scrape TIDs from both `S1` and `S2` lesson blocks of the ES master JSON? If so, does `S2` contain vocabulary TIDs rather than sentence TIDs? If yes, filter to `S1` only (or whichever section contains full sentences).
+- [ ] What is the expected topic count per dialect for essays and dialogues? Run the validation query from `REPORT.md` against `ycm_master.db` to see per-dialect category counts and confirm which dialects inflate `max_len`.
+- [ ] Fix the crystallizer to use a minimum-coverage threshold: only include a topic slot if `len(alignment) >= N` (suggest N = 10 or half of all dialects). This will drop the orphan slots at 71–72 and 60.
+- [ ] Consider deduplication by aboriginal text hash before assigning ordinal slots, to prevent the same content appearing twice.
+
+**Impact on Indivore:** Hub shows wrong totals (73/61 instead of 60/60). ContentSheet groups (`初級`/`中級`/`高級`) break at the boundary. The `essayDiff` helper assumes 60 items. Duplicate `title_zh` causes `.find()` to silently resolve to the wrong topic.
+
+**Indivore-side mitigation (can apply now, partial):**
+- Use `index` as the stable selector (already recommended in `REPORT.md`) — switch `/api/curriculum` to accept `index` instead of `title_zh` to avoid duplicate-title collisions.
+- Cap displayed total at `Math.min(total, 60)` as a stopgap until crystallizer is fixed.
+
+---
+
+### Issue 2 — Twelve (Lessons): Aboriginal Titles Missing
+
+**Symptom:** Lesson cards in ContentSheet show the zh title only; the ab title row is blank.
+
+**What exists:** `corpus_geometry.json → twelve.titles[level][class]` has all 120 zh titles (scraped from `data/raw/twelve/{l}_{c}.json` → `data["titleCh"]`). No ab titles are present anywhere.
+
+**Why:** The crystallizer only reads `titleCh` from the twelve raw JSON. It does not read a `titleAb` / `titleLang` field. It is unknown whether the raw twelve JSON files even contain such a field.
+
+**What to ask/check in Citadel:**
+
+- [ ] Open any raw twelve JSON file (e.g. `data/raw/twelve/twelve_l1_c1.json`). Does it have a field like `titleAb`, `titleLang`, `titleIndigenous`, or a dialect-specific key alongside `titleCh`? If yes, add it to the crystallizer output as `titles_ab[level][class]` (language-agnostic, one representative dialect) or `titles_ab[dialect][level][class]` (per-dialect map).
+- [ ] If the raw JSON does NOT have an ab title: check whether the klokah.tw twelve lesson HTML page has the lesson title in the indigenous language anywhere (e.g. a page heading). If yes, a simple fetch-and-parse of `https://web.klokah.tw/twelve/...` could extract it.
+- [ ] Clarify: should ab lesson titles be dialect-specific? The zh titles are dialect-neutral (共通 titles). If the indigenous title is the same across dialects for each lesson, one array suffices. If not, a per-dialect map is needed.
+
+**Impact on Indivore:** ContentSheet lesson cards show empty ab title row with `minHeight: '1.2em'` placeholder. Low priority cosmetically, but adds context and is the right label for learners.
+
+---
+
+### Tracking
+
+| Issue | Owner | Blocked on | Priority |
+|-------|-------|-----------|----------|
+| Essay/dialogue topic count (73/61 → 60/60) | Citadel | crystallizer fix + optional re-scrape | High — affects hub counts, group splits, completion % |
+| Duplicate title_zh → use index as selector | Indivore | can do now | Medium — prevents silent wrong-topic loads |
+| Twelve ab titles | Citadel | raw file inspection first | Low — cosmetic in ContentSheet |

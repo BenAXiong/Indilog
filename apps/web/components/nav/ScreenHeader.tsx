@@ -28,7 +28,7 @@ export default function ScreenHeader({ title, langName, langDialect, showHome = 
             flexShrink: 0,
           }}
         >
-          <Image src="/icon.png" alt="Indivore" width={28} height={28} priority />
+          <Image src="/icon.png" alt="Indilog" width={28} height={28} priority />
         </Link>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>

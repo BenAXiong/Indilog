@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Indivore',
+  title: 'Indilog',
   description: 'A personal Formosan-language study notebook',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Indivore',
+    title: 'Indilog',
   },
 }
 

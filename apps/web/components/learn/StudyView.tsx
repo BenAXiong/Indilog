@@ -181,21 +181,18 @@ export default function StudyView({ source }: Props) {
 
   useEffect(() => {
     if (source === 'twelve') {
-      // Build ordered item keys
       const levels = ['1','2','3','4','5','6','7','8','9','10','11','12']
       const classes = ['1','2','3','4','5','6','7','8','9','10']
-      const keys = levels.flatMap(lv => classes.map(cl => `${lv}::${cl}`))
-      setNavOrder(keys)
+      setNavOrder(levels.flatMap(lv => classes.map(cl => `${lv}::${cl}`)))
     } else if (source === 'grmpts') {
       fetch(`/api/geometry?source=grmpts&glid=${glid}`)
         .then(r => r.json())
         .then((d: { levels: string[]; counts: Record<string, Record<string, number>> }) => {
-          const keys = d.levels.flatMap(lv =>
+          setNavOrder(d.levels.flatMap(lv =>
             Object.keys(d.counts[lv] ?? {})
               .sort((a, b) => Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1)))
               .map(pt => `${lv}::${pt}`),
-          )
-          setNavOrder(keys)
+          ))
         })
         .catch(() => {})
     } else {
@@ -287,7 +284,10 @@ export default function StudyView({ source }: Props) {
       {/* Custom header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '8px 18px 10px',
-        position: 'sticky', top: 0, background: T.paper, zIndex: 10,
+        position: 'fixed', top: 0, left: 0, right: 0,
+        background: 'rgba(251,245,231,0.85)',
+        backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+        zIndex: 20,
       }}>
         <Link href="/learn" style={{
           width: 34, height: 34, borderRadius: 999, flexShrink: 0,
@@ -347,9 +347,9 @@ export default function StudyView({ source }: Props) {
         </div>
       </div>
 
-      {/* Card scroll area */}
+      {/* Card scroll area — top padding compensates for fixed header (~52px) */}
       <div style={{
-        padding: '14px 18px 180px',
+        padding: '66px 18px 180px',
         display: 'flex', flexDirection: 'column', gap: 12,
       }}>
         {loading ? (

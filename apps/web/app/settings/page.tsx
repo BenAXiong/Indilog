@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Chip, LangAvatar, Icon } from '@/components/ui'
-import { SETTINGS_LANGS } from '@/lib/mock-data'
+import { LANGUAGES, getLanguage } from '@/lib/languages'
+import { getGlid, getDialectsForLang } from '@/lib/learn/lang-bridge'
+import { shortDialectLabel } from '@/lib/learn/dialects'
 import type { User } from '@supabase/supabase-js'
 
 type Profile = {
@@ -18,17 +20,20 @@ type Profile = {
 
 const ACCOUNT_ROWS = [
   { label: 'Export notebook', icon: 'bookmark' as const },
-  { label: 'About Indivore',  icon: 'leaf'     as const },
+  { label: 'About Indilog',   icon: 'leaf'     as const },
   { label: 'Sign out',        icon: 'logout'   as const, danger: true },
 ]
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [activeLang, setActiveLang] = useState('ami')
-  const [goal, setGoal] = useState(20)
-  const [locale, setLocale] = useState('en')
-  const [saving, setSaving] = useState(false)
+  const [user,          setUser]          = useState<User | null>(null)
+  const [activeLang,    setActiveLang]    = useState('ami')
+  const [activeDialect, setActiveDialect] = useState<string | null>(null)
+  const [goal,          setGoal]          = useState(20)
+  const [locale,        setLocale]        = useState('en')
+  const [saving,        setSaving]        = useState(false)
+  const [langPickerOpen, setLangPickerOpen] = useState(false)
+  const [pickedLang,    setPickedLang]    = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -43,6 +48,7 @@ export default function SettingsPage() {
         .then(({ data }) => {
           if (!data) return
           setActiveLang(data.active_study_language)
+          setActiveDialect(data.default_dialect)
           setLocale(data.ui_locale)
           setGoal(data.daily_goal)
         })
@@ -67,7 +73,16 @@ export default function SettingsPage() {
     if (label === 'Sign out') handleSignOut()
   }
 
-  const displayName = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '—'
+  function closePicker() {
+    setLangPickerOpen(false)
+    setPickedLang(null)
+  }
+
+  const currentLang   = getLanguage(activeLang) ?? LANGUAGES[0]
+  const langGlid      = getGlid(activeLang) ?? '01'
+  const dialectLabel  = activeDialect ? shortDialectLabel(activeDialect, langGlid) : null
+
+  const displayName  = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '—'
   const displayEmail = user?.email ?? '—'
 
   return (
@@ -112,59 +127,27 @@ export default function SettingsPage() {
 
       {/* Active study language */}
       <div style={{ padding: '0 18px' }}>
-        <SectionHead title="Active study language" />
-        <div style={{
-          background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16,
-          overflow: 'hidden',
-        }}>
-          {SETTINGS_LANGS.map((l, i, arr) => {
-            const active = l.code === activeLang
-            return (
-              <button
-                key={l.code}
-                onClick={() => {
-                  setActiveLang(l.code)
-                  saveProfile({ active_study_language: l.code })
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-                  padding: '12px 14px', textAlign: 'left',
-                  borderBottom: i < arr.length - 1 ? `1px solid ${T.lineSoft}` : 'none',
-                  background: active ? T.crimsonBg : 'transparent',
-                  transition: 'background .15s', cursor: 'pointer', border: 'none',
-                }}
-              >
-                <LangAvatar letter={l.letter} color={l.color} size={32} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 14, fontWeight: 600, color: T.ink }}>
-                    {l.name}
-                  </div>
-                  {l.dialect && (
-                    <div style={{ fontSize: 11.5, color: T.inkSoft }}>default · {l.dialect}</div>
-                  )}
-                </div>
-                {active ? (
-                  <div style={{
-                    width: 22, height: 22, borderRadius: 999, background: T.crimson,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Icon name="check" size={13} color="#fff" strokeWidth={2.6} />
-                  </div>
-                ) : (
-                  <Icon name="chevron" size={14} color={T.inkFaint} />
-                )}
-              </button>
-            )
-          })}
-          <button style={{
-            padding: '11px 14px', textAlign: 'center', width: '100%',
-            fontSize: 12.5, color: T.crimson, fontWeight: 600,
-            borderTop: `1px solid ${T.lineSoft}`, background: 'none', cursor: 'pointer',
-            border: 'none',
-          }}>
-            See all 16 Formosan languages
-          </button>
-        </div>
+        <SectionHead title="Study language" />
+        <button
+          onClick={() => setLangPickerOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+            padding: '12px 14px', borderRadius: 16, cursor: 'pointer',
+            background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+            textAlign: 'left',
+          }}
+        >
+          <LangAvatar letter={currentLang.letter} color={currentLang.color} size={32} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 600, color: T.ink }}>
+              {currentLang.name}
+            </div>
+            {dialectLabel && (
+              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 1 }}>{dialectLabel}</div>
+            )}
+          </div>
+          <Icon name="review" size={18} color={T.inkSoft} strokeWidth={1.8} />
+        </button>
       </div>
 
       {/* Preferences */}
@@ -267,9 +250,133 @@ export default function SettingsPage() {
           textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5,
           color: T.inkFaint, marginTop: 14, letterSpacing: '0.05em',
         }}>
-          Indivore v0.1 · 行動族語筆記本
+          Indilog v0.1 · 行動族語筆記本
         </div>
       </div>
+
+      {/* Language + dialect picker overlay */}
+      {langPickerOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          {/* Backdrop */}
+          <div
+            onClick={closePicker}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(30,15,5,0.4)' }}
+          />
+
+          {/* Sheet */}
+          <div style={{
+            position: 'relative', background: T.paper,
+            borderRadius: '20px 20px 0 0',
+            paddingTop: 16, paddingBottom: 'max(48px, env(safe-area-inset-bottom))',
+            maxHeight: '80dvh', overflowY: 'auto',
+          }}>
+            {/* Drag handle */}
+            <div style={{
+              width: 36, height: 4, borderRadius: 999, background: T.line,
+              margin: '0 auto 16px',
+            }} />
+
+            {/* Sheet header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '0 18px', marginBottom: 12,
+            }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: T.ink, fontFamily: 'Newsreader, Georgia, serif' }}>
+                {pickedLang ? 'Choose dialect' : 'Study language'}
+              </span>
+              <button
+                onClick={closePicker}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: T.inkSoft }}
+              >
+                <Icon name="x" size={20} strokeWidth={2} color={T.inkSoft} />
+              </button>
+            </div>
+
+            <div style={{ padding: '0 10px' }}>
+              {pickedLang === null ? (
+                /* Language list */
+                LANGUAGES.map(l => {
+                  const isActive = l.code === activeLang
+                  return (
+                    <button
+                      key={l.code}
+                      onClick={() => {
+                        const dialects = getDialectsForLang(l.code)
+                        if (dialects.length > 1) {
+                          setPickedLang(l.code)
+                        } else {
+                          const dialect = dialects[0] ?? null
+                          setActiveLang(l.code)
+                          setActiveDialect(dialect)
+                          saveProfile({ active_study_language: l.code, default_dialect: dialect })
+                          closePicker()
+                        }
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                        padding: '10px 10px', borderRadius: 12,
+                        background: isActive ? T.crimsonBg : 'transparent',
+                        border: 'none', cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <LangAvatar letter={l.letter} color={l.color} size={32} />
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 600 : 400, color: T.ink }}>
+                        {l.name}
+                        {l.nativeName && (
+                          <span style={{ fontSize: 11.5, color: T.inkMute, fontWeight: 400 }}> · {l.nativeName}</span>
+                        )}
+                      </span>
+                      {isActive && <Icon name="check" size={16} color={T.crimson} strokeWidth={2.4} />}
+                    </button>
+                  )
+                })
+              ) : (
+                /* Dialect list */
+                <div>
+                  <button
+                    onClick={() => setPickedLang(null)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: T.inkSoft, fontSize: 13, marginBottom: 10, padding: '4px 8px',
+                    }}
+                  >
+                    <Icon name="arrow-l" size={15} strokeWidth={2} color={T.inkSoft} />
+                    Back
+                  </button>
+                  {getDialectsForLang(pickedLang).map(d => {
+                    const dGlid  = getGlid(pickedLang) ?? '01'
+                    const label  = shortDialectLabel(d, dGlid)
+                    const isActive = d === activeDialect && pickedLang === activeLang
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => {
+                          setActiveLang(pickedLang)
+                          setActiveDialect(d)
+                          saveProfile({ active_study_language: pickedLang, default_dialect: d })
+                          closePicker()
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                          padding: '12px 10px', borderRadius: 12,
+                          background: isActive ? T.crimsonBg : 'transparent',
+                          border: 'none', cursor: 'pointer', textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 600 : 400, color: T.ink }}>
+                          {label}
+                        </span>
+                        {isActive && <Icon name="check" size={16} color={T.crimson} strokeWidth={2.4} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

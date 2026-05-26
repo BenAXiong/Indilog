@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import ScreenHeader from '@/components/nav/ScreenHeader'
@@ -9,6 +9,7 @@ import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import { getGlid } from '@/lib/learn/lang-bridge'
 import { GRMPTS_LEVEL_NAMES, stageName, lessonDifficultyOf } from '@/lib/learn/dialects'
 import { fetchCompletions } from '@/lib/db/completions'
+import HubSearch from '@/components/learn/HubSearch'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
 
@@ -42,7 +43,7 @@ function SourceCard({ href, icon, title, completed, total, nextLabel, hasDue }: 
       </div>
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
           <span style={{
             fontFamily: 'Newsreader, Georgia, serif',
             fontSize: 17, fontWeight: 500, color: T.ink,
@@ -81,6 +82,13 @@ function SourceCard({ href, icon, title, completed, total, nextLabel, hasDue }: 
   )
 }
 
+const headerBtnStyle: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: 999,
+  background: T.paperHi, border: `1px solid ${T.line}`,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: T.inkSoft, flexShrink: 0, cursor: 'pointer', textDecoration: 'none',
+}
+
 function NewCard() {
   return (
     <Link href="/learn/new" style={{
@@ -105,7 +113,7 @@ function NewCard() {
 
 type GrmptsGeo = { levels: string[]; counts: Record<string, Record<string, number>>; labels: Record<string, string> }
 type EssayGeo  = { items: Array<{ index: number; title_zh: string; available: boolean }> }
-type TwelveGeo = { levels: string[]; classes: number[] }
+type TwelveGeo = { levels: string[]; classes: number[]; titles?: Record<string, Record<string, string>> }
 
 export default function LearnPage() {
   const { lang, dialect, dialectLabel } = useActiveLang()
@@ -114,6 +122,10 @@ export default function LearnPage() {
   const [counts,     setCounts]     = useState<Record<Source, number>>({ twelve: 0, grmpts: 0, essay: 0, dialogue: 0 })
   const [totals,     setTotals]     = useState<Record<Source, number>>({ twelve: 120, grmpts: 41, essay: 60, dialogue: 60 })
   const [nextLabels, setNextLabels] = useState<Partial<Record<Source, string>>>({})
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [geoLoaded,  setGeoLoaded]  = useState<{
+    tgeo?: TwelveGeo; ggeo?: GrmptsGeo; egeo?: EssayGeo; dgeo?: EssayGeo
+  }>({})
 
   useEffect(() => {
     if (!langCode) return
@@ -136,6 +148,7 @@ export default function LearnPage() {
 
       setCounts({ twelve: tc.size, grmpts: gc.size, essay: ec.size, dialogue: dc.size })
       setTotals({ twelve: 120, grmpts: gTotal, essay: eTotal, dialogue: dTotal })
+      setGeoLoaded({ tgeo, ggeo, egeo, dgeo })
 
       const twelveNext = (() => {
         for (const lv of tgeo.levels) {
@@ -184,9 +197,90 @@ export default function LearnPage() {
     }).catch(() => {})
   }, [langCode, dialect])
 
+  const glid = getGlid(langCode) ?? '01'
+  const numSortStr = (a: string, b: string) => Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1))
+
+  const hubNavItems = useMemo(() => {
+    const { tgeo, ggeo, egeo, dgeo } = geoLoaded
+    type NavItem = { label: string; sublabel: string; href: string; storage: { key: string; value: string }[] }
+    const items: NavItem[] = []
+    if (tgeo) {
+      for (const lv of tgeo.levels) {
+        for (const cl of tgeo.classes) {
+          items.push({
+            label:    tgeo.titles?.[lv]?.[String(cl)] ?? `Lesson ${cl}`,
+            sublabel: `${lessonDifficultyOf(lv)} · ${stageName(lv)} · ${cl}`,
+            href: '/learn/lessons',
+            storage: [{ key: `iv_learn_sel_lessons_${glid}`, value: `Level ${lv} Lesson ${cl}` }],
+          })
+        }
+      }
+    }
+    if (ggeo) {
+      for (const lv of ggeo.levels) {
+        for (const pt of Object.keys(ggeo.counts[lv] ?? {}).sort(numSortStr)) {
+          items.push({
+            label:    ggeo.labels[pt] ?? pt,
+            sublabel: GRMPTS_LEVEL_NAMES[lv] ?? lv,
+            href: '/learn/patterns',
+            storage: [
+              { key: `iv_learn_sel_patterns_${glid}`, value: pt },
+              { key: `iv_learn_level_${glid}`, value: lv },
+            ],
+          })
+        }
+      }
+    }
+    if (egeo) {
+      for (const item of egeo.items.filter(i => i.available)) {
+        items.push({
+          label: item.title_zh, sublabel: `Essay · ${item.index + 1}`,
+          href: '/learn/essays',
+          storage: [{ key: `iv_learn_sel_essays_${glid}`, value: item.title_zh }],
+        })
+      }
+    }
+    if (dgeo) {
+      for (const item of dgeo.items.filter(i => i.available)) {
+        items.push({
+          label: item.title_zh, sublabel: `Dialog · ${item.index + 1}`,
+          href: '/learn/dialogues',
+          storage: [{ key: `iv_learn_sel_dialogues_${glid}`, value: item.title_zh }],
+        })
+      }
+    }
+    return items
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoLoaded, glid])
+
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <ScreenHeader title="Learn" langName={lang.name} langDialect={dialectLabel} />
+      <ScreenHeader
+        title="Learn"
+        langName={lang.name}
+        langDialect={dialectLabel}
+        right={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+              style={headerBtnStyle}
+            >
+              <Icon name="search" size={17} strokeWidth={1.6} />
+            </button>
+            <Link href="/settings" aria-label="Settings" style={headerBtnStyle}>
+              <Icon name="settings" size={17} strokeWidth={1.6} />
+            </Link>
+          </div>
+        }
+      />
+      {searchOpen && (
+        <HubSearch
+          glid={glid}
+          navItems={hubNavItems}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <SourceCard

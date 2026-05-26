@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Icon, LangAvatar, Wordmark } from '@/components/ui'
-import { ACTIVE_LANG } from '@/lib/mock-data'
+import { useActiveLang } from '@/lib/hooks/useActiveLang'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', href: '/',          icon: 'home'      as const },
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
 
 export default function DesktopSidebar() {
   const pathname = usePathname()
+  const { lang } = useActiveLang()
 
   const activeId = pathname === '/' ? 'dashboard'
     : NAV_ITEMS.find(it => it.href !== '/' && pathname.startsWith(it.href))?.id ?? ''
@@ -43,13 +44,13 @@ export default function DesktopSidebar() {
         padding: '10px', background: T.paperHi,
         border: `1px solid ${T.lineSoft}`, borderRadius: 12,
       }}>
-        <LangAvatar letter={ACTIVE_LANG.letter} color={ACTIVE_LANG.color} size={32} />
+        <LangAvatar letter={lang.letter} color={lang.color} size={32} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 9.5, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Studying
           </div>
           <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 14, fontWeight: 600, color: T.ink, lineHeight: 1.1 }}>
-            {ACTIVE_LANG.name}
+            {lang.name}
           </div>
         </div>
         <Icon name="chev-d" size={13} color={T.inkFaint} />

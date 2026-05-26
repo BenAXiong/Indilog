@@ -19,7 +19,9 @@ export default function ActionBar({
     <div style={{
       position: 'fixed', bottom: 100, left: 0, right: 0,
       display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
-      background: T.paper, borderTop: `1px solid ${T.lineSoft}`, zIndex: 40,
+      background: 'rgba(251,245,231,0.85)',
+      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+      zIndex: 40,
     }}>
       <button
         onClick={onPrev} disabled={prevDisabled}

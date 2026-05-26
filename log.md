@@ -66,3 +66,24 @@
 | 2026-05-26 14:00 | REFACTOR | ScreenHeader — replaced CSS blob home icon with actual app icon.png. |
 | 2026-05-26 14:00 | PHASE COMPLETE | Learn L0–L3 — full study view for all 4 sources, collection creation, hub with progress. Merged feat/learn → main. |
 | 2026-05-26 14:10 | REFACTOR | Login page — replaced tagline and disclaimer text with --- placeholders (landing copy TBD). |
+| 2026-05-26 14:10 | REFACTOR | Rename Indivore → Indilog across layout.tsx, manifest.json, Wordmark.tsx, settings page, en.ts, alt texts. |
+| 2026-05-26 14:10 | FEATURE | Login page — triple logo size (64→192px). |
+| 2026-05-26 14:10 | REFACTOR | Learn hub — remove dialect pills and per-card dialect label; source cards are now dialect-agnostic. |
+| 2026-05-26 14:10 | FEATURE | Settings — replace 3-lang language selector with single-row trigger + bottom-sheet picker covering all 16 languages; dialect step shown for multi-dialect languages; saves active_study_language + default_dialect together. |
+| 2026-05-26 14:10 | FIX | StudyView — dialect now always sourced from profile (Settings), never from stale localStorage; fixes "no content" bug after dialect change in Settings. |
+| 2026-05-26 14:10 | FEATURE | useActiveLang hook + getActiveLangServer — all app pages (Learn, Capture, Review, Dict, Translate, Dashboard, DesktopSidebar) now wire eyebrow/header to real profile language and dialect instead of ACTIVE_LANG mock. |
+| 2026-05-26 14:10 | FIX | StudyView Lessons — DB stores twelve categories as "Level X Lesson Y"; geometry titles ('你好嗎？' etc.) were never the right key. Now builds category directly from level+lesson state. Also removed bogus geometry fetch for twelve and added missing `lesson` dep to curriculum effect. |
+| 2026-05-26 14:30 | FIX | StudyView — grmpts itemKey changed from `pattern` to `${level}::${pattern}` for per-level-per-pattern completion tracking (~41 items vs 11). |
+| 2026-05-26 14:30 | FEATURE | Learn hub — dynamic totals from geometry API (grmpts = sum of level×pattern pairs; essay/dialogue respect dialect availability). "Next: <label>" shown inline on each collection card (L1·3 for Lessons, L2·名詞 for Patterns, truncated title_zh for Essays/Dialogs). |
+| 2026-05-27 00:00 | FEATURE | Grmpts difficulty level names — 初級/中級/中高級/高級 in ContentSheet tabs, StudyView pill, and hub Next: labels. ContentSheet done-check key fixed to match level::pattern format. |
+| 2026-05-27 00:30 | FEATURE | Learn ContentSheet — Lessons redesigned: 4 difficulty tabs → 3 stage buttons (第一階…) → 2×5 lesson grid with large numbers and full titles. Patterns/Essays/Dialogs get sequential item numbers. Essay/Dialog groups renamed 初級/中級/高級. |
+| 2026-05-27 00:30 | FIX | Patterns sort fixed (numeric 1,2,3… not alphabetical 1,10,11…) in ContentSheet, StudyView navOrder, and learn hub. |
+| 2026-05-27 00:30 | FEATURE | Hub Next: labels now include difficulty — Lessons: 初級·第一階·3; Patterns: 初級·1 名詞; Essays/Dialogs: 初級·1·問候… |
+| 2026-05-27 01:00 | FIX | Lessons ContentSheet: 12-col CSS grid — 4 difficulty labels each span 3 cols (aligned above their stages); 12 numbered stage buttons in row below; 2×5 lesson grid kept, cards updated with big number + ab/zh title rows (ab blank until scraped). |
+| 2026-05-27 01:15 | FIX | Lessons ContentSheet: outlined border on difficulty labels (aligns with 3 stages below); lesson card numbers increased to 26px and vertically centered. |
+| 2026-05-27 01:30 | FIX | BottomNav: capture button translate-y 18→10px. ActionBar: bottom 64→100px (clears full navbar). StudyView header: sticky. StudyCard: category pill removed, action buttons moved to header row, bottom action row eliminated (~50px height reduction per card). |
+| 2026-05-27 02:00 | FIX | ActionBar: glass blur background (rgba + backdropFilter), removed borderTop. StudyView header: switched position:sticky → position:fixed (top/left/right 0) with same glass blur; card scroll area top padding 14→66px to compensate. |
+| 2026-05-27 02:00 | CONFIG | Investigated essay/dialogue corpus count anomaly (73/61 vs expected 60). Root cause traced to geometry_crystallizer.py max_len alignment + vocabulary TIDs scraped alongside sentence TIDs + duplicate title_zh from first-sentence heuristic. Documented in plan.md "Corpus Data Issues" section with Citadel checklist. |
+| 2026-05-27 02:30 | FEATURE | Learn hub SourceCard: Next: label right-aligned (justifyContent: space-between). |
+| 2026-05-27 02:30 | FEATURE | HubSearch component — bottom-sheet from Learn hub header (search + settings in ScreenHeader right slot). Titles tab searches all 4 sources by label/sublabel, tap writes localStorage + navigates. Sentences tab debounced dict API search. tsc clean. |
+| 2026-05-27 03:00 | REFACTOR | StudyCard overhaul: 2-column layout (text left, 3 buttons stacked right); index number floated outside card top-left; ab+zh copy merged into single button; divider retained; vertical centering; buttons round (borderRadius:999). tsc clean. |

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { ACTIVE_LANG } from '@/lib/mock-data'
+import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import { createItem } from '@/lib/db/items'
 
 type WordResult = {
@@ -116,7 +116,7 @@ function SentenceCard({ s }: { s: SentenceResult }) {
 
 // ─── Main page ────────────────────────────────────────────────
 export default function DictionaryPage() {
-  const lang = ACTIVE_LANG
+  const { lang, dialectLabel } = useActiveLang()
   const router = useRouter()
 
   const [q, setQ] = useState('')
@@ -181,7 +181,7 @@ export default function DictionaryPage() {
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <ScreenHeader title="Dictionary" langName={lang.name} langDialect={lang.dialect} />
+      <ScreenHeader title="Dictionary" langName={lang.name} langDialect={dialectLabel} />
 
       {/* DB error banner */}
       {dbError && (

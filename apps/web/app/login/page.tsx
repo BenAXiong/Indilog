@@ -25,7 +25,7 @@ export default function LoginPage() {
       padding: '0 24px',
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, maxWidth: 320, width: '100%' }}>
-        <Image src="/icon.png" alt="Indivore" width={64} height={64} priority />
+        <Image src="/icon.png" alt="Indilog" width={192} height={192} priority />
 
         <p style={{ fontSize: 14, color: T.inkFaint, letterSpacing: '0.1em' }}>---</p>
 

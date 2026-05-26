@@ -84,7 +84,7 @@ const en = {
   'settings.goalCards':   'cards',
   'settings.account':     'Account',
   'settings.export':      'Export notebook',
-  'settings.about':       'About Indivore',
+  'settings.about':       'About Indilog',
   'settings.signOut':     'Sign out',
   'settings.synced':      'synced',
 
