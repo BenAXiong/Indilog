@@ -8,11 +8,16 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
+    const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error && user) {
+      // Upsert profile row — no-op if it already exists
+      await supabase.from('ind_profiles').upsert(
+        { user_id: user.id },
+        { onConflict: 'user_id', ignoreDuplicates: true }
+      )
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/error`)
+  return NextResponse.redirect(`${origin}/login?error=auth`)
 }
