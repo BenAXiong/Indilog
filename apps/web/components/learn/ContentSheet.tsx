@@ -194,7 +194,8 @@ function TwelveContent(p: {
             gridColumn: 'span 3', textAlign: 'center',
             fontSize: 10, fontWeight: 700, color: T.inkMute,
             fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.06em',
-            paddingBottom: 5,
+            padding: '3px 4px 5px', borderRadius: 6,
+            border: `1px solid ${T.lineSoft}`,
           }}>
             {d.name}
           </div>
