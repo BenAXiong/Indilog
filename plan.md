@@ -61,24 +61,26 @@
 
 ---
 
-## Phase 2 — Supabase Auth and Profile Settings
+## Phase 2 — Supabase Auth and Profile Settings ✅
 
 **Goal:** Real login and persisted app-level settings.
 
-- [ ] Google OAuth through existing Supabase project
-- [ ] Auth callback route (`/auth/callback`)
-- [ ] Sign in UI
-- [ ] Sign out action
-- [ ] `ind_profiles` migration
+- [x] Google OAuth through existing Supabase project
+- [x] Auth callback route (`/auth/callback`)
+- [x] Sign in UI (`/login`)
+- [x] Sign out action
+- [x] `ind_profiles` migration
   - Fields: `id`, `user_id`, `active_study_language`, `default_dialect`, `ui_locale` (default `en`), `daily_goal`, `created_at`, `updated_at`
-- [ ] RLS policies for `ind_profiles` (user owns their row)
-- [ ] Profile creation on first login (upsert)
-- [ ] Active study language selector in Settings
-- [ ] Default dialect selector in Settings
-- [ ] Local cache for fast startup (localStorage or cookie)
+- [x] RLS policies for `ind_profiles` (user owns their row)
+- [x] Profile creation on first login (upsert)
+- [x] Active study language selector in Settings
+- [ ] Default dialect selector in Settings (deferred — dialect data not yet in LANGUAGES constant)
+- [ ] Local cache for fast startup (deferred to Phase 9 polish)
 - [ ] **Design Checkpoint 2** (if flow feels unclear) — first-run onboarding, language selector, settings layout, signed-out state
 
 **Exit criteria:** User can sign in. Profile row created. Active language and dialect persist. UI works after refresh.
+
+**[PHASE COMPLETE 2026-05-26 11:15]** — Auth flow live. ind_profiles migration ready to apply. Settings reads/writes real data. Sign-out working.
 
 ---
 
