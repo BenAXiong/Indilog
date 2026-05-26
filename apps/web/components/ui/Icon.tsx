@@ -7,7 +7,7 @@ type IconName =
   | 'bookmark' | 'bookmarkF' | 'pin' | 'settings' | 'user' | 'pen'
   | 'sparkle' | 'tree' | 'leaf' | 'mountain' | 'wave' | 'filter'
   | 'play' | 'card' | 'note' | 'word' | 'logout' | 'library'
-  | 'layers' | 'globe' | 'archive' | 'share'
+  | 'layers' | 'globe' | 'archive' | 'share' | 'x'
 
 type IconProps = {
   name: IconName
@@ -63,6 +63,7 @@ export default function Icon({ name, size = 22, color = 'currentColor', strokeWi
     case 'globe':     return <svg {...p}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
     case 'archive':   return <svg {...p}><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8M10 13h4"/></svg>
     case 'share':     return <svg {...p}><path d="M12 3v13M8 7l4-4 4 4M5 14v5a1 1 0 001 1h12a1 1 0 001-1v-5"/></svg>
+    case 'x':         return <svg {...p}><path d="M18 6L6 18M6 6l12 12"/></svg>
     default:          return null
   }
 }
