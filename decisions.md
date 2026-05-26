@@ -6,6 +6,18 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-P1-01 · No separate Library route in Phase 1
+**Decision:** The design handoff showed "saved items" content but no explicit Library tab in the BottomNav. Recent captured material is surfaced in the Dashboard "Recent Captures" section. No `/library` route created in Phase 1; if a dedicated Library screen is needed it can be added in Phase 3 alongside real saved-material CRUD.
+**Date:** 2026-05-26
+
+---
+
+### DEC-P1-02 · i18n strings not threaded through t() in Phase 1
+**Decision:** All Phase 1 pages use inline English strings directly rather than routing through the `t()` i18n helper. The full English key catalog (`lib/i18n/en.ts`) contains all keys, so threading is a mechanical Phase 9 task. Doing it in Phase 1 would add noise with zero user-visible benefit since the only supported locale is English.
+**Date:** 2026-05-26
+
+---
+
 ### DEC-001 · Dictionary API contract
 **Question:** What is the URL and response schema of the "existing Vercel SQLite dictionary API"?
 **Needed for:** Phase 5 (Dictionary integration, token chips in Capture)
@@ -34,11 +46,9 @@ Tracks open questions and resolved architectural/product decisions.
 
 ---
 
-### DEC-005 · Existing Supabase project
-**Question:** Is there an existing Supabase project to connect to, or should a new one be created?
-**Needed for:** Phase 2 (auth setup, migrations)
-**Blocking:** Yes for Phase 2.
-**Action:** Ask user for the Supabase project URL and anon key, or confirm a new project should be created.
+### DEC-R11 · Supabase project
+**Decision:** Existing Supabase project. Local instance running at `localhost:3004` for dev. Production URL set in Vercel env vars. Confirmed 2026-05-25.
+**Date:** 2026-05-25
 
 ---
 

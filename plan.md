@@ -28,34 +28,36 @@
 
 ---
 
-## Phase 1 — Static UI Shell (Mock Data)
+## Phase 1 — Static UI Shell (Mock Data) ✅
 
 **Goal:** Build the full visible structure before backend wiring.
 
-- [ ] Dashboard home route with mock stats
-- [ ] Five-tab bottom navigation:
-  - [ ] Learn tab
-  - [ ] Review tab
-  - [ ] Capture tab (central, visually emphasized / primary)
-  - [ ] Dictionary tab
-  - [ ] Translate tab
-- [ ] Active language chip in header/nav
-- [ ] Settings / profile entry point
-- [ ] Usable desktop fallback layout
-- [ ] Empty states for all tabs
-- [ ] Mock saved items list
-- [ ] Static screens:
-  - [ ] Dashboard
-  - [ ] Learn placeholder
-  - [ ] Review (static)
-  - [ ] Capture (static form)
-  - [ ] Dictionary (static results)
-  - [ ] Translate (static panels)
-  - [ ] Settings / language selector
-  - [ ] Library / saved-material view
-- [ ] **Design Checkpoint 1** — reconcile against design: nav shape, dashboard hierarchy, Capture prominence, card spacing, typography, color tokens, mobile touch targets, desktop layout
+- [x] Dashboard home route with mock stats
+- [x] Five-tab bottom navigation:
+  - [x] Learn tab
+  - [x] Review tab
+  - [x] Capture tab (central, visually emphasized / primary)
+  - [x] Dictionary tab
+  - [x] Translate tab
+- [x] Active language chip in header/nav
+- [x] Settings / profile entry point
+- [x] Usable desktop fallback layout
+- [x] Empty states for all tabs
+- [x] Mock saved items list (Recent Captures section on Dashboard)
+- [x] Static screens:
+  - [x] Dashboard
+  - [x] Learn placeholder
+  - [x] Review (static)
+  - [x] Capture (static form)
+  - [x] Dictionary (static results)
+  - [x] Translate (static panels)
+  - [x] Settings / language selector
+  - [x] Library / saved-material view (merged into Dashboard recent captures — see DEC-P1-01)
+- [x] **Design Checkpoint 1** — reconcile against design: nav shape, dashboard hierarchy, Capture prominence, card spacing, typography, color tokens, mobile touch targets, desktop layout
 
 **Exit criteria:** App feels navigable with mock data. Mobile is primary. Desktop usable. No backend half-wired.
+
+**[PHASE COMPLETE 2026-05-26]** — All 7 screens built with mock data. Shared UI component library (Icon, Chip, Card, Button, SectionHead, LangAvatar, Stat, Toast, Wordmark). Desktop sidebar layout. Build clean (11 routes, 0 type errors).
 
 ---
 

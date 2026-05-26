@@ -1,0 +1,23 @@
+// Design tokens for inline styles — mirrors tailwind.config.ts values
+export const T = {
+  cream:      '#F5EEDF',
+  paper:      '#FBF5E7',
+  paperHi:    '#FFFCF3',
+  line:       '#E6DAC0',
+  lineSoft:   '#EFE5CF',
+  ink:        '#2B221A',
+  inkSoft:    '#5C4E3F',
+  inkMute:    '#8B7B68',
+  inkFaint:   '#B5A691',
+  crimson:    '#A8351F',
+  crimsonDp:  '#7C2113',
+  crimsonHi:  '#C75038',
+  crimsonBg:  '#F6E0D6',
+  terra:      '#D2773A',
+  terraBg:    '#F6E2CE',
+  amber:      '#D9A12F',
+  amberBg:    '#F6E5BA',
+  sage:       '#7B8C46',
+  sageBg:     '#E4E7CC',
+  sageDp:     '#566234',
+} as const
