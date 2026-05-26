@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, Stat, SectionHead, LangAvatar, Icon, Wordmark } from '@/components/ui'
-import { ACTIVE_LANG, MOCK_STATS, RECENT_CAPTURES } from '@/lib/mock-data'
+import { ACTIVE_LANG } from '@/lib/mock-data'
+import { getDashboardStats } from '@/lib/db/stats-server'
 
 // Deterministic heatmap — same algorithm as design handoff
 function buildHeatmap(weeks: number) {
@@ -39,7 +40,7 @@ function buildHeatmap(weeks: number) {
 const INTENSITY = [T.lineSoft, '#F1D8C6', '#E5A88E', '#C66848', T.crimsonDp]
 
 function ActivityHeatmap() {
-  const weeks = MOCK_STATS.heatmapWeeks
+  const weeks = 18
   const data = buildHeatmap(weeks)
   const activeDays = data.flat().filter(v => v > 0).length
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May']
@@ -121,9 +122,9 @@ function ActivityHeatmap() {
   )
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const lang = ACTIVE_LANG
-  const stats = MOCK_STATS
+  const stats = await getDashboardStats()
 
   return (
     <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -196,12 +197,12 @@ export default function DashboardPage() {
 
       {/* Stats grid */}
       <div>
-        <SectionHead title="This week" />
+        <SectionHead title="Overview" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Stat value={stats.captures}           label="Captures"   icon="capture" accent={T.crimson} />
-          <Stat value={stats.reviewed}            label="Reviewed"   icon="card"    accent={T.sage} />
-          <Stat value={stats.dueToday}            label="Due today"  icon="review"  accent={T.amber} />
-          <Stat value={stats.lessons.done} suffix={`of ${stats.lessons.total}`} label="Lessons" icon="learn" accent={T.terra} />
+          <Stat value={stats.capturedTotal} label="Captures"  icon="capture" accent={T.crimson} />
+          <Stat value={stats.reviewedToday} label="Reviewed"  icon="card"    accent={T.sage} />
+          <Stat value={stats.dueCount}      label="Due today" icon="review"  accent={T.amber} />
+          <Stat value={stats.capturedToday} label="Today"     icon="learn"   accent={T.terra} />
         </div>
       </div>
 
@@ -213,12 +214,21 @@ export default function DashboardPage() {
 
       {/* Recent captures */}
       <div>
-        <SectionHead title="Recent captures" action="See all" />
+        <SectionHead title="Recent captures" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {RECENT_CAPTURES.map((item) => {
-            const typeColor = item.type === 'word' ? T.crimson : item.type === 'sentence' ? T.sage : T.amber
-            const typeBg    = item.type === 'word' ? T.crimsonBg : item.type === 'sentence' ? T.sageBg : T.amberBg
+          {stats.recentItems.length === 0 ? (
+            <div style={{
+              padding: '24px 16px', textAlign: 'center',
+              background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14,
+            }}>
+              <div style={{ fontSize: 13, color: T.inkSoft }}>Nothing captured yet.</div>
+              <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>Tap Capture to start your notebook.</div>
+            </div>
+          ) : stats.recentItems.map((item) => {
+            const typeColor  = item.type === 'word' ? T.crimson : item.type === 'sentence' ? T.sage : T.amber
+            const typeBg     = item.type === 'word' ? T.crimsonBg : item.type === 'sentence' ? T.sageBg : T.amberBg
             const typeBorder = item.type === 'word' ? '#EFCAB8' : item.type === 'sentence' ? '#D2D8AE' : '#EBD49A'
+            const when = new Date(item.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
             return (
               <div key={item.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
@@ -232,10 +242,10 @@ export default function DashboardPage() {
                     fontSize: 15, fontWeight: 500, color: T.ink,
                     display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
-                    {item.term}
+                    {item.text}
                   </span>
                   <span style={{ fontSize: 12, color: T.inkSoft, display: 'block', marginTop: 2 }}>
-                    {item.gloss}
+                    {item.language}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
@@ -249,7 +259,7 @@ export default function DashboardPage() {
                     {item.type}
                   </span>
                   <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>
-                    {item.when}
+                    {when}
                   </span>
                 </div>
               </div>
