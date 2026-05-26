@@ -183,101 +183,94 @@ function TwelveContent(p: {
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Stage selector — all 12 stages grouped under difficulty labels */}
-      <div style={{ padding: '8px 18px 0', flexShrink: 0 }}>
-        {LESSON_DIFFICULTIES.map((d) => (
-          <div key={d.name} style={{ marginBottom: 8 }}>
-            {/* Full-width difficulty label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-              <span style={{
-                fontSize: 10, fontWeight: 700, color: T.inkMute,
-                fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.07em',
-                whiteSpace: 'nowrap',
-              }}>
-                {d.name}
-              </span>
-              <div style={{ flex: 1, height: 1, background: T.lineSoft }} />
-            </div>
-            {/* Stage buttons — numbered */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              {d.levels.map(lv => {
-                const active = p.activeLevel === lv
-                return (
-                  <button key={lv} onClick={() => p.setActiveLevel(lv)} style={{
-                    flex: 1, height: 28, borderRadius: 6,
-                    background: active ? T.crimson : T.paperHi,
-                    border: `1px solid ${active ? T.crimsonDp : T.line}`,
-                    color: active ? '#fff' : T.inkSoft,
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                  }}>
-                    {lv}
-                  </button>
-                )
-              })}
-            </div>
+      {/* 12-col grid: difficulty labels (span 3) + stage buttons (1 each) */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)',
+        columnGap: 4, padding: '10px 18px 0', flexShrink: 0,
+      }}>
+        {/* Row 1 — difficulty labels, each spanning 3 stage columns */}
+        {LESSON_DIFFICULTIES.map(d => (
+          <div key={d.name} style={{
+            gridColumn: 'span 3', textAlign: 'center',
+            fontSize: 10, fontWeight: 700, color: T.inkMute,
+            fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.06em',
+            paddingBottom: 5,
+          }}>
+            {d.name}
           </div>
         ))}
-      </div>
-
-      <div style={{ height: 1, background: T.lineSoft, margin: '6px 18px 0', flexShrink: 0 }} />
-
-      {/* Lesson cards */}
-      <div style={{
-        flex: 1, overflowY: 'auto', padding: '8px 18px 24px',
-        display: 'flex', flexDirection: 'column', gap: 6,
-      }}>
-        {p.geo.classes.map(cls => {
-          const key       = `Level ${p.activeLevel} Lesson ${cls}`
-          const done      = p.completions.has(key)
-          const isCurrent = p.activeLevel === p.currentLevel && String(cls) === p.currentLesson
-          const titleZh   = p.geo!.titles[p.activeLevel]?.[String(cls)] ?? ''
+        {/* Row 2 — stage buttons, 1 per column */}
+        {p.geo.levels.map(lv => {
+          const active = p.activeLevel === lv
           return (
-            <button
-              key={cls}
-              onClick={() => p.onSelect(p.activeLevel, String(cls))}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '10px 14px', borderRadius: 10,
-                background: isCurrent ? T.crimsonBg : T.paperHi,
-                border: `1.5px solid ${isCurrent ? T.crimson : T.lineSoft}`,
-                cursor: 'pointer', fontFamily: 'inherit',
-                position: 'relative', textAlign: 'left', width: '100%',
-              }}
-            >
-              {/* Lesson number */}
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 22, fontWeight: 700, flexShrink: 0, width: 28,
-                textAlign: 'right', lineHeight: 1,
-                color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink,
-              }}>
-                {cls}
-              </span>
-
-              {/* Title rows: ab (blank) + zh */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <span style={{
-                  fontSize: 13.5, lineHeight: 1.3, display: 'block',
-                  color: T.inkFaint, minHeight: '1.2em',
-                }}>
-                  {/* aboriginal title — blank until scraped */}
-                </span>
-                <span style={{
-                  fontSize: 13.5, lineHeight: 1.3, display: 'block',
-                  color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkSoft,
-                }}>
-                  {titleZh}
-                </span>
-              </div>
-
-              {done && !isCurrent && (
-                <div style={{ position: 'absolute', top: 7, right: 10 }}>
-                  <Icon name="check" size={11} strokeWidth={2.5} color={T.inkFaint} />
-                </div>
-              )}
+            <button key={lv} onClick={() => p.setActiveLevel(lv)} style={{
+              height: 28, borderRadius: 5, padding: 0,
+              background: active ? T.crimson : T.paperHi,
+              border: `1px solid ${active ? T.crimsonDp : T.line}`,
+              color: active ? '#fff' : T.inkSoft,
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              {lv}
             </button>
           )
         })}
+      </div>
+
+      <div style={{ height: 1, background: T.lineSoft, margin: '8px 18px 0', flexShrink: 0 }} />
+
+      {/* Lesson grid — 2 columns of 5 */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {p.geo.classes.map(cls => {
+            const key       = `Level ${p.activeLevel} Lesson ${cls}`
+            const done      = p.completions.has(key)
+            const isCurrent = p.activeLevel === p.currentLevel && String(cls) === p.currentLesson
+            const titleZh   = p.geo!.titles[p.activeLevel]?.[String(cls)] ?? ''
+            return (
+              <button
+                key={cls}
+                onClick={() => p.onSelect(p.activeLevel, String(cls))}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  padding: '10px 10px', borderRadius: 10,
+                  background: isCurrent ? T.crimsonBg : T.paperHi,
+                  border: `1.5px solid ${isCurrent ? T.crimson : T.lineSoft}`,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  position: 'relative', textAlign: 'left',
+                }}
+              >
+                <span style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: 20, fontWeight: 700, lineHeight: 1, flexShrink: 0,
+                  color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink,
+                }}>
+                  {cls}
+                </span>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{
+                    fontSize: 13, lineHeight: 1.3, display: 'block',
+                    color: T.inkFaint, minHeight: '1.2em',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {/* aboriginal title — blank until scraped */}
+                  </span>
+                  <span style={{
+                    fontSize: 13, lineHeight: 1.3, display: 'block',
+                    color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkSoft,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {titleZh}
+                  </span>
+                </div>
+                {done && !isCurrent && (
+                  <div style={{ position: 'absolute', top: 5, right: 7 }}>
+                    <Icon name="check" size={10} strokeWidth={2.5} color={T.inkFaint} />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
