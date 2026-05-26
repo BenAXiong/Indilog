@@ -106,17 +106,13 @@ Before adding any feature, check the explicit out-of-scope list in the workflow 
 
 ## Log entry format
 
-```
-[YYYY-MM-DD HH:MM] [TYPE] Short description
-```
+Table columns: `Timestamp | Type | Description`
+
+Timestamp format: `YYYY-MM-DD HH:MM` — use the **actual git commit timestamp** (`git log -1 --format="%ai"`), not a made-up or sequential time. Commit granularly (per screen, per component, per meaningful change) so entries get distinct real timestamps.
 
 Types: `FEATURE`, `FIX`, `SCHEMA`, `DECISION`, `PHASE COMPLETE`, `CHECKPOINT`, `CONFIG`, `REFACTOR`
 
-Example:
-```
-[2026-05-25 14:30] [FEATURE] Added five-tab navigation with Capture as primary tab
-[2026-05-25 14:45] [SCHEMA] Created ind_profiles migration with RLS
-```
+**Rule:** Commit before logging. Get the real timestamp from git. Never invent timestamps.
 
 ---
 
@@ -127,5 +123,7 @@ Example:
 - Do not skip design checkpoints when a new major screen is being built.
 - Do not make silent decisions about translation pairs, dictionary API shape, or auth flow — these belong in `decisions.md`.
 - Do not end a session with `plan.md` still showing tasks that were completed in that session.
+- Do not invent log timestamps — always derive them from `git log -1 --format="%ai"` after committing.
+- Do not batch all work into one commit per phase — commit per screen or meaningful unit so log entries get real distinct timestamps.
 - Do not start a new phase without running the phase-start confirmation gate.
 - Do not self-resolve an ambiguity and keep coding — stop, ask, log the answer.
