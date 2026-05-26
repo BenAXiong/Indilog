@@ -50,12 +50,12 @@ export async function getDashboardStats(language?: string): Promise<DashboardSta
       .order('created_at', { ascending: false })
       .limit(5),
 
-    // Due flashcards count
+    // Due flashcards count (null due_at = new card, immediately due)
     supabase
-      .from('ind_reviews')
-      .select('flashcard_id', { count: 'exact', head: true })
+      .from('ind_flashcards')
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .lte('due_at', new Date().toISOString()),
+      .or(`due_at.is.null,due_at.lte.${new Date().toISOString()}`),
   ])
 
   // Streak: count consecutive days with captured_count > 0 ending today

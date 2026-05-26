@@ -49,10 +49,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .limit(5),
 
     supabase
-      .from('ind_reviews')
-      .select('flashcard_id', { count: 'exact', head: true })
+      .from('ind_flashcards')
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .lte('due_at', now),
+      .or(`due_at.is.null,due_at.lte.${now}`),
 
     supabase
       .from('ind_daily_stats')
