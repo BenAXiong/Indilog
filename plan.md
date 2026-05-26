@@ -120,25 +120,27 @@
 
 ---
 
-## Phase 4 — Capture / SeMi v0
+## Phase 4 — Capture / SeMi v0 ✅
 
 **Goal:** Capture as the core app workflow.
 
-- [ ] Large capture text input
-- [ ] Save type selector (word / sentence / note)
-- [ ] Active language display + override
-- [ ] Optional dialect field
-- [ ] Source selector + quick source creation inline
-- [ ] Speaker selector + quick speaker creation inline
-- [ ] Optional place-heard/seen field (separate from dialect)
-- [ ] Notes field
-- [ ] Save button with confirmation feedback
-- [ ] Edit-after-save behavior
-- [ ] Recent captures list below form
-- [ ] "Set this language as app default" action
-- [ ] **Design Checkpoint 3** — input prominence, action button placement, metadata drawer/bottom sheet, source/speaker fields, place field, save confirmation, recent captures
+- [x] Large capture text input
+- [x] Save type selector (word / sentence / note)
+- [x] Active language display + override
+- [x] Optional dialect field
+- [x] Source selector + quick source creation inline
+- [x] Speaker selector + quick speaker creation inline
+- [x] Optional place-heard/seen field (separate from dialect)
+- [x] Notes field
+- [x] Save button with confirmation feedback
+- [x] Edit-after-save behavior
+- [x] Recent captures list below form
+- [x] "Set this language as app default" action
+- [ ] **Design Checkpoint 3** — deferred (core flow works; polish in Phase 9)
 
 **Exit criteria:** User can capture quickly. Form does not feel like a long form. Saved items appear in Library/Review.
+
+**[PHASE COMPLETE 2026-05-26 11:45]** — Full capture workflow live. Dialect, source, speaker, place, notes. Recent captures with tap-to-edit. Edit mode with Update/Cancel. Set-default language action. tsc clean.
 
 ---
 
