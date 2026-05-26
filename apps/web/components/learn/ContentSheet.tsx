@@ -232,7 +232,7 @@ function TwelveContent(p: {
                 key={cls}
                 onClick={() => p.onSelect(p.activeLevel, String(cls))}
                 style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                  display: 'flex', alignItems: 'center', gap: 8,
                   padding: '10px 10px', borderRadius: 10,
                   background: isCurrent ? T.crimsonBg : T.paperHi,
                   border: `1.5px solid ${isCurrent ? T.crimson : T.lineSoft}`,
@@ -242,7 +242,7 @@ function TwelveContent(p: {
               >
                 <span style={{
                   fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: 20, fontWeight: 700, lineHeight: 1, flexShrink: 0,
+                  fontSize: 26, fontWeight: 700, lineHeight: 1, flexShrink: 0,
                   color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink,
                 }}>
                   {cls}
