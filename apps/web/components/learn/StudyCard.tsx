@@ -45,16 +45,31 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
       border: `1px solid ${T.lineSoft}`, padding: '14px 16px 12px',
       boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 2px rgba(80,40,20,0.04)',
     }}>
-      {/* Header: index + dialect */}
+      {/* Header: index + action buttons */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <span style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 10, color: T.inkFaint }}>{index}</span>
-        <span style={{
-          fontSize: 11, color: T.inkMute,
-          background: T.paper, border: `1px solid ${T.lineSoft}`,
-          borderRadius: 999, padding: '1px 7px',
-        }}>
-          {row.category}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {row.audio_url && (
+            <button onClick={() => onPlay(row.audio_url!)} style={btnStyle}>
+              <Icon name="speaker" size={15} strokeWidth={1.8} />
+            </button>
+          )}
+          <button onClick={() => copy(row.ab, 'ab')} style={btnStyle}>
+            <Icon name={copiedAb ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
+          </button>
+          {row.zh && (
+            <button onClick={() => copy(row.zh, 'zh')} style={btnStyle}>
+              <Icon name={copiedZh ? 'check' : 'note'} size={15} strokeWidth={1.8} />
+            </button>
+          )}
+          <button
+            onClick={handleSave}
+            style={{ ...btnStyle, color: saved ? T.crimson : T.inkMute }}
+          >
+            <Icon name={saved ? 'bookmarkF' : 'bookmark'} size={16} strokeWidth={1.8}
+              color={saved ? T.crimson : T.inkMute} />
+          </button>
+        </div>
       </div>
 
       {/* ab text — tokenized */}
@@ -85,7 +100,7 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
           onClick={() => zhMode !== 'visible' && setZhRevealed(v => !v)}
           style={{
             fontFamily: 'Newsreader, Georgia, serif', fontSize: 15,
-            color: T.inkSoft, lineHeight: 1.5, marginBottom: 12,
+            color: T.inkSoft, lineHeight: 1.5,
             filter: zhBlurred ? 'blur(5px)' : 'none',
             cursor: zhMode !== 'visible' ? 'pointer' : 'default',
             userSelect: zhBlurred ? 'none' : 'text',
@@ -98,32 +113,6 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
         </div>
       )}
 
-      {/* Action row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {row.audio_url && (
-          <button onClick={() => onPlay(row.audio_url!)} style={btnStyle}>
-            <Icon name="speaker" size={15} strokeWidth={1.8} />
-          </button>
-        )}
-        <button onClick={() => copy(row.ab, 'ab')} style={btnStyle}>
-          <Icon name={copiedAb ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
-        </button>
-        {row.zh && (
-          <button onClick={() => copy(row.zh, 'zh')} style={btnStyle}>
-            <Icon name={copiedZh ? 'check' : 'note'} size={15} strokeWidth={1.8} />
-          </button>
-        )}
-        <button
-          onClick={handleSave}
-          style={{ ...btnStyle, marginLeft: 'auto', color: saved ? T.crimson : T.inkMute }}
-        >
-          <Icon
-            name={saved ? 'bookmarkF' : 'bookmark'}
-            size={16} strokeWidth={1.8}
-            color={saved ? T.crimson : T.inkMute}
-          />
-        </button>
-      </div>
     </div>
   )
 }

@@ -35,7 +35,7 @@ export default function BottomNav() {
                 key={tab.id}
                 href={tab.href}
                 aria-label={tab.label}
-                className="flex items-center justify-center rounded-full text-white -translate-y-[18px] transition-all"
+                className="flex items-center justify-center rounded-full text-white -translate-y-[10px] transition-all"
                 style={{
                   width: 60, height: 60,
                   background: active ? T.crimsonDp : T.crimson,

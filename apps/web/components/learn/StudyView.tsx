@@ -286,7 +286,8 @@ export default function StudyView({ source }: Props) {
     <div style={{ position: 'relative' }}>
       {/* Custom header */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 18px 0',
+        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 18px 10px',
+        position: 'sticky', top: 0, background: T.paper, zIndex: 10,
       }}>
         <Link href="/learn" style={{
           width: 34, height: 34, borderRadius: 999, flexShrink: 0,

@@ -17,7 +17,7 @@ export default function ActionBar({
 }: Props) {
   return (
     <div style={{
-      position: 'fixed', bottom: 64, left: 0, right: 0,
+      position: 'fixed', bottom: 100, left: 0, right: 0,
       display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
       background: T.paper, borderTop: `1px solid ${T.lineSoft}`, zIndex: 40,
     }}>
