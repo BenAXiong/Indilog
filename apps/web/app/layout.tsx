@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="bg-cream text-ink font-sans antialiased">
+      <body className="bg-cream text-ink font-sans antialiased" suppressHydrationWarning>
         {children}
       </body>
     </html>
