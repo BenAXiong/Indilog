@@ -9,6 +9,7 @@ import {
 } from '@/lib/learn/lang-bridge'
 import { createItem } from '@/lib/db/items'
 import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/completions'
+import { getProfile, updateDefaultDialect } from '@/lib/db/profiles'
 import type { CurriculumRow } from '@/lib/learn/db'
 import Icon from '@/components/ui/Icon'
 import StudyCard from './StudyCard'
@@ -60,13 +61,20 @@ export default function StudyView({ source }: Props) {
     setZhModeState(savedZhMode)
     setLookupOnState(savedLookup)
 
-    // Dialect
+    // Dialect — localStorage first, then ind_profiles, then code default
     const savedDialect = localStorage.getItem(`iv_learn_dialect_${glid}`)
-    const defaultDialect = source === 'grmpts'
+    const hardDefault = source === 'grmpts'
       ? (getGrmptsDialect(langCode) ?? '')
       : (getDefaultDialect(langCode) ?? '')
-    const resolved = savedDialect || defaultDialect
-    setDialect(resolved)
+    if (savedDialect) {
+      setDialect(savedDialect)
+    } else {
+      getProfile().then(profile => {
+        const resolved = profile?.default_dialect || hardDefault
+        setDialect(resolved)
+        localStorage.setItem(`iv_learn_dialect_${glid}`, resolved)
+      }).catch(() => setDialect(hardDefault))
+    }
 
     // Selection
     if (source === 'twelve') {
@@ -156,6 +164,14 @@ export default function StudyView({ source }: Props) {
       : titleZh
 
   const completed = completions.has(itemKey)
+
+  // ── Dialect change (persists to localStorage + ind_profiles) ───────────────
+  const changeDialect = (d: string) => {
+    setDialect(d)
+    localStorage.setItem(`iv_learn_dialect_${glid}`, d)
+    updateDefaultDialect(d).catch(() => {})
+  }
+  void changeDialect // referenced below when dialect picker is wired up
 
   // ── Save settings to localStorage ──────────────────────────────────────────
   const setZhMode = (m: ZhMode) => {

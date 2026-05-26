@@ -6,6 +6,7 @@ export type DashboardStats = {
   capturedToday: number
   reviewedToday: number
   dueCount: number
+  lessonsCompleted: number
   recentItems: {
     id: string
     text: string
@@ -17,10 +18,10 @@ export type DashboardStats = {
 
 const EMPTY: DashboardStats = {
   streak: 0, capturedTotal: 0, capturedToday: 0,
-  reviewedToday: 0, dueCount: 0, recentItems: [],
+  reviewedToday: 0, dueCount: 0, lessonsCompleted: 0, recentItems: [],
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(language = 'ami'): Promise<DashboardStats> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return EMPTY
@@ -28,7 +29,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const today = new Date().toISOString().slice(0, 10)
   const now   = new Date().toISOString()
 
-  const [statsRes, totalRes, recentRes, dueRes, streakRows] = await Promise.all([
+  const [statsRes, totalRes, recentRes, dueRes, streakRows, lessonsRes] = await Promise.all([
     supabase
       .from('ind_daily_stats')
       .select('captured_count, reviewed_count')
@@ -60,6 +61,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(60),
+
+    supabase.rpc('get_completion_count', { p_user_id: user.id, p_language: language }),
   ])
 
   let streak = 0
@@ -76,10 +79,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   return {
     streak,
-    capturedTotal: totalRes.count ?? 0,
-    capturedToday: statsRes.data?.captured_count ?? 0,
-    reviewedToday: statsRes.data?.reviewed_count ?? 0,
-    dueCount: dueRes.count ?? 0,
-    recentItems: recentRes.data ?? [],
+    capturedTotal:    totalRes.count ?? 0,
+    capturedToday:    statsRes.data?.captured_count ?? 0,
+    reviewedToday:    statsRes.data?.reviewed_count ?? 0,
+    dueCount:         dueRes.count ?? 0,
+    lessonsCompleted: (lessonsRes.data as number | null) ?? 0,
+    recentItems:      recentRes.data ?? [],
   }
 }
