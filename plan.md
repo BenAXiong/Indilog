@@ -211,16 +211,18 @@
 
 **Goal:** Dashboard reflects real user activity.
 
-- [ ] Captured content count card
-- [ ] Reviewed flashcards count card
-- [ ] Current streak card
-- [ ] Due review count card
-- [ ] Learned lessons placeholder (static count or "coming soon")
-- [ ] Recent captures list
-- [ ] Quick resume action (e.g., "Start Review" if cards are due)
+- [x] Captured content count card
+- [x] Reviewed flashcards count card
+- [x] Current streak card
+- [x] Due review count card
+- [x] Learned lessons placeholder (static "—", dimmed)
+- [x] Recent captures list
+- [x] Quick resume action (contextual: "Start Review" if dueCount > 0, else "Capture")
 - [ ] **Design Checkpoint 7** — hierarchy, stats readability, recent capture cards, quick action placement, desktop layout
 
 **Exit criteria:** Dashboard opens cleanly. User understands what to do next. Main stats are real.
+
+**[PHASE COMPLETE 2026-05-26 13:15]** — All stats real. QuickAction CTA wired. Lessons placeholder present. tsc clean.
 
 ---
 
