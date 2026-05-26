@@ -50,3 +50,7 @@
 | 2026-05-26 12:11 | FEATURE | Dictionary page — debounced search, dialect filter, exact match card, sentence examples, partial matches list, save/capture actions, DB error banner. |
 | 2026-05-26 12:11 | FEATURE | Capture page — reads ?text= and ?notes= query params for prefill from Dictionary. |
 | 2026-05-26 12:11 | PHASE COMPLETE | Phase 5 — Dictionary integration. Awaiting ycm_master.db at packages/dictionary/. tsc clean. |
+| 2026-05-26 12:53 | FEATURE | Phase 6 — /api/translate route: FormoBank Modal inference proxy, Zod validation, 800-char limit, 45s timeout, mock fallback when INFERENCE_API_URL unset. |
+| 2026-05-26 12:53 | FEATURE | translation-pairs.ts — real FormoBank language codes (zho_Hant ↔ ami/tay/bnn/pyu/pwn/dru _Latn), getValidTargets helper. |
+| 2026-05-26 12:53 | FEATURE | Translate page — pair selectors (all 7 langs, invalid targets disabled), char counter, Translate button (Cmd+Enter), loading shimmer, copy/save actions. |
+| 2026-05-26 12:53 | PHASE COMPLETE | Phase 6 — Translation integration. Mock works; wire INFERENCE_API_URL + INFERENCE_API_KEY for live model. tsc clean. |

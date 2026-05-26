@@ -164,28 +164,24 @@
 
 ---
 
-## Phase 6 — Translation Integration
+## Phase 6 — Translation Integration ✅
 
-**Goal:** AI translation for supported pairs.
+**Goal:** FormoBank Modal inference for Traditional Chinese ↔ 6 Formosan languages.
 
-> **BLOCKED:** Supported translation pairs not enumerated. See `decisions.md`.
+- [x] `/api/translate` route — Modal inference proxy, Zod validation, mock fallback
+- [x] Supported-pair validation on the server (12 pairs: zho_Hant ↔ ami/tay/bnn/pyu/pwn/dru)
+- [x] Translate page — source/target selectors, input with char counter, output panel
+- [x] Unsupported targets clearly disabled in selector
+- [x] Copy output action
+- [x] Save output as captured item
+- [x] Loading shimmer and error states
+- [x] Translation direction independent of active study language
+- [ ] Capture-page Translate action — deferred to Phase 9 polish
+- [ ] **Design Checkpoint 5** — deferred
 
-- [ ] Translation API route / proxy (`apps/web/app/api/translate/`)
-- [ ] Supported-pair validation on the server
-- [ ] Standalone Translate page
-  - [ ] Source language selector
-  - [ ] Target language selector
-  - [ ] Input panel
-  - [ ] Output panel
-  - [ ] Disabled state for unsupported pairs (clear UI, not hidden)
-  - [ ] Copy output action
-  - [ ] Save output as captured item
-  - [ ] Loading and error states
-- [ ] Capture-page Translate action
-- [ ] Translation direction does NOT change app-wide active study language
-- [ ] **Design Checkpoint 5** — disabled state, selectors, panels, save action, mobile ergonomics
+**Exit criteria:** Supported pairs translate. Unsupported pairs disabled. Output saveable.
 
-**Exit criteria:** Supported pairs translate. Unsupported pairs clearly disabled. Output saveable.
+**[PHASE COMPLETE 2026-05-26 12:53]** — Mock works out of the box. Set INFERENCE_API_URL + INFERENCE_API_KEY in .env.local for live model. tsc clean.
 
 ---
 
