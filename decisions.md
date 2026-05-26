@@ -18,6 +18,12 @@ Tracks open questions and resolved architectural/product decisions.
 
 ---
 
+### DEC-P2-01 · /login is a dedicated page
+**Decision:** Sign-in UI lives at `/login` — a dedicated full-page route, not a modal. Unauthenticated users are redirected there by middleware. No design handoff exists for this screen; keep it minimal and on-brand (cream background, Wordmark, Google OAuth button).
+**Date:** 2026-05-26
+
+---
+
 ### DEC-001 · Dictionary API contract
 **Question:** What is the URL and response schema of the "existing Vercel SQLite dictionary API"?
 **Needed for:** Phase 5 (Dictionary integration, token chips in Capture)
@@ -49,6 +55,12 @@ Tracks open questions and resolved architectural/product decisions.
 ### DEC-R11 · Supabase project
 **Decision:** Existing Supabase project. Local instance running at `localhost:3004` for dev. Production URL set in Vercel env vars. Confirmed 2026-05-25.
 **Date:** 2026-05-25
+
+---
+
+### DEC-R05b · Supabase env vars (DEC-005 resolved)
+**Decision:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set in `.env.local` and in Vercel. Auth is unblocked. Resolved 2026-05-26.
+**Date:** 2026-05-26
 
 ---
 
