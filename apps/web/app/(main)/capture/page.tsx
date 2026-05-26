@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Button, SectionHead, Icon, Toast } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
@@ -35,18 +36,19 @@ function typeColor(t: string) {
 
 export default function CapturePage() {
   const lang = ACTIVE_LANG
+  const searchParams = useSearchParams()
   const [activeLanguage, setActiveLanguage] = useState(lang.code)
   const [activeLangName, setActiveLangName] = useState(lang.name)
   const [activeLangDialect, setActiveLangDialect] = useState(lang.dialect)
   const [userId, setUserId] = useState<string | null>(null)
 
-  // Form state
+  // Form state — prefill from ?text= and ?notes= (e.g. from Dictionary "Add context")
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [text, setText] = useState('')
-  const [type, setType] = useState<ItemType>('sentence')
+  const [text, setText] = useState(searchParams.get('text') ?? '')
+  const [type, setType] = useState<ItemType>((searchParams.get('text') ? 'word' : 'sentence') as ItemType)
   const [dialect, setDialect] = useState('')
   const [place, setPlace] = useState('')
-  const [notes, setNotes] = useState('')
+  const [notes, setNotes] = useState(searchParams.get('notes') ?? '')
   const [lookedUp, setLookedUp] = useState(false)
   const [showAllTokens, setShowAllTokens] = useState(false)
 
