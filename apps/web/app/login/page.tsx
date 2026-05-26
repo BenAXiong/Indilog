@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { T } from '@/lib/tokens'
-import { Wordmark } from '@/components/ui'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -25,7 +25,7 @@ export default function LoginPage() {
       padding: '0 24px',
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, maxWidth: 320, width: '100%' }}>
-        <Wordmark size={32} />
+        <Image src="/icon.png" alt="Indivore" width={64} height={64} priority />
 
         <p style={{ fontSize: 14, color: T.inkFaint, letterSpacing: '0.1em' }}>---</p>
 
