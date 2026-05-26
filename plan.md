@@ -84,37 +84,39 @@
 
 ---
 
-## Phase 3 — Private Data Schema and CRUD
+## Phase 3 — Private Data Schema and CRUD ✅
 
 **Goal:** Personal notebook data layer.
 
 ### Migrations and RLS
 
-- [ ] `ind_sources` — name, url, notes, language, user_id
-- [ ] `ind_speakers` — name, notes, user_id
-- [ ] `ind_items` — text, type (word/sentence/note), language, dialect, place_heard, notes, source_id, speaker_id, user_id
-- [ ] `ind_item_tokens` — item_id, token_text, definition_id (nullable), position
-- [ ] `ind_flashcards` — item_id, front, back, user_id
-- [ ] `ind_reviews` — flashcard_id, rating, reviewed_at, due_at, user_id
-- [ ] `ind_daily_stats` — user_id, date, captured_count, reviewed_count, streak_day
-- [ ] RLS on all tables (user owns their rows)
+- [x] `ind_sources` — name, url, notes, language, user_id
+- [x] `ind_speakers` — name, notes, user_id
+- [x] `ind_items` — text, type (word/sentence/note), language, dialect, place_heard, notes, source_id, speaker_id, user_id
+- [x] `ind_item_tokens` — item_id, token_text, definition_id (nullable), position
+- [x] `ind_flashcards` — item_id, front, back, user_id
+- [x] `ind_reviews` — flashcard_id, rating, reviewed_at, due_at, user_id
+- [x] `ind_daily_stats` — user_id, date, captured_count, reviewed_count, streak_day
+- [x] RLS on all tables (user owns their rows)
 
 ### Data helpers
 
-- [ ] `createItem` / `updateItem` / `deleteItem`
-- [ ] `listItems` (with pagination)
-- [ ] `createSource` / `listSources`
-- [ ] `createSpeaker` / `listSpeakers`
-- [ ] `getDashboardStats`
+- [x] `createItem` / `updateItem` / `deleteItem`
+- [x] `listItems` (with pagination)
+- [x] `createSource` / `listSources`
+- [x] `createSpeaker` / `listSpeakers`
+- [x] `getDashboardStats`
 
 ### UX surfaces
 
-- [ ] Saved material list (Library)
-- [ ] Item detail drawer or page
-- [ ] Basic source selector
-- [ ] Basic speaker selector
+- [ ] Saved material list (Library) — deferred to Phase 8 dashboard completion
+- [ ] Item detail drawer or page — deferred to Phase 8
+- [x] Basic source selector (InlineSelector in Capture)
+- [x] Basic speaker selector (InlineSelector in Capture)
 
 **Exit criteria:** User can save/view material. Data persists. RLS protects rows. Dashboard reads real counts.
+
+**[PHASE COMPLETE 2026-05-26 11:36]** — All tables migrated, data helpers built, Capture saves real items, Dashboard reads real stats.
 
 ---
 
