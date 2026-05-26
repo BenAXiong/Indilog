@@ -4,6 +4,47 @@ import { Card, Stat, SectionHead, LangAvatar, Icon, Wordmark } from '@/component
 import { ACTIVE_LANG } from '@/lib/mock-data'
 import { getDashboardStats } from '@/lib/db/stats-server'
 
+function QuickAction({ dueCount, capturedTotal }: { dueCount: number; capturedTotal: number }) {
+  const hasCards = dueCount > 0
+  const hasCaptures = capturedTotal > 0
+  const href = hasCards ? '/review' : '/capture'
+  const icon = hasCards ? 'review' : 'capture'
+  const label = hasCards
+    ? `Review — ${dueCount} card${dueCount === 1 ? '' : 's'} due`
+    : hasCaptures ? 'Review up to date · Capture more' : 'Start capturing to build your notebook'
+  const accent = hasCards ? T.crimson : T.sage
+
+  return (
+    <Link href={href} style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '13px 16px', borderRadius: 16,
+      background: hasCards
+        ? `linear-gradient(135deg, ${T.crimsonBg}, ${T.paper})`
+        : `linear-gradient(135deg, ${T.sageBg}, ${T.paper})`,
+      border: `1.5px solid ${hasCards ? '#EFCAB8' : '#D2D8AE'}`,
+      textDecoration: 'none',
+      boxShadow: '0 1px 0 rgba(255,255,255,0.7) inset',
+    }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+        background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: `0 3px 8px ${accent}55`,
+      }}>
+        <Icon name={icon} size={19} color="#fff" strokeWidth={1.8} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
+          {hasCards ? 'Tap to start your review session' : 'Tap to open Capture'}
+        </div>
+      </div>
+      <Icon name="chevron" size={16} color={T.inkFaint} strokeWidth={2} />
+    </Link>
+  )
+}
+
 // Deterministic heatmap — same algorithm as design handoff
 function buildHeatmap(weeks: number) {
   let seed = 9
@@ -195,6 +236,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* Quick resume */}
+      <QuickAction dueCount={stats.dueCount} capturedTotal={stats.capturedTotal} />
+
       {/* Stats grid */}
       <div>
         <SectionHead title="Overview" />
@@ -203,6 +247,9 @@ export default async function DashboardPage() {
           <Stat value={stats.reviewedToday} label="Reviewed"  icon="card"    accent={T.sage} />
           <Stat value={stats.dueCount}      label="Due today" icon="review"  accent={T.amber} />
           <Stat value={stats.capturedToday} label="Today"     icon="learn"   accent={T.terra} />
+        </div>
+        <div style={{ marginTop: 8, opacity: 0.5 }}>
+          <Stat value="—" label="Lessons" icon="learn" accent={T.inkFaint} />
         </div>
       </div>
 
