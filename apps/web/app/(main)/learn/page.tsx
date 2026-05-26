@@ -1,73 +1,101 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import Icon, { type IconName } from '@/components/ui/Icon'
 import { ACTIVE_LANG } from '@/lib/mock-data'
+import { getGlid, getDialectsForLang, getDefaultDialect } from '@/lib/learn/lang-bridge'
+import { DIALECT_TO_EN } from '@/lib/learn/dialects'
+import { getProfile, updateDefaultDialect } from '@/lib/db/profiles'
+import { fetchCompletions } from '@/lib/db/completions'
+
+// Completable item counts per source (used for progress denominator)
+const TOTALS = { twelve: 120, grmpts: 11, essay: 60, dialogue: 60 }
+
+type Source = keyof typeof TOTALS
 
 type SourceCardProps = {
   href: string
   icon: IconName
   title: string
-  completed?: number
-  total?: number
+  completed: number
+  total: number
   cursor?: string
   hasDue?: boolean
+  dialect: string
 }
 
-function SourceCard({ href, icon, title, completed = 0, total = 0, cursor, hasDue }: SourceCardProps) {
-  const ratio = total > 0 ? completed / total : 0
+function SourceCard({ href, icon, title, completed, total, cursor, hasDue, dialect }: Readonly<SourceCardProps>) {
+  const pct   = total > 0 ? Math.round((completed / total) * 100) : 0
+  const label = DIALECT_TO_EN[dialect] ?? dialect
+
   return (
     <Link href={href} style={{
-      display: 'flex', flexDirection: 'column', gap: 10,
-      padding: '14px 14px 12px', borderRadius: 16, textDecoration: 'none',
-      background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+      display: 'flex', alignItems: 'center', gap: 14,
+      padding: '14px 16px', borderRadius: 16, textDecoration: 'none',
+      background: T.paperHi,
+      border: `1px solid ${T.lineSoft}`,
       borderLeft: hasDue ? `3px solid ${T.crimson}` : `1px solid ${T.lineSoft}`,
       boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 3px rgba(80,40,20,0.05)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-          background: T.crimsonBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon name={icon} size={16} color={T.crimson} strokeWidth={1.8} />
-        </div>
-        <span style={{
-          fontFamily: 'Newsreader, Georgia, serif',
-          fontSize: 15, fontWeight: 500, color: T.ink,
-        }}>{title}</span>
+      {/* Icon */}
+      <div style={{
+        width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+        background: T.crimsonBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon name={icon} size={22} color={T.crimson} strokeWidth={1.6} />
       </div>
 
-      {total > 0 && (
-        <>
-          {/* Progress bar */}
+      {/* Middle */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{
+            fontFamily: 'Newsreader, Georgia, serif',
+            fontSize: 17, fontWeight: 500, color: T.ink,
+          }}>{title}</span>
+          {label && (
+            <span style={{
+              fontSize: 10.5, color: T.inkMute,
+              fontFamily: '"JetBrains Mono", monospace',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120,
+            }}>{label}</span>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ height: 3, borderRadius: 999, background: T.lineSoft, overflow: 'hidden' }}>
           <div style={{
-            height: 3, borderRadius: 999,
-            background: T.lineSoft, overflow: 'hidden',
-          }}>
-            <div style={{
-              height: '100%', borderRadius: 999,
-              width: `${ratio * 100}%`,
-              background: T.crimson,
-            }} />
-          </div>
+            height: '100%', borderRadius: 999,
+            width: `${pct}%`, background: T.crimson,
+            transition: 'width .4s ease',
+          }} />
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: T.inkFaint }}>
-              {completed} / {total}
-            </span>
-            {cursor && (
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 10, color: T.inkMute,
-              }}>{cursor} ▸</span>
-            )}
-          </div>
-        </>
-      )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: T.inkFaint }}>
+            {completed > 0 ? `${completed} / ${total}` : '—'}
+          </span>
+          {pct > 0 && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: T.crimson,
+              fontFamily: '"JetBrains Mono", monospace',
+            }}>{pct}%</span>
+          )}
+        </div>
+      </div>
 
-      {total === 0 && (
-        <span style={{ fontSize: 11, color: T.inkFaint }}>—</span>
-      )}
+      {/* Right */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+        {cursor && (
+          <span style={{
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: 10, color: T.inkMute,
+          }}>{cursor} ▸</span>
+        )}
+        <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
+      </div>
     </Link>
   )
 }
@@ -75,28 +103,133 @@ function SourceCard({ href, icon, title, completed = 0, total = 0, cursor, hasDu
 function NewCard() {
   return (
     <Link href="/learn/new" style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: 8, padding: '14px', borderRadius: 16, textDecoration: 'none',
+      display: 'flex', alignItems: 'center', gap: 14,
+      padding: '14px 16px', borderRadius: 16, textDecoration: 'none',
       background: T.paperHi, border: `1.5px dashed ${T.lineSoft}`,
-      color: T.inkFaint, minHeight: 80,
+      color: T.inkFaint,
     }}>
-      <Icon name="plus" size={16} strokeWidth={2} />
-      <span style={{ fontSize: 14, fontWeight: 500 }}>New collection</span>
+      <div style={{
+        width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+        background: T.paper, border: `1px dashed ${T.lineSoft}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon name="plus" size={22} strokeWidth={1.8} color={T.inkFaint} />
+      </div>
+      <span style={{ fontSize: 17, fontWeight: 500, fontFamily: 'Newsreader, Georgia, serif' }}>
+        New collection
+      </span>
     </Link>
   )
 }
 
 export default function LearnPage() {
-  const lang = ACTIVE_LANG
+  const lang     = ACTIVE_LANG
+  const langCode = lang.code
+  const glid     = getGlid(langCode) ?? '01'
+  const dialects = getDialectsForLang(langCode)
+
+  const [dialect,   setDialect] = useState('')
+  const [counts,    setCounts]       = useState<Record<Source, number>>({
+    twelve: 0, grmpts: 0, essay: 0, dialogue: 0,
+  })
+
+  // Init dialect
+  useEffect(() => {
+    const saved = localStorage.getItem(`iv_learn_dialect_${glid}`)
+    if (saved) {
+      setDialect(saved)
+    } else {
+      getProfile()
+        .then(p => {
+          const d = p?.default_dialect || getDefaultDialect(langCode) || dialects[0] || ''
+          setDialect(d)
+          if (d) localStorage.setItem(`iv_learn_dialect_${glid}`, d)
+        })
+        .catch(() => {
+          const d = getDefaultDialect(langCode) || dialects[0] || ''
+          setDialect(d)
+        })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fetch completion counts
+  useEffect(() => {
+    Promise.all([
+      fetchCompletions(langCode, 'twelve'),
+      fetchCompletions(langCode, 'grmpts'),
+      fetchCompletions(langCode, 'essay'),
+      fetchCompletions(langCode, 'dialogue'),
+    ]).then(([t, g, e, d]) => {
+      setCounts({ twelve: t.size, grmpts: g.size, essay: e.size, dialogue: d.size })
+    }).catch(() => {})
+  }, [langCode])
+
+  const changeDialect = (d: string) => {
+    setDialect(d)
+    localStorage.setItem(`iv_learn_dialect_${glid}`, d)
+    updateDefaultDialect(d).catch(() => {})
+  }
+
   return (
-    <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <ScreenHeader title="Learn" langName={lang.name} langDialect={lang.dialect} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <SourceCard href="/learn/lessons"   icon="learn" title="Lessons"  hasDue />
-        <SourceCard href="/learn/patterns"  icon="layers" title="Patterns" />
-        <SourceCard href="/learn/essays"    icon="pen"   title="Essays" />
-        <SourceCard href="/learn/dialogues" icon="wave"  title="Dialogs" />
+      {/* Dialect selector */}
+      {dialects.length > 1 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{
+            fontSize: 10, fontFamily: '"JetBrains Mono", monospace',
+            color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Dialect</span>
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+            {dialects.map(d => {
+              const label = DIALECT_TO_EN[d] ?? d
+              const active = dialect === d
+              return (
+                <button
+                  key={d}
+                  onClick={() => changeDialect(d)}
+                  style={{
+                    height: 28, padding: '0 10px', borderRadius: 999, flexShrink: 0,
+                    background: active ? T.ink : T.paperHi,
+                    border: `1px solid ${active ? T.ink : T.line}`,
+                    color: active ? T.cream : T.inkSoft,
+                    fontSize: 12, fontWeight: active ? 600 : 400,
+                    fontFamily: 'inherit', cursor: 'pointer',
+                    transition: 'all .12s',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Collection cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <SourceCard
+          href="/learn/lessons"   icon="learn"  title="Lessons"
+          completed={counts.twelve}   total={TOTALS.twelve}
+          dialect={dialect} hasDue={counts.twelve < TOTALS.twelve}
+        />
+        <SourceCard
+          href="/learn/patterns"  icon="layers" title="Patterns"
+          completed={counts.grmpts}   total={TOTALS.grmpts}
+          dialect={dialect}
+        />
+        <SourceCard
+          href="/learn/essays"    icon="pen"    title="Essays"
+          completed={counts.essay}    total={TOTALS.essay}
+          dialect={dialect}
+        />
+        <SourceCard
+          href="/learn/dialogues" icon="wave"   title="Dialogs"
+          completed={counts.dialogue} total={TOTALS.dialogue}
+          dialect={dialect}
+        />
         <NewCard />
       </div>
     </div>
