@@ -34,6 +34,16 @@ export const GLID_NAMES_EN: Record<string, string> = {
   '13': 'Sakizaya',  '14': 'Seediq',   '15': "Hla'alua",  '16': 'Kanakanavu',
 }
 
+// Returns the dialect label with the language family name stripped for concise display.
+// e.g. "Nanshi Amis" → "Nanshi", "Squliq Atayal" → "Squliq"
+export function shortDialectLabel(dialectCh: string, glid: string): string {
+  const full = DIALECT_TO_EN[dialectCh] ?? dialectCh
+  const family = GLID_NAMES_EN[glid]
+  if (!family) return full
+  const stripped = full.endsWith(family) ? full.slice(0, -family.length).trim() : full
+  return stripped || full
+}
+
 export const DIALECT_TO_EN: Record<string, string> = {
   '南勢阿美語': 'Nanshi Amis',        '秀姑巒阿美語': 'Xiuguluan Amis',
   '海岸阿美語': 'Coastal Amis',       '馬蘭阿美語': 'Malan Amis',

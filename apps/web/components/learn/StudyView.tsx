@@ -61,19 +61,21 @@ export default function StudyView({ source }: Props) {
     setZhModeState(savedZhMode)
     setLookupOnState(savedLookup)
 
-    // Dialect — localStorage first, then ind_profiles, then code default
-    const savedDialect = localStorage.getItem(`iv_learn_dialect_${glid}`)
-    const hardDefault = source === 'grmpts'
-      ? (getGrmptsDialect(langCode) ?? '')
-      : (getDefaultDialect(langCode) ?? '')
-    if (savedDialect) {
-      setDialect(savedDialect)
+    // Dialect — grmpts always uses language-level dialect (not sub-dialect)
+    if (source === 'grmpts') {
+      setDialect(getGrmptsDialect(langCode) ?? '')
     } else {
-      getProfile().then(profile => {
-        const resolved = profile?.default_dialect || hardDefault
-        setDialect(resolved)
-        localStorage.setItem(`iv_learn_dialect_${glid}`, resolved)
-      }).catch(() => setDialect(hardDefault))
+      const savedDialect = localStorage.getItem(`iv_learn_dialect_${glid}`)
+      const hardDefault = getDefaultDialect(langCode) ?? ''
+      if (savedDialect) {
+        setDialect(savedDialect)
+      } else {
+        getProfile().then(profile => {
+          const resolved = profile?.default_dialect || hardDefault
+          setDialect(resolved)
+          localStorage.setItem(`iv_learn_dialect_${glid}`, resolved)
+        }).catch(() => setDialect(hardDefault))
+      }
     }
 
     // Selection

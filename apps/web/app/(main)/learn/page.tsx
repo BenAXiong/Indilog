@@ -7,7 +7,7 @@ import ScreenHeader from '@/components/nav/ScreenHeader'
 import Icon, { type IconName } from '@/components/ui/Icon'
 import { ACTIVE_LANG } from '@/lib/mock-data'
 import { getGlid, getDialectsForLang, getDefaultDialect } from '@/lib/learn/lang-bridge'
-import { DIALECT_TO_EN } from '@/lib/learn/dialects'
+import { shortDialectLabel } from '@/lib/learn/dialects'
 import { getProfile, updateDefaultDialect } from '@/lib/db/profiles'
 import { fetchCompletions } from '@/lib/db/completions'
 
@@ -25,11 +25,12 @@ type SourceCardProps = {
   cursor?: string
   hasDue?: boolean
   dialect: string
+  glid: string
 }
 
-function SourceCard({ href, icon, title, completed, total, cursor, hasDue, dialect }: Readonly<SourceCardProps>) {
+function SourceCard({ href, icon, title, completed, total, cursor, hasDue, dialect, glid }: Readonly<SourceCardProps>) {
   const pct   = total > 0 ? Math.round((completed / total) * 100) : 0
-  const label = DIALECT_TO_EN[dialect] ?? dialect
+  const label = shortDialectLabel(dialect, glid)
 
   return (
     <Link href={href} style={{
@@ -75,7 +76,7 @@ function SourceCard({ href, icon, title, completed, total, cursor, hasDue, diale
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, color: T.inkFaint }}>
-            {completed > 0 ? `${completed} / ${total}` : '—'}
+            {completed > 0 ? `${completed} / ${total}` : `0 / ${total}`}
           </span>
           {pct > 0 && (
             <span style={{
@@ -184,7 +185,7 @@ export default function LearnPage() {
           }}>Dialect</span>
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
             {dialects.map(d => {
-              const label = DIALECT_TO_EN[d] ?? d
+              const label = shortDialectLabel(d, glid)
               const active = dialect === d
               return (
                 <button
@@ -213,22 +214,22 @@ export default function LearnPage() {
         <SourceCard
           href="/learn/lessons"   icon="learn"  title="Lessons"
           completed={counts.twelve}   total={TOTALS.twelve}
-          dialect={dialect} hasDue={counts.twelve < TOTALS.twelve}
+          dialect={dialect} glid={glid} hasDue={counts.twelve < TOTALS.twelve}
         />
         <SourceCard
           href="/learn/patterns"  icon="layers" title="Patterns"
           completed={counts.grmpts}   total={TOTALS.grmpts}
-          dialect={dialect}
+          dialect={dialect} glid={glid}
         />
         <SourceCard
           href="/learn/essays"    icon="pen"    title="Essays"
           completed={counts.essay}    total={TOTALS.essay}
-          dialect={dialect}
+          dialect={dialect} glid={glid}
         />
         <SourceCard
           href="/learn/dialogues" icon="wave"   title="Dialogs"
           completed={counts.dialogue} total={TOTALS.dialogue}
-          dialect={dialect}
+          dialect={dialect} glid={glid}
         />
         <NewCard />
       </div>
