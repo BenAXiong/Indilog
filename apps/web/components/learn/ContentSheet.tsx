@@ -5,7 +5,6 @@ import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 import {
   GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, ESSAY_GROUP_LABELS, ESSAY_GROUP_START,
-  stageName, lessonDifficultyIdxOf,
 } from '@/lib/learn/dialects'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
@@ -68,9 +67,6 @@ export default function ContentSheet(props: Props) {
   const [activeLevel, setActiveLevel] = useState(
     props.source === 'twelve' ? props.currentLevel :
     props.source === 'grmpts' ? props.currentLevel : '0',
-  )
-  const [activeDifficulty, setActiveDifficulty] = useState(() =>
-    props.source === 'twelve' ? lessonDifficultyIdxOf(props.currentLevel) : 0
   )
   const [activeGroup, setActiveGroup] = useState(0)
 
@@ -141,11 +137,6 @@ export default function ContentSheet(props: Props) {
               geo={twelveGeo}
               currentLevel={props.currentLevel}
               currentLesson={props.currentLesson}
-              activeDifficulty={activeDifficulty}
-              setActiveDifficulty={(d) => {
-                setActiveDifficulty(d)
-                setActiveLevel(LESSON_DIFFICULTIES[d].levels[0])
-              }}
               activeLevel={activeLevel}
               setActiveLevel={setActiveLevel}
               completions={completions}
@@ -183,90 +174,110 @@ export default function ContentSheet(props: Props) {
 function TwelveContent(p: {
   geo: TwelveGeo | null
   currentLevel: string; currentLesson: string
-  activeDifficulty: number; setActiveDifficulty: (d: number) => void
   activeLevel: string; setActiveLevel: (l: string) => void
   completions: Set<string>
   onSelect: (level: string, lesson: string) => void
 }) {
   if (!p.geo) return <div style={loadingStyle}>Loading…</div>
 
-  const diffLevels = LESSON_DIFFICULTIES[p.activeDifficulty].levels
-
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Difficulty tabs */}
-      <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
-        {LESSON_DIFFICULTIES.map((d, i) => (
-          <button key={d.name} onClick={() => p.setActiveDifficulty(i)} style={tabStyle(p.activeDifficulty === i)}>
-            {d.name}
-          </button>
+
+      {/* Stage selector — all 12 stages grouped under difficulty labels */}
+      <div style={{ padding: '8px 18px 0', flexShrink: 0 }}>
+        {LESSON_DIFFICULTIES.map((d) => (
+          <div key={d.name} style={{ marginBottom: 8 }}>
+            {/* Full-width difficulty label */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: T.inkMute,
+                fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.07em',
+                whiteSpace: 'nowrap',
+              }}>
+                {d.name}
+              </span>
+              <div style={{ flex: 1, height: 1, background: T.lineSoft }} />
+            </div>
+            {/* Stage buttons — numbered */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {d.levels.map(lv => {
+                const active = p.activeLevel === lv
+                return (
+                  <button key={lv} onClick={() => p.setActiveLevel(lv)} style={{
+                    flex: 1, height: 28, borderRadius: 6,
+                    background: active ? T.crimson : T.paperHi,
+                    border: `1px solid ${active ? T.crimsonDp : T.line}`,
+                    color: active ? '#fff' : T.inkSoft,
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {lv}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Stage buttons — 3 for the active difficulty */}
-      <div style={{ display: 'flex', gap: 6, padding: '8px 18px 0' }}>
-        {diffLevels.map(lv => {
-          const active = p.activeLevel === lv
+      <div style={{ height: 1, background: T.lineSoft, margin: '6px 18px 0', flexShrink: 0 }} />
+
+      {/* Lesson cards */}
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '8px 18px 24px',
+        display: 'flex', flexDirection: 'column', gap: 6,
+      }}>
+        {p.geo.classes.map(cls => {
+          const key       = `Level ${p.activeLevel} Lesson ${cls}`
+          const done      = p.completions.has(key)
+          const isCurrent = p.activeLevel === p.currentLevel && String(cls) === p.currentLesson
+          const titleZh   = p.geo!.titles[p.activeLevel]?.[String(cls)] ?? ''
           return (
-            <button key={lv} onClick={() => p.setActiveLevel(lv)} style={{
-              flex: 1, height: 34, borderRadius: 8,
-              background: active ? T.crimsonBg : T.paperHi,
-              border: `1px solid ${active ? T.crimson : T.line}`,
-              color: active ? T.crimson : T.inkSoft,
-              fontSize: 11.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
-            }}>
-              {stageName(lv)}
+            <button
+              key={cls}
+              onClick={() => p.onSelect(p.activeLevel, String(cls))}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '10px 14px', borderRadius: 10,
+                background: isCurrent ? T.crimsonBg : T.paperHi,
+                border: `1.5px solid ${isCurrent ? T.crimson : T.lineSoft}`,
+                cursor: 'pointer', fontFamily: 'inherit',
+                position: 'relative', textAlign: 'left', width: '100%',
+              }}
+            >
+              {/* Lesson number */}
+              <span style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: 22, fontWeight: 700, flexShrink: 0, width: 28,
+                textAlign: 'right', lineHeight: 1,
+                color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink,
+              }}>
+                {cls}
+              </span>
+
+              {/* Title rows: ab (blank) + zh */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <span style={{
+                  fontSize: 13.5, lineHeight: 1.3, display: 'block',
+                  color: T.inkFaint, minHeight: '1.2em',
+                }}>
+                  {/* aboriginal title — blank until scraped */}
+                </span>
+                <span style={{
+                  fontSize: 13.5, lineHeight: 1.3, display: 'block',
+                  color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkSoft,
+                }}>
+                  {titleZh}
+                </span>
+              </div>
+
+              {done && !isCurrent && (
+                <div style={{ position: 'absolute', top: 7, right: 10 }}>
+                  <Icon name="check" size={11} strokeWidth={2.5} color={T.inkFaint} />
+                </div>
+              )}
             </button>
           )
         })}
-      </div>
-
-      {/* Lesson grid — 2 columns of 5 */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {p.geo.classes.map(cls => {
-            const key      = `Level ${p.activeLevel} Lesson ${cls}`
-            const done     = p.completions.has(key)
-            const isCurrent = p.activeLevel === p.currentLevel && String(cls) === p.currentLesson
-            const title    = p.geo!.titles[p.activeLevel]?.[String(cls)] ?? ''
-            return (
-              <button
-                key={cls}
-                onClick={() => p.onSelect(p.activeLevel, String(cls))}
-                style={{
-                  position: 'relative', display: 'flex', flexDirection: 'column',
-                  alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10,
-                  background: isCurrent ? T.crimsonBg : T.paperHi,
-                  border: `1.5px solid ${isCurrent ? T.crimson : T.lineSoft}`,
-                  cursor: 'pointer', fontFamily: 'inherit', gap: 3, textAlign: 'left',
-                }}
-              >
-                <span style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: 18, fontWeight: 700, lineHeight: 1,
-                  color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink,
-                }}>
-                  {cls}
-                </span>
-                {title && (
-                  <span style={{
-                    fontSize: 12.5, lineHeight: 1.35,
-                    color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkSoft,
-                    overflow: 'hidden', maxHeight: '2.7em',
-                    wordBreak: 'break-all',
-                  }}>
-                    {title}
-                  </span>
-                )}
-                {done && !isCurrent && (
-                  <div style={{ position: 'absolute', top: 6, right: 8 }}>
-                    <Icon name="check" size={11} strokeWidth={2.5} color={T.inkFaint} />
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
       </div>
     </div>
   )
