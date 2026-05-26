@@ -1,0 +1,42 @@
+import { NextRequest, NextResponse } from 'next/server'
+import geometryData from '@/lib/learn/corpus_geometry.json'
+import { queryTwelve, queryGrmpts, queryEssayOrDialogue } from '@/lib/learn/db'
+
+export const runtime = 'nodejs'
+
+type AlignedEntry = { index: number; title_zh: string; alignment: Record<string, string> }
+
+export async function GET(req: NextRequest) {
+  const p       = req.nextUrl.searchParams
+  const dialect = p.get('dialect')?.trim() ?? ''
+  const source  = p.get('source')?.trim()  ?? ''
+  const titleZh = p.get('title_zh')?.trim() ?? ''
+  const level   = p.get('level')?.trim()   ?? '1'
+
+  if (!dialect || !source || !titleZh) {
+    return NextResponse.json({ error: 'Missing required params', results: [] }, { status: 400 })
+  }
+
+  try {
+    if (source === 'twelve') {
+      return NextResponse.json({ results: queryTwelve(dialect, titleZh) })
+    }
+
+    if (source === 'grmpts') {
+      return NextResponse.json({ results: queryGrmpts(dialect, titleZh, level) })
+    }
+
+    if (source === 'essay' || source === 'dialogue') {
+      const items = ((geometryData as unknown) as Record<string, AlignedEntry[]>)[source] ?? []
+      const entry = items.find(e => e.title_zh === titleZh)
+      const category = entry?.alignment?.[dialect]
+      if (!category) return NextResponse.json({ results: [] })
+      return NextResponse.json({ results: queryEssayOrDialogue(source, dialect, category) })
+    }
+
+    return NextResponse.json({ error: 'Unknown source', results: [] }, { status: 400 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'curriculum error'
+    return NextResponse.json({ error: msg, results: [] }, { status: 500 })
+  }
+}
