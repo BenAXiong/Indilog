@@ -7,6 +7,7 @@ import ScreenHeader from '@/components/nav/ScreenHeader'
 import Icon, { type IconName } from '@/components/ui/Icon'
 import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import { getGlid } from '@/lib/learn/lang-bridge'
+import { GRMPTS_LEVEL_NAMES } from '@/lib/learn/dialects'
 import { fetchCompletions } from '@/lib/db/completions'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
@@ -150,7 +151,7 @@ export default function LearnPage() {
           for (const pt of Object.keys(ggeo.counts[lv] ?? {}).sort()) {
             if (!gc.has(`${lv}::${pt}`)) {
               const label = ggeo.labels[pt] ?? pt
-              return `L${lv} · ${label}`
+              return `${GRMPTS_LEVEL_NAMES[lv] ?? lv} · ${label}`
             }
           }
         }

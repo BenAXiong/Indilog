@@ -1,3 +1,7 @@
+export const GRMPTS_LEVEL_NAMES: Record<string, string> = {
+  '1': '初級', '2': '中級', '3': '中高級', '4': '高級',
+}
+
 // GLID-keyed dialect data — adapted from YCM Portal (temp_learn/portal/lib/dialects.ts)
 // GLIDs are 2-digit strings matching occurrences.dialect_name groupings in ycm_master.db
 

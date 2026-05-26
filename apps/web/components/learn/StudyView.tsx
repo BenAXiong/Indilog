@@ -7,6 +7,12 @@ import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import {
   getGlid, getDefaultDialect, getGrmptsDialect
 } from '@/lib/learn/lang-bridge'
+import { GRMPTS_LEVEL_NAMES } from '@/lib/learn/dialects'
+import rawPatternLabels from '@/lib/learn/grmpts_type_labels.json'
+
+const PATTERN_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(rawPatternLabels as Record<string, string>).map(([k, v]) => [k, v.replace(/^\d+\s*-\s*/, '')])
+)
 import { createItem } from '@/lib/db/items'
 import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/completions'
 import type { CurriculumRow } from '@/lib/learn/db'
@@ -269,7 +275,7 @@ export default function StudyView({ source }: Props) {
   const pillLabel = source === 'twelve'
     ? `L${level} · ${lesson}`
     : source === 'grmpts'
-      ? `L${level} · ${pattern}`
+      ? `${GRMPTS_LEVEL_NAMES[level] ?? `L${level}`} · ${PATTERN_LABELS[pattern] ?? pattern}`
       : titleZh
         ? (titleZh.length > 14 ? titleZh.slice(0, 13) + '…' : titleZh)
         : '—'

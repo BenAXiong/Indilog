@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
+import { GRMPTS_LEVEL_NAMES } from '@/lib/learn/dialects'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
 
@@ -266,7 +267,7 @@ function GrmptsContent(p: {
       <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
         {p.geo.levels.map(lv => (
           <button key={lv} onClick={() => p.setActiveLevel(lv)} style={tabStyle(p.activeLevel === lv)}>
-            {lv}
+            {GRMPTS_LEVEL_NAMES[lv] ?? lv}
           </button>
         ))}
       </div>
@@ -275,7 +276,7 @@ function GrmptsContent(p: {
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px 24px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {patternsAtLevel.map(pt => {
           const isCurrent = p.activeLevel === p.currentLevel && pt === p.currentPattern
-          const done = p.completions.has(pt)
+          const done = p.completions.has(`${p.activeLevel}::${pt}`)
           const label = p.geo!.labels[pt] ?? pt
           return (
             <button key={pt} onClick={() => p.onSelect(p.activeLevel, pt)} style={listItemStyle(isCurrent, done)}>
