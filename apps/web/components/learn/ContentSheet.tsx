@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
-import { GRMPTS_LEVEL_NAMES } from '@/lib/learn/dialects'
+import {
+  GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, ESSAY_GROUP_LABELS, ESSAY_GROUP_START,
+  stageName, lessonDifficultyIdxOf,
+} from '@/lib/learn/dialects'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
 
-// ── Geometry response shapes ──────────────────────────────────────────────────
 type TwelveGeo = {
   levels: string[]
   classes: number[]
@@ -22,7 +24,6 @@ type EssayGeo = {
   items: Array<{ index: number; title_zh: string; available: boolean }>
 }
 
-// ── Props (discriminated by source) ──────────────────────────────────────────
 type Props = {
   open: boolean
   onClose: () => void
@@ -55,18 +56,24 @@ const SOURCE_LABELS: Record<Source, string> = {
   twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogs',
 }
 
+const numSort = (a: string, b: string) => Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1))
+
 export default function ContentSheet(props: Props) {
   const { open, onClose, completions } = props
 
-  const [twelveGeo, setTwelveGeo]   = useState<TwelveGeo | null>(null)
-  const [grmptsGeo, setGrmptsGeo]   = useState<GrmptsGeo | null>(null)
-  const [essayGeo,  setEssayGeo]    = useState<EssayGeo  | null>(null)
+  const [twelveGeo, setTwelveGeo] = useState<TwelveGeo | null>(null)
+  const [grmptsGeo, setGrmptsGeo] = useState<GrmptsGeo | null>(null)
+  const [essayGeo,  setEssayGeo]  = useState<EssayGeo  | null>(null)
+
   const [activeLevel, setActiveLevel] = useState(
     props.source === 'twelve' ? props.currentLevel :
     props.source === 'grmpts' ? props.currentLevel : '0',
   )
+  const [activeDifficulty, setActiveDifficulty] = useState(() =>
+    props.source === 'twelve' ? lessonDifficultyIdxOf(props.currentLevel) : 0
+  )
+  const [activeGroup, setActiveGroup] = useState(0)
 
-  // Fetch geometry when sheet opens
   useEffect(() => {
     if (!open) return
     if (props.source === 'twelve' && !twelveGeo) {
@@ -89,22 +96,13 @@ export default function ContentSheet(props: Props) {
 
   const name = SOURCE_LABELS[props.source] || props.source
 
-  // Group tabs for essays/dialogues
-  const GROUP_LABELS = ['Intro', 'Intermediate', 'Advanced']
-  const groupStart = [0, 20, 40]
-
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(30,18,10,0.35)', zIndex: 70,
-        }}
-      />
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(30,18,10,0.35)', zIndex: 70,
+      }} />
 
-      {/* Sheet */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         height: '62dvh', background: T.paper,
@@ -113,12 +111,10 @@ export default function ContentSheet(props: Props) {
         zIndex: 71, display: 'flex', flexDirection: 'column',
         boxShadow: '0 -8px 32px rgba(40,20,10,0.12)',
       }}>
-        {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
           <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineSoft }} />
         </div>
 
-        {/* Sheet header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '8px 18px 0',
@@ -139,23 +135,23 @@ export default function ContentSheet(props: Props) {
 
         <div style={{ height: 1, background: T.lineSoft, margin: '10px 18px 0' }} />
 
-        {/* Per-source content */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-
-          {/* LESSONS */}
           {props.source === 'twelve' && (
             <TwelveContent
               geo={twelveGeo}
               currentLevel={props.currentLevel}
               currentLesson={props.currentLesson}
+              activeDifficulty={activeDifficulty}
+              setActiveDifficulty={(d) => {
+                setActiveDifficulty(d)
+                setActiveLevel(LESSON_DIFFICULTIES[d].levels[0])
+              }}
               activeLevel={activeLevel}
               setActiveLevel={setActiveLevel}
               completions={completions}
               onSelect={(l, s) => { props.onSelect(l, s); onClose() }}
             />
           )}
-
-          {/* PATTERNS */}
           {props.source === 'grmpts' && (
             <GrmptsContent
               geo={grmptsGeo}
@@ -167,17 +163,13 @@ export default function ContentSheet(props: Props) {
               onSelect={(l, p) => { props.onSelect(l, p); onClose() }}
             />
           )}
-
-          {/* ESSAYS / DIALOGS */}
           {(props.source === 'essay' || props.source === 'dialogue') && (
             <EssayContent
               geo={essayGeo}
               currentTitleZh={props.currentTitleZh}
-              activeGroup={Number(activeLevel)}
-              setActiveGroup={g => setActiveLevel(String(g))}
+              activeGroup={activeGroup}
+              setActiveGroup={setActiveGroup}
               completions={completions}
-              groupLabels={GROUP_LABELS}
-              groupStart={groupStart}
               onSelect={titleZh => { props.onSelect(titleZh); onClose() }}
             />
           )}
@@ -187,57 +179,88 @@ export default function ContentSheet(props: Props) {
   )
 }
 
-// ── Twelve (Lessons) ──────────────────────────────────────────────────────────
+// ── Lessons ───────────────────────────────────────────────────────────────────
 function TwelveContent(p: {
   geo: TwelveGeo | null
   currentLevel: string; currentLesson: string
+  activeDifficulty: number; setActiveDifficulty: (d: number) => void
   activeLevel: string; setActiveLevel: (l: string) => void
   completions: Set<string>
   onSelect: (level: string, lesson: string) => void
 }) {
   if (!p.geo) return <div style={loadingStyle}>Loading…</div>
 
+  const diffLevels = LESSON_DIFFICULTIES[p.activeDifficulty].levels
+
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Level row */}
-      <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0', overflowX: 'auto' }}>
-        {p.geo.levels.map(lv => (
-          <button key={lv} onClick={() => p.setActiveLevel(lv)} style={tabStyle(p.activeLevel === lv)}>
-            {lv}
+      {/* Difficulty tabs */}
+      <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
+        {LESSON_DIFFICULTIES.map((d, i) => (
+          <button key={d.name} onClick={() => p.setActiveDifficulty(i)} style={tabStyle(p.activeDifficulty === i)}>
+            {d.name}
           </button>
         ))}
       </div>
 
-      {/* Lesson grid — 5 columns */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 18px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+      {/* Stage buttons — 3 for the active difficulty */}
+      <div style={{ display: 'flex', gap: 6, padding: '8px 18px 0' }}>
+        {diffLevels.map(lv => {
+          const active = p.activeLevel === lv
+          return (
+            <button key={lv} onClick={() => p.setActiveLevel(lv)} style={{
+              flex: 1, height: 34, borderRadius: 8,
+              background: active ? T.crimsonBg : T.paperHi,
+              border: `1px solid ${active ? T.crimson : T.line}`,
+              color: active ? T.crimson : T.inkSoft,
+              fontSize: 11.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+            }}>
+              {stageName(lv)}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Lesson grid — 2 columns of 5 */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {p.geo.classes.map(cls => {
-            const key  = `Level ${p.activeLevel} Lesson ${cls}`
-            const done = p.completions.has(key)
+            const key      = `Level ${p.activeLevel} Lesson ${cls}`
+            const done     = p.completions.has(key)
             const isCurrent = p.activeLevel === p.currentLevel && String(cls) === p.currentLesson
-            const title = p.geo!.titles[p.activeLevel]?.[String(cls)] ?? ''
+            const title    = p.geo!.titles[p.activeLevel]?.[String(cls)] ?? ''
             return (
               <button
                 key={cls}
-                title={title}
                 onClick={() => p.onSelect(p.activeLevel, String(cls))}
-                style={lessonCellStyle(isCurrent, done)}
+                style={{
+                  position: 'relative', display: 'flex', flexDirection: 'column',
+                  alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10,
+                  background: isCurrent ? T.crimsonBg : T.paperHi,
+                  border: `1.5px solid ${isCurrent ? T.crimson : T.lineSoft}`,
+                  cursor: 'pointer', fontFamily: 'inherit', gap: 3, textAlign: 'left',
+                }}
               >
-                <span style={{ fontSize: 14, fontWeight: 600, color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink }}>
+                <span style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: 18, fontWeight: 700, lineHeight: 1,
+                  color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink,
+                }}>
                   {cls}
                 </span>
                 {title && (
                   <span style={{
-                    fontSize: 9, color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkSoft,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    width: '100%', textAlign: 'center', display: 'block',
+                    fontSize: 12.5, lineHeight: 1.35,
+                    color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkSoft,
+                    overflow: 'hidden', maxHeight: '2.7em',
+                    wordBreak: 'break-all',
                   }}>
-                    {title.length > 6 ? title.slice(0, 6) + '…' : title}
+                    {title}
                   </span>
                 )}
                 {done && !isCurrent && (
-                  <div style={{ position: 'absolute', top: 3, right: 4 }}>
-                    <Icon name="check" size={9} strokeWidth={3} color={T.inkFaint} />
+                  <div style={{ position: 'absolute', top: 6, right: 8 }}>
+                    <Icon name="check" size={11} strokeWidth={2.5} color={T.inkFaint} />
                   </div>
                 )}
               </button>
@@ -249,7 +272,7 @@ function TwelveContent(p: {
   )
 }
 
-// ── Grmpts (Patterns) ─────────────────────────────────────────────────────────
+// ── Patterns ──────────────────────────────────────────────────────────────────
 function GrmptsContent(p: {
   geo: GrmptsGeo | null
   currentLevel: string; currentPattern: string
@@ -259,11 +282,10 @@ function GrmptsContent(p: {
 }) {
   if (!p.geo) return <div style={loadingStyle}>Loading…</div>
 
-  const patternsAtLevel = Object.keys(p.geo.counts[p.activeLevel] ?? {}).sort()
+  const patternsAtLevel = Object.keys(p.geo.counts[p.activeLevel] ?? {}).sort(numSort)
 
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Level row */}
       <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
         {p.geo.levels.map(lv => (
           <button key={lv} onClick={() => p.setActiveLevel(lv)} style={tabStyle(p.activeLevel === lv)}>
@@ -272,16 +294,21 @@ function GrmptsContent(p: {
         ))}
       </div>
 
-      {/* Pattern list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px 24px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {patternsAtLevel.map(pt => {
           const isCurrent = p.activeLevel === p.currentLevel && pt === p.currentPattern
-          const done = p.completions.has(`${p.activeLevel}::${pt}`)
-          const label = p.geo!.labels[pt] ?? pt
+          const done      = p.completions.has(`${p.activeLevel}::${pt}`)
+          const label     = p.geo!.labels[pt] ?? pt
+          const typeNum   = Number.parseInt(pt.slice(1))
           return (
             <button key={pt} onClick={() => p.onSelect(p.activeLevel, pt)} style={listItemStyle(isCurrent, done)}>
-              <span style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 11, color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkMute, marginRight: 8 }}>{pt}</span>
-              <span style={{ fontSize: 14, color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink }}>{label}</span>
+              <span style={{
+                fontFamily: '"JetBrains Mono",monospace', fontSize: 11, width: 22, flexShrink: 0, textAlign: 'right',
+                color: isCurrent ? T.crimson : done ? T.inkFaint : T.inkMute,
+              }}>{typeNum}</span>
+              <span style={{ fontSize: 14, flex: 1, textAlign: 'left', color: isCurrent ? T.crimson : done ? T.inkFaint : T.ink }}>
+                {label}
+              </span>
               {done && <Icon name="check" size={13} strokeWidth={2.5} color={T.inkFaint} style={{ marginLeft: 'auto' }} />}
             </button>
           )
@@ -291,39 +318,34 @@ function GrmptsContent(p: {
   )
 }
 
-// ── Essay / Dialogue ──────────────────────────────────────────────────────────
+// ── Essays / Dialogs ──────────────────────────────────────────────────────────
 function EssayContent(p: {
   geo: EssayGeo | null
   currentTitleZh: string
   activeGroup: number; setActiveGroup: (g: number) => void
   completions: Set<string>
-  groupLabels: string[]
-  groupStart: number[]
   onSelect: (titleZh: string) => void
 }) {
   if (!p.geo) return <div style={loadingStyle}>Loading…</div>
 
-  const itemsInGroup = p.geo.items.filter(item =>
-    item.index >= p.groupStart[p.activeGroup] &&
-    item.index < (p.groupStart[p.activeGroup + 1] ?? Infinity),
-  )
+  const groupStart = ESSAY_GROUP_START[p.activeGroup]
+  const groupEnd   = ESSAY_GROUP_START[p.activeGroup + 1] ?? Infinity
+  const itemsInGroup = p.geo.items.filter(i => i.index >= groupStart && i.index < groupEnd)
 
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Group tabs */}
       <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
-        {p.groupLabels.map((lbl, i) => (
+        {ESSAY_GROUP_LABELS.map((lbl, i) => (
           <button key={lbl} onClick={() => p.setActiveGroup(i)} style={tabStyle(p.activeGroup === i)}>
             {lbl}
           </button>
         ))}
       </div>
 
-      {/* Item list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 18px 24px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {itemsInGroup.map(item => {
           const isCurrent = item.title_zh === p.currentTitleZh
-          const done = p.completions.has(item.title_zh)
+          const done      = p.completions.has(item.title_zh)
           return (
             <button
               key={item.index}
@@ -331,13 +353,19 @@ function EssayContent(p: {
               disabled={!item.available}
               style={listItemStyle(isCurrent, done, !item.available)}
             >
-              <Icon name={done ? 'check' : 'note'} size={13} strokeWidth={2}
-                color={done ? T.sage : isCurrent ? T.crimson : T.inkFaint}
-                style={{ flexShrink: 0 }} />
               <span style={{
-                fontSize: 14, flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                fontFamily: '"JetBrains Mono",monospace', fontSize: 11, width: 22, flexShrink: 0,
+                textAlign: 'right', color: isCurrent ? T.crimson : done ? T.sage : T.inkFaint,
+              }}>{item.index + 1}</span>
+              <span style={{
+                fontSize: 14, flex: 1, textAlign: 'left',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 color: !item.available ? T.inkFaint : isCurrent ? T.crimson : done ? T.inkSoft : T.ink,
               }}>{item.title_zh}</span>
+              {done && (
+                <Icon name="check" size={13} strokeWidth={2}
+                  color={T.sage} style={{ flexShrink: 0 }} />
+              )}
             </button>
           )
         })}
@@ -346,21 +374,13 @@ function EssayContent(p: {
   )
 }
 
-// ── Shared style helpers ──────────────────────────────────────────────────────
+// ── Style helpers ─────────────────────────────────────────────────────────────
 const tabStyle = (active: boolean): React.CSSProperties => ({
   height: 32, minWidth: 36, padding: '0 12px', borderRadius: 8, flexShrink: 0,
   background: active ? T.crimson : T.paperHi,
   border: `1px solid ${active ? T.crimsonDp : T.line}`,
   color: active ? '#fff' : T.inkSoft,
   fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
-})
-
-const lessonCellStyle = (current: boolean, done: boolean): React.CSSProperties => ({
-  position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
-  justifyContent: 'center', gap: 2, padding: '8px 4px', borderRadius: 10,
-  background: current ? T.crimsonBg : done ? T.paperHi : T.paperHi,
-  border: `1.5px solid ${current ? T.crimson : done ? T.lineSoft : T.lineSoft}`,
-  cursor: 'pointer', fontFamily: 'inherit', minHeight: 52,
 })
 
 const listItemStyle = (current: boolean, done: boolean, disabled = false): React.CSSProperties => ({

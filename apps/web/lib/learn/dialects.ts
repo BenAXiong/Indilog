@@ -2,6 +2,41 @@ export const GRMPTS_LEVEL_NAMES: Record<string, string> = {
   '1': '初級', '2': '中級', '3': '中高級', '4': '高級',
 }
 
+export const LESSON_DIFFICULTIES: { name: string; levels: string[] }[] = [
+  { name: '初級',   levels: ['1','2','3'] },
+  { name: '中級',   levels: ['4','5','6'] },
+  { name: '中高級', levels: ['7','8','9'] },
+  { name: '高級',   levels: ['10','11','12'] },
+]
+
+const ZH_ORDINALS: Record<string, string> = {
+  '1':'一','2':'二','3':'三','4':'四','5':'五','6':'六',
+  '7':'七','8':'八','9':'九','10':'十','11':'十一','12':'十二',
+}
+
+export function stageName(level: string): string {
+  return `第${ZH_ORDINALS[level] ?? level}階`
+}
+
+export function lessonDifficultyOf(level: string): string {
+  const n = Number.parseInt(level)
+  if (n <= 3) return '初級'
+  if (n <= 6) return '中級'
+  if (n <= 9) return '中高級'
+  return '高級'
+}
+
+export function lessonDifficultyIdxOf(level: string): number {
+  const n = Number.parseInt(level)
+  if (n <= 3) return 0
+  if (n <= 6) return 1
+  if (n <= 9) return 2
+  return 3
+}
+
+export const ESSAY_GROUP_LABELS = ['初級', '中級', '高級']
+export const ESSAY_GROUP_START  = [0, 20, 40]
+
 // GLID-keyed dialect data — adapted from YCM Portal (temp_learn/portal/lib/dialects.ts)
 // GLIDs are 2-digit strings matching occurrences.dialect_name groupings in ycm_master.db
 

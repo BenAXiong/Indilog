@@ -7,7 +7,7 @@ import ScreenHeader from '@/components/nav/ScreenHeader'
 import Icon, { type IconName } from '@/components/ui/Icon'
 import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import { getGlid } from '@/lib/learn/lang-bridge'
-import { GRMPTS_LEVEL_NAMES } from '@/lib/learn/dialects'
+import { GRMPTS_LEVEL_NAMES, stageName, lessonDifficultyOf } from '@/lib/learn/dialects'
 import { fetchCompletions } from '@/lib/db/completions'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
@@ -104,7 +104,7 @@ function NewCard() {
 }
 
 type GrmptsGeo = { levels: string[]; counts: Record<string, Record<string, number>>; labels: Record<string, string> }
-type EssayGeo  = { items: Array<{ title_zh: string; available: boolean }> }
+type EssayGeo  = { items: Array<{ index: number; title_zh: string; available: boolean }> }
 type TwelveGeo = { levels: string[]; classes: number[] }
 
 export default function LearnPage() {
@@ -140,28 +140,39 @@ export default function LearnPage() {
       const twelveNext = (() => {
         for (const lv of tgeo.levels) {
           for (const cl of tgeo.classes) {
-            if (!tc.has(`Level ${lv} Lesson ${cl}`)) return `L${lv} · ${cl}`
-          }
-        }
-        return ''
-      })()
-
-      const grmptsNext = (() => {
-        for (const lv of ggeo.levels) {
-          for (const pt of Object.keys(ggeo.counts[lv] ?? {}).sort()) {
-            if (!gc.has(`${lv}::${pt}`)) {
-              const label = ggeo.labels[pt] ?? pt
-              return `${GRMPTS_LEVEL_NAMES[lv] ?? lv} · ${label}`
+            if (!tc.has(`Level ${lv} Lesson ${cl}`)) {
+              return `${lessonDifficultyOf(lv)} · ${stageName(lv)} · ${cl}`
             }
           }
         }
         return ''
       })()
 
+      const numSort = (a: string, b: string) => Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1))
+
+      const grmptsNext = (() => {
+        for (const lv of ggeo.levels) {
+          for (const pt of Object.keys(ggeo.counts[lv] ?? {}).sort(numSort)) {
+            if (!gc.has(`${lv}::${pt}`)) {
+              const label   = ggeo.labels[pt] ?? pt
+              const typeNum = Number.parseInt(pt.slice(1))
+              return `${GRMPTS_LEVEL_NAMES[lv] ?? lv} · ${typeNum} ${label}`
+            }
+          }
+        }
+        return ''
+      })()
+
+      const essayDiff = (idx: number) => {
+        if (idx < 20) { return '初級' }
+        if (idx < 40) { return '中級' }
+        return '高級'
+      }
       const findNext = (items: EssayGeo['items'], done: Set<string>) => {
         const item = items.find(i => i.available && !done.has(i.title_zh))
         if (!item) return ''
-        return item.title_zh.length > 12 ? item.title_zh.slice(0, 11) + '…' : item.title_zh
+        const title = item.title_zh.length > 6 ? item.title_zh.slice(0, 5) + '…' : item.title_zh
+        return `${essayDiff(item.index)} · ${item.index + 1} · ${title}`
       }
 
       setNextLabels({

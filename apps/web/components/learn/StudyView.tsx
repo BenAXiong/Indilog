@@ -191,7 +191,9 @@ export default function StudyView({ source }: Props) {
         .then(r => r.json())
         .then((d: { levels: string[]; counts: Record<string, Record<string, number>> }) => {
           const keys = d.levels.flatMap(lv =>
-            Object.keys(d.counts[lv] ?? {}).sort().map(pt => `${lv}::${pt}`),
+            Object.keys(d.counts[lv] ?? {})
+              .sort((a, b) => Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1)))
+              .map(pt => `${lv}::${pt}`),
           )
           setNavOrder(keys)
         })
