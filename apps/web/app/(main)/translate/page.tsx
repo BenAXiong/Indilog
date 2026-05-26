@@ -2,25 +2,89 @@
 
 import { useState } from 'react'
 import { T } from '@/lib/tokens'
-import { Chip, Icon } from '@/components/ui'
+import { Icon } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { ACTIVE_LANG, TRANSLATE_LANGS } from '@/lib/mock-data'
+import { ACTIVE_LANG } from '@/lib/mock-data'
+import { TRANSLATION_LANGUAGES, getValidTargets, isPairSupported } from '@/lib/translation-pairs'
+import { createItem } from '@/lib/db/items'
+
+const MAX_CHARS = 800
+
+function langLabel(code: string): string {
+  return TRANSLATION_LANGUAGES.find(l => l.code === code)?.label ?? code
+}
 
 export default function TranslatePage() {
   const lang = ACTIVE_LANG
-  const [src, setSrc] = useState('en')
-  const [tgt, setTgt] = useState('ami')
-  const [text, setText] = useState('I want to learn your language.')
-  const [out] = useState('Maolah kako misanga to sowal no niyaroʼ iso.')
+  const [src, setSrc] = useState('zho_Hant')
+  const [tgt, setTgt] = useState('ami_Latn')
+  const [text, setText] = useState('')
+  const [output, setOutput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [saved, setSaved] = useState(false)
 
-  const srcLang = TRANSLATE_LANGS.find(o => o.code === src)
-  const tgtLang = TRANSLATE_LANGS.find(o => o.code === tgt)
+  const validTargets = getValidTargets(src)
+  const pairOk = isPairSupported(src, tgt)
+  const charsLeft = MAX_CHARS - text.length
+  const canSwap = isPairSupported(tgt, src)
 
-  const handleSwap = () => {
-    const prevSrc = src
-    const prevTgt = tgt
-    setSrc(prevTgt)
-    setTgt(prevSrc)
+  function handleSrcChange(newSrc: string) {
+    setSrc(newSrc)
+    setOutput('')
+    setError(null)
+    const targets = getValidTargets(newSrc)
+    if (!targets.includes(tgt)) setTgt(targets[0] ?? '')
+  }
+
+  function handleSwap() {
+    if (!canSwap) return
+    setSrc(tgt)
+    setTgt(src)
+    setText(output)
+    setOutput(text)
+    setError(null)
+  }
+
+  async function handleTranslate() {
+    if (!text.trim() || !pairOk || loading) return
+    setLoading(true)
+    setError(null)
+    setOutput('')
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Translation failed.'); return }
+      setOutput(data.translation)
+    } catch {
+      setError('Could not reach the translation service.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleCopy() {
+    if (!output) return
+    await navigator.clipboard.writeText(output)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1800)
+  }
+
+  async function handleSave() {
+    if (!output) return
+    await createItem({
+      text: output,
+      type: 'sentence',
+      language: langLabel(tgt),
+      notes: `Translated from: ${text.trim()}`,
+    })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
   }
 
   return (
@@ -28,7 +92,7 @@ export default function TranslatePage() {
       <ScreenHeader title="Translate" langName={lang.name} langDialect={lang.dialect} />
 
       <div style={{ fontSize: 12, color: T.inkMute, lineHeight: 1.4, padding: '0 4px', marginTop: -6 }}>
-        Independent of your study language · supported pairs only
+        Traditional Chinese ↔ Formosan · draft translation only
       </div>
 
       {/* Pair selector */}
@@ -37,141 +101,156 @@ export default function TranslatePage() {
         background: T.paperHi, borderRadius: 16, border: `1px solid ${T.lineSoft}`,
         overflow: 'hidden',
       }}>
-        <button style={{
-          padding: '12px 14px', textAlign: 'left',
-          display: 'flex', flexDirection: 'column', gap: 1,
-          background: 'none', border: 'none', cursor: 'pointer',
-        }}>
+        <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             From
           </span>
-          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 17, fontWeight: 500, color: T.ink }}>
-            {srcLang?.name}
-          </span>
-        </button>
+          <select
+            value={src}
+            onChange={e => handleSrcChange(e.target.value)}
+            style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 17, fontWeight: 500, color: T.ink, background: 'transparent', border: 'none', outline: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            {TRANSLATION_LANGUAGES.map(l => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+        </div>
+
         <button
           onClick={handleSwap}
+          disabled={!canSwap}
+          aria-label="Swap languages"
           style={{
-            padding: '0 8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: T.crimson,
+            padding: '0 10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderLeft: `1px solid ${T.lineSoft}`, borderRight: `1px solid ${T.lineSoft}`,
-            background: T.paper, cursor: 'pointer', border: `1px solid ${T.lineSoft}`,
+            background: T.paper, cursor: canSwap ? 'pointer' : 'default',
+            color: canSwap ? T.crimson : T.inkFaint, border: `1px solid ${T.lineSoft}`,
           }}
         >
           <Icon name="swap" size={18} strokeWidth={2} />
         </button>
-        <button style={{
-          padding: '12px 14px', textAlign: 'left',
-          display: 'flex', flexDirection: 'column', gap: 1,
-          background: 'none', border: 'none', cursor: 'pointer',
-        }}>
+
+        <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             To
           </span>
-          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 17, fontWeight: 500, color: T.ink }}>
-            {tgtLang?.name}
-          </span>
-        </button>
+          <select
+            value={tgt}
+            onChange={e => { setTgt(e.target.value); setOutput(''); setError(null) }}
+            style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 17, fontWeight: 500, color: T.ink, background: 'transparent', border: 'none', outline: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            {TRANSLATION_LANGUAGES.map(l => (
+              <option key={l.code} value={l.code} disabled={!validTargets.includes(l.code)}>
+                {l.label}{!validTargets.includes(l.code) ? ' —' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Source panel */}
-      <div style={{
-        background: T.paperHi, border: `1.5px solid ${T.line}`,
-        borderRadius: 18, padding: '14px 16px',
-      }}>
+      <div style={{ background: T.paperHi, border: `1.5px solid ${T.line}`, borderRadius: 18, padding: '14px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute,
-            textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
-          }}>
-            {srcLang?.name}
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+            {langLabel(src)}
           </span>
-          <button
-            onClick={() => setText('')}
-            style={{ color: T.inkMute, fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
-            Clear
-          </button>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: charsLeft < 100 ? T.crimson : T.inkFaint }}>
+            {charsLeft}
+          </span>
         </div>
         <textarea
           value={text}
-          onChange={e => setText(e.target.value)}
-          rows={2}
-          placeholder="Type or paste…"
-          style={{
-            width: '100%', border: 0, background: 'transparent', resize: 'none', outline: 'none',
-            fontFamily: 'inherit', fontSize: 16, fontWeight: 400, color: T.ink, lineHeight: 1.4,
-          }}
+          onChange={e => { if (e.target.value.length <= MAX_CHARS) { setText(e.target.value); setOutput(''); setError(null) } }}
+          onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleTranslate() }}
+          rows={3}
+          placeholder="Type or paste text…"
+          style={{ width: '100%', border: 0, background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'inherit', fontSize: 16, color: T.ink, lineHeight: 1.4 }}
         />
+        <button
+          onClick={handleTranslate}
+          disabled={!text.trim() || loading || !pairOk}
+          style={{
+            marginTop: 8, width: '100%', padding: '11px 0', borderRadius: 12,
+            background: text.trim() && pairOk && !loading ? T.ink : T.lineSoft,
+            color: text.trim() && pairOk && !loading ? T.cream : T.inkFaint,
+            fontSize: 14, fontWeight: 600, border: 'none',
+            cursor: text.trim() && pairOk && !loading ? 'pointer' : 'default',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'background .15s',
+          }}
+        >
+          <Icon name="sparkle" size={14} color="currentColor" />
+          {loading ? 'Translating…' : 'Translate'}
+        </button>
       </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: T.amberBg, border: `1px solid ${T.amber}`, fontSize: 13, color: T.terra }}>
+          {error}
+        </div>
+      )}
 
       {/* Output panel */}
-      <div style={{
-        background: `linear-gradient(180deg, ${T.cream}, ${T.paper})`,
-        border: `1.5px solid ${T.crimsonBg}`,
-        borderRadius: 18, padding: '14px 16px',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        {/* top accent bar */}
+      {(output || loading) && (
         <div style={{
-          position: 'absolute', top: -1, left: 16, height: 3, width: 36,
-          background: T.crimson, borderRadius: '0 0 4px 4px',
-        }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.crimson,
-            textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
-          }}>
-            {tgtLang?.name}
-          </span>
-          <Chip size="sm" tone="ghost" icon="sparkle">AI</Chip>
-        </div>
-        <div style={{
-          fontFamily: 'Newsreader, Georgia, serif',
-          fontSize: 19, color: T.ink, lineHeight: 1.35,
-          fontWeight: 400, fontStyle: 'italic', letterSpacing: '-0.015em',
+          background: `linear-gradient(180deg, ${T.cream}, ${T.paper})`,
+          border: `1.5px solid ${T.crimsonBg}`, borderRadius: 18, padding: '14px 16px',
+          position: 'relative', overflow: 'hidden',
         }}>
-          {out}
-        </div>
+          <div style={{ position: 'absolute', top: -1, left: 16, height: 3, width: 36, background: T.crimson, borderRadius: '0 0 4px 4px' }} />
 
-        <div style={{
-          display: 'flex', gap: 8, marginTop: 14,
-          paddingTop: 12, borderTop: `1px solid ${T.crimsonBg}`,
-        }}>
-          <button style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '6px 10px', borderRadius: 8, background: T.paperHi,
-            border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
-            fontSize: 12, fontWeight: 500, cursor: 'pointer',
-          }}>
-            <Icon name="copy" size={13} strokeWidth={1.8} /> Copy
-          </button>
-          <button style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '6px 10px', borderRadius: 8, background: T.paperHi,
-            border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
-            fontSize: 12, fontWeight: 500, cursor: 'pointer',
-          }}>
-            <Icon name="speaker" size={13} strokeWidth={1.8} /> Listen
-          </button>
-          <div style={{ flex: 1 }} />
-          <button style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '6px 10px', borderRadius: 8,
-            background: T.crimson, color: '#fff',
-            fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
-          }}>
-            <Icon name="bookmark" size={13} strokeWidth={1.8} color="#fff" /> Save
-          </button>
-        </div>
-      </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.crimson, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+              {langLabel(tgt)}
+            </span>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
+              FormosanBank/nllb200
+            </span>
+          </div>
 
-      <div style={{
-        fontSize: 11.5, color: T.inkMute, lineHeight: 1.5,
-        padding: '0 4px', display: 'flex', gap: 6, alignItems: 'flex-start',
-      }}>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+              {[220, 160, 100].map(w => (
+                <div key={w} className="animate-iv-shimmer" style={{ height: 14, width: w, borderRadius: 7, background: T.lineSoft }} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 19, color: T.ink, lineHeight: 1.4, fontStyle: 'italic', letterSpacing: '-0.015em' }}>
+              {output}
+            </div>
+          )}
+
+          {output && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.crimsonBg}` }}>
+              <button onClick={handleCopy} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '6px 10px', borderRadius: 8, background: T.paperHi,
+                border: `1px solid ${T.lineSoft}`, color: copied ? T.sage : T.inkSoft,
+                fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              }}>
+                <Icon name={copied ? 'check' : 'copy'} size={13} strokeWidth={1.8} />
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+              <div style={{ flex: 1 }} />
+              <button onClick={handleSave} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '6px 12px', borderRadius: 8,
+                background: saved ? T.sage : T.crimson, color: '#fff',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
+                transition: 'background .15s',
+              }}>
+                <Icon name={saved ? 'check' : 'bookmark'} size={13} strokeWidth={1.8} color="#fff" />
+                {saved ? 'Saved' : 'Save'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ fontSize: 11.5, color: T.inkMute, lineHeight: 1.5, padding: '0 4px', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
         <Icon name="sparkle" size={12} color={T.inkMute} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
-        AI translations approximate. Verify with a fluent speaker before relying on them.
+        Draft translation · CC-BY-NC-4.0 · Verify with a fluent speaker before relying on output.
       </div>
     </div>
   )
