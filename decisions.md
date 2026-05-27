@@ -73,21 +73,6 @@ Tracks open questions and resolved architectural/product decisions.
 
 ---
 
-### DEC-001 · Dictionary API contract
-**Question:** What is the URL and response schema of the "existing Vercel SQLite dictionary API"?
-**Needed for:** Phase 5 (Dictionary integration, token chips in Capture)
-**Blocking:** Yes — cannot build the dictionary client without knowing the endpoint and response shape.
-**Action:** Ask user to provide the base URL and a sample response, or link to existing client code.
-
----
-
-### DEC-002 · Supported translation pairs
-**Question:** Which Formosan-language translation pairs are actually supported by the translation API?
-**Needed for:** Phase 6 (Translate page, Capture translation action, disabled-state logic)
-**Blocking:** Yes — the supported-pair constant that drives enabled/disabled UI cannot be populated without this list.
-**Action:** Ask user to enumerate supported source → target pairs, or link to existing pair config.
-
----
 
 ### DEC-R08 · Dialogue drill is v0 scope
 **Decision:** Dialogue drill IS v0 (confirmed by user 2026-05-25). Build as designed — two sample dialogues in Review landing, with session view. Content can be static for v0.
@@ -120,6 +105,18 @@ Tracks open questions and resolved architectural/product decisions.
 ---
 
 ## Resolved
+
+### DEC-001 · Dictionary API contract
+**Decision:** Dictionary is a local SQLite file (`ycm_master.db`) accessed via `better-sqlite3`. No remote Vercel API. Route handlers: `/api/dict/search` (FTS words + sentences, glid filter) and `/api/dict/dialects`. Capture lookup uses `/api/lookup` (exact-match ILRDF word lookup).
+**Date:** 2026-05-26
+
+---
+
+### DEC-002 · Supported translation pairs
+**Decision:** 12 pairs supported via FormoBank Modal inference — `zho_Hant ↔ ami/tay/bnn/pyu/pwn/dru_Latn`. Defined in `lib/learn/translation-pairs.ts`. Unsupported targets are disabled in the Translate page UI.
+**Date:** 2026-05-26
+
+---
 
 ### DEC-R03b · Design access method
 **Decision:** Claude Design handoff is provided as a downloaded zip bundle (`Indivore-design_handoff_v2.zip`) dropped in the repo root, extracted to `design-handoff/`. Read design files directly from disk — no API call needed.

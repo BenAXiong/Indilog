@@ -94,7 +94,7 @@ Do not silently make any decision — minor or major — without logging it and 
 - All visible UI strings go through the i18n helper — no hardcoded English strings in components.
 - Keep shared constants and validation out of page components.
 - TypeScript throughout — no `any` without a comment explaining why.
-- Tailwind for styling — no inline style objects unless unavoidable.
+- Inline React style objects are the project convention — do not introduce Tailwind utility classes on components that already use inline styles. Tailwind is used only for animations/keyframes defined in `tailwind.config.js`.
 
 ---
 

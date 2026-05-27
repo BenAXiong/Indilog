@@ -280,35 +280,37 @@ These are intentionally not in v0:
 
 > Full spec: `docs/learn-feature.md`
 
-### Phase L0 — Assets & Data Bridge
-- [ ] Copy `corpus_geometry.json` → `apps/web/lib/learn/`
-- [ ] Copy `grmpts_type_labels.json` → `apps/web/lib/learn/`
-- [ ] Create `lib/learn/dialects.ts` (GLID maps)
-- [ ] Create `lib/learn/lang-bridge.ts` (Indivore code → GLID)
-- [ ] Wire `ind_profiles.default_dialect` for Learn dialect persistence
+### Phase L0 — Assets & Data Bridge ✅
+- [x] Copy `corpus_geometry.json` → `apps/web/lib/learn/`
+- [x] Copy `grmpts_type_labels.json` → `apps/web/lib/learn/`
+- [x] Create `lib/learn/dialects.ts` (GLID maps)
+- [x] Create `lib/learn/lang-bridge.ts` (Indivore code → GLID)
+- [x] Wire `ind_profiles.default_dialect` for Learn dialect persistence
 
-### Phase L1 — API Routes
-- [ ] `lib/learn/db.ts` — SQLite curriculum query functions
-- [ ] `/api/curriculum` — four source variants + audio URL repair
-- [ ] `/api/lookup` — exact-match ILRDF word lookup
-- [ ] `ind_completions` migration (cross-device lesson completion)
+### Phase L1 — API Routes ✅
+- [x] `lib/learn/db.ts` — SQLite curriculum query functions
+- [x] `/api/curriculum` — four source variants + audio URL repair
+- [x] `/api/lookup` — exact-match ILRDF word lookup
+- [x] `ind_completions` migration (cross-device lesson completion)
 
-### Phase L2 — Learn Page UI
-- [ ] Source tab bar (mobile bottom strip / desktop horizontal)
-- [ ] Content selector per source (lesson grid, pattern list, essay/dialogue groups)
-- [ ] Data fetch loop (source + selection + dialect → results)
-- [ ] Prev / Next navigation
-- [ ] Study card component: ab text, zh reveal/hide, audio, copy, save, mark-complete
-- [ ] Settings panel (zh visibility, layout, lookup toggle)
-- [ ] Saved view (filters `ind_items` by language + sentence type)
+### Phase L2 — Learn Page UI ✅
+- [x] Source tab bar (mobile bottom strip / desktop horizontal)
+- [x] Content selector per source (lesson grid, pattern list, essay/dialogue groups)
+- [x] Data fetch loop (source + selection + dialect → results)
+- [x] Prev / Next navigation
+- [x] Study card component: ab text, zh reveal/hide, audio, copy, save, mark-complete
+- [x] Settings panel (zh visibility, layout, lookup toggle)
+- [x] Saved view (filters `ind_items` by language + sentence type)
 
-### Phase L3 — Lookup + Polish
-- [ ] Inline word lookup on study card tokens → `/api/lookup`
-- [ ] Completion counts → Dashboard Lessons stat (real data replaces "—")
-- [ ] Mobile spacing pass
-- [ ] Accessibility pass
+### Phase L3 — Lookup + Polish ✅
+- [x] Inline word lookup on study card tokens → `/api/lookup`
+- [x] Completion counts → Dashboard Lessons stat (real data replaces "—")
+- [x] Mobile spacing pass
+- [ ] Accessibility pass (deferred)
 
-**Deferred from Phase 10:** grammar comparison mode, language dashboard, full cross-app WordLookup component.
+**[PHASE COMPLETE 2026-05-26 14:00]** — Full study view for all 4 sources, collection creation, hub with progress, inline word lookup. Merged feat/learn → main.
+
+**Deferred from Phase 10:** grammar comparison mode, language dashboard, full cross-app WordLookup component, accessibility pass.
 
 ### Word Lookup — Spelling Suggestions (v1 addition)
 When a token has no exact dictionary match, surface near-matches ranked by edit distance with common phonological variants:
