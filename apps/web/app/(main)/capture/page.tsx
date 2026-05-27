@@ -580,24 +580,28 @@ function CapturePageInner() {
                         <>
                           {visible.map((r, i) => (
                             <div key={i} style={{
-                              display: 'flex', alignItems: 'center', gap: 8,
-                              marginTop: i > 0 ? 3 : 0,
+                              position: 'relative', display: 'flex', alignItems: 'center',
+                              minHeight: 22, marginTop: i > 0 ? 3 : 0,
                             }}>
-                              {/* Ab word — visible on row 0, transparent spacer on rows 1+ to keep columns */}
+                              {/* Ab word — row 0 only, left-anchored */}
+                              {i === 0 && (
+                                <span style={{
+                                  fontFamily: 'Newsreader, Georgia, serif',
+                                  fontSize: 15, fontWeight: 500, color: T.ink, flexShrink: 0,
+                                }}>
+                                  {disp}
+                                </span>
+                              )}
+                              {/* Definition — truly centered vs full card width */}
                               <span style={{
-                                fontFamily: 'Newsreader, Georgia, serif',
-                                fontSize: 15, fontWeight: 500, flexShrink: 0,
-                                color: i === 0 ? T.ink : 'transparent',
+                                position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+                                fontSize: 13, color: T.inkSoft, whiteSpace: 'nowrap',
                               }}>
-                                {disp}
-                              </span>
-                              {/* Definition — centered */}
-                              <span style={{ flex: 1, textAlign: 'center', fontSize: 13, color: T.inkSoft }}>
                                 {r.word_ch}
                               </span>
-                              {/* Dialect — right */}
+                              {/* Dialect — right-anchored */}
                               <span style={{
-                                fontSize: 10, color: T.inkFaint,
+                                marginLeft: 'auto', fontSize: 10, color: T.inkFaint,
                                 fontFamily: '"JetBrains Mono", monospace', flexShrink: 0,
                               }}>
                                 {r.dialect_name}

@@ -1,14 +1,16 @@
 'use client'
 
-import { Suspense, useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { T } from '@/lib/tokens'
-import { SectionHead, LangAvatar, Icon } from '@/components/ui'
+import { Card, SectionHead, LangAvatar, Icon } from '@/components/ui'
 import { LANGUAGES, getLanguage } from '@/lib/languages'
 import { getGlid, getDialectsForLang } from '@/lib/learn/lang-bridge'
 import { shortDialectLabel } from '@/lib/learn/dialects'
+import type { User } from '@supabase/supabase-js'
 
 type Profile = {
   active_study_language: string
@@ -16,20 +18,15 @@ type Profile = {
   ui_locale: string
 }
 
-const TABS = [
-  { id: 'general', label: 'General' },
-  { id: 'capture', label: 'Capture' },
-] as const
-
-type TabId = typeof TABS[number]['id']
-
 const TAGS_KEY = 'ind_custom_tags'
 
 function SettingsContent() {
   const searchParams = useSearchParams()
-  const tab  = (searchParams.get('tab') ?? 'general') as TabId
+  const tab  = (searchParams.get('tab') ?? 'general') as 'general' | 'capture'
   const from = searchParams.get('from') ?? '/'
+  const router = useRouter()
 
+  const [user,          setUser]          = useState<User | null>(null)
   const [activeLang,    setActiveLang]    = useState('ami')
   const [activeDialect, setActiveDialect] = useState<string | null>(null)
   const [locale,        setLocale]        = useState('en')
@@ -37,12 +34,14 @@ function SettingsContent() {
   const [langPickerOpen, setLangPickerOpen] = useState(false)
   const [pickedLang,    setPickedLang]    = useState<string | null>(null)
   const [userId,        setUserId]        = useState<string | null>(null)
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const accountMenuRef = useRef<HTMLDivElement>(null)
 
   // Capture settings
-  const [autoLookup,   setAutoLookup]   = useState(true)
-  const [customTags,   setCustomTags]   = useState<string[]>([])
-  const [newTagInput,  setNewTagInput]  = useState('')
-  const [addingTag,    setAddingTag]    = useState(false)
+  const [autoLookup,  setAutoLookup]  = useState(true)
+  const [customTags,  setCustomTags]  = useState<string[]>([])
+  const [newTagInput, setNewTagInput] = useState('')
+  const [addingTag,   setAddingTag]   = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('ind_auto_lookup')
@@ -57,6 +56,7 @@ function SettingsContent() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      setUser(user)
       setUserId(user.id)
       supabase
         .from('ind_profiles')
@@ -72,6 +72,16 @@ function SettingsContent() {
     })
   }, [])
 
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setAccountMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
   const saveProfile = useCallback(async (patch: Partial<Profile>) => {
     if (!userId) return
     setSaving(true)
@@ -79,6 +89,12 @@ function SettingsContent() {
     await supabase.from('ind_profiles').update(patch).eq('user_id', userId)
     setSaving(false)
   }, [userId])
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   function closePicker() {
     setLangPickerOpen(false)
@@ -112,6 +128,9 @@ function SettingsContent() {
   const langGlid     = getGlid(activeLang) ?? '01'
   const dialectLabel = activeDialect ? shortDialectLabel(activeDialect, langGlid) : null
 
+  const displayName  = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '—'
+  const displayEmail = user?.email ?? '—'
+
   return (
     <div style={{ padding: '4px 0 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* Header */}
@@ -134,40 +153,81 @@ function SettingsContent() {
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ padding: '0 18px' }}>
-        <div style={{
-          display: 'flex',
-          background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12,
-          padding: 3,
-        }}>
-          {TABS.map(t => {
-            const active = tab === t.id
-            return (
-              <Link
-                key={t.id}
-                href={`/settings?tab=${t.id}&from=${encodeURIComponent(from)}`}
-                style={{
-                  flex: 1, textAlign: 'center', padding: '8px 0',
-                  borderRadius: 10, fontSize: 13, fontWeight: active ? 600 : 400,
-                  color: active ? T.ink : T.inkSoft,
-                  background: active ? T.paper : 'transparent',
-                  border: `1px solid ${active ? T.lineSoft : 'transparent'}`,
-                  textDecoration: 'none',
-                  boxShadow: active ? '0 1px 4px rgba(43,34,26,0.08)' : 'none',
-                  transition: 'background 0.15s',
-                }}
-              >
-                {t.label}
-              </Link>
-            )
-          })}
-        </div>
-      </div>
-
       {/* ── General tab ── */}
       {tab === 'general' && (
         <>
+          {/* Account card */}
+          <div style={{ padding: '0 18px' }}>
+            <Card raised pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 999, background: T.amberBg,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: `1px solid ${T.amber}`, flexShrink: 0,
+              }}>
+                <Icon name="user" size={22} strokeWidth={1.6} color="#8C6515" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {displayName}
+                </div>
+                <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {displayEmail}
+                </div>
+              </div>
+              {/* "..." menu */}
+              <div ref={accountMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  onClick={() => setAccountMenuOpen(v => !v)}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: accountMenuOpen ? T.paper : 'transparent',
+                    border: `1px solid ${accountMenuOpen ? T.lineSoft : 'transparent'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: T.inkSoft,
+                  }}
+                >
+                  <Icon name="more-v" size={18} strokeWidth={2.2} color={T.inkSoft} />
+                </button>
+                {accountMenuOpen && (
+                  <div style={{
+                    position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 50,
+                    background: T.paperHi, border: `1px solid ${T.line}`, borderRadius: 12,
+                    boxShadow: '0 4px 16px rgba(43,34,26,0.12)',
+                    minWidth: 160, overflow: 'hidden',
+                  }}>
+                    {[
+                      { label: 'Change account', icon: 'user' as const,   action: () => {} },
+                      { label: 'About Indilog',  icon: 'leaf' as const,   action: () => {} },
+                      { label: 'Sign out',        icon: 'logout' as const, action: handleSignOut, danger: true },
+                    ].map((item, i, arr) => (
+                      <button
+                        key={item.label}
+                        onClick={() => { setAccountMenuOpen(false); item.action() }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          width: '100%', padding: '11px 14px', textAlign: 'left',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          borderBottom: i < arr.length - 1 ? `1px solid ${T.lineSoft}` : 'none',
+                          color: item.danger ? T.crimson : T.ink,
+                          fontSize: 13.5, fontWeight: 500,
+                        }}
+                      >
+                        <Icon name={item.icon} size={15} strokeWidth={1.8}
+                          color={item.danger ? T.crimson : T.inkSoft} />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+            {saving && (
+              <div style={{ fontSize: 11, color: T.inkFaint, textAlign: 'right', marginTop: 6, fontFamily: '"JetBrains Mono", monospace' }}>
+                saving…
+              </div>
+            )}
+          </div>
+
           {/* Study language */}
           <div style={{ padding: '0 18px' }}>
             <SectionHead title="Study language" />
@@ -233,14 +293,6 @@ function SettingsContent() {
                 </div>
               </div>
             </div>
-            {saving && (
-              <div style={{
-                fontSize: 11, color: T.inkFaint, textAlign: 'right', marginTop: 6,
-                fontFamily: '"JetBrains Mono", monospace',
-              }}>
-                saving…
-              </div>
-            )}
           </div>
         </>
       )}
