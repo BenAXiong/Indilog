@@ -104,6 +104,24 @@ Before adding any feature, check the explicit out-of-scope list in the workflow 
 
 ---
 
+## Commit cadence
+
+**Commit after every meaningful unit of work — not at the end of a session.**
+
+A "unit of work" is one component, one screen, one schema change, or one self-contained fix. Never accumulate multiple features/fixes into a single commit.
+
+Why this matters: `log.md` timestamps come from `git log -1 --format="%ai"`. If you batch an entire session into one commit, all log entries get the same timestamp, making the history unreadable.
+
+Concrete triggers to commit:
+- New file created (component, migration, lib)
+- Existing screen has a complete, working change
+- Schema migration added
+- Bug fixed and verified
+
+Do not wait until the user asks. Do not wait until the end of the session.
+
+---
+
 ## Log entry format
 
 Table columns: `Timestamp | Type | Description`
