@@ -92,3 +92,6 @@
 | 2026-05-27 12:39 | SCHEMA | Add RLS policies migration for ind-audio Supabase Storage bucket (insert/select/delete per UID folder). |
 | 2026-05-27 12:40 | FEATURE | BatchImport: segmented Paste/Import toggle inline with sheet title; fixed-height content area (360px) prevents sheet jump on tab switch. |
 | 2026-05-27 12:40 | FEATURE | Capture page polish: audio upload to ind-audio on save + pre-save playback button; sparkle moved to meaning section with "AI translation coming soon" hint; lookup (search) moved right-aligned with mic; Definitions section collapses to 1 result per token (chevron expands rest), punctuation trimmed from display tokens; Recent filter icon removed, dropdown uses scrollbar-thin. |
+| 2026-05-27 13:07 | FEATURE | Icon: add stop (filled square) and trash icons. |
+| 2026-05-27 13:07 | FIX | InlineSelector: move clear button outside trigger to fix button-in-button hydration error; .find→.some, Readonly<Props>. Better createItem error logging. |
+| 2026-05-27 13:07 | FEATURE | Capture polish round 2: dialect select from GLID_FAMILIES (defaults to profile dialect); mic→stop icon when recording, separate trash+play when has-recording; AI hint inline; lookup placeholder; sort by current dialect; remove type pill from Recent. |
