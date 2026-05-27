@@ -13,6 +13,7 @@ export type CreateItemInput = {
   audio_url?: string
   source_id?: string
   speaker_id?: string
+  tags?: string[]
 }
 
 export type Item = CreateItemInput & {

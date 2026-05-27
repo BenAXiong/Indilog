@@ -106,8 +106,10 @@ function CapturePageInner() {
 
   const [recentItems, setRecentItems] = useState<Item[]>([])
 
-  // Auto-lookup setting
-  const [autoLookup, setAutoLookup] = useState(true)
+  // Auto-lookup + tags settings
+  const [autoLookup,   setAutoLookup]   = useState(true)
+  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [selectedTags,  setSelectedTags]  = useState<string[]>([])
 
   // Dialect options for current language
   const dialectInitRef = useRef(false)
@@ -117,6 +119,10 @@ function CapturePageInner() {
   useEffect(() => {
     const stored = localStorage.getItem('ind_auto_lookup')
     if (stored !== null) setAutoLookup(stored === 'true')
+    const storedTags = localStorage.getItem('ind_custom_tags')
+    if (storedTags) {
+      try { setAvailableTags(JSON.parse(storedTags)) } catch { /* ignore */ }
+    }
   }, [])
 
   useEffect(() => {
@@ -279,19 +285,20 @@ function CapturePageInner() {
     setNotes(item.notes ?? '')
     setSelectedSource(sources.find(s => s.id === item.source_id) ?? null)
     setSelectedSpeaker(speakers.find(s => s.id === item.speaker_id) ?? null)
+    setSelectedTags((item.tags as string[] | undefined) ?? [])
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function handleClear() {
     setEditingId(null); setText(''); setMeaning(''); setDialect(''); setPlace(''); setNotes('')
-    setSelectedSource(null); setSelectedSpeaker(null)
+    setSelectedSource(null); setSelectedSpeaker(null); setSelectedTags([])
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
     discardRecording()
   }
 
   function softClear() {
-    setEditingId(null); setText(''); setMeaning(''); setNotes('')
+    setEditingId(null); setText(''); setMeaning(''); setNotes(''); setSelectedTags([])
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
     discardRecording()
   }
@@ -334,6 +341,7 @@ function CapturePageInner() {
       source_id:   selectedSource?.id,
       speaker_id:  selectedSpeaker?.id,
       audio_url:   audioUrl,
+      tags:        selectedTags.length ? selectedTags : undefined,
     }
 
     let ok = false
@@ -406,7 +414,7 @@ function CapturePageInner() {
           value={text}
           onChange={e => setText(e.target.value)}
           placeholder="A word, sentence, or note you want to keep…"
-          rows={3}
+          rows={2}
           style={{
             width: '100%', border: 0, background: 'transparent', resize: 'none',
             fontFamily: 'Newsreader, Georgia, serif',
@@ -750,6 +758,41 @@ function CapturePageInner() {
               style={{ flex: 1, border: 0, background: 'transparent', fontSize: 14, fontWeight: 500, color: T.ink, padding: 0, outline: 'none' }}
             />
           </div>
+          {/* Tags — only shown when the user has created tags in settings */}
+          {availableTags.length > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              padding: '10px 14px', borderBottom: `1px solid ${T.lineSoft}`,
+            }}>
+              <Icon name="tag" size={16} color={T.inkSoft} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60, paddingTop: 2, flexShrink: 0 }}>Tags</span>
+              <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {availableTags.map(tag => {
+                  const sel = selectedTags.includes(tag)
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedTags(prev =>
+                        sel ? prev.filter(t => t !== tag) : [...prev, tag]
+                      )}
+                      style={{
+                        padding: '3px 10px', borderRadius: 999,
+                        fontSize: 12, fontWeight: 500,
+                        background: sel ? T.crimsonBg : T.paper,
+                        color: sel ? T.crimson : T.inkMute,
+                        borderWidth: 1, borderStyle: 'solid' as const,
+                        borderColor: sel ? T.crimson : T.lineSoft,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px' }}>
             <Icon name="pen" size={16} color={T.inkSoft} strokeWidth={1.8} style={{ marginTop: 2 }} />
             <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60, paddingTop: 2 }}>Notes</span>

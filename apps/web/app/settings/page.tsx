@@ -16,9 +16,18 @@ type Profile = {
   ui_locale: string
 }
 
+const TABS = [
+  { id: 'general', label: 'General' },
+  { id: 'capture', label: 'Capture' },
+] as const
+
+type TabId = typeof TABS[number]['id']
+
+const TAGS_KEY = 'ind_custom_tags'
+
 function SettingsContent() {
   const searchParams = useSearchParams()
-  const tab  = (searchParams.get('tab') ?? 'general') as 'general' | 'capture'
+  const tab  = (searchParams.get('tab') ?? 'general') as TabId
   const from = searchParams.get('from') ?? '/'
 
   const [activeLang,    setActiveLang]    = useState('ami')
@@ -30,11 +39,18 @@ function SettingsContent() {
   const [userId,        setUserId]        = useState<string | null>(null)
 
   // Capture settings
-  const [autoLookup, setAutoLookup] = useState(true)
+  const [autoLookup,   setAutoLookup]   = useState(true)
+  const [customTags,   setCustomTags]   = useState<string[]>([])
+  const [newTagInput,  setNewTagInput]  = useState('')
+  const [addingTag,    setAddingTag]    = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('ind_auto_lookup')
     if (stored !== null) setAutoLookup(stored === 'true')
+    const storedTags = localStorage.getItem(TAGS_KEY)
+    if (storedTags) {
+      try { setCustomTags(JSON.parse(storedTags)) } catch { /* ignore */ }
+    }
   }, [])
 
   useEffect(() => {
@@ -75,6 +91,23 @@ function SettingsContent() {
     localStorage.setItem('ind_auto_lookup', String(next))
   }
 
+  function saveTags(tags: string[]) {
+    setCustomTags(tags)
+    localStorage.setItem(TAGS_KEY, JSON.stringify(tags))
+  }
+
+  function addTag() {
+    const name = newTagInput.trim()
+    if (!name || customTags.includes(name)) { setNewTagInput(''); setAddingTag(false); return }
+    saveTags([...customTags, name])
+    setNewTagInput('')
+    setAddingTag(false)
+  }
+
+  function removeTag(name: string) {
+    saveTags(customTags.filter(t => t !== name))
+  }
+
   const currentLang  = getLanguage(activeLang) ?? LANGUAGES[0]
   const langGlid     = getGlid(activeLang) ?? '01'
   const dialectLabel = activeDialect ? shortDialectLabel(activeDialect, langGlid) : null
@@ -98,6 +131,37 @@ function SettingsContent() {
           }}>
             Settings
           </h1>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ padding: '0 18px' }}>
+        <div style={{
+          display: 'flex',
+          background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12,
+          padding: 3,
+        }}>
+          {TABS.map(t => {
+            const active = tab === t.id
+            return (
+              <Link
+                key={t.id}
+                href={`/settings?tab=${t.id}&from=${encodeURIComponent(from)}`}
+                style={{
+                  flex: 1, textAlign: 'center', padding: '8px 0',
+                  borderRadius: 10, fontSize: 13, fontWeight: active ? 600 : 400,
+                  color: active ? T.ink : T.inkSoft,
+                  background: active ? T.paper : 'transparent',
+                  border: `1px solid ${active ? T.lineSoft : 'transparent'}`,
+                  textDecoration: 'none',
+                  boxShadow: active ? '0 1px 4px rgba(43,34,26,0.08)' : 'none',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {t.label}
+              </Link>
+            )
+          })}
         </div>
       </div>
 
@@ -183,39 +247,109 @@ function SettingsContent() {
 
       {/* ── Capture tab ── */}
       {tab === 'capture' && (
-        <div style={{ padding: '0 18px' }}>
-          <SectionHead title="Lookup" />
-          <div style={{
-            background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Auto-lookup</div>
-                <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
-                  Automatically search definitions as you type
+        <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          {/* Lookup */}
+          <div>
+            <SectionHead title="Lookup" />
+            <div style={{
+              background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Auto-lookup</div>
+                  <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
+                    Automatically search definitions as you type
+                  </div>
                 </div>
+                <button
+                  onClick={toggleAutoLookup}
+                  aria-checked={autoLookup}
+                  role="switch"
+                  style={{
+                    width: 44, height: 26, borderRadius: 999,
+                    background: autoLookup ? T.crimson : T.lineSoft,
+                    border: 'none', cursor: 'pointer', position: 'relative',
+                    transition: 'background 0.2s', flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute', top: 3, left: autoLookup ? 21 : 3,
+                    width: 20, height: 20, borderRadius: 999,
+                    background: 'white', transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </button>
               </div>
-              {/* Toggle switch */}
-              <button
-                onClick={toggleAutoLookup}
-                aria-checked={autoLookup}
-                role="switch"
-                style={{
-                  width: 44, height: 26, borderRadius: 999,
-                  background: autoLookup ? T.crimson : T.lineSoft,
-                  border: 'none', cursor: 'pointer', position: 'relative',
-                  transition: 'background 0.2s', flexShrink: 0,
-                }}
-              >
-                <div style={{
-                  position: 'absolute', top: 3, left: autoLookup ? 21 : 3,
-                  width: 20, height: 20, borderRadius: 999,
-                  background: 'white', transition: 'left 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                }} />
-              </button>
             </div>
           </div>
+
+          {/* Tags */}
+          <div>
+            <SectionHead title="Tags" />
+            <div style={{
+              background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16,
+              padding: '12px 14px',
+            }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                {customTags.map(tag => (
+                  <div key={tag} style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '4px 10px', borderRadius: 999,
+                    background: T.paper, border: `1px solid ${T.lineSoft}`,
+                    fontSize: 12.5, color: T.ink, fontWeight: 500,
+                  }}>
+                    {tag}
+                    <button
+                      onClick={() => removeTag(tag)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', lineHeight: 1, display: 'flex' }}
+                    >
+                      <Icon name="x" size={12} strokeWidth={2.2} color={T.inkFaint} />
+                    </button>
+                  </div>
+                ))}
+
+                {addingTag ? (
+                  <input
+                    autoFocus
+                    value={newTagInput}
+                    onChange={e => setNewTagInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') addTag()
+                      if (e.key === 'Escape') { setNewTagInput(''); setAddingTag(false) }
+                    }}
+                    onBlur={addTag}
+                    placeholder="tag name…"
+                    style={{
+                      border: `1px solid ${T.crimson}`, borderRadius: 999,
+                      padding: '4px 10px', fontSize: 12.5, color: T.ink,
+                      background: T.crimsonBg, outline: 'none',
+                      width: 110, fontFamily: 'inherit',
+                    }}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setAddingTag(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      padding: '4px 10px', borderRadius: 999,
+                      background: 'none', border: `1px dashed ${T.lineSoft}`,
+                      fontSize: 12.5, color: T.inkFaint, cursor: 'pointer',
+                    }}
+                  >
+                    <Icon name="plus" size={12} strokeWidth={2.2} color={T.inkFaint} />
+                    Add tag
+                  </button>
+                )}
+              </div>
+              {customTags.length === 0 && !addingTag && (
+                <div style={{ marginTop: 8, fontSize: 12, color: T.inkFaint }}>
+                  Tags appear as selectable chips when capturing — e.g. games, classroom, plants.
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       )}
 
