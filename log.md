@@ -87,3 +87,8 @@
 | 2026-05-27 02:30 | FEATURE | Learn hub SourceCard: Next: label right-aligned (justifyContent: space-between). |
 | 2026-05-27 02:30 | FEATURE | HubSearch component — bottom-sheet from Learn hub header (search + settings in ScreenHeader right slot). Titles tab searches all 4 sources by label/sublabel, tap writes localStorage + navigates. Sentences tab debounced dict API search. tsc clean. |
 | 2026-05-27 03:00 | REFACTOR | StudyCard overhaul: 2-column layout (text left, 3 buttons stacked right); index number floated outside card top-left; ab+zh copy merged into single button; divider retained; vertical centering; buttons round (borderRadius:999). tsc clean. |
+| 2026-05-27 03:00 | FIX | Add missing useActiveLang.ts hook and profiles-server.ts to git — were untracked, caused Vercel build failure. |
+| 2026-05-27 12:39 | CONFIG | Add scrollbar-thin CSS utility; strengthen commit-cadence rule in agents.md. |
+| 2026-05-27 12:39 | SCHEMA | Add RLS policies migration for ind-audio Supabase Storage bucket (insert/select/delete per UID folder). |
+| 2026-05-27 12:40 | FEATURE | BatchImport: segmented Paste/Import toggle inline with sheet title; fixed-height content area (360px) prevents sheet jump on tab switch. |
+| 2026-05-27 12:40 | FEATURE | Capture page polish: audio upload to ind-audio on save + pre-save playback button; sparkle moved to meaning section with "AI translation coming soon" hint; lookup (search) moved right-aligned with mic; Definitions section collapses to 1 result per token (chevron expands rest), punctuation trimmed from display tokens; Recent filter icon removed, dropdown uses scrollbar-thin. |
