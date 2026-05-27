@@ -9,6 +9,8 @@ export type CreateItemInput = {
   dialect?: string
   place_heard?: string
   notes?: string
+  meaning?: string
+  audio_url?: string
   source_id?: string
   speaker_id?: string
 }
@@ -31,7 +33,7 @@ export async function createItem(input: CreateItemInput): Promise<Item | null> {
     .select()
     .single()
 
-  if (error) { console.error('createItem:', error); return null }
+  if (error) { console.error('createItem:', error.message, error.code, error.details); return null }
   return data
 }
 

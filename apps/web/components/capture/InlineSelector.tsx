@@ -16,7 +16,7 @@ type Props = {
   placeholder?: string
 }
 
-export default function InlineSelector({ icon, label, options, selected, onSelect, onCreate, placeholder }: Props) {
+export default function InlineSelector({ icon, label, options, selected, onSelect, onCreate, placeholder }: Readonly<Props>) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [creating, setCreating] = useState(false)
@@ -39,7 +39,7 @@ export default function InlineSelector({ icon, label, options, selected, onSelec
   }, [])
 
   const filtered = options.filter(o => o.name.toLowerCase().includes(query.toLowerCase()))
-  const showCreate = query.trim() && !filtered.find(o => o.name.toLowerCase() === query.toLowerCase())
+  const showCreate = query.trim() && !filtered.some(o => o.name.toLowerCase() === query.toLowerCase())
 
   async function handleCreate() {
     if (!query.trim() || creating) return
@@ -55,11 +55,13 @@ export default function InlineSelector({ icon, label, options, selected, onSelec
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
+      {/* Trigger row — note: clear button is a sibling below, not inside, to avoid button-in-button */}
       <button
         onClick={() => setOpen(!open)}
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '12px 14px', width: '100%', textAlign: 'left',
+          padding: '12px 14px', paddingRight: selected ? 40 : 14,
+          width: '100%', textAlign: 'left',
           background: 'none', border: 'none', cursor: 'pointer',
         }}
       >
@@ -68,20 +70,26 @@ export default function InlineSelector({ icon, label, options, selected, onSelec
         <span style={{
           flex: 1, fontSize: 14, fontWeight: selected ? 500 : 400,
           color: selected ? T.ink : T.inkFaint,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {selected ? selected.name : placeholder ?? '(optional)'}
         </span>
-        {selected ? (
-          <button
-            onClick={e => { e.stopPropagation(); onSelect(null) }}
-            style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: T.inkFaint }}
-          >
-            <Icon name="x" size={13} strokeWidth={2} />
-          </button>
-        ) : (
-          <Icon name="chev-d" size={14} color={T.inkFaint} />
-        )}
+        {!selected && <Icon name="chev-d" size={14} color={T.inkFaint} />}
       </button>
+
+      {/* Clear button — absolutely positioned sibling so it is never nested inside the trigger button */}
+      {selected && (
+        <button
+          onClick={e => { e.stopPropagation(); onSelect(null) }}
+          style={{
+            position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', padding: 2, cursor: 'pointer',
+            color: T.inkFaint, display: 'flex', alignItems: 'center',
+          }}
+        >
+          <Icon name="x" size={13} strokeWidth={2} />
+        </button>
+      )}
 
       {open && (
         <div style={{
