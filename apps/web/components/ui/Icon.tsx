@@ -6,8 +6,8 @@ export type IconName =
   | 'chevron' | 'chev-d' | 'close' | 'x' | 'speaker' | 'copy' | 'swap'
   | 'bookmark' | 'bookmarkF' | 'pin' | 'settings' | 'user' | 'pen'
   | 'sparkle' | 'tree' | 'leaf' | 'mountain' | 'wave' | 'filter'
-  | 'play' | 'card' | 'note' | 'word' | 'logout' | 'library'
-  | 'layers' | 'globe' | 'archive' | 'share'
+  | 'play' | 'stop' | 'card' | 'note' | 'word' | 'logout' | 'library'
+  | 'layers' | 'globe' | 'archive' | 'share' | 'download' | 'trash'
 
 type IconProps = {
   name: IconName
@@ -63,6 +63,8 @@ const ICONS: Record<IconName, (p: SVGProps) => ReactNode> = {
   'wave':      p => S(p, <path d="M3 12c3-3 6-3 9 0s6 3 9 0M3 18c3-3 6-3 9 0s6 3 9 0M3 6c3-3 6-3 9 0s6 3 9 0"/>),
   'filter':    p => S(p, <path d="M3 5h18l-7 9v6l-4-2v-4L3 5z"/>),
   'play':      p => S({ ...p, fill: p.stroke }, <path d="M7 4v16l13-8L7 4z"/>),
+  'stop':      p => S({ ...p, fill: p.stroke }, <rect x="5" y="5" width="14" height="14" rx="2"/>),
+  'trash':     p => S(p, <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></>),
   'card':      p => S(p, <><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></>),
   'note':      p => S(p, <><path d="M5 3h11l4 4v14H5V3z"/><path d="M8 12h8M8 16h5"/></>),
   'word':      p => S(p, <path d="M4 6h16M4 12h10M4 18h16"/>),
@@ -72,6 +74,7 @@ const ICONS: Record<IconName, (p: SVGProps) => ReactNode> = {
   'globe':     p => S(p, <><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></>),
   'archive':   p => S(p, <><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8M10 13h4"/></>),
   'share':     p => S(p, <path d="M12 3v13M8 7l4-4 4 4M5 14v5a1 1 0 001 1h12a1 1 0 001-1v-5"/>),
+  'download':  p => S(p, <><path d="M12 3v13M8 12l4 4 4-4"/><path d="M5 20h14"/></>),
 }
 
 export default function Icon({ name, size = 22, color = 'currentColor', strokeWidth = 1.6, style, className }: IconProps) {
