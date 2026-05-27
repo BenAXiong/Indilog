@@ -541,10 +541,17 @@ function CapturePageInner() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {lookupResults.map(({ token, rows }) => {
+              {lookupResults.map(({ token, rows: rawRows }) => {
+                // Deduplicate by word_ch — keep first occurrence (already sorted by dialect priority)
+                const rows = rawRows.filter((r, i, arr) => arr.findIndex(x => x.word_ch === r.word_ch) === i)
                 const disp = displayToken(token)
                 const isExpanded = expandedTokens.has(token)
                 const visible = isExpanded ? rows : rows.slice(0, 1)
+                const toggle = () => setExpandedTokens(prev => {
+                  const n = new Set(prev)
+                  if (n.has(token)) n.delete(token); else n.add(token)
+                  return n
+                })
                 return (
                   <div key={token} style={{
                     padding: '10px 14px', background: T.paperHi,
@@ -560,7 +567,7 @@ function CapturePageInner() {
                       <div style={{ marginTop: 5 }}>
                         {visible.map((r, i) => (
                           <div key={i} style={{
-                            display: 'flex', alignItems: 'baseline', gap: 8,
+                            display: 'flex', alignItems: 'center', gap: 8,
                             marginBottom: i < visible.length - 1 ? 3 : 0,
                           }}>
                             <span style={{ fontSize: 13, color: T.inkSoft, flex: 1 }}>{r.word_ch}</span>
@@ -570,25 +577,29 @@ function CapturePageInner() {
                             }}>
                               {r.dialect_name}
                             </span>
+                            {/* Expand button inline on first row when collapsed */}
+                            {i === 0 && rows.length > 1 && !isExpanded && (
+                              <button onClick={toggle} style={{
+                                display: 'flex', alignItems: 'center', gap: 2,
+                                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                                fontSize: 11, color: T.inkFaint, fontFamily: 'inherit', flexShrink: 0,
+                              }}>
+                                <Icon name="chevron" size={11} strokeWidth={2} color={T.inkFaint} />
+                                +{rows.length - 1} more
+                              </button>
+                            )}
                           </div>
                         ))}
-                        {rows.length > 1 && (
-                          <button
-                            onClick={() => setExpandedTokens(prev => {
-                              const n = new Set(prev)
-                              if (n.has(token)) n.delete(token); else n.add(token)
-                              return n
-                            })}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 3,
-                              marginTop: 5, background: 'none', border: 'none',
-                              cursor: 'pointer', padding: 0,
-                              fontSize: 11, color: T.inkFaint, fontFamily: 'inherit',
-                            }}
-                          >
+                        {isExpanded && rows.length > 1 && (
+                          <button onClick={toggle} style={{
+                            display: 'flex', alignItems: 'center', gap: 2,
+                            marginTop: 4, background: 'none', border: 'none',
+                            cursor: 'pointer', padding: 0,
+                            fontSize: 11, color: T.inkFaint, fontFamily: 'inherit',
+                          }}>
                             <Icon name="chevron" size={11} strokeWidth={2} color={T.inkFaint}
-                              style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
-                            {isExpanded ? 'less' : `+${rows.length - 1} more`}
+                              style={{ transform: 'rotate(90deg)' }} />
+                            less
                           </button>
                         )}
                       </div>

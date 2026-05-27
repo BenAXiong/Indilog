@@ -16,16 +16,9 @@ type Profile = {
   ui_locale: string
 }
 
-const TABS = [
-  { id: 'general', label: 'General' },
-  { id: 'capture', label: 'Capture' },
-] as const
-
-type TabId = typeof TABS[number]['id']
-
 function SettingsContent() {
   const searchParams = useSearchParams()
-  const tab  = (searchParams.get('tab') ?? 'general') as TabId
+  const tab  = (searchParams.get('tab') ?? 'general') as 'general' | 'capture'
   const from = searchParams.get('from') ?? '/'
 
   const [activeLang,    setActiveLang]    = useState('ami')
@@ -105,37 +98,6 @@ function SettingsContent() {
           }}>
             Settings
           </h1>
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div style={{ padding: '0 18px' }}>
-        <div style={{
-          display: 'flex', gap: 0,
-          background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12,
-          padding: 3,
-        }}>
-          {TABS.map(t => {
-            const active = tab === t.id
-            return (
-              <Link
-                key={t.id}
-                href={`/settings?tab=${t.id}&from=${encodeURIComponent(from)}`}
-                style={{
-                  flex: 1, textAlign: 'center', padding: '8px 0',
-                  borderRadius: 10, fontSize: 13, fontWeight: active ? 600 : 400,
-                  color: active ? T.ink : T.inkSoft,
-                  background: active ? T.paper : 'transparent',
-                  border: `1px solid ${active ? T.lineSoft : 'transparent'}`,
-                  textDecoration: 'none',
-                  boxShadow: active ? '0 1px 4px rgba(43,34,26,0.08)' : 'none',
-                  transition: 'background 0.15s',
-                }}
-              >
-                {t.label}
-              </Link>
-            )
-          })}
         </div>
       </div>
 
