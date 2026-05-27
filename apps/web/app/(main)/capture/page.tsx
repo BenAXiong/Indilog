@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
@@ -13,7 +13,7 @@ import { incrementCapturedToday } from '@/lib/db/stats'
 import { listSources, createSource, type Source } from '@/lib/db/sources'
 import { listSpeakers, createSpeaker, type Speaker } from '@/lib/db/speakers'
 import { LANGUAGES } from '@/lib/languages'
-import { GLID_FAMILIES, DIALECT_TO_EN } from '@/lib/learn/dialects'
+import { GLID_FAMILIES, shortDialectLabel } from '@/lib/learn/dialects'
 import { getGlid } from '@/lib/learn/lang-bridge'
 import InlineSelector from '@/components/capture/InlineSelector'
 import BatchImport from '@/components/capture/BatchImport'
@@ -29,15 +29,12 @@ function displayToken(t: string): string {
   return t.replace(/^[^a-zA-ZÀ-ÿ']+|[^a-zA-ZÀ-ÿ']+$/g, '')
 }
 
-function typeColor(t: string) {
-  if (t === 'word')     return { color: T.crimson, bg: T.crimsonBg, border: '#EFCAB8' }
-  if (t === 'sentence') return { color: T.sage,    bg: T.sageBg,    border: '#D2D8AE' }
-  return                       { color: T.amber,   bg: T.amberBg,   border: '#EBD49A' }
-}
 
 const iconBtn: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 9,
-  background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+  background: T.paper,
+  borderWidth: 1, borderStyle: 'solid' as const, borderColor: T.lineSoft,
+  color: T.inkSoft,
   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
 }
 
@@ -88,6 +85,10 @@ function CapturePageInner() {
   const [selectedSource,  setSelectedSource]  = useState<Source | null>(null)
   const [selectedSpeaker, setSelectedSpeaker] = useState<Speaker | null>(null)
 
+  // Dialect dropdown
+  const [dialectOpen, setDialectOpen] = useState(false)
+  const dialectRef = useRef<HTMLDivElement>(null)
+
   // Batch import
   const [batchOpen, setBatchOpen] = useState(false)
 
@@ -104,10 +105,18 @@ function CapturePageInner() {
 
   const [recentItems, setRecentItems] = useState<Item[]>([])
 
+  // Auto-lookup setting
+  const [autoLookup, setAutoLookup] = useState(true)
+
   // Dialect options for current language
   const dialectInitRef = useRef(false)
   const glid = getGlid(lang.code) ?? '01'
   const langDialects = GLID_FAMILIES[glid] ?? []
+
+  useEffect(() => {
+    const stored = localStorage.getItem('ind_auto_lookup')
+    if (stored !== null) setAutoLookup(stored === 'true')
+  }, [])
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data: { user } }) => {
@@ -137,25 +146,22 @@ function CapturePageInner() {
     listItems({ limit: 5, language }).then(setRecentItems)
   }, [captureFilter])
 
-  // Close filter dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function onOutside(e: MouseEvent) {
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false)
+      if (dialectRef.current && !dialectRef.current.contains(e.target as Node)) setDialectOpen(false)
     }
     document.addEventListener('mousedown', onOutside)
     return () => document.removeEventListener('mousedown', onOutside)
   }, [])
 
   // ── Lookup ──────────────────────────────────────────────────────────────
-  async function handleLookup() {
-    if (lookedUp) {
-      setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
-      return
-    }
-    if (!text.trim()) return
+  const doLookup = useCallback(async (queryText: string) => {
+    if (!queryText.trim()) return
 
     const seen = new Set<string>()
-    const deduped = text.trim().split(/\s+/).filter(tok => {
+    const deduped = queryText.trim().split(/\s+/).filter(tok => {
       const c = cleanToken(tok)
       if (!c || seen.has(c)) return false
       seen.add(c)
@@ -168,7 +174,6 @@ function CapturePageInner() {
     setLookupResults([])
     setExpandedTokens(new Set())
 
-    // Prioritize results matching current dialect if one is set
     const results = await Promise.all(deduped.map(async tok => {
       try {
         const r = await fetch(`/api/lookup?word=${encodeURIComponent(cleanToken(tok))}`)
@@ -187,7 +192,25 @@ function CapturePageInner() {
 
     setLookupResults(results)
     setLookupLoading(false)
+  }, [dialect])
+
+  function handleLookup() {
+    if (lookedUp) {
+      setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
+      return
+    }
+    doLookup(text)
   }
+
+  // Auto-lookup debounce
+  useEffect(() => {
+    if (!autoLookup || !text.trim()) {
+      if (!text.trim()) { setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()) }
+      return
+    }
+    const id = setTimeout(() => doLookup(text), 600)
+    return () => clearTimeout(id)
+  }, [text, autoLookup, doLookup])
 
   // ── Audio recording ──────────────────────────────────────────────────────
   async function startRecording() {
@@ -333,6 +356,8 @@ function CapturePageInner() {
     ? 'All'
     : (LANGUAGES.find(l => l.code === (captureFilter ?? lang.code))?.name ?? '—')
 
+  const dialectDisplayLabel = dialect ? shortDialectLabel(dialect, glid) : null
+
   return (
     <div style={{ padding: '4px 18px 120px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <ScreenHeader
@@ -344,7 +369,7 @@ function CapturePageInner() {
             <button onClick={() => setBatchOpen(true)} aria-label="Batch import" style={headerBtnStyle}>
               <Icon name="download" size={17} strokeWidth={1.6} />
             </button>
-            <Link href="/settings" aria-label="Settings" style={headerBtnStyle}>
+            <Link href="/settings?from=/capture" aria-label="Settings" style={headerBtnStyle}>
               <Icon name="settings" size={17} strokeWidth={1.6} />
             </Link>
           </div>
@@ -387,8 +412,17 @@ function CapturePageInner() {
           }}
         />
 
-        {/* Ab area footer: [trash? | play?] [mic/stop] [lookup] — all right-aligned */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, gap: 6 }}>
+        {/* Ab area footer: [hint?] [trash?] [play?] [lookup] [mic] */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 6, gap: 6 }}>
+          {/* Inline lookup hint — visible when no text typed, disappears on input */}
+          {!text.trim() && (
+            <span style={{
+              fontSize: 11.5, color: T.inkFaint, fontStyle: 'italic',
+              marginRight: 'auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+            }}>
+              Enter words in {lang.name} to lookup
+            </span>
+          )}
           {hasRecording && (
             <button
               onClick={discardRecording}
@@ -408,6 +442,18 @@ function CapturePageInner() {
             </button>
           )}
           <button
+            onClick={handleLookup}
+            aria-label="Lookup words"
+            style={{
+              ...iconBtn,
+              color:       lookedUp ? T.crimson : T.inkSoft,
+              borderColor: lookedUp ? T.crimson : T.lineSoft,
+              background:  lookedUp ? T.crimsonBg : T.paper,
+            }}
+          >
+            <Icon name="search" size={15} strokeWidth={1.8} color={lookedUp ? T.crimson : T.inkSoft} />
+          </button>
+          <button
             onClick={recording ? stopRecording : startRecording}
             aria-label={recording ? 'Stop recording' : hasRecording ? 'Re-record' : 'Record audio'}
             style={{
@@ -422,18 +468,6 @@ function CapturePageInner() {
               size={15} strokeWidth={1.8}
               color={recording ? T.crimson : hasRecording ? T.sage : T.inkSoft}
             />
-          </button>
-          <button
-            onClick={handleLookup}
-            aria-label="Lookup words"
-            style={{
-              ...iconBtn,
-              color:       lookedUp ? T.crimson : T.inkSoft,
-              borderColor: lookedUp ? T.crimson : T.lineSoft,
-              background:  lookedUp ? T.crimsonBg : T.paper,
-            }}
-          >
-            <Icon name="search" size={15} strokeWidth={1.8} color={lookedUp ? T.crimson : T.inkSoft} />
           </button>
         </div>
 
@@ -477,13 +511,6 @@ function CapturePageInner() {
       {/* Hidden audio element for playback */}
       {audioBlobUrl && (
         <audio ref={audioRef} src={audioBlobUrl} onEnded={() => setPlaying(false)} style={{ display: 'none' }} />
-      )}
-
-      {/* Lookup placeholder — shown when text is empty and lookup is closed */}
-      {!lookedUp && !text.trim() && (
-        <div style={{ textAlign: 'center', fontSize: 12, color: T.inkFaint, fontStyle: 'italic', padding: '2px 0' }}>
-          Enter words in {lang.name} to display their definition below
-        </div>
       )}
 
       {/* Lookup results — shown below input card when active */}
@@ -581,9 +608,9 @@ function CapturePageInner() {
       {/* Context metadata */}
       <div>
         <SectionHead title="Context" />
+        {/* overflow: visible so dialect dropdown can overflow the card */}
         <div style={{
           background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14,
-          overflow: 'hidden',
         }}>
           <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
             <InlineSelector
@@ -610,34 +637,90 @@ function CapturePageInner() {
             />
           </div>
 
-          {/* Dialect — select from known dialects for the current language */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}`,
-          }}>
-            <Icon name="wave" size={16} color={T.inkSoft} strokeWidth={1.8} />
-            <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60 }}>Dialect</span>
-            <select
-              value={dialect}
-              onChange={e => setDialect(e.target.value)}
+          {/* Dialect — custom themed dropdown */}
+          <div
+            ref={dialectRef}
+            style={{
+              position: 'relative',
+              borderBottom: `1px solid ${T.lineSoft}`,
+            }}
+          >
+            <button
+              onClick={() => setDialectOpen(v => !v)}
               style={{
-                flex: 1, border: 0, background: 'transparent', fontSize: 14,
-                fontWeight: 500, color: dialect ? T.ink : T.inkFaint,
-                padding: 0, outline: 'none', cursor: 'pointer',
-                appearance: 'none',
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '12px 14px', paddingRight: dialectDisplayLabel ? 40 : 14,
+                width: '100%', textAlign: 'left',
+                background: 'none', border: 'none', cursor: 'pointer',
               }}
             >
-              <option value="">(optional)</option>
-              {langDialects.map(zh => (
-                <option key={zh} value={zh}>{DIALECT_TO_EN[zh] ?? zh}</option>
-              ))}
-              {/* Show current value as option if it's not in the standard list (legacy free-text) */}
-              {dialect && !langDialects.includes(dialect) && (
-                <option value={dialect}>{dialect}</option>
-              )}
-            </select>
-            <Icon name="chev-d" size={14} color={T.inkFaint} strokeWidth={1.8}
-              style={{ flexShrink: 0, pointerEvents: 'none' }} />
+              <Icon name="wave" size={16} color={T.inkSoft} strokeWidth={1.8} />
+              <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60 }}>Dialect</span>
+              <span style={{
+                flex: 1, fontSize: 14, fontWeight: dialectDisplayLabel ? 500 : 400,
+                color: dialectDisplayLabel ? T.ink : T.inkFaint,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {dialectDisplayLabel ?? '(optional)'}
+              </span>
+              {!dialectDisplayLabel && <Icon name="chev-d" size={14} color={T.inkFaint} />}
+            </button>
+
+            {/* Clear button — absolutely positioned sibling */}
+            {dialectDisplayLabel && (
+              <button
+                onClick={e => { e.stopPropagation(); setDialect('') }}
+                style={{
+                  position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', padding: 2, cursor: 'pointer',
+                  color: T.inkFaint, display: 'flex', alignItems: 'center',
+                }}
+              >
+                <Icon name="x" size={13} strokeWidth={2} />
+              </button>
+            )}
+
+            {dialectOpen && (
+              <div style={{
+                position: 'absolute', left: 0, right: 0, top: '100%', zIndex: 50,
+                background: T.paperHi, border: `1px solid ${T.line}`, borderRadius: 12,
+                boxShadow: '0 4px 16px rgba(43,34,26,0.12)', overflow: 'hidden',
+              }}>
+                <div className="scrollbar-thin" style={{ maxHeight: 180, overflowY: 'auto' }}>
+                  {langDialects.map(zh => {
+                    const label = shortDialectLabel(zh, glid)
+                    const isSelected = dialect === zh
+                    return (
+                      <button
+                        key={zh}
+                        onClick={() => { setDialect(zh); setDialectOpen(false) }}
+                        style={{
+                          display: 'block', width: '100%', padding: '10px 14px',
+                          textAlign: 'left', fontSize: 13, color: T.ink, fontWeight: 500,
+                          background: isSelected ? T.crimsonBg : 'none',
+                          border: 'none', cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                  {/* Show legacy free-text value if not in known list */}
+                  {dialect && !langDialects.includes(dialect) && (
+                    <button
+                      onClick={() => { setDialect(dialect); setDialectOpen(false) }}
+                      style={{
+                        display: 'block', width: '100%', padding: '10px 14px',
+                        textAlign: 'left', fontSize: 13, color: T.ink, fontWeight: 500,
+                        background: T.crimsonBg, border: 'none', cursor: 'pointer',
+                      }}
+                    >
+                      {dialect}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{
@@ -735,6 +818,7 @@ function CapturePageInner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recentItems.map(item => {
               const isEditing = editingId === item.id
+              const speakerName = speakers.find(s => s.id === item.speaker_id)?.name
               return (
                 <button
                   key={item.id}
@@ -765,6 +849,16 @@ function CapturePageInner() {
                       </span>
                     )}
                   </div>
+                  {speakerName && (
+                    <span style={{
+                      fontSize: 11, color: T.inkSoft, fontWeight: 500,
+                      background: T.paper, borderRadius: 6,
+                      padding: '2px 7px', border: `1px solid ${T.lineSoft}`,
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                    }}>
+                      {speakerName}
+                    </span>
+                  )}
                   <Icon name="pen" size={13} color={T.inkFaint} strokeWidth={1.8} />
                 </button>
               )

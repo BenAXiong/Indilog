@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 import type { ReactNode } from 'react'
@@ -15,6 +18,9 @@ type ScreenHeaderProps = {
 }
 
 export default function ScreenHeader({ title, langName, langDialect, showHome = true, right }: ScreenHeaderProps) {
+  const pathname = usePathname()
+  const settingsHref = '/settings?from=' + encodeURIComponent(pathname)
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
       {showHome && (
@@ -50,7 +56,7 @@ export default function ScreenHeader({ title, langName, langDialect, showHome = 
       </div>
       {right !== undefined ? right : (
         <Link
-          href="/settings"
+          href={settingsHref}
           aria-label="Settings"
           style={{
             width: 36, height: 36, borderRadius: 999,

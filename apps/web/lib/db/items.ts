@@ -22,6 +22,11 @@ export type Item = CreateItemInput & {
   updated_at: string
 }
 
+// Strips undefined values before sending to PostgREST — avoids PGRST204 on optional columns
+function defined(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
+}
+
 export async function createItem(input: CreateItemInput): Promise<Item | null> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,7 +34,7 @@ export async function createItem(input: CreateItemInput): Promise<Item | null> {
 
   const { data, error } = await supabase
     .from('ind_items')
-    .insert({ ...input, user_id: user.id })
+    .insert(defined({ ...input, user_id: user.id }))
     .select()
     .single()
 
@@ -39,8 +44,8 @@ export async function createItem(input: CreateItemInput): Promise<Item | null> {
 
 export async function updateItem(id: string, patch: Partial<CreateItemInput>): Promise<boolean> {
   const supabase = createClient()
-  const { error } = await supabase.from('ind_items').update(patch).eq('id', id)
-  if (error) { console.error('updateItem:', error); return false }
+  const { error } = await supabase.from('ind_items').update(defined(patch)).eq('id', id)
+  if (error) { console.error('updateItem:', error.message, error.code); return false }
   return true
 }
 
