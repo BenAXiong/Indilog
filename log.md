@@ -95,3 +95,7 @@
 | 2026-05-27 13:07 | FEATURE | Icon: add stop (filled square) and trash icons. |
 | 2026-05-27 13:07 | FIX | InlineSelector: move clear button outside trigger to fix button-in-button hydration error; .find→.some, Readonly<Props>. Better createItem error logging. |
 | 2026-05-27 13:07 | FEATURE | Capture polish round 2: dialect select from GLID_FAMILIES (defaults to profile dialect); mic→stop icon when recording, separate trash+play when has-recording; AI hint inline; lookup placeholder; sort by current dialect; remove type pill from Recent. |
+| 2026-05-27 14:30 | FIX | items.ts: defined() helper strips undefined from INSERT/UPDATE — fixes PGRST204 "could not find meaning column". |
+| 2026-05-27 14:30 | FEATURE | Settings: tabbed layout (General / Capture) via ?tab= param; back arrow uses ?from= query param; removed profile card, daily goal, account section; Capture tab adds auto-lookup toggle (localStorage ind_auto_lookup). |
+| 2026-05-27 14:30 | FEATURE | ScreenHeader: 'use client' + usePathname; settings gear link auto-appends ?from=<pathname>. |
+| 2026-05-27 14:30 | FEATURE | Capture polish round 3: iconBtn border shorthand fix (lookup style interference); inline lookup hint in ab footer; button order [lookup | mic]; custom themed dialect dropdown with shortDialectLabel(); Context card overflow:visible; speaker pill in Recent; auto-lookup debounced 600ms; settings link includes ?from=/capture. |
