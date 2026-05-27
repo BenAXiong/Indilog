@@ -61,6 +61,7 @@ function CapturePageInner() {
 
   // Lookup
   const [lookedUp,       setLookedUp]       = useState(false)
+  const [defsOpen,       setDefsOpen]       = useState(true)
   const [lookupLoading,  setLookupLoading]  = useState(false)
   const [lookupResults,  setLookupResults]  = useState<LookupResult[]>([])
   const [expandedTokens, setExpandedTokens] = useState<Set<string>>(new Set())
@@ -157,7 +158,7 @@ function CapturePageInner() {
   }, [])
 
   // ── Lookup ──────────────────────────────────────────────────────────────
-  const doLookup = useCallback(async (queryText: string) => {
+  const doLookup = useCallback(async (queryText: string, auto = false) => {
     if (!queryText.trim()) return
 
     const seen = new Set<string>()
@@ -173,6 +174,7 @@ function CapturePageInner() {
     setLookupLoading(true)
     setLookupResults([])
     setExpandedTokens(new Set())
+    if (!auto) setDefsOpen(true)  // manual trigger always re-opens panel
 
     const results = await Promise.all(deduped.map(async tok => {
       try {
@@ -196,19 +198,20 @@ function CapturePageInner() {
 
   function handleLookup() {
     if (lookedUp) {
-      setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
+      setLookedUp(false); setDefsOpen(true); setLookupResults([]); setExpandedTokens(new Set())
       return
     }
+    setDefsOpen(true)
     doLookup(text)
   }
 
-  // Auto-lookup debounce
+  // Auto-lookup debounce — passes auto=true so a user-collapsed panel stays collapsed
   useEffect(() => {
     if (!autoLookup || !text.trim()) {
       if (!text.trim()) { setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()) }
       return
     }
-    const id = setTimeout(() => doLookup(text), 600)
+    const id = setTimeout(() => doLookup(text, true), 600)
     return () => clearTimeout(id)
   }, [text, autoLookup, doLookup])
 
@@ -513,13 +516,18 @@ function CapturePageInner() {
         <audio ref={audioRef} src={audioBlobUrl} onEnded={() => setPlaying(false)} style={{ display: 'none' }} />
       )}
 
-      {/* Lookup results — shown below input card when active */}
+      {/* Definitions section — header persists once lookedUp so user can re-expand */}
       {lookedUp && (
         <div className="animate-iv-rise">
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0 4px', marginBottom: 8,
-          }}>
+          {/* Header: label + chevron toggle (stays visible when collapsed) */}
+          <button
+            onClick={() => setDefsOpen(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%', padding: '0 4px', marginBottom: defsOpen ? 8 : 0,
+              background: 'none', border: 'none', cursor: 'pointer',
+            }}
+          >
             <span style={{
               fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
               fontWeight: 500, color: T.inkMute,
@@ -527,91 +535,87 @@ function CapturePageInner() {
             }}>
               Definitions
             </span>
-            <button
-              onClick={() => { setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
-            >
-              <Icon name="x" size={15} color={T.inkFaint} strokeWidth={2} />
-            </button>
-          </div>
+            <Icon name="chev-d" size={15} color={T.inkFaint} strokeWidth={2}
+              style={{ transform: defsOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+          </button>
 
-          {lookupLoading ? (
-            <div style={{ padding: '16px 0', textAlign: 'center', fontSize: 13, color: T.inkFaint }}>
-              Looking up…
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {lookupResults.map(({ token, rows: rawRows }) => {
-                // Deduplicate by word_ch — keep first occurrence (already sorted by dialect priority)
-                const rows = rawRows.filter((r, i, arr) => arr.findIndex(x => x.word_ch === r.word_ch) === i)
-                const disp = displayToken(token)
-                const isExpanded = expandedTokens.has(token)
-                const visible = isExpanded ? rows : rows.slice(0, 1)
-                const toggle = () => setExpandedTokens(prev => {
-                  const n = new Set(prev)
-                  if (n.has(token)) n.delete(token); else n.add(token)
-                  return n
-                })
-                return (
-                  <div key={token} style={{
-                    padding: '10px 14px', background: T.paperHi,
-                    border: `1px solid ${T.lineSoft}`, borderRadius: 12,
-                  }}>
-                    <span style={{
-                      fontFamily: 'Newsreader, Georgia, serif',
-                      fontSize: 15, fontWeight: 500, color: T.ink,
-                    }}>
-                      {disp}
-                    </span>
-                    {rows.length > 0 ? (
-                      <div style={{ marginTop: 5 }}>
-                        {visible.map((r, i) => (
-                          <div key={i} style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            marginBottom: i < visible.length - 1 ? 3 : 0,
-                          }}>
-                            <span style={{ fontSize: 13, color: T.inkSoft, flex: 1 }}>{r.word_ch}</span>
-                            <span style={{
-                              fontSize: 10, color: T.inkFaint,
-                              fontFamily: '"JetBrains Mono", monospace', flexShrink: 0,
+          {defsOpen && (
+            lookupLoading ? (
+              <div style={{ padding: '16px 0', textAlign: 'center', fontSize: 13, color: T.inkFaint }}>
+                Looking up…
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {lookupResults.map(({ token, rows: rawRows }) => {
+                  // Deduplicate by word_ch — keep first (already sorted by dialect priority)
+                  const rows = rawRows.filter((r, i, arr) => arr.findIndex(x => x.word_ch === r.word_ch) === i)
+                  const disp = displayToken(token)
+                  const isExpanded = expandedTokens.has(token)
+                  const visible = isExpanded ? rows : rows.slice(0, 1)
+                  const toggle = () => setExpandedTokens(prev => {
+                    const n = new Set(prev)
+                    if (n.has(token)) n.delete(token); else n.add(token)
+                    return n
+                  })
+
+                  return (
+                    <div
+                      key={token}
+                      onClick={rows.length > 1 ? toggle : undefined}
+                      style={{
+                        padding: '10px 14px', background: T.paperHi,
+                        border: `1px solid ${T.lineSoft}`, borderRadius: 12,
+                        cursor: rows.length > 1 ? 'pointer' : 'default',
+                      }}
+                    >
+                      {rows.length > 0 ? (
+                        <>
+                          {visible.map((r, i) => (
+                            <div key={i} style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              marginTop: i > 0 ? 3 : 0,
                             }}>
-                              {r.dialect_name}
-                            </span>
-                            {/* Expand button inline on first row when collapsed */}
-                            {i === 0 && rows.length > 1 && !isExpanded && (
-                              <button onClick={toggle} style={{
-                                display: 'flex', alignItems: 'center', gap: 2,
-                                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                                fontSize: 11, color: T.inkFaint, fontFamily: 'inherit', flexShrink: 0,
+                              {/* Ab word — visible on row 0, transparent spacer on rows 1+ to keep columns */}
+                              <span style={{
+                                fontFamily: 'Newsreader, Georgia, serif',
+                                fontSize: 15, fontWeight: 500, flexShrink: 0,
+                                color: i === 0 ? T.ink : 'transparent',
                               }}>
-                                <Icon name="chevron" size={11} strokeWidth={2} color={T.inkFaint} />
-                                +{rows.length - 1} more
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        {isExpanded && rows.length > 1 && (
-                          <button onClick={toggle} style={{
-                            display: 'flex', alignItems: 'center', gap: 2,
-                            marginTop: 4, background: 'none', border: 'none',
-                            cursor: 'pointer', padding: 0,
-                            fontSize: 11, color: T.inkFaint, fontFamily: 'inherit',
-                          }}>
-                            <Icon name="chevron" size={11} strokeWidth={2} color={T.inkFaint}
-                              style={{ transform: 'rotate(90deg)' }} />
-                            less
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <div style={{ marginTop: 3, fontSize: 12, color: T.inkFaint, fontStyle: 'italic' }}>
-                        not found
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                                {disp}
+                              </span>
+                              {/* Definition — centered */}
+                              <span style={{ flex: 1, textAlign: 'center', fontSize: 13, color: T.inkSoft }}>
+                                {r.word_ch}
+                              </span>
+                              {/* Dialect — right */}
+                              <span style={{
+                                fontSize: 10, color: T.inkFaint,
+                                fontFamily: '"JetBrains Mono", monospace', flexShrink: 0,
+                              }}>
+                                {r.dialect_name}
+                              </span>
+                            </div>
+                          ))}
+                          {/* Bottom-center expand/collapse indicator */}
+                          {rows.length > 1 && (
+                            <div style={{
+                              textAlign: 'center', marginTop: 6,
+                              fontSize: 11, color: T.inkFaint,
+                            }}>
+                              {isExpanded ? '↑ less' : `+ ${rows.length - 1} more`}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 12, color: T.inkFaint, fontStyle: 'italic' }}>
+                          {disp} — not found
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
           )}
         </div>
       )}
