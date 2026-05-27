@@ -13,6 +13,8 @@ import { incrementCapturedToday } from '@/lib/db/stats'
 import { listSources, createSource, type Source } from '@/lib/db/sources'
 import { listSpeakers, createSpeaker, type Speaker } from '@/lib/db/speakers'
 import { LANGUAGES } from '@/lib/languages'
+import { GLID_FAMILIES, DIALECT_TO_EN } from '@/lib/learn/dialects'
+import { getGlid } from '@/lib/learn/lang-bridge'
 import InlineSelector from '@/components/capture/InlineSelector'
 import BatchImport from '@/components/capture/BatchImport'
 
@@ -47,7 +49,7 @@ const headerBtnStyle: React.CSSProperties = {
 }
 
 function CapturePageInner() {
-  const { lang, dialectLabel } = useActiveLang()
+  const { lang, dialect: profileDialect, dialectLabel } = useActiveLang()
   const searchParams = useSearchParams()
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -102,6 +104,11 @@ function CapturePageInner() {
 
   const [recentItems, setRecentItems] = useState<Item[]>([])
 
+  // Dialect options for current language
+  const dialectInitRef = useRef(false)
+  const glid = getGlid(lang.code) ?? '01'
+  const langDialects = GLID_FAMILIES[glid] ?? []
+
   useEffect(() => {
     createClient().auth.getUser().then(({ data: { user } }) => {
       if (user) setUserId(user.id)
@@ -109,6 +116,14 @@ function CapturePageInner() {
     listSources().then(setSources)
     listSpeakers().then(setSpeakers)
   }, [])
+
+  // Default dialect to profile value once loaded (one-time init)
+  useEffect(() => {
+    if (profileDialect && !dialectInitRef.current) {
+      dialectInitRef.current = true
+      setDialect(profileDialect)
+    }
+  }, [profileDialect])
 
   // Default filter to active language once profile loads
   useEffect(() => {
@@ -153,11 +168,18 @@ function CapturePageInner() {
     setLookupResults([])
     setExpandedTokens(new Set())
 
+    // Prioritize results matching current dialect if one is set
     const results = await Promise.all(deduped.map(async tok => {
       try {
         const r = await fetch(`/api/lookup?word=${encodeURIComponent(cleanToken(tok))}`)
         const d = await r.json() as { results: LookupRow[] }
-        return { token: tok, rows: d.results ?? [] }
+        let rows = d.results ?? []
+        if (dialect && rows.length > 1) {
+          rows = [...rows].sort((a, b) =>
+            a.dialect_name === dialect ? -1 : b.dialect_name === dialect ? 1 : 0
+          )
+        }
+        return { token: tok, rows }
       } catch {
         return { token: tok, rows: [] }
       }
@@ -365,8 +387,17 @@ function CapturePageInner() {
           }}
         />
 
-        {/* Ab area footer: play (when has recording) | mic | lookup */}
+        {/* Ab area footer: [trash? | play?] [mic/stop] [lookup] — all right-aligned */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6, gap: 6 }}>
+          {hasRecording && (
+            <button
+              onClick={discardRecording}
+              aria-label="Discard recording"
+              style={{ ...iconBtn, color: T.crimson, borderColor: '#EFCAB8', background: T.crimsonBg }}
+            >
+              <Icon name="trash" size={14} strokeWidth={1.8} color={T.crimson} />
+            </button>
+          )}
           {hasRecording && (
             <button
               onClick={togglePlayback}
@@ -377,8 +408,8 @@ function CapturePageInner() {
             </button>
           )}
           <button
-            onClick={recording ? stopRecording : (hasRecording ? discardRecording : startRecording)}
-            aria-label={recording ? 'Stop recording' : hasRecording ? 'Discard recording' : 'Record audio'}
+            onClick={recording ? stopRecording : startRecording}
+            aria-label={recording ? 'Stop recording' : hasRecording ? 'Re-record' : 'Record audio'}
             style={{
               ...iconBtn,
               color:       recording ? T.crimson : hasRecording ? T.sage : T.inkSoft,
@@ -386,8 +417,11 @@ function CapturePageInner() {
               background:  recording ? T.crimsonBg : hasRecording ? T.sageBg : T.paper,
             }}
           >
-            <Icon name="mic" size={15} strokeWidth={1.8}
-              color={recording ? T.crimson : hasRecording ? T.sage : T.inkSoft} />
+            <Icon
+              name={recording ? 'stop' : 'mic'}
+              size={15} strokeWidth={1.8}
+              color={recording ? T.crimson : hasRecording ? T.sage : T.inkSoft}
+            />
           </button>
           <button
             onClick={handleLookup}
@@ -418,8 +452,13 @@ function CapturePageInner() {
           }}
         />
 
-        {/* Meaning footer: sparkle */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+        {/* Meaning footer: AI hint text inline left of sparkle */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          {showAiHint && (
+            <span style={{ fontSize: 12, color: T.inkMute, fontStyle: 'italic' }}>
+              AI translation coming soon ✨
+            </span>
+          )}
           <button
             onClick={() => setShowAiHint(v => !v)}
             aria-label="AI translation"
@@ -433,16 +472,18 @@ function CapturePageInner() {
             <Icon name="sparkle" size={15} strokeWidth={1.8} color={showAiHint ? T.amber : T.inkSoft} />
           </button>
         </div>
-        {showAiHint && (
-          <div style={{ marginTop: 6, fontSize: 12, color: T.inkMute, textAlign: 'right', fontStyle: 'italic' }}>
-            AI translation coming soon ✨
-          </div>
-        )}
       </div>
 
       {/* Hidden audio element for playback */}
       {audioBlobUrl && (
         <audio ref={audioRef} src={audioBlobUrl} onEnded={() => setPlaying(false)} style={{ display: 'none' }} />
+      )}
+
+      {/* Lookup placeholder — shown when text is empty and lookup is closed */}
+      {!lookedUp && !text.trim() && (
+        <div style={{ textAlign: 'center', fontSize: 12, color: T.inkFaint, fontStyle: 'italic', padding: '2px 0' }}>
+          Enter words in {lang.name} to display their definition below
+        </div>
       )}
 
       {/* Lookup results — shown below input card when active */}
@@ -568,18 +609,37 @@ function CapturePageInner() {
               }}
             />
           </div>
+
+          {/* Dialect — select from known dialects for the current language */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}`,
           }}>
             <Icon name="wave" size={16} color={T.inkSoft} strokeWidth={1.8} />
             <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60 }}>Dialect</span>
-            <input
-              value={dialect} onChange={e => setDialect(e.target.value)}
-              placeholder="(optional)"
-              style={{ flex: 1, border: 0, background: 'transparent', fontSize: 14, fontWeight: 500, color: T.ink, padding: 0, outline: 'none' }}
-            />
+            <select
+              value={dialect}
+              onChange={e => setDialect(e.target.value)}
+              style={{
+                flex: 1, border: 0, background: 'transparent', fontSize: 14,
+                fontWeight: 500, color: dialect ? T.ink : T.inkFaint,
+                padding: 0, outline: 'none', cursor: 'pointer',
+                appearance: 'none',
+              }}
+            >
+              <option value="">(optional)</option>
+              {langDialects.map(zh => (
+                <option key={zh} value={zh}>{DIALECT_TO_EN[zh] ?? zh}</option>
+              ))}
+              {/* Show current value as option if it's not in the standard list (legacy free-text) */}
+              {dialect && !langDialects.includes(dialect) && (
+                <option value={dialect}>{dialect}</option>
+              )}
+            </select>
+            <Icon name="chev-d" size={14} color={T.inkFaint} strokeWidth={1.8}
+              style={{ flexShrink: 0, pointerEvents: 'none' }} />
           </div>
+
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}`,
@@ -629,7 +689,7 @@ function CapturePageInner() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <SectionHead title="Recent" />
 
-            {/* Language filter — no icon, just label + chevron */}
+            {/* Language filter */}
             <div ref={filterRef} style={{ position: 'relative', paddingBottom: 12 }}>
               <button
                 onClick={() => setFilterOpen(v => !v)}
@@ -674,7 +734,6 @@ function CapturePageInner() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recentItems.map(item => {
-              const tc = typeColor(item.type)
               const isEditing = editingId === item.id
               return (
                 <button
@@ -706,13 +765,6 @@ function CapturePageInner() {
                       </span>
                     )}
                   </div>
-                  <span style={{
-                    padding: '2px 7px', borderRadius: 999,
-                    background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`,
-                    fontSize: 10.5, fontWeight: 500, flexShrink: 0,
-                  }}>
-                    {item.type}
-                  </span>
                   <Icon name="pen" size={13} color={T.inkFaint} strokeWidth={1.8} />
                 </button>
               )
