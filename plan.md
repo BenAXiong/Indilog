@@ -254,6 +254,7 @@
 - [ ] 8. Save translation into an item
 - [ ] 9. Generate and review a flashcard
 - [ ] 10. Confirm dashboard stats update
+- [ ] 11. Batch import with premade dataset (verify items created, filter visible in Recent)
 
 **Exit criteria:** App deployable. Main v0 loop works. README explains setup. Known gaps listed.
 
@@ -308,6 +309,14 @@ These are intentionally not in v0:
 - [ ] Accessibility pass
 
 **Deferred from Phase 10:** grammar comparison mode, language dashboard, full cross-app WordLookup component.
+
+### Word Lookup — Spelling Suggestions (v1 addition)
+When a token has no exact dictionary match, surface near-matches ranked by edit distance with common phonological variants:
+- l ↔ r (common across Formosan languages)
+- o ↔ u vowel alternation
+- Glottal stop / apostrophe variation
+- Single edit distance (insertion, deletion, substitution)
+Display as a "Did you mean?" row beneath the "not found" card in the Capture lookup section and in the Learn StudyCard inline lookup.
 
 **Exit criteria:** User can navigate all four sources for their active language, study cards render with audio and zh toggle, saving a sentence creates an item in the notebook and a reviewable flashcard, completed lessons persist cross-device.
 

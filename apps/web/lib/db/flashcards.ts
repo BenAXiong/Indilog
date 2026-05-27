@@ -30,7 +30,7 @@ export async function ensureFlashcards(): Promise<void> {
 
   const [{ data: existing }, { data: items }] = await Promise.all([
     supabase.from('ind_flashcards').select('item_id').eq('user_id', user.id),
-    supabase.from('ind_items').select('id, text, notes, type').eq('user_id', user.id),
+    supabase.from('ind_items').select('id, text, notes, meaning, type').eq('user_id', user.id),
   ])
 
   if (!items?.length) return
@@ -43,7 +43,7 @@ export async function ensureFlashcards(): Promise<void> {
       user_id: user.id,
       item_id: item.id,
       front: item.text,
-      back: item.notes?.trim() || (item.type === 'word' ? '(no definition)' : '(no translation)'),
+      back: item.meaning?.trim() || item.notes?.trim() || (item.type === 'word' ? '(no definition)' : '(no translation)'),
     }))
   )
 }

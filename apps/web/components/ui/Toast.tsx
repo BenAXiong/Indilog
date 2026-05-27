@@ -7,12 +7,12 @@ type ToastProps = {
   tone?: 'sage' | 'amber'
 }
 
-export default function Toast({ children, tone = 'sage' }: ToastProps) {
+export default function Toast({ children, tone = 'sage' }: Readonly<ToastProps>) {
   return (
     <div
       className="animate-iv-toast"
       style={{
-        position: 'absolute',
+        position: 'fixed',
         bottom: 110,
         left: '50%',
         transform: 'translateX(-50%)',
