@@ -380,7 +380,7 @@ function CapturePageInner() {
             <button onClick={() => setBatchOpen(true)} aria-label="Batch import" style={headerBtnStyle}>
               <Icon name="download" size={17} strokeWidth={1.6} />
             </button>
-            <Link href="/settings?from=/capture" aria-label="Settings" style={headerBtnStyle}>
+            <Link href="/settings?tab=capture&from=/capture" aria-label="Settings" style={headerBtnStyle}>
               <Icon name="settings" size={17} strokeWidth={1.6} />
             </Link>
           </div>
