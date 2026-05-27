@@ -106,10 +106,12 @@ function CapturePageInner() {
 
   const [recentItems, setRecentItems] = useState<Item[]>([])
 
-  // Auto-lookup + tags settings
-  const [autoLookup,   setAutoLookup]   = useState(true)
+  // Auto-lookup + tags
+  const [autoLookup,    setAutoLookup]    = useState(true)
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [selectedTags,  setSelectedTags]  = useState<string[]>([])
+  const [addingTag,     setAddingTag]     = useState(false)
+  const [newTagInput,   setNewTagInput]   = useState('')
 
   // Dialect options for current language
   const dialectInitRef = useRef(false)
@@ -301,6 +303,16 @@ function CapturePageInner() {
     setEditingId(null); setText(''); setMeaning(''); setNotes(''); setSelectedTags([])
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
     discardRecording()
+  }
+
+  function addTagInline() {
+    const name = newTagInput.trim()
+    setNewTagInput(''); setAddingTag(false)
+    if (!name || availableTags.includes(name)) return
+    const next = [...availableTags, name]
+    setAvailableTags(next)
+    localStorage.setItem('ind_custom_tags', JSON.stringify(next))
+    setSelectedTags(prev => [...prev, name])
   }
 
   function refetchRecent() {
@@ -713,7 +725,7 @@ function CapturePageInner() {
                 background: T.paperHi, border: `1px solid ${T.line}`, borderRadius: 12,
                 boxShadow: '0 4px 16px rgba(43,34,26,0.12)', overflow: 'hidden',
               }}>
-                <div className="scrollbar-thin" style={{ maxHeight: 180, overflowY: 'auto' }}>
+                <div>
                   {langDialects.map(zh => {
                     const label = shortDialectLabel(zh, glid)
                     const isSelected = dialect === zh
@@ -762,40 +774,70 @@ function CapturePageInner() {
               style={{ flex: 1, border: 0, background: 'transparent', fontSize: 14, fontWeight: 500, color: T.ink, padding: 0, outline: 'none' }}
             />
           </div>
-          {/* Tags — only shown when the user has created tags in settings */}
-          {availableTags.length > 0 && (
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10,
-              padding: '10px 14px', borderBottom: `1px solid ${T.lineSoft}`,
-            }}>
-              <Icon name="tag" size={16} color={T.inkSoft} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60, paddingTop: 2, flexShrink: 0 }}>Tags</span>
-              <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {availableTags.map(tag => {
-                  const sel = selectedTags.includes(tag)
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => setSelectedTags(prev =>
-                        sel ? prev.filter(t => t !== tag) : [...prev, tag]
-                      )}
-                      style={{
-                        padding: '3px 10px', borderRadius: 999,
-                        fontSize: 12, fontWeight: 500,
-                        background: sel ? T.crimsonBg : T.paper,
-                        color: sel ? T.crimson : T.inkMute,
-                        borderWidth: 1, borderStyle: 'solid' as const,
-                        borderColor: sel ? T.crimson : T.lineSoft,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {tag}
-                    </button>
-                  )
-                })}
-              </div>
+          {/* Tags — always visible with inline add */}
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            padding: '10px 14px', borderBottom: `1px solid ${T.lineSoft}`,
+          }}>
+            <Icon name="tag" size={16} color={T.inkSoft} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
+            <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60, paddingTop: 2, flexShrink: 0 }}>Tags</span>
+            <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+              {availableTags.map(tag => {
+                const sel = selectedTags.includes(tag)
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => setSelectedTags(prev =>
+                      sel ? prev.filter(t => t !== tag) : [...prev, tag]
+                    )}
+                    style={{
+                      padding: '3px 10px', borderRadius: 999,
+                      fontSize: 12, fontWeight: 500,
+                      background: sel ? T.crimsonBg : T.paper,
+                      color: sel ? T.crimson : T.inkMute,
+                      borderWidth: 1, borderStyle: 'solid' as const,
+                      borderColor: sel ? T.crimson : T.lineSoft,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+              {addingTag ? (
+                <input
+                  autoFocus
+                  value={newTagInput}
+                  onChange={e => setNewTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') addTagInline()
+                    if (e.key === 'Escape') { setNewTagInput(''); setAddingTag(false) }
+                  }}
+                  onBlur={addTagInline}
+                  placeholder="tag name…"
+                  style={{
+                    border: `1px solid ${T.crimson}`, borderRadius: 999,
+                    padding: '3px 10px', fontSize: 12, color: T.ink,
+                    background: T.crimsonBg, outline: 'none',
+                    width: 90, fontFamily: 'inherit',
+                  }}
+                />
+              ) : (
+                <button
+                  onClick={() => setAddingTag(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 3,
+                    padding: '3px 8px', borderRadius: 999,
+                    background: 'none', border: `1px dashed ${T.lineSoft}`,
+                    fontSize: 12, color: T.inkFaint, cursor: 'pointer',
+                  }}
+                >
+                  <Icon name="plus" size={11} strokeWidth={2.2} color={T.inkFaint} />
+                  Add
+                </button>
+              )}
             </div>
-          )}
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px' }}>
             <Icon name="pen" size={16} color={T.inkSoft} strokeWidth={1.8} style={{ marginTop: 2 }} />

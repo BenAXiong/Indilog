@@ -18,8 +18,6 @@ type Profile = {
   ui_locale: string
 }
 
-const TAGS_KEY = 'ind_custom_tags'
-
 function SettingsContent() {
   const searchParams = useSearchParams()
   const tab  = (searchParams.get('tab') ?? 'general') as 'general' | 'capture'
@@ -38,18 +36,11 @@ function SettingsContent() {
   const accountMenuRef = useRef<HTMLDivElement>(null)
 
   // Capture settings
-  const [autoLookup,  setAutoLookup]  = useState(true)
-  const [customTags,  setCustomTags]  = useState<string[]>([])
-  const [newTagInput, setNewTagInput] = useState('')
-  const [addingTag,   setAddingTag]   = useState(false)
+  const [autoLookup, setAutoLookup] = useState(true)
 
   useEffect(() => {
     const stored = localStorage.getItem('ind_auto_lookup')
     if (stored !== null) setAutoLookup(stored === 'true')
-    const storedTags = localStorage.getItem(TAGS_KEY)
-    if (storedTags) {
-      try { setCustomTags(JSON.parse(storedTags)) } catch { /* ignore */ }
-    }
   }, [])
 
   useEffect(() => {
@@ -105,23 +96,6 @@ function SettingsContent() {
     const next = !autoLookup
     setAutoLookup(next)
     localStorage.setItem('ind_auto_lookup', String(next))
-  }
-
-  function saveTags(tags: string[]) {
-    setCustomTags(tags)
-    localStorage.setItem(TAGS_KEY, JSON.stringify(tags))
-  }
-
-  function addTag() {
-    const name = newTagInput.trim()
-    if (!name || customTags.includes(name)) { setNewTagInput(''); setAddingTag(false); return }
-    saveTags([...customTags, name])
-    setNewTagInput('')
-    setAddingTag(false)
-  }
-
-  function removeTag(name: string) {
-    saveTags(customTags.filter(t => t !== name))
   }
 
   const currentLang  = getLanguage(activeLang) ?? LANGUAGES[0]
@@ -333,72 +307,6 @@ function SettingsContent() {
                   }} />
                 </button>
               </div>
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <SectionHead title="Tags" />
-            <div style={{
-              background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16,
-              padding: '12px 14px',
-            }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                {customTags.map(tag => (
-                  <div key={tag} style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    padding: '4px 10px', borderRadius: 999,
-                    background: T.paper, border: `1px solid ${T.lineSoft}`,
-                    fontSize: 12.5, color: T.ink, fontWeight: 500,
-                  }}>
-                    {tag}
-                    <button
-                      onClick={() => removeTag(tag)}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', lineHeight: 1, display: 'flex' }}
-                    >
-                      <Icon name="x" size={12} strokeWidth={2.2} color={T.inkFaint} />
-                    </button>
-                  </div>
-                ))}
-
-                {addingTag ? (
-                  <input
-                    autoFocus
-                    value={newTagInput}
-                    onChange={e => setNewTagInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') addTag()
-                      if (e.key === 'Escape') { setNewTagInput(''); setAddingTag(false) }
-                    }}
-                    onBlur={addTag}
-                    placeholder="tag name…"
-                    style={{
-                      border: `1px solid ${T.crimson}`, borderRadius: 999,
-                      padding: '4px 10px', fontSize: 12.5, color: T.ink,
-                      background: T.crimsonBg, outline: 'none',
-                      width: 110, fontFamily: 'inherit',
-                    }}
-                  />
-                ) : (
-                  <button
-                    onClick={() => setAddingTag(true)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      padding: '4px 10px', borderRadius: 999,
-                      background: 'none', border: `1px dashed ${T.lineSoft}`,
-                      fontSize: 12.5, color: T.inkFaint, cursor: 'pointer',
-                    }}
-                  >
-                    <Icon name="plus" size={12} strokeWidth={2.2} color={T.inkFaint} />
-                    Add tag
-                  </button>
-                )}
-              </div>
-              {customTags.length === 0 && !addingTag && (
-                <div style={{ marginTop: 8, fontSize: 12, color: T.inkFaint }}>
-                  Tags appear as selectable chips when capturing — e.g. games, classroom, plants.
-                </div>
-              )}
             </div>
           </div>
 
