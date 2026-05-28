@@ -1,7 +1,7 @@
 # Indivore — Claude Code Instructions
 
 ## At the start of every session
-- Read `agents.md`, `plan.md`, `decisions.md` to orient
+- Read `agents.md`, `plan-v1.md`, `decisions.md` to orient (also skim `plan.md` for v0 history if needed)
 
 ## After every commit
 - Append one or more rows to `log.md` covering what changed

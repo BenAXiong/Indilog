@@ -1,4 +1,6 @@
-# Indivore — Build Plan
+# Indivore — v0 Build Plan
+
+> **v1 active work lives in `plan-v1.md`** — SRS milestone, Library, v1 polish.
 
 > Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 
@@ -109,8 +111,8 @@
 
 ### UX surfaces
 
-- [ ] Saved material list (Library) — deferred to Phase 8 dashboard completion
-- [ ] Item detail drawer or page — deferred to Phase 8
+- [ ] Saved material list (Library) — deferred to v1
+- [ ] Item detail drawer or page — deferred to v1
 - [x] Basic source selector (InlineSelector in Capture)
 - [x] Basic speaker selector (InlineSelector in Capture)
 
@@ -248,31 +250,17 @@ Post-completion improvements built during and after Phase 10:
 
 **Goal:** Coherent prototype ready to demo.
 
-- [ ] Mobile spacing pass (all five tabs)
-- [ ] Desktop usability pass
-- [ ] Loading states everywhere async data is fetched
-- [ ] Empty states everywhere (consistent copy)
-- [ ] Error states (API failures, auth errors)
-- [ ] Basic accessibility pass (focus order, ARIA labels on icon buttons)
-- [ ] Document all env vars in `.env.example` and `README`
-- [ ] README setup flow (clone → env → supabase → run)
-- [ ] Vercel deployment check (env vars set, build passes)
-- [ ] Supabase redirect URL check (OAuth callback registered)
-- [ ] Smoke test all 10 flows from the workflow doc
-
-### Smoke-test flows
-
-- [ ] 1. Sign in
-- [ ] 2. Set active study language
-- [ ] 3. Capture a sentence
-- [ ] 4. Add source / speaker / place
-- [ ] 5. Look up a token
-- [ ] 6. Save a word
-- [ ] 7. Translate a supported pair
-- [ ] 8. Save translation into an item
-- [ ] 9. Generate and review a flashcard
-- [ ] 10. Confirm dashboard stats update
-- [ ] 11. Batch import with premade dataset (verify items created, filter visible in Recent)
+- [x] Mobile spacing pass (all five tabs)
+- [x] Vercel deployment check (env vars set, build passes)
+- [x] Supabase redirect URL check (OAuth callback registered)
+- [~] Loading states — Dict/Learn covered; Capture/Review/Dashboard need a pass to verify all async paths
+- [~] Empty states — Dict covered; other tabs need audit for consistent no-data messages
+- [ ] Document all env vars in `.env.example` and `README` ← **do now**
+- [ ] README setup flow (clone → env → supabase → run) — deferred to v1
+- [ ] Desktop usability pass — deferred to v1
+- [ ] Error states (API failures, auth errors) — deferred to v1
+- [ ] Basic accessibility pass — deferred to v1
+- [ ] Smoke test all 11 flows — deferred to v1
 
 **Exit criteria:** App deployable. Main v0 loop works. README explains setup. Known gaps listed.
 
@@ -325,14 +313,14 @@ These are intentionally not in v0:
 ### Phase L0 — Assets & Data Bridge ✅
 - [x] Copy `corpus_geometry.json` → `apps/web/lib/learn/`
 - [x] Copy `grmpts_type_labels.json` → `apps/web/lib/learn/`
-- [x] Create `lib/learn/dialects.ts` (GLID maps)
-- [x] Create `lib/learn/lang-bridge.ts` (Indivore code → GLID)
+- [x] Create `lib/lang/dialects.ts` (GLID maps) — moved from `lib/learn/` 2026-05-29
+- [x] Create `lib/lang/lang-bridge.ts` (Indivore code → GLID) — moved from `lib/learn/` 2026-05-29
 - [x] Wire `ind_profiles.default_dialect` for Learn dialect persistence
 
 ### Phase L1 — API Routes ✅
-- [x] `lib/learn/db.ts` — SQLite curriculum query functions
-- [x] `/api/curriculum` — four source variants + audio URL repair
-- [x] `/api/lookup` — exact-match ILRDF word lookup
+- [x] `lib/corpus/curriculum.ts` — SQLite curriculum query functions (moved from `lib/learn/db.ts` 2026-05-29)
+- [x] `/api/learn/curriculum` — four source variants + audio URL repair (moved from `/api/curriculum` 2026-05-29)
+- [x] `/api/learn/lookup` — exact-match ILRDF word lookup (moved from `/api/lookup` 2026-05-29)
 - [x] `ind_completions` migration (cross-device lesson completion)
 
 ### Phase L2 — Learn Page UI ✅
