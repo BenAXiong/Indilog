@@ -93,5 +93,23 @@ export async function listCollectionCards(collectionId: string): Promise<Collect
     .select('id, level, lesson, position, ab, zh')
     .eq('collection_id', collectionId)
     .order('level').order('lesson').order('position')
+    .limit(10000) // override PostgREST default 1000-row cap
   return (data ?? []) as CollectionCard[]
+}
+
+export async function renameCollection(id: string, name: string): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('ind_learn_collections')
+    .update({ name })
+    .eq('id', id)
+  return !error
+}
+
+export async function deleteCollection(id: string): Promise<boolean> {
+  const supabase = createClient()
+  // Delete cards first (in case FK has no cascade)
+  await supabase.from('ind_learn_cards').delete().eq('collection_id', id)
+  const { error } = await supabase.from('ind_learn_collections').delete().eq('id', id)
+  return !error
 }
