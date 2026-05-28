@@ -29,10 +29,14 @@
 
 ### M1-C — Amis1k Collection
 
-- [ ] Amis1k word list as a static importable dataset (`packages/amis1k/`)
-- [ ] Bulk-import Amis1k into a user's `ind_learn_collections` on first use
+- [x] Amis1k word list as importable JSON (`packages/amis1k/amis1k.json`) — 1063 cards, 4 difficulty lessons (初級/中級/中高級/高級), drag-drop into `/learn/new`
+- [x] Collections saved to `ind_learn_collections` + `ind_learn_cards` via chunked insert (200/batch)
+- [x] `lesson_title` column on `ind_learn_cards` — titles shown in browse page
+- [x] Learn hub shows saved collections (amber card, card count, links to browse page)
+- [x] `/learn/collection/[id]` browse page — collapsible lessons, rename inline, delete with confirm
+- [ ] Generate flashcards from collection cards → SRS queue (M1-B dependency)
 - [ ] Track which Amis1k words have been seen / learned / mastered
-- [ ] Compare Amis1k against user's existing captured items (avoid duplicates)
+- [ ] Compare Amis1k against existing captured items (avoid duplicates)
 
 ### M1-D — Progress View & Stats
 

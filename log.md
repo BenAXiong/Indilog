@@ -2,6 +2,13 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-29 02:44 | FIX | collections: batch card inserts in chunks of 200 to avoid PostgREST body limit on large imports |
+| 2026-05-29 02:42 | SCHEMA | ind_learn_cards: add lesson_title column (migration 20260529); saveCollection persists it; browse page shows it; all lessons collapsed by default |
+| 2026-05-29 02:39 | FIX | collection browse page: .limit(10000) overrides PostgREST 1000-row default; add rename (inline pencil) + delete (confirm trash) |
+| 2026-05-29 02:37 | FIX | learn/new import flow: after "Import N cards" show collapsible summary before Save — not CollectionEditor |
+| 2026-05-29 02:33 | FEATURE | Learn hub: saved collections visible below corpus sources (amber card, card count); /learn/collection/[id] browse page with collapsible lessons; ImportDropzone lessons collapsible by default |
+| 2026-05-29 02:25 | DATA | Amis1k deck restructured: 4 difficulty lessons (初級 300 / 中級 200 / 中高級 300 / 高級 263) |
+| 2026-05-29 02:20 | DATA | Amis1k vocab deck generated — 1063 cards, packages/amis1k/amis1k.json, importable via /learn/new |
 | 2026-05-29 01:39 | CONFIG | gitignore temp_learn/ temp_scrape/ and logo source PNGs; untracked files removed from history |
 | 2026-05-29 01:38 | REFACTOR | Full architecture restructure: lib/corpus/ (SQLite layer), lib/db/ subfolders (notebook/srs/progress/profile), LangDialectProvider (single profile fetch → instant Settings sync), components/lookup/, api/learn/ route group; tsc clean |
 | 2026-05-29 01:01 | REFACTOR | lib/lang/ extracted — dialects.ts + lang-bridge.ts moved from lib/learn/; lib/dict/sqlite.ts extracted from client.ts; lib/learn/db.ts now imports from sqlite directly; 8 import sites updated; tsc clean |
