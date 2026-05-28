@@ -133,39 +133,31 @@ function SentenceCard({ s, onSave, onCapture }: {
   )
 }
 
-// ─── Merged entry (computed client-side) ─────────────────────
+// ─── Merged entry (words only, deduped defs) ─────────────────
 type MergedEntry = {
   ab: string
   dialect_name: string
   glid: string
   exact: boolean
-  wordDefs: string[]
-  sentences: { zh: string; source: string; audio_url: string | null }[]
+  defs: string[]   // deduplicated, ordered definitions
 }
 
 function MergedEntryCard({ entry, onSave, onCapture }: {
   entry: MergedEntry
-  onSave: (ab: string, dialect: string, def: string, type: 'word' | 'sentence') => void
+  onSave: (ab: string, dialect: string, def: string) => void
   onCapture: (ab: string, def: string) => void
 }) {
-  const primaryDef = entry.wordDefs[0] ?? entry.sentences[0]?.zh ?? ''
-
+  const primaryDef = entry.defs[0] ?? ''
   const btnStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: 8,
     background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
     display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
   }
-
-  function playAudio(url: string) {
-    new Audio(url).play().catch(() => {})
-  }
-
   return (
     <div style={{
       background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14,
       overflow: 'hidden', boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
     }}>
-      {/* Header */}
       <div style={{ padding: '12px 14px 10px', borderBottom: `1px solid ${T.lineSoft}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
           <div>
@@ -189,60 +181,23 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
           )}
         </div>
       </div>
-
-      {/* Word definitions */}
-      {entry.wordDefs.length > 0 && (
-        <div style={{ padding: '10px 14px', borderBottom: entry.sentences.length > 0 ? `1px solid ${T.lineSoft}` : 'none' }}>
-          {entry.wordDefs.map((def, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < entry.wordDefs.length - 1 ? 6 : 0 }}>
-              {entry.wordDefs.length > 1 && (
-                <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', marginTop: 2, flexShrink: 0 }}>
-                  {i + 1}.
-                </span>
-              )}
-              <span style={{ fontSize: 14, color: T.ink, fontWeight: 500, lineHeight: 1.35 }}>{def}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Sentence examples */}
-      {entry.sentences.length > 0 && (
-        <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {entry.sentences.map((s, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 13.5, fontStyle: 'italic', color: T.inkSoft, lineHeight: 1.4 }}>
-                  {s.zh}
-                </div>
-                <div style={{ fontSize: 10.5, color: T.inkFaint, marginTop: 2, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase' }}>
-                  {s.source}
-                </div>
-              </div>
-              {s.audio_url && (
-                <button onClick={() => playAudio(s.audio_url!)} title="Play audio" style={{ ...btnStyle, flexShrink: 0 }}>
-                  <Icon name="speaker" size={13} strokeWidth={1.8} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Actions */}
+      <div style={{ padding: '10px 14px' }}>
+        {entry.defs.map((def, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < entry.defs.length - 1 ? 6 : 0 }}>
+            {entry.defs.length > 1 && (
+              <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', marginTop: 2, flexShrink: 0 }}>
+                {i + 1}.
+              </span>
+            )}
+            <span style={{ fontSize: 14, color: T.ink, fontWeight: 500, lineHeight: 1.35 }}>{def}</span>
+          </div>
+        ))}
+      </div>
       <div style={{ padding: '8px 14px', borderTop: `1px solid ${T.lineSoft}`, display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-        <button
-          onClick={() => onSave(entry.ab, entry.dialect_name, primaryDef, entry.wordDefs.length > 0 ? 'word' : 'sentence')}
-          title="Save to notebook"
-          style={btnStyle}
-        >
+        <button onClick={() => onSave(entry.ab, entry.dialect_name, primaryDef)} title="Save word" style={btnStyle}>
           <Icon name="bookmark" size={14} strokeWidth={1.8} />
         </button>
-        <button
-          onClick={() => onCapture(entry.ab, primaryDef)}
-          title="Add context in Capture"
-          style={btnStyle}
-        >
+        <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
           <Icon name="capture" size={14} strokeWidth={1.8} />
         </button>
       </div>
@@ -308,26 +263,43 @@ export default function DictionaryPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [q, glid, runSearch])
 
-  // Merge words + sentences by (ab, dialect_name)
+  // Merge words-only by (word_ab case-insensitive, dialect_name),
+  // parsing numbered definitions and deduplicating via substring inclusion.
   const merged = useMemo<MergedEntry[]>(() => {
+    function parseDefs(wordCh: string): string[] {
+      // "1. foo 2. bar 3. baz" → ["foo", "bar", "baz"]
+      if (/^\d+\./.test(wordCh)) {
+        const parts = wordCh.split(/(?=\s\d+\.)/).map(s => s.replace(/^\d+\.\s*/, '').trim()).filter(Boolean)
+        if (parts.length > 1) return parts
+      }
+      return [wordCh.trim()]
+    }
+
+    function addDef(def: string, defs: string[]): string[] {
+      // If def is already covered by something in defs, skip it
+      if (defs.some(e => e.includes(def))) return defs
+      // If def covers (subsumes) existing shorter entries, replace them
+      const kept = defs.filter(e => !def.includes(e))
+      return [...kept, def]
+    }
+
     const map = new Map<string, MergedEntry>()
     for (const w of words) {
-      const key = `${w.word_ab}|${w.dialect_name}`
-      if (!map.has(key)) map.set(key, { ab: w.word_ab, dialect_name: w.dialect_name, glid: w.glid, exact: false, wordDefs: [], sentences: [] })
+      const key = `${w.word_ab.toLowerCase()}|${w.dialect_name}`
+      if (!map.has(key)) map.set(key, { ab: w.word_ab, dialect_name: w.dialect_name, glid: w.glid, exact: false, defs: [] })
       const e = map.get(key)!
-      e.wordDefs.push(w.word_ch)
       if (w.exact) e.exact = true
+      for (const def of parseDefs(w.word_ch)) {
+        e.defs = addDef(def, e.defs)
+      }
     }
-    for (const s of sentences) {
-      const key = `${s.ab}|${s.dialect_name}`
-      if (!map.has(key)) map.set(key, { ab: s.ab, dialect_name: s.dialect_name, glid: '', exact: false, wordDefs: [], sentences: [] })
-      map.get(key)!.sentences.push({ zh: s.zh, source: s.source, audio_url: s.audio_url })
-    }
-    return Array.from(map.values()).sort((a, b) => {
-      if (a.exact !== b.exact) return a.exact ? -1 : 1
-      return a.ab.length - b.ab.length
-    })
-  }, [words, sentences])
+    return Array.from(map.values())
+      .filter(e => e.defs.length > 0)
+      .sort((a, b) => {
+        if (a.exact !== b.exact) return a.exact ? -1 : 1
+        return a.ab.length - b.ab.length
+      })
+  }, [words])
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
@@ -342,9 +314,9 @@ export default function DictionaryPage() {
     touchStartX.current = null
   }
 
-  async function handleSaveMerged(ab: string, dialect: string, def: string, type: 'word' | 'sentence') {
-    await createItem({ text: ab, type, language: dialect, notes: def })
-    setSaveMsg(type === 'word' ? `Saved "${ab}"` : 'Sentence saved')
+  async function handleSaveMerged(ab: string, dialect: string, def: string) {
+    await createItem({ text: ab, type: 'word', language: dialect, notes: def })
+    setSaveMsg(`Saved "${ab}"`)
     setTimeout(() => setSaveMsg(null), 2000)
   }
 
