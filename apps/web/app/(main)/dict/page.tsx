@@ -7,6 +7,7 @@ import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import { getGlid } from '@/lib/learn/lang-bridge'
+import { GLID_FAMILIES } from '@/lib/learn/dialects'
 import { createItem } from '@/lib/db/items'
 
 type WordResult = {
@@ -226,6 +227,7 @@ export default function DictionaryPage() {
 
   const [q, setQ] = useState('')
   const [glid, setGlid] = useState<string>('')
+  const [dialectFilter, setDialectFilter] = useState<string>('')
   const [userChangedGlid, setUserChangedGlid] = useState(false)
   const [dialects, setDialects] = useState<DialectOption[]>([])
   const [words, setWords] = useState<WordResult[]>([])
@@ -254,15 +256,17 @@ export default function DictionaryPage() {
     const langGlid = getGlid(lang.code)
     if (langGlid && dialects.some(d => d.glid === langGlid)) {
       setGlid(langGlid)
+      setDialectFilter('')
     }
   }, [lang, dialects, userChangedGlid])
 
-  const runSearch = useCallback(async (term: string, glidFilter: string) => {
+  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string) => {
     if (!term.trim()) { setWords([]); setSentences([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)
     const params = new URLSearchParams({ q: term })
     if (glidFilter) params.set('glid', glidFilter)
+    if (dialectF)   params.set('dialect', dialectF)
     const res = await fetch(`/api/dict/search?${params}`)
     const data = await res.json()
     if (data.error) setDbError(data.error)
@@ -273,9 +277,9 @@ export default function DictionaryPage() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => runSearch(q, glid), 320)
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, runSearch])
+  }, [q, glid, dialectFilter, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
@@ -435,7 +439,7 @@ export default function DictionaryPage() {
         {dialects.length > 0 && (
           <select
             value={glid}
-            onChange={e => { setGlid(e.target.value); setUserChangedGlid(true) }}
+            onChange={e => { setGlid(e.target.value); setDialectFilter(''); setUserChangedGlid(true) }}
             style={{
               height: 52, borderRadius: 14, border: `1px solid ${T.line}`,
               background: T.paperHi, color: glid ? T.ink : T.inkMute,
@@ -446,6 +450,25 @@ export default function DictionaryPage() {
             <option value="">All</option>
             {dialects.map(d => (
               <option key={d.glid} value={d.glid}>{d.group_name}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Dialect filter — only when a language is selected */}
+        {glid && (GLID_FAMILIES[glid]?.length ?? 0) > 1 && (
+          <select
+            value={dialectFilter}
+            onChange={e => setDialectFilter(e.target.value)}
+            style={{
+              height: 52, borderRadius: 14, border: `1px solid ${T.line}`,
+              background: T.paperHi, color: dialectFilter ? T.ink : T.inkMute,
+              fontSize: 12.5, fontWeight: 500, padding: '0 10px',
+              cursor: 'pointer', outline: 'none',
+            }}
+          >
+            <option value="">All dialects</option>
+            {(GLID_FAMILIES[glid] ?? []).map(d => (
+              <option key={d} value={d}>{d}</option>
             ))}
           </select>
         )}

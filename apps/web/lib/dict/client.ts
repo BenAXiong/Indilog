@@ -43,7 +43,7 @@ export type DialectRow = {
   sub_dialects: string
 }
 
-export function searchWords(q: string, glid?: string, limit = 30): WordRow[] {
+export function searchWords(q: string, glid?: string, dialect?: string, limit = 30): WordRow[] {
   const db = getDb()
   const pattern = `"${q.replace(/"/g, '""')}"*`
 
@@ -53,18 +53,20 @@ export function searchWords(q: string, glid?: string, limit = 30): WordRow[] {
     FROM ilrdf_vocabulary_fts f
     JOIN ilrdf_vocabulary v ON v.id = f.rowid
     WHERE f.ab MATCH ?
-    ${glid ? 'AND v.glid = ?' : ''}
+    ${glid    ? 'AND v.glid = ?'         : ''}
+    ${dialect ? 'AND v.dialect_name = ?' : ''}
     ORDER BY exact DESC, LENGTH(v.word_ab) ASC
     LIMIT ?
   `
-  const params: (string | number)[] = glid
-    ? [q, pattern, glid, limit]
-    : [q, pattern, limit]
+  const params: (string | number)[] = [q, pattern]
+  if (glid)    params.push(glid)
+  if (dialect) params.push(dialect)
+  params.push(limit)
 
   return db.prepare(base).all(...params) as WordRow[]
 }
 
-export function searchSentences(q: string, glid?: string, limit = 20): SentenceRow[] {
+export function searchSentences(q: string, glid?: string, dialect?: string, limit = 20): SentenceRow[] {
   const db = getDb()
   const pattern = `"${q.replace(/"/g, '""')}"*`
 
@@ -74,13 +76,15 @@ export function searchSentences(q: string, glid?: string, limit = 20): SentenceR
     JOIN sentences s ON s.id = f.rowid
     JOIN occurrences o ON o.sentence_id = s.id
     WHERE f.ab MATCH ?
-    ${glid ? 'AND s.glid = ?' : ''}
+    ${glid    ? 'AND s.glid = ?'         : ''}
+    ${dialect ? 'AND o.dialect_name = ?' : ''}
     ORDER BY o.source
     LIMIT ?
   `
-  const params: (string | number)[] = glid
-    ? [pattern, glid, limit]
-    : [pattern, limit]
+  const params: (string | number)[] = [pattern]
+  if (glid)    params.push(glid)
+  if (dialect) params.push(dialect)
+  params.push(limit)
 
   return db.prepare(base).all(...params) as SentenceRow[]
 }

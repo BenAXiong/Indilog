@@ -5,16 +5,17 @@ export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const q    = searchParams.get('q')?.trim() ?? ''
-  const glid = searchParams.get('glid') ?? undefined
+  const q       = searchParams.get('q')?.trim() ?? ''
+  const glid    = searchParams.get('glid')    ?? undefined
+  const dialect = searchParams.get('dialect') ?? undefined
 
   if (!q || q.length < 1) {
     return NextResponse.json({ words: [], sentences: [] })
   }
 
   try {
-    const words = searchWords(q, glid)
-    const rawSentences = searchSentences(q, glid)
+    const words = searchWords(q, glid, dialect)
+    const rawSentences = searchSentences(q, glid, dialect)
 
     // Deduplicate by sentence id — one sentence can have multiple occurrences
     // (different dialect recordings). Prefer entries with audio_url.
