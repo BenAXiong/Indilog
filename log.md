@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-29 01:38 | REFACTOR | Full architecture restructure: lib/corpus/ (SQLite layer), lib/db/ subfolders (notebook/srs/progress/profile), LangDialectProvider (single profile fetch → instant Settings sync), components/lookup/, api/learn/ route group; tsc clean |
 | 2026-05-29 01:01 | REFACTOR | lib/lang/ extracted — dialects.ts + lang-bridge.ts moved from lib/learn/; lib/dict/sqlite.ts extracted from client.ts; lib/learn/db.ts now imports from sqlite directly; 8 import sites updated; tsc clean |
 | 2026-05-29 00:42 | FIX | dict normKey/normWordKey: replace literal U+2018/U+2019 with \\uXXXX escape sequences — Next.js 15.5.18 SWC rejects non-ASCII chars in regex char classes |
 | 2026-05-28 15:47 | FIX | Dict: word dedup by space-stripped normalisation key (apostrophe unify + whitespace collapse) — removes corpus spacing inconsistencies e.g. mafana'to vs mafana' to; DEC-D01 documented in decisions.md |

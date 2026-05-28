@@ -118,6 +118,18 @@ Tracks open questions and resolved architectural/product decisions.
 
 **Rule going forward:** Any file that 3+ non-Learn features import belongs in `lib/lang/` or another domain-neutral folder, not inside a feature folder.
 
+**Final directory contract (2026-05-29):**
+- `lib/lang/` — static YCM metadata, no I/O
+- `lib/corpus/` — all SQLite reads (`db.ts` singleton, `dict.ts` word search, `curriculum.ts` lesson queries)
+- `lib/db/notebook/` — captured items, sources, speakers
+- `lib/db/srs/` — flashcards and scheduling
+- `lib/db/progress/` — completions, collections, stats
+- `lib/db/profile/` — user profile read/write
+- `lib/context/LangDialectProvider` — single profile fetch, exposes `{lang, dialect, dialectLabel, setLang, setDialect}`; Settings writes through context for instant cross-app sync
+- `components/lookup/` — cross-app word lookup components
+- `app/api/learn/` — curriculum, geometry, lookup routes
+- `app/api/dict/` — dictionary search and dialects routes
+
 ---
 
 ### DEC-D01 · Dictionary word dedup: space-stripping normalisation
