@@ -74,7 +74,7 @@
 - [x] RLS policies for `ind_profiles` (user owns their row)
 - [x] Profile creation on first login (upsert)
 - [x] Active study language selector in Settings
-- [ ] Default dialect selector in Settings (deferred — dialect data not yet in LANGUAGES constant)
+- [x] Default dialect selector in Settings — bottom-sheet picker with dialect step for multi-dialect languages (done in Phase 10 / Settings overhaul)
 - [ ] Local cache for fast startup (deferred to Phase 9 polish)
 - [ ] **Design Checkpoint 2** (if flow feels unclear) — first-run onboarding, language selector, settings layout, signed-out state
 
@@ -161,6 +161,24 @@
 **Exit criteria:** User can search dictionary. User can save words and navigate to Capture from results.
 
 **[PHASE COMPLETE 2026-05-26 12:11]** — Awaiting `ycm_master.db` drop at `packages/dictionary/`. All code wired; DB error banner shown until file is present. tsc clean.
+
+### Phase 5+ — Dictionary Enhancements
+
+Post-completion improvements built during and after Phase 10:
+
+- [x] Language filter defaults to active study language on first load
+- [x] Audio plays inline (direct `Audio()` playback, not a link to external page)
+- [x] Sentence dedup in route — one row per sentence id; prefer entries with `audio_url`
+- [x] Words / Merged / Sentences tabs (swipeable l/r); all three loaded together
+- [x] Merged tab: group by normalised `word_ab` (apostrophe-variant unification + space-stripping), per-dialect sections, deduplicated and parsed definitions
+- [x] Tooltips on all result card buttons; Save + Add-context on sentence cards
+- [x] Filter bottom sheet: lang/dialect picker behind header funnel button; closes on dialect select or outside tap; button turns crimson when filter is active
+- [x] Fuzzy (≈) / prefix toggle in header
+- [x] 3-character minimum search (trimmed; guard in both page and route)
+- [x] Word dedup in route by space-stripped normalisation key — removes corpus spacing inconsistencies (→ DEC-D01)
+- [x] `LIMIT` removed from word and sentence queries — 3-char minimum keeps worst-case result count manageable (~2K rows)
+- [x] Settings: `dict` tab — interface language toggle + dictionary source toggles (Klokah on; 族語言線上辭典 / MoE Dict disabled stubs)
+- [ ] Capture token lookup — deferred (FTS infrastructure ready; see DEC-L08)
 
 ---
 
@@ -264,7 +282,7 @@
 
 These are intentionally not in v0:
 
-- Learned-lessons full implementation → Phase 10
+- Learned-lessons full implementation → Phase 10 ✅ (Phases L0–L3 complete 2026-05-26)
 - Streak polish
 - Advanced source/speaker fields
 - Token definition persistence

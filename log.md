@@ -2,6 +2,9 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-28 15:47 | FIX | Dict: word dedup by space-stripped normalisation key (apostrophe unify + whitespace collapse) — removes corpus spacing inconsistencies e.g. mafana'to vs mafana' to; DEC-D01 documented in decisions.md |
+| 2026-05-28 15:47 | FIX | Dict: 3-char search minimum (trimmed; guard in page + route); removed LIMIT from searchWords/searchSentences — 3-char floor keeps worst-case ~2K rows |
+| 2026-05-28 15:47 | FIX | Dict filter sheet: height 82dvh; header "Filter results by language and dialect"; filterLabel shows dialect name alone or "language (all dialects)" |
 | 2026-05-28 09:03 | FEATURE | Dictionary: Words/Sentences tabs (swipeable), language filter defaults to active study language, audio plays inline, duplicate key fix (dedup sentences by id in route handler) |
 | 2026-05-28 10:00 | FEATURE | Dictionary: filter bottom sheet — search bar full width, lang/dialect picker moved to funnel button in header; closes on dialect select or outside tap; filter button turns crimson when active |
 | 2026-05-26 02:34 | CONFIG | Created project docs: agents.md, plan.md, log.md, decisions.md from workflow spec |
