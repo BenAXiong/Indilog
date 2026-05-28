@@ -271,6 +271,9 @@ These are intentionally not in v0:
 - Multiple flashcard card types
 - Full desktop polish
 - Public sharing, social, admin, classroom, lesson system, offline sync, batch import
+- Amis1k collection for flashcards - compare official and freq list
+- Track Amis1k words learned in other items/collections
+
 
 ---
 

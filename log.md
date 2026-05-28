@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-28 09:03 | FEATURE | Dictionary: Words/Sentences tabs (swipeable), language filter defaults to active study language, audio plays inline, duplicate key fix (dedup sentences by id in route handler) |
+| 2026-05-28 10:00 | FEATURE | Dictionary: filter bottom sheet — search bar full width, lang/dialect picker moved to funnel button in header; closes on dialect select or outside tap; filter button turns crimson when active |
 | 2026-05-26 02:34 | CONFIG | Created project docs: agents.md, plan.md, log.md, decisions.md from workflow spec |
 | 2026-05-26 02:34 | CHECKPOINT | Design Checkpoint 0 complete — read design handoff bundle (zip); created docs/design-system.md and docs/ui-screens.md. Resolved DEC-003. Opened DEC-006/007 (both confirmed v0 by user). |
 | 2026-05-26 02:34 | FEATURE | Scaffolded pnpm workspace monorepo — apps/web/ (Next.js 15, TypeScript strict, Tailwind v3), packages/ stubs (shared, dictionary-client, translator, scheduler), supabase/ dir. |
