@@ -104,6 +104,22 @@ Tracks open questions and resolved architectural/product decisions.
 
 ---
 
+### DEC-ARCH01 · Shared YCM utilities live in `lib/lang/`, not `lib/learn/`
+**Decision:** `dialects.ts` (GLID maps, dialect labels, lesson metadata) and `lang-bridge.ts` (Indivore code → GLID mapping) are placed in `apps/web/lib/lang/`, not `lib/learn/`. The SQLite singleton (`getDb()`) lives in `lib/dict/sqlite.ts` as its own module.
+**Date:** 2026-05-29
+
+**Why:** These utilities are consumed by Dict, Capture, Settings, and Learn — 8 importers across 5 domains. Placing them under `lib/learn/` implied they were Learn internals, which caused two failure modes: (1) developers modifying `lib/learn/` would unknowingly break Capture and Dict; (2) `lib/learn/db.ts` imported the SQLite singleton from `lib/dict/client.ts`, coupling two unrelated domains at the connection level.
+
+**Boundaries after this change:**
+- `lib/lang/` — shared YCM corpus metadata (GLID families, dialect names, Indivore↔GLID mapping). No imports from `lib/learn/` or `lib/dict/`.
+- `lib/dict/sqlite.ts` — SQLite singleton only. Imported by both `lib/dict/client.ts` (word/sentence queries) and `lib/learn/db.ts` (curriculum queries). No business logic.
+- `lib/dict/client.ts` — word/sentence search functions. Does not know about Learn.
+- `lib/learn/db.ts` — curriculum query functions. Does not know about Dict.
+
+**Rule going forward:** Any file that 3+ non-Learn features import belongs in `lib/lang/` or another domain-neutral folder, not inside a feature folder.
+
+---
+
 ### DEC-D01 · Dictionary word dedup: space-stripping normalisation
 **Decision:** When returning word results from `/api/dict/search`, deduplicate entries that differ only by internal whitespace. Two rows are considered duplicates when their `(dialect_name, normWordKey(word_ab))` matches, where `normWordKey` = lowercase → NFC → unify apostrophe variants (U+0027/U+2019/U+02BC/U+A78C → `'`) → strip all whitespace. Among duplicates keep the entry with the longest original `word_ab` — the spaced form is always longer and is the correct romanisation.
 **Date:** 2026-05-28
