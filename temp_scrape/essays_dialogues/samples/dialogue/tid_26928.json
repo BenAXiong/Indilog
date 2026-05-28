@@ -1,0 +1,156 @@
+[
+  {
+    "sn": "26928/440458",
+    "ab": "Initu haw kita, ta! Malingatu tu kita.",
+    "ch": "大家好。我們開始了。",
+    "en": "Hello everyone. Here we go.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440459",
+    "ab": "Katemireng! Mitaung!",
+    "ch": "A:請起立! 敬禮!",
+    "en": "A: Please stand up! Salute!",
+    "snd": true
+  },
+  {
+    "sn": "26928/440460",
+    "ab": "Kapah haw kisu pasevana’ay.",
+    "ch": "B:老師好。",
+    "en": "B: Hello.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440461",
+    "ab": "Kamaru’.",
+    "ch": "A:請坐下。",
+    "en": "A: Please sit down.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440462",
+    "ab": "Kapah haw kamu alumanay! I nipicudad nu mita anini a remiad, a pasevana’ kaku i tamuwan tu ngangan nu kakaenan nu Pangcah.",
+    "ch": "大家好。今天老師要教大家食物的阿美語怎麼說。",
+    "en": "Hello everyone. Today, I am going to teach you how to say the Ami language for food.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440463",
+    "ab": "Mavana’ tu haw kisu a mitengil tu suwal nu pasevana’ay?",
+    "ch": "A:你聽得懂老師的話嗎?",
+    "en": "A: Do you understand what the teacher says?",
+    "snd": true
+  },
+  {
+    "sn": "26928/440464",
+    "ab": "Caay kava:na’ kaku a mitengil tu suwal nu misu pasevana’ay, kapah tu haw a kinacacay aca a miliyaw a semuwal?",
+    "ch": "B:老師，我聽不懂。可以再說一次好嗎?",
+    "en": "B: I don’t understand. Can you repeat it again?",
+    "snd": true
+  },
+  {
+    "sn": "26928/472979",
+    "ab": "Caay pakatengil kaku, kapa:h tu haw a satataangen atu:di?",
+    "ch": "B:我聽不到，可以大聲一點嗎",
+    "en": "B:I can’t hear you, can you speak louder?",
+    "snd": true
+  },
+  {
+    "sn": "26928/440466",
+    "ab": "Pimelawi itini! Duduen ku nipiasip nu maku.",
+    "ch": "請看這裡! 跟著我唸一遍。",
+    "en": "Look here, please! Repeat after me.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440467",
+    "ab": "Hay! Kapah ku niasip nu misu.",
+    "ch": "唸得很好。",
+    "en": "It’s very well read.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440468",
+    "ab": "Kakinacacay aca a miasip, satataangen atudi.",
+    "ch": "再唸一次。請大聲一點。",
+    "en": "Read it again. Please speak louder.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440469",
+    "ab": "Terep han, akaa kasemuwal.",
+    "ch": "請安靜。不要說話。",
+    "en": "Please be quiet. Don’t talk.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440470",
+    "ab": "Patahekalen ku cudad.",
+    "ch": "A:請把課本拿出來。",
+    "en": "A: Please take out your textbook.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440471",
+    "ab": "Hay, pasevana’ay.",
+    "ch": "B:是的，老師。",
+    "en": "B: Yes, sir.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440472",
+    "ab": "Pasadaken ku sapisurit nu misu.",
+    "ch": "A:請把筆拿出來。",
+    "en": "A: Please take out your pen.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440473",
+    "ab": "Pasevana’ay! Mapawan kaku a mikerid tu sapisurit nu maku.",
+    "ch": "B:老師，我忘了帶筆。",
+    "en": "B: I forgot to bring my pen.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440474",
+    "ab": "Patahkalen ku savuric.",
+    "ch": "A:請把橡皮擦拿出來。",
+    "en": "A: Please take out the eraser.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440475",
+    "ab": "Pasevana’ay, mapawan kaku a mikerid tu savuric.",
+    "ch": "B:老師，我忘了帶橡皮擦。",
+    "en": "B: I forgot to bring my eraser.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440476",
+    "ab": "Picaliwi tu savuric nu teparay nu misu.",
+    "ch": "A:請跟旁邊同學借橡皮擦。",
+    "en": "A: Please borrow erasers from your classmates.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440477",
+    "ab": "Pacaliwi kaku tu savuric nu misu.",
+    "ch": "B:你的橡皮擦借我好嗎?",
+    "en": "B: Can I borrow your eraser?",
+    "snd": true
+  },
+  {
+    "sn": "26928/440478",
+    "ab": "Maherek tu ku nipicudad nu mita.",
+    "ch": "我們下課了。",
+    "en": "Class is over.",
+    "snd": true
+  },
+  {
+    "sn": "26928/440479",
+    "ab": "Tangasa itini ku nipinanam nu mita, rumaaw tu a lipayan a malalitemuh.",
+    "ch": "我們就上到這邊，下週再見。",
+    "en": "Class dismissed, see you next week.",
+    "snd": true
+  }
+]

@@ -5,7 +5,7 @@ import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 import {
   GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, ESSAY_GROUP_LABELS, ESSAY_GROUP_START,
-} from '@/lib/learn/dialects'
+} from '@/lib/lang/dialects'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
 

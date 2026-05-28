@@ -6,8 +6,8 @@ import { T } from '@/lib/tokens'
 import { useActiveLang } from '@/lib/hooks/useActiveLang'
 import {
   getGlid, getDefaultDialect, getGrmptsDialect
-} from '@/lib/learn/lang-bridge'
-import { GRMPTS_LEVEL_NAMES } from '@/lib/learn/dialects'
+} from '@/lib/lang/lang-bridge'
+import { GRMPTS_LEVEL_NAMES } from '@/lib/lang/dialects'
 import rawPatternLabels from '@/lib/learn/grmpts_type_labels.json'
 
 const PATTERN_LABELS: Record<string, string> = Object.fromEntries(

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { LANGUAGES, getLanguage } from '@/lib/languages'
-import { getGlid } from '@/lib/learn/lang-bridge'
-import { shortDialectLabel } from '@/lib/learn/dialects'
+import { getGlid } from '@/lib/lang/lang-bridge'
+import { shortDialectLabel } from '@/lib/lang/dialects'
 
 export async function getActiveLangServer() {
   const supabase = await createClient()

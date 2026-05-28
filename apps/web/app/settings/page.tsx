@@ -8,8 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, LangAvatar, Icon } from '@/components/ui'
 import { LANGUAGES, getLanguage } from '@/lib/languages'
-import { getGlid, getDialectsForLang } from '@/lib/learn/lang-bridge'
-import { shortDialectLabel } from '@/lib/learn/dialects'
+import { getGlid, getDialectsForLang } from '@/lib/lang/lang-bridge'
+import { shortDialectLabel } from '@/lib/lang/dialects'
 import type { User } from '@supabase/supabase-js'
 
 type Profile = {

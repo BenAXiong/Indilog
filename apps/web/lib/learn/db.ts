@@ -1,4 +1,4 @@
-import { getDb } from '@/lib/dict/client'
+import { getDb } from '@/lib/dict/sqlite'
 
 export type CurriculumRow = {
   ab: string

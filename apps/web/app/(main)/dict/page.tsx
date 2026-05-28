@@ -7,8 +7,8 @@ import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useActiveLang } from '@/lib/hooks/useActiveLang'
-import { getGlid } from '@/lib/learn/lang-bridge'
-import { GLID_FAMILIES } from '@/lib/learn/dialects'
+import { getGlid } from '@/lib/lang/lang-bridge'
+import { GLID_FAMILIES } from '@/lib/lang/dialects'
 import { createItem } from '@/lib/db/items'
 
 type WordResult = {
@@ -625,7 +625,7 @@ export default function DictionaryPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {merged.map((entry, i) => (
                     <MergedEntryCard
-                      key={`${entry.ab}|${entry.dialect_name}|${i}`}
+                      key={`${entry.ab}|${entry.glid}|${i}`}
                       entry={entry}
                       onSave={handleSaveMerged}
                       onCapture={handleCaptureMerged}

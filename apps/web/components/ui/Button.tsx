@@ -20,6 +20,7 @@ type ButtonProps = {
   type?: 'button' | 'submit' | 'reset'
   className?: string
   'aria-label'?: string
+  title?: string
 }
 
 const VARIANTS: Record<Variant, { bg: string; color: string; border: string; shadow: string }> = {

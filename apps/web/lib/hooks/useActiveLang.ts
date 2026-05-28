@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { LANGUAGES, getLanguage } from '@/lib/languages'
 import { getProfile } from '@/lib/db/profiles'
-import { getGlid } from '@/lib/learn/lang-bridge'
-import { shortDialectLabel } from '@/lib/learn/dialects'
+import { getGlid } from '@/lib/lang/lang-bridge'
+import { shortDialectLabel } from '@/lib/lang/dialects'
 import type { Language } from '@/lib/languages'
 
 const DEFAULT: Language = LANGUAGES[0] // Amis
