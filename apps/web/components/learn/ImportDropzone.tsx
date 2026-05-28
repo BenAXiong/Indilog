@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 import type { LevelInput } from '@/lib/db/progress/collections'
@@ -54,7 +54,16 @@ export default function ImportDropzone({ onParsed }: Props) {
   const [dragging,  setDragging]  = useState(false)
   const [parsed,    setParsed]    = useState<ParsedCollection | null>(null)
   const [error,     setError]     = useState<string | null>(null)
+  const [expanded,  setExpanded]  = useState<Set<string>>(new Set())
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const toggleLesson = useCallback((key: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }, [])
 
   const handle = (file: File) => {
     setError(null)
@@ -102,24 +111,51 @@ export default function ImportDropzone({ onParsed }: Props) {
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {parsed.levels.flatMap((lv, li) =>
-              lv.lessons.map((ls, lsi) => (
-                <div key={`${li}-${lsi}`} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '4px 0', borderBottom: `1px solid ${T.lineSoft}`,
-                }}>
-                  <span style={{ fontSize: 13, color: T.inkSoft }}>
-                    <span style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 10, color: T.inkFaint, marginRight: 8 }}>
-                      L{li + 1}-{lsi + 1}
-                    </span>
-                    {ls.title || <em style={{ color: T.inkFaint }}>Untitled</em>}
-                  </span>
-                  <span style={{ fontSize: 11, color: T.inkFaint }}>
-                    {ls.cards.length} card{ls.cards.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-              ))
+              lv.lessons.map((ls, lsi) => {
+                const key = `${li}-${lsi}`
+                const open = expanded.has(key)
+                return (
+                  <div key={key}>
+                    <button
+                      onClick={() => toggleLesson(key)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '6px 0', background: 'none', border: 'none',
+                        cursor: 'pointer', borderBottom: `1px solid ${T.lineSoft}`,
+                      }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Icon name="chevron" size={12} strokeWidth={2} color={T.inkFaint}
+                          style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform .15s' }} />
+                        <span style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 10, color: T.inkFaint }}>
+                          L{li + 1}-{lsi + 1}
+                        </span>
+                        <span style={{ fontSize: 13, color: T.inkSoft }}>
+                          {ls.title || <em style={{ color: T.inkFaint }}>Untitled</em>}
+                        </span>
+                      </span>
+                      <span style={{ fontSize: 11, color: T.inkFaint }}>
+                        {ls.cards.length} cards
+                      </span>
+                    </button>
+                    {open && (
+                      <div style={{ padding: '4px 0 4px 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {ls.cards.slice(0, 8).map((c, ci) => (
+                          <div key={ci} style={{ display: 'flex', gap: 10, fontSize: 12, color: T.inkSoft }}>
+                            <span style={{ color: T.ink, minWidth: 80 }}>{c.ab}</span>
+                            <span>{c.zh}</span>
+                          </div>
+                        ))}
+                        {ls.cards.length > 8 && (
+                          <span style={{ fontSize: 11, color: T.inkFaint }}>+{ls.cards.length - 8} more…</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
             )}
           </div>
         </div>

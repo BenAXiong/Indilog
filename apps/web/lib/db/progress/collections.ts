@@ -49,16 +49,49 @@ export async function saveCollection(
   return col.id
 }
 
-export async function listCollections(language?: string) {
+export type CollectionMeta = {
+  id: string
+  name: string
+  language: string
+  created_at: string
+  card_count: number
+}
+
+export async function listCollections(language?: string): Promise<CollectionMeta[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
   let q = supabase
     .from('ind_learn_collections')
-    .select('id, name, language, created_at')
+    .select('id, name, language, created_at, ind_learn_cards(count)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
   if (language) q = q.eq('language', language)
   const { data } = await q
-  return data ?? []
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id:         row.id as string,
+    name:       row.name as string,
+    language:   row.language as string,
+    created_at: row.created_at as string,
+    card_count: (row.ind_learn_cards as { count: number }[])?.[0]?.count ?? 0,
+  }))
+}
+
+export type CollectionCard = {
+  id: string
+  level: number
+  lesson: number
+  position: number
+  ab: string
+  zh: string | null
+}
+
+export async function listCollectionCards(collectionId: string): Promise<CollectionCard[]> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('ind_learn_cards')
+    .select('id, level, lesson, position, ab, zh')
+    .eq('collection_id', collectionId)
+    .order('level').order('lesson').order('position')
+  return (data ?? []) as CollectionCard[]
 }

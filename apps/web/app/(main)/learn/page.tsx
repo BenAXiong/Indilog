@@ -9,6 +9,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import { GRMPTS_LEVEL_NAMES, stageName, lessonDifficultyOf } from '@/lib/lang/dialects'
 import { fetchCompletions } from '@/lib/db/progress/completions'
+import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
 import HubSearch from '@/components/learn/HubSearch'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
@@ -119,11 +120,12 @@ export default function LearnPage() {
   const { lang, dialect, dialectLabel } = useLang()
   const langCode = lang.code
 
-  const [counts,     setCounts]     = useState<Record<Source, number>>({ twelve: 0, grmpts: 0, essay: 0, dialogue: 0 })
-  const [totals,     setTotals]     = useState<Record<Source, number>>({ twelve: 120, grmpts: 41, essay: 60, dialogue: 60 })
-  const [nextLabels, setNextLabels] = useState<Partial<Record<Source, string>>>({})
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [geoLoaded,  setGeoLoaded]  = useState<{
+  const [counts,      setCounts]      = useState<Record<Source, number>>({ twelve: 0, grmpts: 0, essay: 0, dialogue: 0 })
+  const [totals,      setTotals]      = useState<Record<Source, number>>({ twelve: 120, grmpts: 41, essay: 60, dialogue: 60 })
+  const [nextLabels,  setNextLabels]  = useState<Partial<Record<Source, string>>>({})
+  const [collections, setCollections] = useState<CollectionMeta[]>([])
+  const [searchOpen,  setSearchOpen]  = useState(false)
+  const [geoLoaded,   setGeoLoaded]   = useState<{
     tgeo?: TwelveGeo; ggeo?: GrmptsGeo; egeo?: EssayGeo; dgeo?: EssayGeo
   }>({})
 
@@ -131,6 +133,8 @@ export default function LearnPage() {
     if (!langCode) return
     const glid = getGlid(langCode) ?? '01'
     const enc  = encodeURIComponent(dialect ?? '')
+
+    listCollections(langCode).then(setCollections).catch(() => {})
 
     Promise.all([
       fetchCompletions(langCode, 'twelve'),
@@ -304,8 +308,51 @@ export default function LearnPage() {
           completed={counts.dialogue} total={totals.dialogue}
           nextLabel={nextLabels.dialogue}
         />
+        {collections.length > 0 && (
+          <>
+            <div style={{
+              fontSize: 10.5, fontWeight: 700, color: T.inkMute,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              fontFamily: '"JetBrains Mono", monospace', marginTop: 4,
+            }}>
+              My collections
+            </div>
+            {collections.map(col => (
+              <CollectionCard key={col.id} col={col} />
+            ))}
+          </>
+        )}
         <NewCard />
       </div>
     </div>
+  )
+}
+
+function CollectionCard({ col }: { col: CollectionMeta }) {
+  return (
+    <Link href={`/learn/collection/${col.id}`} style={{
+      display: 'flex', alignItems: 'center', gap: 14,
+      padding: '14px 16px', borderRadius: 16, textDecoration: 'none',
+      background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+      boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 3px rgba(80,40,20,0.05)',
+    }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+        background: T.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon name="archive" size={22} color="#8C6515" strokeWidth={1.6} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: 'Newsreader, Georgia, serif',
+          fontSize: 17, fontWeight: 500, color: T.ink,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{col.name}</div>
+        <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 2 }}>
+          {col.card_count} cards
+        </div>
+      </div>
+      <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
+    </Link>
   )
 }
