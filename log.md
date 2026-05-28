@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-29 01:39 | CONFIG | gitignore temp_learn/ temp_scrape/ and logo source PNGs; untracked files removed from history |
 | 2026-05-29 01:38 | REFACTOR | Full architecture restructure: lib/corpus/ (SQLite layer), lib/db/ subfolders (notebook/srs/progress/profile), LangDialectProvider (single profile fetch → instant Settings sync), components/lookup/, api/learn/ route group; tsc clean |
 | 2026-05-29 01:01 | REFACTOR | lib/lang/ extracted — dialects.ts + lang-bridge.ts moved from lib/learn/; lib/dict/sqlite.ts extracted from client.ts; lib/learn/db.ts now imports from sqlite directly; 8 import sites updated; tsc clean |
 | 2026-05-29 00:42 | FIX | dict normKey/normWordKey: replace literal U+2018/U+2019 with \\uXXXX escape sequences — Next.js 15.5.18 SWC rejects non-ASCII chars in regex char classes |

@@ -278,6 +278,27 @@ Post-completion improvements built during and after Phase 10:
 
 ---
 
+## Architecture Baseline ✅
+
+Cross-cutting infrastructure work done 2026-05-29. No feature changes — all tsc clean.
+
+- [x] `lib/lang/` — static YCM metadata extracted from `lib/learn/` (dialects.ts, lang-bridge.ts)
+- [x] `lib/corpus/` — all SQLite reads in one place: `db.ts` (singleton), `dict.ts` (word/sentence search), `curriculum.ts` (lesson queries)
+- [x] `lib/db/` split into domain subfolders: `notebook/` (items/sources/speakers), `srs/` (flashcards), `progress/` (completions/collections/stats), `profile/` (client/server)
+- [x] `LangDialectProvider` — single Supabase profile fetch at layout level; exposes `setLang`/`setDialect`; Settings writes through context for instant cross-app sync; replaces `useActiveLang` (7 independent fetches → 1)
+- [x] `components/lookup/` — cross-app lookup home; `LookupInline` moved from `components/learn/`
+- [x] `app/api/learn/` — curriculum, geometry, lookup routes grouped under learn namespace
+- [x] `temp_learn/`, `temp_scrape/` added to `.gitignore`; stale commits cleaned up
+
+**Future additions slot directly into:**
+- `lib/db/srs/` — SRS charts, review history, scheduling improvements
+- `lib/db/progress/` — Amis1k tracking, vocab progress
+- `lib/db/notebook/` — token definitions, batch import
+- `components/lookup/` — cross-app WordLookup panel (DEC-L08)
+- `lib/corpus/dict.ts` — collocation search
+
+---
+
 ## Deferred (explicit)
 
 These are intentionally not in v0:

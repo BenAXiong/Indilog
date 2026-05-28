@@ -105,16 +105,13 @@ Tracks open questions and resolved architectural/product decisions.
 ---
 
 ### DEC-ARCH01 · Shared YCM utilities live in `lib/lang/`, not `lib/learn/`
-**Decision:** `dialects.ts` (GLID maps, dialect labels, lesson metadata) and `lang-bridge.ts` (Indivore code → GLID mapping) are placed in `apps/web/lib/lang/`, not `lib/learn/`. The SQLite singleton (`getDb()`) lives in `lib/dict/sqlite.ts` as its own module.
+**Decision:** Shared YCM utilities and the SQLite layer are extracted into domain-neutral folders. The full architecture was completed in two passes (2026-05-29).
 **Date:** 2026-05-29
 
-**Why:** These utilities are consumed by Dict, Capture, Settings, and Learn — 8 importers across 5 domains. Placing them under `lib/learn/` implied they were Learn internals, which caused two failure modes: (1) developers modifying `lib/learn/` would unknowingly break Capture and Dict; (2) `lib/learn/db.ts` imported the SQLite singleton from `lib/dict/client.ts`, coupling two unrelated domains at the connection level.
+**Why:** `dialects.ts` and `lang-bridge.ts` lived under `lib/learn/` despite being consumed by 8 importers across 5 features. `lib/learn/db.ts` imported the SQLite singleton directly from `lib/dict/client.ts`, coupling two unrelated domains. `useActiveLang` caused 7 independent Supabase profile fetches — one per page mount.
 
-**Boundaries after this change:**
-- `lib/lang/` — shared YCM corpus metadata (GLID families, dialect names, Indivore↔GLID mapping). No imports from `lib/learn/` or `lib/dict/`.
-- `lib/dict/sqlite.ts` — SQLite singleton only. Imported by both `lib/dict/client.ts` (word/sentence queries) and `lib/learn/db.ts` (curriculum queries). No business logic.
-- `lib/dict/client.ts` — word/sentence search functions. Does not know about Learn.
-- `lib/learn/db.ts` — curriculum query functions. Does not know about Dict.
+**Pass 1 (intermediate):** `lib/lang/` + `lib/dict/sqlite.ts` extracted.
+**Pass 2 (full):** Complete architecture restructure — see directory contract in DEC-ARCH01 body below.
 
 **Rule going forward:** Any file that 3+ non-Learn features import belongs in `lib/lang/` or another domain-neutral folder, not inside a feature folder.
 
@@ -151,9 +148,9 @@ Stripping only spaces immediately adjacent to apostrophes (`replace(/' /g, "'")`
 
 ## Resolved
 
-### DEC-001 · Dictionary API contract
-**Decision:** Dictionary is a local SQLite file (`ycm_master.db`) accessed via `better-sqlite3`. No remote Vercel API. Route handlers: `/api/dict/search` (FTS words + sentences, glid filter) and `/api/dict/dialects`. Capture lookup uses `/api/lookup` (exact-match ILRDF word lookup).
-**Date:** 2026-05-26
+### DEC-001 · Dictionary and corpus API contract
+**Decision:** YCM corpus is a local SQLite file (`ycm_master.db`, `packages/dictionary/`) accessed via `better-sqlite3`. No remote API. All corpus queries go through `lib/corpus/` — `dict.ts` (word/sentence search), `curriculum.ts` (lesson queries), `db.ts` (singleton). Route handlers: `/api/dict/search`, `/api/dict/dialects`, `/api/learn/curriculum`, `/api/learn/lookup`, `/api/learn/geometry`. Capture inline lookup uses `/api/learn/lookup`.
+**Date:** 2026-05-26 · updated paths 2026-05-29
 
 ---
 
