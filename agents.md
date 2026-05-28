@@ -87,6 +87,26 @@ Do not silently make any decision — minor or major — without logging it and 
 
 ---
 
+## Architecture rules
+
+Before creating any new file in `apps/web/lib/` or `apps/web/components/`, check the directory contract in **DEC-ARCH01** (`decisions.md`) and place it in the right folder:
+
+| What you're building | Where it goes |
+|---|---|
+| New Supabase helper | `lib/db/<subdomain>/` — `notebook/` `srs/` `progress/` `profile/` |
+| New SQLite query | `lib/corpus/dict.ts` or `lib/corpus/curriculum.ts` (or a new file in `lib/corpus/`) |
+| Static YCM / dialect metadata | `lib/lang/` |
+| Cross-app UI component | `components/lookup/` or a new `components/<domain>/` — **never** inside a feature folder like `components/learn/` |
+| Utility imported by 3+ features | `lib/lang/` or another neutral `lib/` folder — never inside a feature folder |
+
+**Lang/dialect state:** Never write a new profile fetch. Use `useLang()` from `lib/context/LangDialectProvider`. If `setLang` / `setDialect` don't cover the use case, extend the provider — don't bypass it.
+
+**API routes:** Dict routes → `app/api/dict/`. Learn/corpus routes → `app/api/learn/`. New feature routes → `app/api/<feature>/`.
+
+When in doubt: grep for where similar code already lives, then match it.
+
+---
+
 ## Code hygiene
 
 - Follow the repo structure in the workflow doc (`apps/web/`, `packages/`, `supabase/`).
