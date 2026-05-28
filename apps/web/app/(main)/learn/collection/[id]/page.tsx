@@ -27,7 +27,7 @@ export default function CollectionPage() {
 
   const [name,       setName]       = useState('')
   const [levels,     setLevels]     = useState<LevelGroup[]>([])
-  const [open,       setOpen]       = useState<Set<string>>(new Set(['1-1']))
+  const [open,       setOpen]       = useState<Set<string>>(new Set())
   const [renaming,   setRenaming]   = useState(false)
   const [nameEdit,   setNameEdit]   = useState('')
   const [confirmDel, setConfirmDel] = useState(false)
@@ -180,7 +180,7 @@ export default function CollectionPage() {
                       <Icon name="chevron" size={13} strokeWidth={2.2} color={T.inkFaint}
                         style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform .15s', flexShrink: 0 }} />
                       <span style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>
-                        Lesson {ls.lesson}
+                        {ls.cards[0]?.lesson_title ?? `Lesson ${ls.lesson}`}
                       </span>
                     </span>
                     <span style={{ fontSize: 11.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>

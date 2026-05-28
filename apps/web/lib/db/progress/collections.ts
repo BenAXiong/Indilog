@@ -21,7 +21,7 @@ export async function saveCollection(
   if (colErr || !col) return null
 
   const cardRows: {
-    collection_id: string; level: number; lesson: number; position: number; ab: string; zh?: string
+    collection_id: string; level: number; lesson: number; lesson_title?: string; position: number; ab: string; zh?: string
   }[] = []
 
   levels.forEach((lv, li) => {
@@ -30,11 +30,12 @@ export async function saveCollection(
         if (c.ab.trim()) {
           cardRows.push({
             collection_id: col.id,
-            level:    li + 1,
-            lesson:   lsi + 1,
-            position: ci + 1,
-            ab: c.ab.trim(),
-            zh: c.zh?.trim() || undefined,
+            level:        li + 1,
+            lesson:       lsi + 1,
+            lesson_title: ls.title || undefined,
+            position:     ci + 1,
+            ab:  c.ab.trim(),
+            zh:  c.zh?.trim() || undefined,
           })
         }
       })
@@ -81,6 +82,7 @@ export type CollectionCard = {
   id: string
   level: number
   lesson: number
+  lesson_title: string | null
   position: number
   ab: string
   zh: string | null
@@ -90,7 +92,7 @@ export async function listCollectionCards(collectionId: string): Promise<Collect
   const supabase = createClient()
   const { data } = await supabase
     .from('ind_learn_cards')
-    .select('id, level, lesson, position, ab, zh')
+    .select('id, level, lesson, lesson_title, position, ab, zh')
     .eq('collection_id', collectionId)
     .order('level').order('lesson').order('position')
     .limit(10000) // override PostgREST default 1000-row cap
