@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     // (and similar spacing inconsistencies elsewhere). Keep the longest word_ab among
     // duplicates — the spaced form is always longer and is the correct romanisation.
     function normWordKey(ab: string): string {
-      return ab.toLowerCase().normalize('NFC').replace(/['''ʼꞌ]/g, "'").replace(/\s+/g, '')
+      return ab.toLowerCase().normalize('NFC').replace(/['\u2018\u2019\u02BC\uA78C]/g, "'").replace(/\s+/g, '')
     }
     const wordMap = new Map<string, typeof rawWords[number]>()
     for (const w of rawWords) {

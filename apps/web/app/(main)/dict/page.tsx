@@ -309,7 +309,7 @@ export default function DictionaryPage() {
     // Normalize key: lowercase + collapse all apostrophe variants to '
     // (ILRDF data mixes U+0027, U+2019, U+02BC, U+A78C across entries)
     function normKey(ab: string) {
-      return ab.toLowerCase().normalize(‘NFC’).replace(/[‘’’ʼꞌ]/g, "’").replace(/\s+/g, ‘’)
+      return ab.toLowerCase().normalize('NFC').replace(/['\u2018\u2019\u02BC\uA78C]/g, "'").replace(/\s+/g, '')
     }
 
     function capitalize(s: string) {
