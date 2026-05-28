@@ -264,10 +264,11 @@ export default function DictionaryPage() {
   }, [lang, dialects, userChangedGlid])
 
   const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean) => {
-    if (!term.trim()) { setWords([]); setSentences([]); setSearched(false); return }
+    const trimmed = term.trim()
+    if (trimmed.length < 3) { setWords([]); setSentences([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)
-    const params = new URLSearchParams({ q: term })
+    const params = new URLSearchParams({ q: trimmed })
     if (glidFilter) params.set('glid', glidFilter)
     if (dialectF)   params.set('dialect', dialectF)
     if (isFuzzy)    params.set('fuzzy', '1')
@@ -308,7 +309,7 @@ export default function DictionaryPage() {
     // Normalize key: lowercase + collapse all apostrophe variants to '
     // (ILRDF data mixes U+0027, U+2019, U+02BC, U+A78C across entries)
     function normKey(ab: string) {
-      return ab.toLowerCase().normalize('NFC').replace(/['‘’ʼꞌ]/g, "'")
+      return ab.toLowerCase().normalize(‘NFC’).replace(/[‘’’ʼꞌ]/g, "’").replace(/\s+/g, ‘’)
     }
 
     function capitalize(s: string) {
@@ -396,9 +397,9 @@ export default function DictionaryPage() {
   const filterActive = !!(glid || dialectFilter)
   const filterLabel = !glid
     ? 'All languages'
-    : !dialectFilter
-      ? selectedLangOption?.group_name ?? ''
-      : `${selectedLangOption?.group_name ?? ''} · ${dialectFilter}`
+    : dialectFilter
+      ? dialectFilter
+      : `${selectedLangOption?.group_name ?? ''} (all dialects)`
   const searchPlaceholder = selectedLangOption
     ? `Search in ${selectedLangOption.group_name}${dialectFilter ? ` · ${dialectFilter}` : ''}, Chinese or English`
     : 'Search in all languages, Chinese or English'
@@ -676,7 +677,7 @@ export default function DictionaryPage() {
             position: 'relative', background: T.paper,
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
-            maxHeight: '72dvh', display: 'flex', flexDirection: 'column',
+            maxHeight: '82dvh', display: 'flex', flexDirection: 'column',
           }}>
             {/* Drag handle */}
             <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '12px auto 0' }} />
@@ -687,7 +688,7 @@ export default function DictionaryPage() {
               borderBottom: `1px solid ${T.lineSoft}`,
             }}>
               <span style={{ fontSize: 15, fontWeight: 600, color: T.ink, fontFamily: 'Newsreader, Georgia, serif' }}>
-                Filter results
+                Filter results by language and dialect
               </span>
               <span style={{ fontSize: 11.5, color: T.inkSoft, fontFamily: '"JetBrains Mono", monospace' }}>
                 {filterLabel}
