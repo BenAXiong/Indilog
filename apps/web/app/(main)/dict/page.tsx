@@ -283,9 +283,15 @@ export default function DictionaryPage() {
       return [...kept, def]
     }
 
+    // Normalize key: lowercase + collapse all apostrophe variants to '
+    // (ILRDF data mixes U+0027, U+2019, U+02BC, U+A78C across entries)
+    function normKey(ab: string) {
+      return ab.toLowerCase().normalize('NFC').replace(/['‘’ʼꞌ]/g, "'")
+    }
+
     const map = new Map<string, MergedEntry>()
     for (const w of words) {
-      const key = `${w.word_ab.toLowerCase()}|${w.dialect_name}`
+      const key = `${normKey(w.word_ab)}|${w.dialect_name}`
       if (!map.has(key)) map.set(key, { ab: w.word_ab, dialect_name: w.dialect_name, glid: w.glid, exact: false, defs: [] })
       const e = map.get(key)!
       if (w.exact) e.exact = true
