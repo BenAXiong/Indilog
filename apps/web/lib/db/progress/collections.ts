@@ -42,9 +42,15 @@ export async function saveCollection(
     })
   })
 
-  if (cardRows.length > 0) {
-    const { error: cardsErr } = await supabase.from('ind_learn_cards').insert(cardRows)
-    if (cardsErr) return null
+  // Insert in chunks of 200 to stay under PostgREST body size limits
+  const CHUNK = 200
+  for (let i = 0; i < cardRows.length; i += CHUNK) {
+    const { error } = await supabase.from('ind_learn_cards').insert(cardRows.slice(i, i + CHUNK))
+    if (error) {
+      console.error('saveCollection cards chunk failed:', error)
+      await supabase.from('ind_learn_collections').delete().eq('id', col.id)
+      return null
+    }
   }
 
   return col.id
