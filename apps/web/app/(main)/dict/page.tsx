@@ -240,6 +240,7 @@ export default function DictionaryPage() {
             onChange={e => setQ(e.target.value)}
             placeholder={searchPlaceholder}
             autoComplete="off"
+            className="dict-search-input"
             style={{
               flex: 1, border: 0, background: 'transparent', outline: 'none',
               fontFamily: '"JetBrains Mono", monospace',

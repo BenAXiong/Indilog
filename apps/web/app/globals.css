@@ -36,4 +36,6 @@
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: #B5A691; border-radius: 4px; }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #8B7B68; }
+
+  .dict-search-input::placeholder { font-size: 13px; }
 }
