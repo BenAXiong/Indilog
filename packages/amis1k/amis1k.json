@@ -7,7 +7,7 @@
       "lessons": [
         {
           "lesson": 1,
-          "title": "1–50",
+          "title": "初級",
           "cards": [
             {
               "ab": "cecay",
@@ -208,13 +208,7 @@
             {
               "ab": "kami",
               "zh": "我們"
-            }
-          ]
-        },
-        {
-          "lesson": 2,
-          "title": "51–100",
-          "cards": [
+            },
             {
               "ab": "cangra",
               "zh": "他們 另作: ca mira"
@@ -414,13 +408,7 @@
             {
               "ab": "fa’inayan a kaka",
               "zh": "哥哥"
-            }
-          ]
-        },
-        {
-          "lesson": 3,
-          "title": "101–150",
-          "cards": [
+            },
             {
               "ab": "safa",
               "zh": "(弟弟;妹妹)通稱"
@@ -620,13 +608,7 @@
             {
               "ab": "’afala",
               "zh": "肩膀"
-            }
-          ]
-        },
-        {
-          "lesson": 4,
-          "title": "151–200",
-          "cards": [
+            },
             {
               "ab": "ngaroy",
               "zh": "下巴"
@@ -826,13 +808,7 @@
             {
               "ab": "arem",
               "zh": "穿山甲"
-            }
-          ]
-        },
-        {
-          "lesson": 5,
-          "title": "201–250",
-          "cards": [
+            },
             {
               "ab": "fafoy",
               "zh": "山豬"
@@ -1032,13 +1008,7 @@
             {
               "ab": "waa’",
               "zh": "(動物的)角"
-            }
-          ]
-        },
-        {
-          "lesson": 6,
-          "title": "251–300",
-          "cards": [
+            },
             {
               "ab": "riri’",
               "zh": "蚱蜢"
@@ -1242,8 +1212,8 @@
           ]
         },
         {
-          "lesson": 7,
-          "title": "301–350",
+          "lesson": 2,
+          "title": "中級",
           "cards": [
             {
               "ab": "imoc",
@@ -1444,13 +1414,7 @@
             {
               "ab": "cakelis",
               "zh": "斧頭"
-            }
-          ]
-        },
-        {
-          "lesson": 8,
-          "title": "351–400",
-          "cards": [
+            },
             {
               "ab": "alapit",
               "zh": "夾子"
@@ -1650,13 +1614,7 @@
             {
               "ab": "apapolo",
               "zh": "獨立的小山頭"
-            }
-          ]
-        },
-        {
-          "lesson": 9,
-          "title": "401–450",
-          "cards": [
+            },
             {
               "ab": "padipas",
               "zh": "崇山峻嶺"
@@ -1856,13 +1814,7 @@
             {
               "ab": "kofaw",
               "zh": "穀倉"
-            }
-          ]
-        },
-        {
-          "lesson": 10,
-          "title": "451–500",
-          "cards": [
+            },
             {
               "ab": "misafadahong",
               "zh": "蓋屋頂"
@@ -2066,8 +2018,8 @@
           ]
         },
         {
-          "lesson": 11,
-          "title": "501–550",
+          "lesson": 3,
+          "title": "中高級",
           "cards": [
             {
               "ab": "mikohkoh",
@@ -2268,13 +2220,7 @@
             {
               "ab": "kiradom",
               "zh": "布匹"
-            }
-          ]
-        },
-        {
-          "lesson": 12,
-          "title": "551–600",
-          "cards": [
+            },
             {
               "ab": "tadasay",
               "zh": "妝扮飾物"
@@ -2474,13 +2420,7 @@
             {
               "ab": "kohecal",
               "zh": "白色"
-            }
-          ]
-        },
-        {
-          "lesson": 13,
-          "title": "601–650",
-          "cards": [
+            },
             {
               "ab": "koheting",
               "zh": "黑色"
@@ -2680,13 +2620,7 @@
             {
               "ab": "tatayni",
               "zh": "要來"
-            }
-          ]
-        },
-        {
-          "lesson": 14,
-          "title": "651–700",
-          "cards": [
+            },
             {
               "ab": "natayniay to",
               "zh": "來過"
@@ -2886,13 +2820,7 @@
             {
               "ab": "falod",
               "zh": "捆綁"
-            }
-          ]
-        },
-        {
-          "lesson": 15,
-          "title": "701–750",
-          "cards": [
+            },
             {
               "ab": "leken",
               "zh": "按住"
@@ -3092,13 +3020,7 @@
             {
               "ab": "tonton",
               "zh": "剁"
-            }
-          ]
-        },
-        {
-          "lesson": 16,
-          "title": "751–800",
-          "cards": [
+            },
             {
               "ab": "talik",
               "zh": "搗"
@@ -3302,8 +3224,8 @@
           ]
         },
         {
-          "lesson": 17,
-          "title": "801–850",
+          "lesson": 4,
+          "title": "高級",
           "cards": [
             {
               "ab": "patosek",
@@ -3504,13 +3426,7 @@
             {
               "ab": "ehir",
               "zh": "炒(如炒花生)"
-            }
-          ]
-        },
-        {
-          "lesson": 18,
-          "title": "851–900",
-          "cards": [
+            },
             {
               "ab": "pafo^fo",
               "zh": "以籠捕魚蝦"
@@ -3710,13 +3626,7 @@
             {
               "ab": "cifena’",
               "zh": "化膿"
-            }
-          ]
-        },
-        {
-          "lesson": 19,
-          "title": "901–950",
-          "cards": [
+            },
             {
               "ab": "ngiliw",
               "zh": "瘦(身形)"
@@ -3916,13 +3826,7 @@
             {
               "ab": "kahemaw",
               "zh": "輕快"
-            }
-          ]
-        },
-        {
-          "lesson": 20,
-          "title": "951–1000",
-          "cards": [
+            },
             {
               "ab": "’acicim",
               "zh": "酸"
@@ -4122,13 +4026,7 @@
             {
               "ab": "siday",
               "zh": "留下"
-            }
-          ]
-        },
-        {
-          "lesson": 21,
-          "title": "1001–1050",
-          "cards": [
+            },
             {
               "ab": "ngiha",
               "zh": "聲響"
@@ -4328,13 +4226,7 @@
             {
               "ab": "ano",
               "zh": "如果"
-            }
-          ]
-        },
-        {
-          "lesson": 22,
-          "title": "1051–1063",
-          "cards": [
+            },
             {
               "ab": "nga",
               "zh": "如此"
