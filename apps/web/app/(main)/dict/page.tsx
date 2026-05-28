@@ -133,13 +133,13 @@ function SentenceCard({ s, onSave, onCapture }: {
   )
 }
 
-// ─── Merged entry (words only, deduped defs) ─────────────────
+// ─── Merged entry (words only, deduped defs, cross-dialect) ──
 type MergedEntry = {
-  ab: string
-  dialect_name: string
+  ab: string        // display form, first letter capitalised
+  dialects: string[]
   glid: string
   exact: boolean
-  defs: string[]   // deduplicated, ordered definitions
+  defs: string[]
 }
 
 function MergedEntryCard({ entry, onSave, onCapture }: {
@@ -160,25 +160,34 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
     }}>
       <div style={{ padding: '12px 14px 10px', borderBottom: `1px solid ${T.lineSoft}` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <div>
-            <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink, lineHeight: 1.2 }}>
-              {entry.ab}
-            </div>
-            <div style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', marginTop: 3 }}>
-              {entry.dialect_name}
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink, lineHeight: 1.2 }}>
+            {entry.ab}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+            {entry.exact && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3,
+                padding: '2px 7px', borderRadius: 999,
+                background: T.sageBg, color: T.sage, border: `1px solid #D2D8AE`,
+                fontSize: 10, fontWeight: 600,
+              }}>
+                <Icon name="check" size={9} color={T.sage} strokeWidth={2.5} />
+                exact
+              </span>
+            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'flex-end' }}>
+              {entry.dialects.map(d => (
+                <span key={d} style={{
+                  fontSize: 9.5, color: T.inkFaint,
+                  fontFamily: '"JetBrains Mono", monospace',
+                  background: T.paper, border: `1px solid ${T.lineSoft}`,
+                  borderRadius: 4, padding: '1px 5px',
+                }}>
+                  {d}
+                </span>
+              ))}
             </div>
           </div>
-          {entry.exact && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 3,
-              padding: '2px 7px', borderRadius: 999,
-              background: T.sageBg, color: T.sage, border: `1px solid #D2D8AE`,
-              fontSize: 10, fontWeight: 600, flexShrink: 0, marginTop: 2,
-            }}>
-              <Icon name="check" size={9} color={T.sage} strokeWidth={2.5} />
-              exact
-            </span>
-          )}
         </div>
       </div>
       <div style={{ padding: '10px 14px' }}>
@@ -194,7 +203,7 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
         ))}
       </div>
       <div style={{ padding: '8px 14px', borderTop: `1px solid ${T.lineSoft}`, display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-        <button onClick={() => onSave(entry.ab, entry.dialect_name, primaryDef)} title="Save word" style={btnStyle}>
+        <button onClick={() => onSave(entry.ab, entry.dialects[0] ?? '', primaryDef)} title="Save word" style={btnStyle}>
           <Icon name="bookmark" size={14} strokeWidth={1.8} />
         </button>
         <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
@@ -289,12 +298,17 @@ export default function DictionaryPage() {
       return ab.toLowerCase().normalize('NFC').replace(/['‘’ʼꞌ]/g, "'")
     }
 
+    function capitalize(s: string) {
+      return s.length === 0 ? s : s.charAt(0).toUpperCase() + s.slice(1)
+    }
+
     const map = new Map<string, MergedEntry>()
     for (const w of words) {
-      const key = `${normKey(w.word_ab)}|${w.dialect_name}`
-      if (!map.has(key)) map.set(key, { ab: w.word_ab, dialect_name: w.dialect_name, glid: w.glid, exact: false, defs: [] })
+      const key = normKey(w.word_ab)  // dialect dropped — same word across dialects → one card
+      if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), dialects: [], glid: w.glid, exact: false, defs: [] })
       const e = map.get(key)!
       if (w.exact) e.exact = true
+      if (!e.dialects.includes(w.dialect_name)) e.dialects.push(w.dialect_name)
       for (const def of parseDefs(w.word_ch)) {
         e.defs = addDef(def, e.defs)
       }
