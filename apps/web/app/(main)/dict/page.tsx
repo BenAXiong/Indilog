@@ -6,6 +6,7 @@ import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { getGlid } from '@/lib/learn/lang-bridge'
 import { createItem } from '@/lib/db/items'
 
 type WordResult = {
@@ -82,6 +83,9 @@ function ExactWordCard({ word, onSave, onCapture }: {
 
 // ─── Sentence card ────────────────────────────────────────────
 function SentenceCard({ s }: { s: SentenceResult }) {
+  function playAudio() {
+    if (s.audio_url) new Audio(s.audio_url).play().catch(() => {})
+  }
   return (
     <div style={{
       padding: '12px 14px', background: T.paperHi,
@@ -101,13 +105,14 @@ function SentenceCard({ s }: { s: SentenceResult }) {
           {s.source}
         </span>
         {s.audio_url && (
-          <a href={s.audio_url} target="_blank" rel="noreferrer" style={{
+          <button onClick={playAudio} style={{
             marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 11, color: T.inkSoft, textDecoration: 'none',
+            fontSize: 11, color: T.inkSoft, background: 'none', border: 'none',
+            cursor: 'pointer', padding: 0,
           }}>
             <Icon name="speaker" size={13} strokeWidth={1.8} />
-            Audio
-          </a>
+            Play
+          </button>
         )}
       </div>
     </div>
@@ -121,6 +126,7 @@ export default function DictionaryPage() {
 
   const [q, setQ] = useState('')
   const [glid, setGlid] = useState<string>('')
+  const [userChangedGlid, setUserChangedGlid] = useState(false)
   const [dialects, setDialects] = useState<DialectOption[]>([])
   const [words, setWords] = useState<WordResult[]>([])
   const [sentences, setSentences] = useState<SentenceResult[]>([])
@@ -128,7 +134,9 @@ export default function DictionaryPage() {
   const [searched, setSearched] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [dbError, setDbError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'words' | 'sentences'>('words')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const touchStartX = useRef<number | null>(null)
 
   // Load dialects once
   useEffect(() => {
@@ -139,6 +147,15 @@ export default function DictionaryPage() {
         if (data.error) setDbError(data.error)
       })
   }, [])
+
+  // Default glid to active language (once, unless user manually changes it)
+  useEffect(() => {
+    if (userChangedGlid || dialects.length === 0) return
+    const langGlid = getGlid(lang.code)
+    if (langGlid && dialects.some(d => d.glid === langGlid)) {
+      setGlid(langGlid)
+    }
+  }, [lang, dialects, userChangedGlid])
 
   const runSearch = useCallback(async (term: string, glidFilter: string) => {
     if (!term.trim()) { setWords([]); setSentences([]); setSearched(false); return }
@@ -159,6 +176,17 @@ export default function DictionaryPage() {
     debounceRef.current = setTimeout(() => runSearch(q, glid), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [q, glid, runSearch])
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    if (dx < -50) setActiveTab('sentences')
+    if (dx > 50) setActiveTab('words')
+    touchStartX.current = null
+  }
 
   async function handleSave(word: WordResult) {
     await createItem({
@@ -205,7 +233,7 @@ export default function DictionaryPage() {
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="Search words or sentences…"
+            placeholder="Search the YCM corpus"
             autoComplete="off"
             style={{
               flex: 1, border: 0, background: 'transparent', outline: 'none',
@@ -224,7 +252,7 @@ export default function DictionaryPage() {
         {dialects.length > 0 && (
           <select
             value={glid}
-            onChange={e => setGlid(e.target.value)}
+            onChange={e => { setGlid(e.target.value); setUserChangedGlid(true) }}
             style={{
               height: 52, borderRadius: 14, border: `1px solid ${T.line}`,
               background: T.paperHi, color: glid ? T.ink : T.inkMute,
@@ -239,6 +267,31 @@ export default function DictionaryPage() {
           </select>
         )}
       </div>
+
+      {/* Words / Sentences tab toggle — shown after first search */}
+      {searched && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(['words', 'sentences'] as const).map(tab => {
+            const count = tab === 'words' ? words.length : sentences.length
+            const active = activeTab === tab
+            return (
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                flex: 1, height: 36, borderRadius: 10,
+                fontWeight: 500, fontSize: 13,
+                background: active ? T.ink : T.paperHi,
+                color: active ? T.paper : T.inkSoft,
+                border: `1px solid ${active ? T.ink : T.lineSoft}`,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              }}>
+                {tab === 'words' ? 'Words' : 'Sentences'}
+                {count > 0 && (
+                  <span style={{ fontSize: 11, opacity: active ? 0.55 : 0.5 }}>{count}</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Save confirmation */}
       {saveMsg && (
@@ -262,80 +315,101 @@ export default function DictionaryPage() {
         </div>
       )}
 
-      {/* No results */}
-      {!loading && searched && words.length === 0 && sentences.length === 0 && !dbError && (
-        <div style={{ padding: '28px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
-          <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>No results for "{q}"</div>
-          <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>Try a different spelling or remove the language filter.</div>
-        </div>
-      )}
-
-      {/* Exact word match */}
-      {!loading && exactWord && (
-        <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} />
-      )}
-
-      {/* Sentence examples */}
-      {!loading && sentences.length > 0 && (
-        <div>
-          <SectionHead title="Sentences" action={`${sentences.length} found`} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {sentences.slice(0, 8).map(s => <SentenceCard key={s.id} s={s} />)}
-          </div>
-        </div>
-      )}
-
-      {/* Other word matches */}
-      {!loading && otherWords.length > 0 && (
-        <div>
-          <SectionHead title="Also matches" action={`${otherWords.length}`} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {otherWords.slice(0, 20).map(w => (
-              <div key={w.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '11px 14px', background: T.paperHi,
-                border: `1px solid ${T.lineSoft}`, borderRadius: 12,
-                boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink }}>
-                      {w.word_ab}
-                    </span>
-                    <span style={{ fontSize: 11, color: T.inkFaint }}>{w.dialect_name}</span>
-                  </div>
-                  <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {w.word_ch}
+      {/* Results — swipeable l/r between tabs */}
+      {!loading && searched && (
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
+          {/* Words tab */}
+          {activeTab === 'words' && (
+            <>
+              {words.length === 0 && !dbError && (
+                <div style={{ padding: '20px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
+                  <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>No words found for "{q}"</div>
+                  {sentences.length > 0 && (
+                    <button onClick={() => setActiveTab('sentences')} style={{
+                      marginTop: 6, fontSize: 12, color: T.crimson,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                    }}>
+                      {sentences.length} sentence{sentences.length !== 1 ? 's' : ''} found →
+                    </button>
+                  )}
+                </div>
+              )}
+              {exactWord && (
+                <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} />
+              )}
+              {otherWords.length > 0 && (
+                <div>
+                  {exactWord && <SectionHead title="Also matches" action={`${otherWords.length}`} />}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {otherWords.map(w => (
+                      <div key={w.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '11px 14px', background: T.paperHi,
+                        border: `1px solid ${T.lineSoft}`, borderRadius: 12,
+                        boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink }}>
+                              {w.word_ab}
+                            </span>
+                            <span style={{ fontSize: 11, color: T.inkFaint }}>{w.dialect_name}</span>
+                          </div>
+                          <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {w.word_ch}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => handleSave(w)} aria-label="Save word" style={{
+                            width: 32, height: 32, borderRadius: 9,
+                            background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          }}>
+                            <Icon name="bookmark" size={15} strokeWidth={1.8} />
+                          </button>
+                          <button onClick={() => handleCapture(w)} aria-label="Open in Capture" style={{
+                            width: 32, height: 32, borderRadius: 9,
+                            background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          }}>
+                            <Icon name="capture" size={15} strokeWidth={1.8} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <button onClick={() => handleSave(w)} aria-label="Save word" style={{
-                    width: 32, height: 32, borderRadius: 9,
-                    background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  }}>
-                    <Icon name="bookmark" size={15} strokeWidth={1.8} />
-                  </button>
-                  <button onClick={() => handleCapture(w)} aria-label="Open in Capture" style={{
-                    width: 32, height: 32, borderRadius: 9,
-                    background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  }}>
-                    <Icon name="capture" size={15} strokeWidth={1.8} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              )}
+            </>
+          )}
 
-      {/* Empty state — no search yet */}
-      {!searched && !loading && (
-        <div style={{ padding: '32px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
-          <Icon name="dict" size={28} color={T.inkFaint} strokeWidth={1.4} />
-          <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500, marginTop: 10 }}>Search the YCM corpus</div>
-          <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>Words and sentences across all 16 Formosan languages</div>
+          {/* Sentences tab */}
+          {activeTab === 'sentences' && (
+            <>
+              {sentences.length === 0 && !dbError && (
+                <div style={{ padding: '20px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
+                  <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>No sentences found for "{q}"</div>
+                  {words.length > 0 && (
+                    <button onClick={() => setActiveTab('words')} style={{
+                      marginTop: 6, fontSize: 12, color: T.crimson,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                    }}>
+                      {words.length} word{words.length !== 1 ? 's' : ''} found →
+                    </button>
+                  )}
+                </div>
+              )}
+              {sentences.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {sentences.map(s => <SentenceCard key={s.id} s={s} />)}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

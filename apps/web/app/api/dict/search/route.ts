@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchWords, searchSentences } from '@/lib/dict/client'
+import { searchWords, searchSentences, type SentenceRow } from '@/lib/dict/client'
 
 export const runtime = 'nodejs'
 
@@ -13,10 +13,19 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [words, sentences] = [
-      searchWords(q, glid),
-      searchSentences(q, glid),
-    ]
+    const words = searchWords(q, glid)
+    const rawSentences = searchSentences(q, glid)
+
+    // Deduplicate by sentence id — one sentence can have multiple occurrences
+    // (different dialect recordings). Prefer entries with audio_url.
+    const sentenceMap = new Map<number, SentenceRow>()
+    for (const s of rawSentences) {
+      if (!sentenceMap.has(s.id) || (!sentenceMap.get(s.id)!.audio_url && s.audio_url)) {
+        sentenceMap.set(s.id, s)
+      }
+    }
+    const sentences = Array.from(sentenceMap.values())
+
     return NextResponse.json({ words, sentences })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'dict error'
