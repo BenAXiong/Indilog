@@ -78,7 +78,9 @@ Items explicitly deferred from v0 Phase 9:
 - [ ] Basic accessibility pass (focus order, ARIA labels)
 - [ ] README setup flow (clone → env → supabase → run)
 - [ ] Smoke test all 11 flows
-- [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh` (DEC-corpus issue 1 mitigation — Indivore-side fix, can do anytime)
+- [ ] Local cache for fast startup (profile + lang on first render, no flash)
+- [ ] Capture-page Translate action (shortcut from Capture to Translate with pre-filled text)
+- [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh` (Indivore-side fix for duplicate-title silent failures — can do anytime)
 
 ---
 

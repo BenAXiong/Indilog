@@ -24,9 +24,9 @@
 - [x] **Design Checkpoint 0** — design handoff bundle read; `docs/design-system.md` and `docs/ui-screens.md` created
 - [x] Monorepo structure: pnpm workspaces, packages/ stubs, supabase/ dir
 - [x] Build passes clean (`next build`, 11 routes, 0 errors)
-- [ ] Deploy to Vercel (pending Supabase env vars — DEC-005)
+- [x] Deploy to Vercel — env vars resolved (DEC-R05b), output directory fix applied
 
-**[PHASE COMPLETE 2026-05-25]** — app builds and all routes exist. Vercel deploy pending env vars.
+**[PHASE COMPLETE 2026-05-25]** — app builds, all routes exist, Vercel deployed.
 
 ---
 
@@ -77,8 +77,8 @@
 - [x] Profile creation on first login (upsert)
 - [x] Active study language selector in Settings
 - [x] Default dialect selector in Settings — bottom-sheet picker with dialect step for multi-dialect languages (done in Phase 10 / Settings overhaul)
-- [ ] Local cache for fast startup (deferred to Phase 9 polish)
-- [ ] **Design Checkpoint 2** (if flow feels unclear) — first-run onboarding, language selector, settings layout, signed-out state
+- [ ] Local cache for fast startup → plan-v1.md M3
+- [ ] **Design Checkpoint 2** — skipped; built iteratively from handoff, not needed
 
 **Exit criteria:** User can sign in. Profile row created. Active language and dialect persist. UI works after refresh.
 
@@ -111,8 +111,8 @@
 
 ### UX surfaces
 
-- [ ] Saved material list (Library) — deferred to v1
-- [ ] Item detail drawer or page — deferred to v1
+- [ ] Saved material list (Library) → plan-v1.md M2
+- [ ] Item detail drawer or page → plan-v1.md M2
 - [x] Basic source selector (InlineSelector in Capture)
 - [x] Basic speaker selector (InlineSelector in Capture)
 
@@ -138,7 +138,7 @@
 - [x] Edit-after-save behavior
 - [x] Recent captures list below form
 - [x] "Set this language as app default" action
-- [ ] **Design Checkpoint 3** — deferred (core flow works; polish in Phase 9)
+- [ ] **Design Checkpoint 3** — skipped; built iteratively from handoff
 
 **Exit criteria:** User can capture quickly. Form does not feel like a long form. Saved items appear in Library/Review.
 
@@ -157,8 +157,8 @@
 - [x] Save word action from result → `createItem`
 - [x] "Open in Capture" action from result → `/capture?text=&notes=`
 - [x] Loading state, empty state, DB error banner
-- [ ] Capture token lookup — deferred to Phase 9 polish (FTS infrastructure is ready)
-- [ ] **Design Checkpoint 4** — deferred
+- [ ] Capture token lookup → plan-v1.md (DEC-L08; FTS infrastructure ready)
+- [ ] **Design Checkpoint 4** — skipped; built iteratively from handoff
 
 **Exit criteria:** User can search dictionary. User can save words and navigate to Capture from results.
 
@@ -180,7 +180,7 @@ Post-completion improvements built during and after Phase 10:
 - [x] Word dedup in route by space-stripped normalisation key — removes corpus spacing inconsistencies (→ DEC-D01)
 - [x] `LIMIT` removed from word and sentence queries — 3-char minimum keeps worst-case result count manageable (~2K rows)
 - [x] Settings: `dict` tab — interface language toggle + dictionary source toggles (Klokah on; 族語言線上辭典 / MoE Dict disabled stubs)
-- [ ] Capture token lookup — deferred (FTS infrastructure ready; see DEC-L08)
+- [ ] Capture token lookup → plan-v1.md (DEC-L08)
 
 ---
 
@@ -196,8 +196,8 @@ Post-completion improvements built during and after Phase 10:
 - [x] Save output as captured item
 - [x] Loading shimmer and error states
 - [x] Translation direction independent of active study language
-- [ ] Capture-page Translate action — deferred to Phase 9 polish
-- [ ] **Design Checkpoint 5** — deferred
+- [ ] Capture-page Translate action → plan-v1.md M3
+- [ ] **Design Checkpoint 5** — skipped; built iteratively from handoff
 
 **Exit criteria:** Supported pairs translate. Unsupported pairs disabled. Output saveable.
 
@@ -217,9 +217,9 @@ Post-completion improvements built during and after Phase 10:
 - [x] Write review history row after each rating
 - [x] Update `ind_daily_stats` reviewed count
 - [x] Dashboard review stats (due count, reviewed today)
-- [ ] Basic streak logic (deferred to Phase 9 polish)
+- [x] Basic streak logic — computed from `ind_daily_stats.captured_count`; heatmap wiring → plan-v1.md M1-D
 - [x] Saved-material browsing inside Review tab
-- [ ] **Design Checkpoint 6** — deferred (core session works; polish in Phase 9)
+- [ ] **Design Checkpoint 6** — skipped; built iteratively from handoff
 
 **Exit criteria:** User can review due cards. Ratings update due dates. Dashboard reflects reviewed counts.
 
@@ -238,7 +238,7 @@ Post-completion improvements built during and after Phase 10:
 - [x] Learned lessons placeholder (static "—", dimmed)
 - [x] Recent captures list
 - [x] Quick resume action (contextual: "Start Review" if dueCount > 0, else "Capture")
-- [ ] **Design Checkpoint 7** — hierarchy, stats readability, recent capture cards, quick action placement, desktop layout
+- [ ] **Design Checkpoint 7** — skipped; built iteratively from handoff
 
 **Exit criteria:** Dashboard opens cleanly. User understands what to do next. Main stats are real.
 
@@ -287,19 +287,28 @@ Cross-cutting infrastructure work done 2026-05-29. No feature changes — all ts
 
 ---
 
-## Deferred (explicit)
+## Deferred to v1
 
-These are intentionally not in v0:
+See `plan-v1.md` for the full breakdown. Items from v0 phases that didn't ship:
 
-- Learned-lessons full implementation → Phase 10 ✅ (Phases L0–L3 complete 2026-05-26)
-- Streak polish
-- Advanced source/speaker fields
-- Token definition persistence
-- Multiple flashcard card types
-- Full desktop polish
-- Public sharing, social, admin, classroom, lesson system, offline sync, batch import
-- Amis1k collection for flashcards - compare official and freq list
-- Track Amis1k words learned in other items/collections
+| Item | plan-v1.md section |
+|---|---|
+| Library / saved material list | M2 |
+| Item detail drawer / page | M2 |
+| Capture token lookup (cross-app WordLookup) | M1 / DEC-L08 |
+| Capture-page Translate action | M3 |
+| Dashboard heatmap wired to real data | M1-D |
+| Streak polish | M1-D |
+| Multiple flashcard card types | M1-E |
+| Advanced SRS algorithm (SM-2 / FSRS) | M1-A |
+| Amis1k collection | M1-C |
+| Token definition persistence | M1-B |
+| Local cache for fast startup | M3 |
+| Accessibility pass | M3 |
+| Desktop usability pass | M3 |
+| Smoke tests | M3 |
+| Advanced source/speaker fields | future |
+| Public sharing, social, admin, classroom, offline sync | future |
 
 
 ---
@@ -336,7 +345,7 @@ These are intentionally not in v0:
 - [x] Inline word lookup on study card tokens → `/api/lookup`
 - [x] Completion counts → Dashboard Lessons stat (real data replaces "—")
 - [x] Mobile spacing pass
-- [ ] Accessibility pass (deferred)
+- [ ] Accessibility pass → plan-v1.md M3
 
 **[PHASE COMPLETE 2026-05-26 14:00]** — Full study view for all 4 sources, collection creation, hub with progress, inline word lookup. Merged feat/learn → main.
 
