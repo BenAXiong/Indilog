@@ -37,3 +37,8 @@ supabase/.temp
 
 # design handoff zip (extracted to design-handoff/)
 *.zip
+
+# scratch / research folders — not part of the app
+temp_learn/
+temp_scrape/
+Book_1_nocirc_nobg*.png
