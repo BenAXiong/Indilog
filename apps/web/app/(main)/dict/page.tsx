@@ -239,6 +239,7 @@ export default function DictionaryPage() {
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
 
@@ -391,9 +392,15 @@ export default function DictionaryPage() {
   const exactWord = words.find(w => w.exact)
   const otherWords = words.filter(w => !w.exact)
 
-  const selectedDialect = dialects.find(d => d.glid === glid)
-  const searchPlaceholder = selectedDialect
-    ? `Search in ${selectedDialect.group_name}, Chinese or English`
+  const selectedLangOption = dialects.find(d => d.glid === glid)
+  const filterActive = !!(glid || dialectFilter)
+  const filterLabel = !glid
+    ? 'All languages'
+    : !dialectFilter
+      ? selectedLangOption?.group_name ?? ''
+      : `${selectedLangOption?.group_name ?? ''} · ${dialectFilter}`
+  const searchPlaceholder = selectedLangOption
+    ? `Search in ${selectedLangOption.group_name}${dialectFilter ? ` · ${dialectFilter}` : ''}, Chinese or English`
     : 'Search in all languages, Chinese or English'
 
   return (
@@ -406,7 +413,7 @@ export default function DictionaryPage() {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
             <button
               onClick={() => setFuzzy(f => !f)}
-              title={fuzzy ? 'Fuzzy search (contains) — click for prefix' : 'Prefix search — click for fuzzy (contains)'}
+              title={fuzzy ? 'Fuzzy (contains) — click for prefix' : 'Prefix search — click for fuzzy'}
               style={{
                 width: 36, height: 36, borderRadius: 999,
                 background: fuzzy ? T.crimsonBg : T.paperHi,
@@ -417,6 +424,19 @@ export default function DictionaryPage() {
               }}
             >
               ≈
+            </button>
+            <button
+              onClick={() => setFilterSheetOpen(true)}
+              title="Filter by language / dialect"
+              style={{
+                width: 36, height: 36, borderRadius: 999,
+                background: filterActive ? T.crimsonBg : T.paperHi,
+                border: `1px solid ${filterActive ? T.crimson : T.line}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: filterActive ? T.crimson : T.inkSoft,
+              }}
+            >
+              <Icon name="filter" size={16} strokeWidth={1.8} />
             </button>
             <Link
               href="/settings?from=/dict&tab=dict"
@@ -444,70 +464,29 @@ export default function DictionaryPage() {
         </div>
       )}
 
-      {/* Search row */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{
-          flex: 1, minWidth: 0,
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: T.paperHi, border: `1.5px solid ${T.line}`, borderRadius: 14,
-          padding: '0 14px', height: 52,
-        }}>
-          <Icon name="search" size={18} color={T.inkMute} />
-          <input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder={searchPlaceholder}
-            autoComplete="off"
-            className="dict-search-input"
-            style={{
-              flex: 1, border: 0, background: 'transparent', outline: 'none',
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: 17, fontWeight: 400, color: T.ink,
-            }}
-          />
-          {q && (
-            <button onClick={() => setQ('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.inkMute, padding: 0 }}>
-              <Icon name="x" size={16} />
-            </button>
-          )}
-        </div>
-
-        {/* Language filter */}
-        {dialects.length > 0 && (
-          <select
-            value={glid}
-            onChange={e => { setGlid(e.target.value); setDialectFilter(''); setUserChangedGlid(true) }}
-            style={{
-              height: 52, borderRadius: 14, border: `1px solid ${T.line}`,
-              background: T.paperHi, color: glid ? T.ink : T.inkMute,
-              fontSize: 12.5, fontWeight: 500, padding: '0 10px',
-              cursor: 'pointer', outline: 'none',
-            }}
-          >
-            <option value="">All</option>
-            {dialects.map(d => (
-              <option key={d.glid} value={d.glid}>{d.group_name}</option>
-            ))}
-          </select>
-        )}
-
-        {/* Dialect filter — only when a language is selected */}
-        {glid && (GLID_FAMILIES[glid]?.length ?? 0) > 1 && (
-          <select
-            value={dialectFilter}
-            onChange={e => setDialectFilter(e.target.value)}
-            style={{
-              height: 52, borderRadius: 14, border: `1px solid ${T.line}`,
-              background: T.paperHi, color: dialectFilter ? T.ink : T.inkMute,
-              fontSize: 12.5, fontWeight: 500, padding: '0 10px',
-              cursor: 'pointer', outline: 'none',
-            }}
-          >
-            <option value="">All dialects</option>
-            {(GLID_FAMILIES[glid] ?? []).map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+      {/* Search bar — full width */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: T.paperHi, border: `1.5px solid ${T.line}`, borderRadius: 14,
+        padding: '0 14px', height: 52,
+      }}>
+        <Icon name="search" size={18} color={T.inkMute} />
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder={searchPlaceholder}
+          autoComplete="off"
+          className="dict-search-input"
+          style={{
+            flex: 1, border: 0, background: 'transparent', outline: 'none',
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: 17, fontWeight: 400, color: T.ink,
+          }}
+        />
+        {q && (
+          <button onClick={() => setQ('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.inkMute, padding: 0 }}>
+            <Icon name="x" size={16} />
+          </button>
         )}
       </div>
 
@@ -681,6 +660,119 @@ export default function DictionaryPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Filter bottom sheet ── */}
+      {filterSheetOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          {/* Overlay */}
+          <div
+            onClick={() => setFilterSheetOpen(false)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(30,15,5,0.4)' }}
+          />
+          {/* Sheet */}
+          <div style={{
+            position: 'relative', background: T.paper,
+            borderRadius: '20px 20px 0 0',
+            paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
+            maxHeight: '72dvh', display: 'flex', flexDirection: 'column',
+          }}>
+            {/* Drag handle */}
+            <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '12px auto 0' }} />
+            {/* Sheet header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 18px 10px',
+              borderBottom: `1px solid ${T.lineSoft}`,
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: T.ink, fontFamily: 'Newsreader, Georgia, serif' }}>
+                Filter results
+              </span>
+              <span style={{ fontSize: 11.5, color: T.inkSoft, fontFamily: '"JetBrains Mono", monospace' }}>
+                {filterLabel}
+              </span>
+            </div>
+            {/* Two-column body */}
+            <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              {/* Left: languages */}
+              <div style={{ flex: 1, overflowY: 'auto', borderRight: `1px solid ${T.lineSoft}`, padding: '6px 0' }}>
+                {/* All languages */}
+                <button
+                  onClick={() => { setGlid(''); setDialectFilter(''); setUserChangedGlid(true) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', padding: '10px 16px', textAlign: 'left',
+                    background: !glid ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 500, color: !glid ? T.crimson : T.ink }}>All</span>
+                  {!glid && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
+                </button>
+                {dialects.map(d => {
+                  const active = glid === d.glid
+                  return (
+                    <button
+                      key={d.glid}
+                      onClick={() => { setGlid(d.glid); setDialectFilter(''); setUserChangedGlid(true) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '10px 16px', textAlign: 'left',
+                        background: active ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? T.crimson : T.ink }}>
+                        {d.group_name}
+                      </span>
+                      {active && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
+                    </button>
+                  )
+                })}
+              </div>
+              {/* Right: dialects for selected language */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
+                {!glid ? (
+                  <div style={{ padding: '16px', fontSize: 12, color: T.inkFaint, textAlign: 'center' }}>
+                    Select a language first
+                  </div>
+                ) : (
+                  <>
+                    {/* All dialects */}
+                    <button
+                      onClick={() => { setDialectFilter(''); setFilterSheetOpen(false) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '10px 16px', textAlign: 'left',
+                        background: !dialectFilter ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 500, color: !dialectFilter ? T.crimson : T.ink }}>All</span>
+                      {!dialectFilter && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
+                    </button>
+                    {(GLID_FAMILIES[glid] ?? []).map(d => {
+                      const active = dialectFilter === d
+                      return (
+                        <button
+                          key={d}
+                          onClick={() => { setDialectFilter(d); setFilterSheetOpen(false) }}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            width: '100%', padding: '10px 16px', textAlign: 'left',
+                            background: active ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
+                          }}
+                        >
+                          <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? T.crimson : T.ink }}>
+                            {d}
+                          </span>
+                          {active && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
+                        </button>
+                      )
+                    })}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
