@@ -1,0 +1,4395 @@
+{
+  "name": "詞匯 - 高級1k",
+  "language": "ami",
+  "levels": [
+    {
+      "level": 1,
+      "lessons": [
+        {
+          "lesson": 1,
+          "title": "1–50",
+          "cards": [
+            {
+              "ab": "cecay",
+              "zh": "一"
+            },
+            {
+              "ab": "tosa",
+              "zh": "二"
+            },
+            {
+              "ab": "tolo",
+              "zh": "三"
+            },
+            {
+              "ab": "sepat",
+              "zh": "四"
+            },
+            {
+              "ab": "lima",
+              "zh": "五"
+            },
+            {
+              "ab": "enem",
+              "zh": "六"
+            },
+            {
+              "ab": "pito",
+              "zh": "七"
+            },
+            {
+              "ab": "falo",
+              "zh": "八"
+            },
+            {
+              "ab": "siwa",
+              "zh": "九"
+            },
+            {
+              "ab": "mo^tep",
+              "zh": "十"
+            },
+            {
+              "ab": "mo^tep ira ko cecay",
+              "zh": "十一"
+            },
+            {
+              "ab": "mo^tep ira ko tosa",
+              "zh": "十二"
+            },
+            {
+              "ab": "mo^tep ira ko tolo",
+              "zh": "十三"
+            },
+            {
+              "ab": "mo^tep ira ko sepat",
+              "zh": "十四"
+            },
+            {
+              "ab": "mo^tep ira ko lima",
+              "zh": "十五"
+            },
+            {
+              "ab": "mo^tep ira ko enem",
+              "zh": "十六"
+            },
+            {
+              "ab": "mo^tep ira ko pito",
+              "zh": "十七"
+            },
+            {
+              "ab": "mo^tep ila ko falo",
+              "zh": "十八"
+            },
+            {
+              "ab": "mo^tep ira ko siwa",
+              "zh": "十九"
+            },
+            {
+              "ab": "tosa polo’",
+              "zh": "二十"
+            },
+            {
+              "ab": "tosa polo’ ira ko cecay",
+              "zh": "二十一"
+            },
+            {
+              "ab": "tosa polo’ ira ko tosa",
+              "zh": "二十二"
+            },
+            {
+              "ab": "tosa polo’ ira ko tolo",
+              "zh": "二十三"
+            },
+            {
+              "ab": "tosa polo’ ira ko sepat",
+              "zh": "二十四"
+            },
+            {
+              "ab": "tosa polo’ ira ko lima",
+              "zh": "二十五"
+            },
+            {
+              "ab": "tolo polo’",
+              "zh": "三十"
+            },
+            {
+              "ab": "tolo polo’ ira ko cecay",
+              "zh": "三十一"
+            },
+            {
+              "ab": "sepat polo’",
+              "zh": "四十"
+            },
+            {
+              "ab": "lima polo’",
+              "zh": "五十"
+            },
+            {
+              "ab": "enem polo’",
+              "zh": "六十"
+            },
+            {
+              "ab": "pito polo’",
+              "zh": "七十"
+            },
+            {
+              "ab": "falo polo’",
+              "zh": "八十"
+            },
+            {
+              "ab": "siwa polo’",
+              "zh": "九十"
+            },
+            {
+              "ab": "somo’ot",
+              "zh": "百"
+            },
+            {
+              "ab": "cecay so’ot",
+              "zh": "一百"
+            },
+            {
+              "ab": "tosa so’ot",
+              "zh": "兩百"
+            },
+            {
+              "ab": "molefot / cecay lefot",
+              "zh": "一千"
+            },
+            {
+              "ab": "mamangay / cowa ka hakowa",
+              "zh": "一些"
+            },
+            {
+              "ab": "kinacecay",
+              "zh": "一次"
+            },
+            {
+              "ab": "cecay faliling / cecay solsol",
+              "zh": "一串 一串香蕉 cecay faliling a pawli. 一串項鍊 cecay solsol a cangaw."
+            },
+            {
+              "ab": "kahirahira",
+              "zh": "各式各樣"
+            },
+            {
+              "ab": "’api",
+              "zh": "一雙"
+            },
+            {
+              "ab": "maemin",
+              "zh": "全部"
+            },
+            {
+              "ab": "mamang",
+              "zh": "一點點"
+            },
+            {
+              "ab": "kalitosa",
+              "zh": "一半"
+            },
+            {
+              "ab": "kiso",
+              "zh": "你"
+            },
+            {
+              "ab": "kako",
+              "zh": "我"
+            },
+            {
+              "ab": "cingra",
+              "zh": "他"
+            },
+            {
+              "ab": "kamo",
+              "zh": "你們"
+            },
+            {
+              "ab": "kami",
+              "zh": "我們"
+            }
+          ]
+        },
+        {
+          "lesson": 2,
+          "title": "51–100",
+          "cards": [
+            {
+              "ab": "cangra",
+              "zh": "他們 另作: ca mira"
+            },
+            {
+              "ab": "namo",
+              "zh": "你們的"
+            },
+            {
+              "ab": "niyam",
+              "zh": "我們的"
+            },
+            {
+              "ab": "nangra",
+              "zh": "他們的 另作:na mira"
+            },
+            {
+              "ab": "no miso",
+              "zh": "你的"
+            },
+            {
+              "ab": "no mako",
+              "zh": "我的"
+            },
+            {
+              "ab": "no mira",
+              "zh": "他的"
+            },
+            {
+              "ab": "kami",
+              "zh": "我們(排除式)"
+            },
+            {
+              "ab": "kita",
+              "zh": "咱們(包含式)"
+            },
+            {
+              "ab": "no mita",
+              "zh": "咱們的"
+            },
+            {
+              "ab": "kora",
+              "zh": "那個"
+            },
+            {
+              "ab": "koni",
+              "zh": "這個"
+            },
+            {
+              "ab": "ni",
+              "zh": "這裡"
+            },
+            {
+              "ab": "ra",
+              "zh": "那裡"
+            },
+            {
+              "ab": "hatini",
+              "zh": "(像)這樣"
+            },
+            {
+              "ab": "pina",
+              "zh": "多少"
+            },
+            {
+              "ab": "maan",
+              "zh": "什麼"
+            },
+            {
+              "ab": "samaan",
+              "zh": "如何"
+            },
+            {
+              "ab": "anohacowa",
+              "zh": "何時(未發生)"
+            },
+            {
+              "ab": "cima",
+              "zh": "誰"
+            },
+            {
+              "ab": "sakacowaay",
+              "zh": "哪一個"
+            },
+            {
+              "ab": "icowa",
+              "zh": "哪裡"
+            },
+            {
+              "ab": "nimaay",
+              "zh": "是誰的"
+            },
+            {
+              "ab": "mana",
+              "zh": "怎麼"
+            },
+            {
+              "ab": "pina",
+              "zh": "多少(歲;物)"
+            },
+            {
+              "ab": "hakowa",
+              "zh": "多少(程度大小)"
+            },
+            {
+              "ab": "icowa",
+              "zh": "什麼地方"
+            },
+            {
+              "ab": "ihacowaay",
+              "zh": "何時(已發生)"
+            },
+            {
+              "ab": "mana",
+              "zh": "為什麼"
+            },
+            {
+              "ab": "wama",
+              "zh": "爸爸 另作:ama"
+            },
+            {
+              "ab": "wina",
+              "zh": "媽媽 另作:ina"
+            },
+            {
+              "ab": "salikaka",
+              "zh": "堂、表兄弟姐妹"
+            },
+            {
+              "ab": "sawamaan",
+              "zh": "男性⻑輩 (祖父;外公;岳父) 另作: fa’inayan a fofo"
+            },
+            {
+              "ab": "sawinaan",
+              "zh": "女性⻑輩 (祖母;外婆;岳母) 另作: fafahiyan a fofo"
+            },
+            {
+              "ab": "salawina",
+              "zh": "親戚"
+            },
+            {
+              "ab": "ramod",
+              "zh": "配偶"
+            },
+            {
+              "ab": "kadafo",
+              "zh": "女婿"
+            },
+            {
+              "ab": "’ali",
+              "zh": "舅子"
+            },
+            {
+              "ab": "’ali",
+              "zh": "弟媳"
+            },
+            {
+              "ab": "’ali",
+              "zh": "嫂嫂"
+            },
+            {
+              "ab": "acawa",
+              "zh": "媳婦"
+            },
+            {
+              "ab": "fofo",
+              "zh": "孫子/孫女"
+            },
+            {
+              "ab": "mararamoday",
+              "zh": "夫妻"
+            },
+            {
+              "ab": "fa’inay",
+              "zh": "丈夫"
+            },
+            {
+              "ab": "lataper",
+              "zh": "姻親"
+            },
+            {
+              "ab": "malikaka",
+              "zh": "兄弟姊妹"
+            },
+            {
+              "ab": "kaka",
+              "zh": "兄⻑"
+            },
+            {
+              "ab": "kaka",
+              "zh": "(哥哥;姊姊)通稱"
+            },
+            {
+              "ab": "fafahiyan a kaka",
+              "zh": "姊姊"
+            },
+            {
+              "ab": "fa’inayan a kaka",
+              "zh": "哥哥"
+            }
+          ]
+        },
+        {
+          "lesson": 3,
+          "title": "101–150",
+          "cards": [
+            {
+              "ab": "safa",
+              "zh": "(弟弟;妹妹)通稱"
+            },
+            {
+              "ab": "fa’nayan a safa",
+              "zh": "弟弟"
+            },
+            {
+              "ab": "fafahiyan a safa",
+              "zh": "妹妹"
+            },
+            {
+              "ab": "faki",
+              "zh": "(伯父;叔叔;舅舅) 通稱"
+            },
+            {
+              "ab": "fai",
+              "zh": "(伯母;嬸嬸;舅母) 通稱"
+            },
+            {
+              "ab": "ngangan",
+              "zh": "名字"
+            },
+            {
+              "ab": "fa’inayan a wawa",
+              "zh": "男孩"
+            },
+            {
+              "ab": "fafahiyan a wawa",
+              "zh": "女孩"
+            },
+            {
+              "ab": "widang",
+              "zh": "朋友"
+            },
+            {
+              "ab": "wawa",
+              "zh": "孩童"
+            },
+            {
+              "ab": "malitengay",
+              "zh": "老人家"
+            },
+            {
+              "ab": "fafahiyan",
+              "zh": "女性"
+            },
+            {
+              "ab": "fa’inayan",
+              "zh": "男性"
+            },
+            {
+              "ab": "tamdaw",
+              "zh": "人"
+            },
+            {
+              "ab": "ising",
+              "zh": "醫生"
+            },
+            {
+              "ab": "singsi",
+              "zh": "老師"
+            },
+            {
+              "ab": "’ada",
+              "zh": "敵人"
+            },
+            {
+              "ab": "tapang",
+              "zh": "⻑官"
+            },
+            {
+              "ab": "lomataw",
+              "zh": "流氓"
+            },
+            {
+              "ab": "kincac",
+              "zh": "警察"
+            },
+            {
+              "ab": "Tangafolan",
+              "zh": "平埔族"
+            },
+            {
+              "ab": "Ngayngay",
+              "zh": "客家人"
+            },
+            {
+              "ab": "kociw",
+              "zh": "校⻑"
+            },
+            {
+              "ab": "Payrang",
+              "zh": "閩南人"
+            },
+            {
+              "ab": "kapah",
+              "zh": "青年"
+            },
+            {
+              "ab": "simpo",
+              "zh": "神父"
+            },
+            {
+              "ab": "siwni",
+              "zh": "修女"
+            },
+            {
+              "ab": "Kowaping",
+              "zh": "外省人"
+            },
+            {
+              "ab": "kay^ing",
+              "zh": "小姐"
+            },
+            {
+              "ab": "mitiliday",
+              "zh": "學生"
+            },
+            {
+              "ab": "tangila",
+              "zh": "耳朵"
+            },
+            {
+              "ab": "cepi’",
+              "zh": "大腿"
+            },
+            {
+              "ab": "mata",
+              "zh": "眼睛"
+            },
+            {
+              "ab": "pising / laway",
+              "zh": "臉"
+            },
+            {
+              "ab": "ngoyos",
+              "zh": "嘴巴"
+            },
+            {
+              "ab": "fongoh",
+              "zh": "頭"
+            },
+            {
+              "ab": "kinoos",
+              "zh": "指甲"
+            },
+            {
+              "ab": "kamay",
+              "zh": "手"
+            },
+            {
+              "ab": "tatirengan",
+              "zh": "身體"
+            },
+            {
+              "ab": "ngoso’",
+              "zh": "鼻子"
+            },
+            {
+              "ab": "oo’",
+              "zh": "腳"
+            },
+            {
+              "ab": "wadis",
+              "zh": "牙齒"
+            },
+            {
+              "ab": "fokes",
+              "zh": "頭髮"
+            },
+            {
+              "ab": "’irang",
+              "zh": "血"
+            },
+            {
+              "ab": "titi",
+              "zh": "肉"
+            },
+            {
+              "ab": "atongol",
+              "zh": "額頭"
+            },
+            {
+              "ab": "tiyad",
+              "zh": "肚子"
+            },
+            {
+              "ab": "coco",
+              "zh": "乳房"
+            },
+            {
+              "ab": "nonol",
+              "zh": "小腿肚"
+            },
+            {
+              "ab": "’afala",
+              "zh": "肩膀"
+            }
+          ]
+        },
+        {
+          "lesson": 4,
+          "title": "151–200",
+          "cards": [
+            {
+              "ab": "ngaroy",
+              "zh": "下巴"
+            },
+            {
+              "ab": "koror",
+              "zh": "背部"
+            },
+            {
+              "ab": "fanges",
+              "zh": "皮膚"
+            },
+            {
+              "ab": "falohang",
+              "zh": "胸腔"
+            },
+            {
+              "ab": "panga",
+              "zh": "男性生殖 器"
+            },
+            {
+              "ab": "riti",
+              "zh": "女性生殖 器"
+            },
+            {
+              "ab": "fala’",
+              "zh": "肺"
+            },
+            {
+              "ab": "faloco’",
+              "zh": "心臟"
+            },
+            {
+              "ab": "ciko",
+              "zh": "手肘"
+            },
+            {
+              "ab": "ngalay",
+              "zh": "口水"
+            },
+            {
+              "ab": "toros",
+              "zh": "膝蓋"
+            },
+            {
+              "ab": "doka’",
+              "zh": "傷口"
+            },
+            {
+              "ab": "fitoka",
+              "zh": "胃"
+            },
+            {
+              "ab": "’atay",
+              "zh": "肝臟"
+            },
+            {
+              "ab": "toloho’",
+              "zh": "痰"
+            },
+            {
+              "ab": "firo’ok",
+              "zh": "甲狀腺腫"
+            },
+            {
+              "ab": "simal",
+              "zh": "油脂"
+            },
+            {
+              "ab": "fadowac",
+              "zh": "肋骨"
+            },
+            {
+              "ab": "tira’",
+              "zh": "膽囊"
+            },
+            {
+              "ab": "salita’ang",
+              "zh": "拇指"
+            },
+            {
+              "ab": "takolaw",
+              "zh": "喉嚨"
+            },
+            {
+              "ab": "sema",
+              "zh": "舌頭"
+            },
+            {
+              "ab": "tatelecan",
+              "zh": "腰部"
+            },
+            {
+              "ab": "tarodo’",
+              "zh": "手指"
+            },
+            {
+              "ab": "sangotngot",
+              "zh": "門牙"
+            },
+            {
+              "ab": "sino’ot",
+              "zh": "汗水"
+            },
+            {
+              "ab": "li’el",
+              "zh": "脖子"
+            },
+            {
+              "ab": "dinget",
+              "zh": "鼻涕"
+            },
+            {
+              "ab": "pokoh",
+              "zh": "關節"
+            },
+            {
+              "ab": "hemot",
+              "zh": "臀部"
+            },
+            {
+              "ab": "saripa’",
+              "zh": "腳掌"
+            },
+            {
+              "ab": "aliyocan",
+              "zh": "頸子"
+            },
+            {
+              "ab": "kakiri’an",
+              "zh": "腋窩"
+            },
+            {
+              "ab": "fowa’",
+              "zh": "腎臟"
+            },
+            {
+              "ab": "filfil",
+              "zh": "嘴唇"
+            },
+            {
+              "ab": "fanoh",
+              "zh": "毛 羽毛為opih / 人體毛為fanoh"
+            },
+            {
+              "ab": "wikor",
+              "zh": "尾巴"
+            },
+            {
+              "ab": "diyong",
+              "zh": "豬"
+            },
+            {
+              "ab": "waco",
+              "zh": "狗"
+            },
+            {
+              "ab": "siri",
+              "zh": "羊"
+            },
+            {
+              "ab": "posi",
+              "zh": "貓"
+            },
+            {
+              "ab": "’ayam",
+              "zh": "鳥"
+            },
+            {
+              "ab": "foting",
+              "zh": "魚"
+            },
+            {
+              "ab": "koko’",
+              "zh": "雞"
+            },
+            {
+              "ab": "lotong",
+              "zh": "猴子"
+            },
+            {
+              "ab": "kolong",
+              "zh": "牛"
+            },
+            {
+              "ab": "kacingcon",
+              "zh": "老鼠(統稱)"
+            },
+            {
+              "ab": "takora’",
+              "zh": "青蛙"
+            },
+            {
+              "ab": "ekong",
+              "zh": "貓頭鷹"
+            },
+            {
+              "ab": "arem",
+              "zh": "穿山甲"
+            }
+          ]
+        },
+        {
+          "lesson": 5,
+          "title": "201–250",
+          "cards": [
+            {
+              "ab": "fafoy",
+              "zh": "山豬"
+            },
+            {
+              "ab": "topi",
+              "zh": "野鴿子"
+            },
+            {
+              "ab": "fao",
+              "zh": "蟲(統稱)"
+            },
+            {
+              "ab": "rarokoh",
+              "zh": "烏龜"
+            },
+            {
+              "ab": "oner",
+              "zh": "蛇"
+            },
+            {
+              "ab": "lawal",
+              "zh": "飛鼠"
+            },
+            {
+              "ab": "lokedaw",
+              "zh": "豹"
+            },
+            {
+              "ab": "malonem",
+              "zh": "水鹿"
+            },
+            {
+              "ab": "tomay",
+              "zh": "熊"
+            },
+            {
+              "ab": "mangcel",
+              "zh": "山羌"
+            },
+            {
+              "ab": "dadipis",
+              "zh": "蟑螂"
+            },
+            {
+              "ab": "facacido’",
+              "zh": "蜻蜓"
+            },
+            {
+              "ab": "’adipangpang",
+              "zh": "蝴蝶"
+            },
+            {
+              "ab": "falalotong",
+              "zh": "蜘蛛"
+            },
+            {
+              "ab": "panga / fotol",
+              "zh": "雄性動物 生殖器官"
+            },
+            {
+              "ab": "sofol",
+              "zh": "松鼠"
+            },
+            {
+              "ab": "kolafaw",
+              "zh": "田鼠"
+            },
+            {
+              "ab": "likes",
+              "zh": "蚊子"
+            },
+            {
+              "ab": "koto",
+              "zh": "頭蝨"
+            },
+            {
+              "ab": "lalangaw",
+              "zh": "蒼蠅"
+            },
+            {
+              "ab": "facacenal",
+              "zh": "蜜蜂"
+            },
+            {
+              "ab": "’otoyan",
+              "zh": "雄性(動物) ’otoyan公豬 / okang公牛 / tangalawan公雞"
+            },
+            {
+              "ab": "ciciw",
+              "zh": "乳豬"
+            },
+            {
+              "ab": "maymay",
+              "zh": "鴨"
+            },
+            {
+              "ab": "arikak / atikak",
+              "zh": "蚯蚓"
+            },
+            {
+              "ab": "tina’i",
+              "zh": "動物的內 臟"
+            },
+            {
+              "ab": "facacenal",
+              "zh": "土蜂"
+            },
+            {
+              "ab": "afar",
+              "zh": "蝦"
+            },
+            {
+              "ab": "eco",
+              "zh": "大象"
+            },
+            {
+              "ab": "efa",
+              "zh": "馬"
+            },
+            {
+              "ab": "tawinaan",
+              "zh": "雌性(動物)"
+            },
+            {
+              "ab": "kalang",
+              "zh": "螃蟹"
+            },
+            {
+              "ab": "dadacdac",
+              "zh": "蟬 另作:simi"
+            },
+            {
+              "ab": "rodak",
+              "zh": "百步蛇"
+            },
+            {
+              "ab": "sapikpik",
+              "zh": "翅膀"
+            },
+            {
+              "ab": "padadaki",
+              "zh": "蝙蝠 另作:fadadiki"
+            },
+            {
+              "ab": "katacomoli",
+              "zh": "蝸牛"
+            },
+            {
+              "ab": "alicay",
+              "zh": "麻雀"
+            },
+            {
+              "ab": "fararangad",
+              "zh": "鍬形蟲"
+            },
+            {
+              "ab": "lidep",
+              "zh": "老鷹 另作:alilis"
+            },
+            {
+              "ab": "kakonah",
+              "zh": "螞蟻"
+            },
+            {
+              "ab": "kaciw",
+              "zh": "鵝"
+            },
+            {
+              "ab": "’ayam",
+              "zh": "水鳥"
+            },
+            {
+              "ab": "dipong",
+              "zh": "窩巢 另作:difong"
+            },
+            {
+              "ab": "tatekoh",
+              "zh": "虎頭蜂"
+            },
+            {
+              "ab": "’atimela",
+              "zh": "跳蚤"
+            },
+            {
+              "ab": "cacelakay",
+              "zh": "眼鏡蛇"
+            },
+            {
+              "ab": "parang",
+              "zh": "烏鴉 另作:’ak’akay"
+            },
+            {
+              "ab": "totoy",
+              "zh": "幼犬"
+            },
+            {
+              "ab": "waa’",
+              "zh": "(動物的)角"
+            }
+          ]
+        },
+        {
+          "lesson": 6,
+          "title": "251–300",
+          "cards": [
+            {
+              "ab": "riri’",
+              "zh": "蚱蜢"
+            },
+            {
+              "ab": "pawli",
+              "zh": "香蕉"
+            },
+            {
+              "ab": "adas",
+              "zh": "稻穀 另作:asad"
+            },
+            {
+              "ab": "kilang",
+              "zh": "樹"
+            },
+            {
+              "ab": "tali",
+              "zh": "芋頭"
+            },
+            {
+              "ab": "tefos",
+              "zh": "甘蔗"
+            },
+            {
+              "ab": "papah",
+              "zh": "葉子"
+            },
+            {
+              "ab": "konga",
+              "zh": "甘藷"
+            },
+            {
+              "ab": "asilo",
+              "zh": "柑橘"
+            },
+            {
+              "ab": "falo",
+              "zh": "花朵"
+            },
+            {
+              "ab": "ciyak",
+              "zh": "南瓜"
+            },
+            {
+              "ab": "semot",
+              "zh": "雜草"
+            },
+            {
+              "ab": "ariray",
+              "zh": "玉米"
+            },
+            {
+              "ab": "icep",
+              "zh": "檳榔"
+            },
+            {
+              "ab": "awol",
+              "zh": "竹子"
+            },
+            {
+              "ab": "ca’ang",
+              "zh": "樹枝"
+            },
+            {
+              "ab": "heci",
+              "zh": "(植物的)果實"
+            },
+            {
+              "ab": "tefo’",
+              "zh": "竹筍"
+            },
+            {
+              "ab": "faniw",
+              "zh": "香菇"
+            },
+            {
+              "ab": "talacay",
+              "zh": "鳳梨"
+            },
+            {
+              "ab": "rengos",
+              "zh": "草"
+            },
+            {
+              "ab": "oway",
+              "zh": "藤類"
+            },
+            {
+              "ab": "lopas",
+              "zh": "桃子"
+            },
+            {
+              "ab": "somomo",
+              "zh": "李子"
+            },
+            {
+              "ab": "heci no losay",
+              "zh": "水果"
+            },
+            {
+              "ab": "tatapangan no kilang / palamitan",
+              "zh": "樹頭"
+            },
+            {
+              "ab": "talonged",
+              "zh": "木耳"
+            },
+            {
+              "ab": "tomato",
+              "zh": "蕃茄"
+            },
+            {
+              "ab": "lamit no kilang",
+              "zh": "樹根"
+            },
+            {
+              "ab": "dapowak",
+              "zh": "野百合"
+            },
+            {
+              "ab": "lawilaw",
+              "zh": "姑婆芋"
+            },
+            {
+              "ab": "toto’",
+              "zh": "胡瓜"
+            },
+            {
+              "ab": "lokot",
+              "zh": "山蘇"
+            },
+            {
+              "ab": "ningcing",
+              "zh": "胡蘿蔔"
+            },
+            {
+              "ab": "ingcay",
+              "zh": "空心菜"
+            },
+            {
+              "ab": "kalitang",
+              "zh": "⻑豆"
+            },
+            {
+              "ab": "naniwac",
+              "zh": "綠豆"
+            },
+            {
+              "ab": "emi",
+              "zh": "麥"
+            },
+            {
+              "ab": "kenaw",
+              "zh": "蔥"
+            },
+            {
+              "ab": "tawcay",
+              "zh": "豆芽"
+            },
+            {
+              "ab": "acimeri",
+              "zh": "百香果"
+            },
+            {
+              "ab": "korto’",
+              "zh": "山藥"
+            },
+            {
+              "ab": "hinoki",
+              "zh": "檜木"
+            },
+            {
+              "ab": "sapal",
+              "zh": "幼苗"
+            },
+            {
+              "ab": "sapaloma",
+              "zh": "種子"
+            },
+            {
+              "ab": "edox",
+              "zh": "野草莓"
+            },
+            {
+              "ab": "omi",
+              "zh": "梅子"
+            },
+            {
+              "ab": "mokaw",
+              "zh": "過貓"
+            },
+            {
+              "ab": "sakora",
+              "zh": "山櫻花"
+            },
+            {
+              "ab": "sedeng",
+              "zh": "咬人貓"
+            }
+          ]
+        },
+        {
+          "lesson": 7,
+          "title": "301–350",
+          "cards": [
+            {
+              "ab": "imoc",
+              "zh": "山胡椒"
+            },
+            {
+              "ab": "fata’an",
+              "zh": "樹豆"
+            },
+            {
+              "ab": "kamoraw",
+              "zh": "柚子"
+            },
+            {
+              "ab": "tamako",
+              "zh": "菸草"
+            },
+            {
+              "ab": "adiyamay",
+              "zh": "辣椒(通稱) 另作:kamamod"
+            },
+            {
+              "ab": "takomod",
+              "zh": "棉花"
+            },
+            {
+              "ab": "konga",
+              "zh": "地瓜"
+            },
+            {
+              "ab": "kodafes",
+              "zh": "番石榴"
+            },
+            {
+              "ab": "tilid",
+              "zh": "書"
+            },
+            {
+              "ab": "payci",
+              "zh": "錢"
+            },
+            {
+              "ab": "mali",
+              "zh": "球"
+            },
+            {
+              "ab": "cokowi",
+              "zh": "桌子"
+            },
+            {
+              "ab": "tingwa",
+              "zh": "電話"
+            },
+            {
+              "ab": "impic",
+              "zh": "筆"
+            },
+            {
+              "ab": "hakenang",
+              "zh": "椅子 akenan"
+            },
+            {
+              "ab": "sapaiyo",
+              "zh": "藥物"
+            },
+            {
+              "ab": "tingnaw",
+              "zh": "電腦"
+            },
+            {
+              "ab": "dinay",
+              "zh": "雨傘"
+            },
+            {
+              "ab": "toki",
+              "zh": "手錶"
+            },
+            {
+              "ab": "toki",
+              "zh": "鐘錶"
+            },
+            {
+              "ab": "sakawit",
+              "zh": "鉤子"
+            },
+            {
+              "ab": "walay",
+              "zh": "細線"
+            },
+            {
+              "ab": "saso’ot",
+              "zh": "繩索"
+            },
+            {
+              "ab": "rinom",
+              "zh": "針"
+            },
+            {
+              "ab": "asolo",
+              "zh": "木杵"
+            },
+            {
+              "ab": "ca’ang",
+              "zh": "枝條"
+            },
+            {
+              "ab": "hatapes",
+              "zh": "篩子"
+            },
+            {
+              "ab": "po’ot",
+              "zh": "小刀"
+            },
+            {
+              "ab": "tamina",
+              "zh": "船隻"
+            },
+            {
+              "ab": "kalatim",
+              "zh": "剪刀"
+            },
+            {
+              "ab": "atang",
+              "zh": "木炭"
+            },
+            {
+              "ab": "fakic",
+              "zh": "水桶"
+            },
+            {
+              "ab": "sapacemot",
+              "zh": "釣竿"
+            },
+            {
+              "ab": "lawas",
+              "zh": "竹筒"
+            },
+            {
+              "ab": "dawdaw",
+              "zh": "電燈"
+            },
+            {
+              "ab": "satahaf",
+              "zh": "蓋子"
+            },
+            {
+              "ab": "topipic",
+              "zh": "(竹製的)刮麻具"
+            },
+            {
+              "ab": "kadit",
+              "zh": "污垢"
+            },
+            {
+              "ab": "tatifekan",
+              "zh": "木臼"
+            },
+            {
+              "ab": "sawfan",
+              "zh": "棉被"
+            },
+            {
+              "ab": "kaysing",
+              "zh": "碗"
+            },
+            {
+              "ab": "tafokod",
+              "zh": "網子"
+            },
+            {
+              "ab": "dangah",
+              "zh": "飯鍋"
+            },
+            {
+              "ab": "sarosaros",
+              "zh": "鋸子"
+            },
+            {
+              "ab": "dadokap",
+              "zh": "紙張"
+            },
+            {
+              "ab": "koppo",
+              "zh": "杯子"
+            },
+            {
+              "ab": "sapacemot",
+              "zh": "釣具"
+            },
+            {
+              "ab": "tisaki",
+              "zh": "袋子"
+            },
+            {
+              "ab": "sekop",
+              "zh": "鍋鏟"
+            },
+            {
+              "ab": "cakelis",
+              "zh": "斧頭"
+            }
+          ]
+        },
+        {
+          "lesson": 8,
+          "title": "351–400",
+          "cards": [
+            {
+              "ab": "alapit",
+              "zh": "夾子"
+            },
+            {
+              "ab": "takar",
+              "zh": "床舖"
+            },
+            {
+              "ab": "awakay",
+              "zh": "梗"
+            },
+            {
+              "ab": "dadingoan",
+              "zh": "鏡子"
+            },
+            {
+              "ab": "sakadademak",
+              "zh": "工具"
+            },
+            {
+              "ab": "pirit",
+              "zh": "弧形(底)鍋"
+            },
+            {
+              "ab": "afo",
+              "zh": "炭灰"
+            },
+            {
+              "ab": "talid",
+              "zh": "瓶子"
+            },
+            {
+              "ab": "ilos",
+              "zh": "湯匙"
+            },
+            {
+              "ab": "sala",
+              "zh": "菜盤"
+            },
+            {
+              "ab": "sasing",
+              "zh": "相片"
+            },
+            {
+              "ab": "safon",
+              "zh": "肥皂"
+            },
+            {
+              "ab": "safitay",
+              "zh": "濾酒渣網"
+            },
+            {
+              "ab": "sakares",
+              "zh": "梳子"
+            },
+            {
+              "ab": "safafa",
+              "zh": "揹帶"
+            },
+            {
+              "ab": "sapihpih",
+              "zh": "扇子"
+            },
+            {
+              "ab": "dangah",
+              "zh": "湯鍋"
+            },
+            {
+              "ab": "toto’",
+              "zh": "水瓢(舀水用)"
+            },
+            {
+              "ab": "ping-syang",
+              "zh": "電冰箱"
+            },
+            {
+              "ab": "tilifi",
+              "zh": "電視"
+            },
+            {
+              "ab": "hoso",
+              "zh": "水管"
+            },
+            {
+              "ab": "tatangalan",
+              "zh": "枕頭 另作:tangangalan"
+            },
+            {
+              "ab": "satoktok",
+              "zh": "鐵鎚"
+            },
+            {
+              "ab": "pacek",
+              "zh": "鐵釘"
+            },
+            {
+              "ab": "tingal",
+              "zh": "卡在牙縫之物"
+            },
+            {
+              "ab": "siwto / satonton",
+              "zh": "菜刀 另作:satonton"
+            },
+            {
+              "ab": "tafokod",
+              "zh": "魚網"
+            },
+            {
+              "ab": "sasipasip",
+              "zh": "橡皮擦"
+            },
+            {
+              "ab": "kadango",
+              "zh": "簍子"
+            },
+            {
+              "ab": "lalan",
+              "zh": "道路"
+            },
+            {
+              "ab": "lotok",
+              "zh": "山林"
+            },
+            {
+              "ab": "ci’ci’",
+              "zh": "小溪"
+            },
+            {
+              "ab": "fali",
+              "zh": "風"
+            },
+            {
+              "ab": "tafok",
+              "zh": "沙子"
+            },
+            {
+              "ab": "sera",
+              "zh": "泥土"
+            },
+            {
+              "ab": "’alo",
+              "zh": "河流"
+            },
+            {
+              "ab": "fanaw",
+              "zh": "湖泊"
+            },
+            {
+              "ab": "kilakilangan",
+              "zh": "森林"
+            },
+            {
+              "ab": "ngara’",
+              "zh": "縫隙"
+            },
+            {
+              "ab": "dihif",
+              "zh": "洞穴"
+            },
+            {
+              "ab": "tapang no tokos",
+              "zh": "山腳下"
+            },
+            {
+              "ab": "apolaw",
+              "zh": "土堆"
+            },
+            {
+              "ab": "ofang no ongcoy",
+              "zh": "岩洞"
+            },
+            {
+              "ab": "rengorengosan",
+              "zh": "草原"
+            },
+            {
+              "ab": "onsing",
+              "zh": "溫泉"
+            },
+            {
+              "ab": "sa’owacan",
+              "zh": "峽谷"
+            },
+            {
+              "ab": "ofang",
+              "zh": "山洞"
+            },
+            {
+              "ab": "ongcoy",
+              "zh": "岩石"
+            },
+            {
+              "ab": "cascas",
+              "zh": "瀑布"
+            },
+            {
+              "ab": "apapolo",
+              "zh": "獨立的小山頭"
+            }
+          ]
+        },
+        {
+          "lesson": 9,
+          "title": "401–450",
+          "cards": [
+            {
+              "ab": "padipas",
+              "zh": "崇山峻嶺"
+            },
+            {
+              "ab": "ma’orad",
+              "zh": "下雨"
+            },
+            {
+              "ab": "cidal",
+              "zh": "太陽"
+            },
+            {
+              "ab": "folad",
+              "zh": "月亮"
+            },
+            {
+              "ab": "kakarayan",
+              "zh": "天空"
+            },
+            {
+              "ab": "fo’is",
+              "zh": "星星"
+            },
+            {
+              "ab": "’orad",
+              "zh": "雨"
+            },
+            {
+              "ab": "so’eda",
+              "zh": "雪"
+            },
+            {
+              "ab": "kasienawan",
+              "zh": "冬天"
+            },
+            {
+              "ab": "laloodan",
+              "zh": "夏天"
+            },
+            {
+              "ab": "kakereng",
+              "zh": "雷"
+            },
+            {
+              "ab": "ool",
+              "zh": "露水"
+            },
+            {
+              "ab": "toem",
+              "zh": "雲"
+            },
+            {
+              "ab": "acefel",
+              "zh": "煙"
+            },
+            {
+              "ab": "kalapiyat",
+              "zh": "閃電"
+            },
+            {
+              "ab": "hadhad",
+              "zh": "旱田"
+            },
+            {
+              "ab": "matoem",
+              "zh": "陰天"
+            },
+            {
+              "ab": "namal",
+              "zh": "火"
+            },
+            {
+              "ab": "koli",
+              "zh": "冰"
+            },
+            {
+              "ab": "atoray",
+              "zh": "地震"
+            },
+            {
+              "ab": "adingo",
+              "zh": "影子"
+            },
+            {
+              "ab": "faliyos",
+              "zh": "颱風"
+            },
+            {
+              "ab": "pedak",
+              "zh": "霜"
+            },
+            {
+              "ab": "tera’",
+              "zh": "水滴"
+            },
+            {
+              "ab": "manawnaw",
+              "zh": "水患"
+            },
+            {
+              "ab": "kacanglahan",
+              "zh": "春天"
+            },
+            {
+              "ab": "lawac no riyal",
+              "zh": "海邊"
+            },
+            {
+              "ab": "kafarawfawan",
+              "zh": "秋天"
+            },
+            {
+              "ab": "talakal ni Idek",
+              "zh": "彩虹"
+            },
+            {
+              "ab": "maringaring",
+              "zh": "日落"
+            },
+            {
+              "ab": "to’eman",
+              "zh": "天黑"
+            },
+            {
+              "ab": "tomerep ko ’orad",
+              "zh": "雨停"
+            },
+            {
+              "ab": "mafaliyos",
+              "zh": "刮颱風"
+            },
+            {
+              "ab": "masadak ko cidal",
+              "zh": "日出"
+            },
+            {
+              "ab": "loma’",
+              "zh": "家"
+            },
+            {
+              "ab": "palatawan",
+              "zh": "窗戶"
+            },
+            {
+              "ab": "fawahan",
+              "zh": "門"
+            },
+            {
+              "ab": "kongkoan",
+              "zh": "學校"
+            },
+            {
+              "ab": "fakeloh",
+              "zh": "石頭"
+            },
+            {
+              "ab": "fadahong",
+              "zh": "屋頂"
+            },
+            {
+              "ab": "kayakay",
+              "zh": "橋樑"
+            },
+            {
+              "ab": "taro’an",
+              "zh": "工寮"
+            },
+            {
+              "ab": "tata’ian",
+              "zh": "廁所"
+            },
+            {
+              "ab": "hecek",
+              "zh": "柱子"
+            },
+            {
+              "ab": "atol",
+              "zh": "石堆"
+            },
+            {
+              "ab": "pakoko’an",
+              "zh": "雞寮"
+            },
+            {
+              "ab": "takaykayan",
+              "zh": "樓梯"
+            },
+            {
+              "ab": "satimolan",
+              "zh": "庭院"
+            },
+            {
+              "ab": "patih",
+              "zh": "牆壁"
+            },
+            {
+              "ab": "kofaw",
+              "zh": "穀倉"
+            }
+          ]
+        },
+        {
+          "lesson": 10,
+          "title": "451–500",
+          "cards": [
+            {
+              "ab": "misafadahong",
+              "zh": "蓋屋頂"
+            },
+            {
+              "ab": "misaadiper",
+              "zh": "搭建圍籬"
+            },
+            {
+              "ab": "saikoran",
+              "zh": "後院"
+            },
+            {
+              "ab": "lalomiheca",
+              "zh": "明年"
+            },
+            {
+              "ab": "dadaya",
+              "zh": "晚上"
+            },
+            {
+              "ab": "nacila",
+              "zh": "昨天"
+            },
+            {
+              "ab": "anocila",
+              "zh": "明天"
+            },
+            {
+              "ab": "anini",
+              "zh": "今天"
+            },
+            {
+              "ab": "papacem",
+              "zh": "早上"
+            },
+            {
+              "ab": "romi’ad",
+              "zh": "白天"
+            },
+            {
+              "ab": "inacila",
+              "zh": "前天"
+            },
+            {
+              "ab": "kanikalan",
+              "zh": "清晨"
+            },
+            {
+              "ab": "to’eman",
+              "zh": "黑暗"
+            },
+            {
+              "ab": "hakakerem",
+              "zh": "傍晚"
+            },
+            {
+              "ab": "dotoc",
+              "zh": "接續"
+            },
+            {
+              "ab": "lafii",
+              "zh": "半夜"
+            },
+            {
+              "ab": "itiya",
+              "zh": "當時"
+            },
+            {
+              "ab": "inaci:la",
+              "zh": "大前天"
+            },
+            {
+              "ab": "anosawni",
+              "zh": "待會兒 另作:anosoni"
+            },
+            {
+              "ab": "anoci:la",
+              "zh": "大後天"
+            },
+            {
+              "ab": "tadengal",
+              "zh": "亮光 另作:talengad"
+            },
+            {
+              "ab": "anocila",
+              "zh": "後天"
+            },
+            {
+              "ab": "papacem",
+              "zh": "上午"
+            },
+            {
+              "ab": "cila",
+              "zh": "未來"
+            },
+            {
+              "ab": "dadaya",
+              "zh": "夜"
+            },
+            {
+              "ab": "kaemang ho",
+              "zh": "年輕時"
+            },
+            {
+              "ab": "pahoda",
+              "zh": "一下子"
+            },
+            {
+              "ab": "ikor no lahok",
+              "zh": "下午"
+            },
+            {
+              "ab": "toki",
+              "zh": "(幾)點鐘"
+            },
+            {
+              "ab": "pa’aliwacan",
+              "zh": "星期日"
+            },
+            {
+              "ab": "mihecaan",
+              "zh": "年"
+            },
+            {
+              "ab": "romi’ami’ad",
+              "zh": "天天"
+            },
+            {
+              "ab": "hatini",
+              "zh": "現在"
+            },
+            {
+              "ab": "kahofocan",
+              "zh": "生日"
+            },
+            {
+              "ab": "laloma’",
+              "zh": "裡面"
+            },
+            {
+              "ab": "isakacowa",
+              "zh": "在某處"
+            },
+            {
+              "ab": "kafekang",
+              "zh": "上面 另作:fafekang"
+            },
+            {
+              "ab": "ka’ayaw",
+              "zh": "前面"
+            },
+            {
+              "ab": "laeno",
+              "zh": "下面"
+            },
+            {
+              "ab": "tenok",
+              "zh": "中間"
+            },
+            {
+              "ab": "papotal",
+              "zh": "外面"
+            },
+            {
+              "ab": "tatihi",
+              "zh": "旁邊"
+            },
+            {
+              "ab": "tatafaan",
+              "zh": "頂"
+            },
+            {
+              "ab": "kawanan",
+              "zh": "右邊"
+            },
+            {
+              "ab": "kawili",
+              "zh": "左邊"
+            },
+            {
+              "ab": "tadimocokan",
+              "zh": "角落"
+            },
+            {
+              "ab": "laeno",
+              "zh": "某物之下"
+            },
+            {
+              "ab": "ta’elif",
+              "zh": "經過"
+            },
+            {
+              "ab": "tahira",
+              "zh": "(從某處)到某處"
+            },
+            {
+              "ab": "naicowa",
+              "zh": "從某處"
+            }
+          ]
+        },
+        {
+          "lesson": 11,
+          "title": "501–550",
+          "cards": [
+            {
+              "ab": "mikohkoh",
+              "zh": "鋤草"
+            },
+            {
+              "ab": "mikangkang",
+              "zh": "犁田"
+            },
+            {
+              "ab": "paloma",
+              "zh": "播種"
+            },
+            {
+              "ab": "mipaloma",
+              "zh": "種苗(動作)"
+            },
+            {
+              "ab": "fakar",
+              "zh": "穀物乾燥簍"
+            },
+            {
+              "ab": "kangkang",
+              "zh": "犁"
+            },
+            {
+              "ab": "kawkaw",
+              "zh": "鐮刀"
+            },
+            {
+              "ab": "pitaw",
+              "zh": "鋤頭"
+            },
+            {
+              "ab": "kofaw",
+              "zh": "倉庫"
+            },
+            {
+              "ab": "pamatang",
+              "zh": "開墾"
+            },
+            {
+              "ab": "tayhi",
+              "zh": "肥料"
+            },
+            {
+              "ab": "safitay",
+              "zh": "篩穀器具"
+            },
+            {
+              "ab": "mirohem",
+              "zh": "催熟(果實)"
+            },
+            {
+              "ab": "asisiw",
+              "zh": "稻草"
+            },
+            {
+              "ab": "focol",
+              "zh": "弓"
+            },
+            {
+              "ab": "kotang",
+              "zh": "矛"
+            },
+            {
+              "ab": "pana’",
+              "zh": "箭矢"
+            },
+            {
+              "ab": "sapariri’",
+              "zh": "餌"
+            },
+            {
+              "ab": "kowang",
+              "zh": "槍"
+            },
+            {
+              "ab": "fonos",
+              "zh": "獵刀"
+            },
+            {
+              "ab": "hawan",
+              "zh": "直形獵刀"
+            },
+            {
+              "ab": "’a’adopen",
+              "zh": "獵物(統稱)"
+            },
+            {
+              "ab": "tekep",
+              "zh": "石壓式陷阱"
+            },
+            {
+              "ab": "wa’ir",
+              "zh": "套頸式繩索陷阱"
+            },
+            {
+              "ab": "tisaki",
+              "zh": "籃子"
+            },
+            {
+              "ab": "talakal",
+              "zh": "捕鳥陷阱"
+            },
+            {
+              "ab": "paysin",
+              "zh": "禁忌"
+            },
+            {
+              "ab": "tiih",
+              "zh": "夢"
+            },
+            {
+              "ab": "sair",
+              "zh": "巫術"
+            },
+            {
+              "ab": "kiwkay",
+              "zh": "教會"
+            },
+            {
+              "ab": "pipatafangan to liteng",
+              "zh": "祖靈祭"
+            },
+            {
+              "ab": "sarao’",
+              "zh": "播種祭"
+            },
+            {
+              "ab": "kawas",
+              "zh": "鬼魂"
+            },
+            {
+              "ab": "sapi’edaw",
+              "zh": "法器(巫醫治病用)"
+            },
+            {
+              "ab": "kafong",
+              "zh": "帽子"
+            },
+            {
+              "ab": "riko’",
+              "zh": "衣服"
+            },
+            {
+              "ab": "mitinooy",
+              "zh": "編織"
+            },
+            {
+              "ab": "tangalayan",
+              "zh": "肚兜"
+            },
+            {
+              "ab": "capay",
+              "zh": "男用耳環"
+            },
+            {
+              "ab": "fiting",
+              "zh": "女用耳環"
+            },
+            {
+              "ab": "kafel",
+              "zh": "褲子"
+            },
+            {
+              "ab": "cicih",
+              "zh": "破掉"
+            },
+            {
+              "ab": "tadasay",
+              "zh": "頭飾"
+            },
+            {
+              "ab": "sakawit",
+              "zh": "編網針"
+            },
+            {
+              "ab": "telec",
+              "zh": "腰帶"
+            },
+            {
+              "ab": "keliw",
+              "zh": "苧麻"
+            },
+            {
+              "ab": "micengel",
+              "zh": "染色"
+            },
+            {
+              "ab": "kafel",
+              "zh": "女性⻑褲"
+            },
+            {
+              "ab": "keliw",
+              "zh": "苧麻線"
+            },
+            {
+              "ab": "kiradom",
+              "zh": "布匹"
+            }
+          ]
+        },
+        {
+          "lesson": 12,
+          "title": "551–600",
+          "cards": [
+            {
+              "ab": "tadasay",
+              "zh": "妝扮飾物"
+            },
+            {
+              "ab": "dangpaw",
+              "zh": "傳統女上衣"
+            },
+            {
+              "ab": "talip",
+              "zh": "傳統女裙"
+            },
+            {
+              "ab": "cokap",
+              "zh": "鞋子"
+            },
+            {
+              "ab": "safafa",
+              "zh": "揹小孩的背帶"
+            },
+            {
+              "ab": "fodoy",
+              "zh": "毛線"
+            },
+            {
+              "ab": "talip",
+              "zh": "裙子"
+            },
+            {
+              "ab": "pacacoyan",
+              "zh": "男用遮陰布"
+            },
+            {
+              "ab": "fadasay",
+              "zh": "男用背負網袋"
+            },
+            {
+              "ab": "pa’ayawan",
+              "zh": "擋胸巾"
+            },
+            {
+              "ab": "caca’edongan",
+              "zh": "袖子"
+            },
+            {
+              "ab": "riko’",
+              "zh": "上衣"
+            },
+            {
+              "ab": "kawes no loto",
+              "zh": "頭帶(女用背籃用)"
+            },
+            {
+              "ab": "keliw",
+              "zh": "織布用的素麻線"
+            },
+            {
+              "ab": "misopil to mowa",
+              "zh": "刮苧麻"
+            },
+            {
+              "ab": "loto",
+              "zh": "女用揹籃"
+            },
+            {
+              "ab": "kadango",
+              "zh": "圓形竹簍"
+            },
+            {
+              "ab": "paso",
+              "zh": "公車"
+            },
+            {
+              "ab": "tingsa",
+              "zh": "腳踏車"
+            },
+            {
+              "ab": "siyataw",
+              "zh": "車站"
+            },
+            {
+              "ab": "tayya",
+              "zh": "輪胎"
+            },
+            {
+              "ab": "tamina",
+              "zh": "船"
+            },
+            {
+              "ab": "paliding",
+              "zh": "車子"
+            },
+            {
+              "ab": "kasoling",
+              "zh": "火車"
+            },
+            {
+              "ab": "hemay",
+              "zh": "飯 holo"
+            },
+            {
+              "ab": "nanom",
+              "zh": "水"
+            },
+            {
+              "ab": "felac",
+              "zh": "白米"
+            },
+            {
+              "ab": "dateng",
+              "zh": "菜餚"
+            },
+            {
+              "ab": "dateng",
+              "zh": "青菜"
+            },
+            {
+              "ab": "epah",
+              "zh": "酒"
+            },
+            {
+              "ab": "cinah",
+              "zh": "鹽"
+            },
+            {
+              "ab": "odax",
+              "zh": "蜜"
+            },
+            {
+              "ab": "fita’ol",
+              "zh": "蛋"
+            },
+            {
+              "ab": "simal",
+              "zh": "油"
+            },
+            {
+              "ab": "aredet",
+              "zh": "味道"
+            },
+            {
+              "ab": "kohaw",
+              "zh": "湯"
+            },
+            {
+              "ab": "kalitang",
+              "zh": "豆類"
+            },
+            {
+              "ab": "saytaw",
+              "zh": "白蘿蔔"
+            },
+            {
+              "ab": "adas",
+              "zh": "穀粒"
+            },
+            {
+              "ab": "doway",
+              "zh": "糯米"
+            },
+            {
+              "ab": "kasaw",
+              "zh": "粥"
+            },
+            {
+              "ab": "lamelo",
+              "zh": "小米"
+            },
+            {
+              "ab": "odax",
+              "zh": "糖"
+            },
+            {
+              "ab": "titi no diyong",
+              "zh": "豬肉"
+            },
+            {
+              "ab": "towami",
+              "zh": "麵"
+            },
+            {
+              "ab": "taw’iw",
+              "zh": "醬油"
+            },
+            {
+              "ab": "tipos",
+              "zh": "在來米"
+            },
+            {
+              "ab": "afih",
+              "zh": "米糠"
+            },
+            {
+              "ab": "otong",
+              "zh": "麵粉"
+            },
+            {
+              "ab": "kohecal",
+              "zh": "白色"
+            }
+          ]
+        },
+        {
+          "lesson": 13,
+          "title": "601–650",
+          "cards": [
+            {
+              "ab": "koheting",
+              "zh": "黑色"
+            },
+            {
+              "ab": "kahengang",
+              "zh": "紅色"
+            },
+            {
+              "ab": "koetimay",
+              "zh": "紫色的"
+            },
+            {
+              "ab": "kaliyalaway",
+              "zh": "黃色的 kohelaay"
+            },
+            {
+              "ab": "makolah",
+              "zh": "灰色"
+            },
+            {
+              "ab": "kangdaw",
+              "zh": "綠色"
+            },
+            {
+              "ab": "cengel",
+              "zh": "顏色"
+            },
+            {
+              "ab": "aw’aw",
+              "zh": "狗吠聲"
+            },
+            {
+              "ab": "radiw",
+              "zh": "歌"
+            },
+            {
+              "ab": "natengilan",
+              "zh": "聽說"
+            },
+            {
+              "ab": "teked sa a cecay",
+              "zh": "獨自一人"
+            },
+            {
+              "ab": "lecad",
+              "zh": "相同"
+            },
+            {
+              "ab": "niyaro’",
+              "zh": "部落"
+            },
+            {
+              "ab": "romi’ad",
+              "zh": "日子"
+            },
+            {
+              "ab": "hay",
+              "zh": "是的"
+            },
+            {
+              "ab": "caciyaw",
+              "zh": "語言"
+            },
+            {
+              "ab": "’icel",
+              "zh": "力量"
+            },
+            {
+              "ab": "patosokan",
+              "zh": "目標"
+            },
+            {
+              "ab": "serangawan",
+              "zh": "文化"
+            },
+            {
+              "ab": "epoc",
+              "zh": "意義"
+            },
+            {
+              "ab": "pakayif",
+              "zh": "結婚"
+            },
+            {
+              "ab": "kahirahira",
+              "zh": "各色各樣"
+            },
+            {
+              "ab": "’aca",
+              "zh": "價格"
+            },
+            {
+              "ab": "sapimaan",
+              "zh": "用途"
+            },
+            {
+              "ab": "raramod",
+              "zh": "婚姻"
+            },
+            {
+              "ab": "lahad",
+              "zh": "(植物)生⻑"
+            },
+            {
+              "ab": "paliyas",
+              "zh": "讓開"
+            },
+            {
+              "ab": "patelong",
+              "zh": "贈送(禮物)"
+            },
+            {
+              "ab": "mililis to tokos",
+              "zh": "沿著山巒"
+            },
+            {
+              "ab": "rasras",
+              "zh": "(植物的果實)掉落"
+            },
+            {
+              "ab": "cokacok",
+              "zh": "(往)上坡"
+            },
+            {
+              "ab": "militemoh",
+              "zh": "接(人)"
+            },
+            {
+              "ab": "lakec",
+              "zh": "越溪而過"
+            },
+            {
+              "ab": "saeli",
+              "zh": "向人家要(東⻄)"
+            },
+            {
+              "ab": "taktak",
+              "zh": "倒(水)"
+            },
+            {
+              "ab": "pasayra",
+              "zh": "走(向某個方向)"
+            },
+            {
+              "ab": "lalad",
+              "zh": "(藤類植物)攀爬"
+            },
+            {
+              "ab": "sarakarakat",
+              "zh": "逛一逛"
+            },
+            {
+              "ab": "lepel",
+              "zh": "追"
+            },
+            {
+              "ab": "takop",
+              "zh": "趕上"
+            },
+            {
+              "ab": "pedoc",
+              "zh": "滑掉"
+            },
+            {
+              "ab": "lacinowas",
+              "zh": "分開"
+            },
+            {
+              "ab": "hawikid",
+              "zh": "攜帶(如帶傘)"
+            },
+            {
+              "ab": "ca’edong",
+              "zh": "穿(如穿衣服)"
+            },
+            {
+              "ab": "cikafong",
+              "zh": "戴(如戴帽子)"
+            },
+            {
+              "ab": "sadak",
+              "zh": "出現"
+            },
+            {
+              "ab": "aro’",
+              "zh": "坐著"
+            },
+            {
+              "ab": "tomireng",
+              "zh": "站著"
+            },
+            {
+              "ab": "’edef",
+              "zh": "關(門;窗)"
+            },
+            {
+              "ab": "tatayni",
+              "zh": "要來"
+            }
+          ]
+        },
+        {
+          "lesson": 14,
+          "title": "651–700",
+          "cards": [
+            {
+              "ab": "natayniay to",
+              "zh": "來過"
+            },
+            {
+              "ab": "natayraay to",
+              "zh": "去了"
+            },
+            {
+              "ab": "nafoy",
+              "zh": "爬行"
+            },
+            {
+              "ab": "nengneng han",
+              "zh": "看起來"
+            },
+            {
+              "ab": "liso’",
+              "zh": "拜訪"
+            },
+            {
+              "ab": "masadak",
+              "zh": "出去"
+            },
+            {
+              "ab": "takod / teloc",
+              "zh": "跳躍"
+            },
+            {
+              "ab": "makero",
+              "zh": "跳舞"
+            },
+            {
+              "ab": "maro’",
+              "zh": "坐下"
+            },
+            {
+              "ab": "loho",
+              "zh": "彎腰"
+            },
+            {
+              "ab": "ca’it",
+              "zh": "掛"
+            },
+            {
+              "ab": "salama",
+              "zh": "玩(球)"
+            },
+            {
+              "ab": "ala",
+              "zh": "拿取"
+            },
+            {
+              "ab": "seti’",
+              "zh": "打(人)"
+            },
+            {
+              "ab": "pacok",
+              "zh": "刺"
+            },
+            {
+              "ab": "mikowang",
+              "zh": "射擊"
+            },
+            {
+              "ab": "tolo’",
+              "zh": "跌倒"
+            },
+            {
+              "ab": "tenok",
+              "zh": "踢"
+            },
+            {
+              "ab": "coloh",
+              "zh": "推"
+            },
+            {
+              "ab": "letek",
+              "zh": "砍伐"
+            },
+            {
+              "ab": "ngiyangi",
+              "zh": "搖動"
+            },
+            {
+              "ab": "pitek",
+              "zh": "折斷"
+            },
+            {
+              "ab": "mirmir",
+              "zh": "發抖"
+            },
+            {
+              "ab": "koskos",
+              "zh": "抓癢"
+            },
+            {
+              "ab": "kocakoc / kodakod",
+              "zh": "爬上(去)"
+            },
+            {
+              "ab": "wakang",
+              "zh": "躺"
+            },
+            {
+              "ab": "fafa",
+              "zh": "揹(人)"
+            },
+            {
+              "ab": "pelpel",
+              "zh": "敲碎"
+            },
+            {
+              "ab": "tamolong",
+              "zh": "扛"
+            },
+            {
+              "ab": "wadwad",
+              "zh": "翻動"
+            },
+            {
+              "ab": "walin",
+              "zh": "滾落"
+            },
+            {
+              "ab": "sontol",
+              "zh": "撞到"
+            },
+            {
+              "ab": "afofo",
+              "zh": "抱著"
+            },
+            {
+              "ab": "iyof",
+              "zh": "吹"
+            },
+            {
+              "ab": "korkor",
+              "zh": "挖掘"
+            },
+            {
+              "ab": "cikcik",
+              "zh": "切"
+            },
+            {
+              "ab": "dangoy",
+              "zh": "游泳"
+            },
+            {
+              "ab": "himed",
+              "zh": "藏起來"
+            },
+            {
+              "ab": "cepet",
+              "zh": "抓(如抓到動物)"
+            },
+            {
+              "ab": "letek",
+              "zh": "砍"
+            },
+            {
+              "ab": "fafa",
+              "zh": "揹負(物品)"
+            },
+            {
+              "ab": "pakilac",
+              "zh": "分(東⻄)"
+            },
+            {
+              "ab": "pela’",
+              "zh": "剖切"
+            },
+            {
+              "ab": "so’ot",
+              "zh": "綁住"
+            },
+            {
+              "ab": "tengteng",
+              "zh": "拉"
+            },
+            {
+              "ab": "pela’",
+              "zh": "劈(木材)"
+            },
+            {
+              "ab": "keton",
+              "zh": "扯斷"
+            },
+            {
+              "ab": "tatoy",
+              "zh": "提著"
+            },
+            {
+              "ab": "metmet",
+              "zh": "握著"
+            },
+            {
+              "ab": "falod",
+              "zh": "捆綁"
+            }
+          ]
+        },
+        {
+          "lesson": 15,
+          "title": "701–750",
+          "cards": [
+            {
+              "ab": "leken",
+              "zh": "按住"
+            },
+            {
+              "ab": "fa’enot",
+              "zh": "拔除"
+            },
+            {
+              "ab": "pili’",
+              "zh": "挑選"
+            },
+            {
+              "ab": "folesak",
+              "zh": "散撒"
+            },
+            {
+              "ab": "toltol",
+              "zh": "啄"
+            },
+            {
+              "ab": "coenek",
+              "zh": "插"
+            },
+            {
+              "ab": "taring",
+              "zh": "堆積"
+            },
+            {
+              "ab": "colo’",
+              "zh": "搬運"
+            },
+            {
+              "ab": "fa’enot",
+              "zh": "拔出"
+            },
+            {
+              "ab": "tiyol",
+              "zh": "攪動"
+            },
+            {
+              "ab": "’enec",
+              "zh": "壓住"
+            },
+            {
+              "ab": "koskos",
+              "zh": "搔癢"
+            },
+            {
+              "ab": "metmet",
+              "zh": "握拳"
+            },
+            {
+              "ab": "pitpit",
+              "zh": "摘取"
+            },
+            {
+              "ab": "ngoyangoy",
+              "zh": "晃動"
+            },
+            {
+              "ab": "foheci",
+              "zh": "剝(花生;豆類)"
+            },
+            {
+              "ab": "lakec",
+              "zh": "涉水而過"
+            },
+            {
+              "ab": "ngernger",
+              "zh": "震動"
+            },
+            {
+              "ab": "tafo",
+              "zh": "打包"
+            },
+            {
+              "ab": "litod",
+              "zh": "採收"
+            },
+            {
+              "ab": "renac",
+              "zh": "(將器具)磨利"
+            },
+            {
+              "ab": "ngiyangi",
+              "zh": "(搖)動"
+            },
+            {
+              "ab": "lepel",
+              "zh": "追捕"
+            },
+            {
+              "ab": "pelpel",
+              "zh": "打碎"
+            },
+            {
+              "ab": "wakang",
+              "zh": "倒(下)"
+            },
+            {
+              "ab": "liyoc",
+              "zh": "扭轉"
+            },
+            {
+              "ab": "patireng",
+              "zh": "豎立"
+            },
+            {
+              "ab": "ripa’",
+              "zh": "踩踏"
+            },
+            {
+              "ab": "hawang",
+              "zh": "跨過"
+            },
+            {
+              "ab": "kerit",
+              "zh": "割"
+            },
+            {
+              "ab": "imec",
+              "zh": "掐住"
+            },
+            {
+              "ab": "piepi",
+              "zh": "壓制"
+            },
+            {
+              "ab": "pariri’",
+              "zh": "餵食"
+            },
+            {
+              "ab": "cepet",
+              "zh": "捕抓"
+            },
+            {
+              "ab": "kowad",
+              "zh": "撬開"
+            },
+            {
+              "ab": "ripa’",
+              "zh": "(用腳)踏"
+            },
+            {
+              "ab": "pasakohepic",
+              "zh": "壓扁"
+            },
+            {
+              "ab": "litolak",
+              "zh": "剝皮"
+            },
+            {
+              "ab": "renaf",
+              "zh": "擦(如口紅;油漆)"
+            },
+            {
+              "ab": "wadwad",
+              "zh": "亂翻"
+            },
+            {
+              "ab": "ricaric",
+              "zh": "揉搓(衣物)"
+            },
+            {
+              "ab": "cingray",
+              "zh": "靠著"
+            },
+            {
+              "ab": "pacpac",
+              "zh": "鞭打"
+            },
+            {
+              "ab": "tokinil",
+              "zh": "側臥"
+            },
+            {
+              "ab": "kelac",
+              "zh": "削皮(水果)"
+            },
+            {
+              "ab": "mika’erid",
+              "zh": "捻線"
+            },
+            {
+              "ab": "kalatim",
+              "zh": "剪"
+            },
+            {
+              "ab": "tepoc",
+              "zh": "砍除"
+            },
+            {
+              "ab": "wangawang",
+              "zh": "招手"
+            },
+            {
+              "ab": "tonton",
+              "zh": "剁"
+            }
+          ]
+        },
+        {
+          "lesson": 16,
+          "title": "751–800",
+          "cards": [
+            {
+              "ab": "talik",
+              "zh": "搗"
+            },
+            {
+              "ab": "’odot",
+              "zh": "打架"
+            },
+            {
+              "ab": "coeco",
+              "zh": "擠"
+            },
+            {
+              "ab": "ocekoy",
+              "zh": "低下頭"
+            },
+            {
+              "ab": "tengteng",
+              "zh": "拉(上來)"
+            },
+            {
+              "ab": "korkor",
+              "zh": "(用手)挖掘"
+            },
+            {
+              "ab": "podac",
+              "zh": "剝樹皮"
+            },
+            {
+              "ab": "conga",
+              "zh": "畫圖"
+            },
+            {
+              "ab": "simaanay / patelas",
+              "zh": "隨意"
+            },
+            {
+              "ab": "roho",
+              "zh": "蹲下"
+            },
+            {
+              "ab": "tomireng",
+              "zh": "起立"
+            },
+            {
+              "ab": "kaen",
+              "zh": "吃"
+            },
+            {
+              "ab": "helip",
+              "zh": "吸"
+            },
+            {
+              "ab": "minanom",
+              "zh": "喝"
+            },
+            {
+              "ab": "ota’",
+              "zh": "吐"
+            },
+            {
+              "ab": "kalat",
+              "zh": "咬"
+            },
+            {
+              "ab": "enoc",
+              "zh": "吞嚥"
+            },
+            {
+              "ab": "ta’emod",
+              "zh": "吞下"
+            },
+            {
+              "ab": "cedet",
+              "zh": "燙到"
+            },
+            {
+              "ab": "si’ed",
+              "zh": "噎到"
+            },
+            {
+              "ab": "fecol",
+              "zh": "飽食"
+            },
+            {
+              "ab": "kemkem",
+              "zh": "咀嚼"
+            },
+            {
+              "ab": "so’aw",
+              "zh": "渴"
+            },
+            {
+              "ab": "ngitngit",
+              "zh": "啃"
+            },
+            {
+              "ab": "cahiw",
+              "zh": "餓"
+            },
+            {
+              "ab": "kaen",
+              "zh": "吃(東⻄)"
+            },
+            {
+              "ab": "maranam",
+              "zh": "吃早餐"
+            },
+            {
+              "ab": "malahok",
+              "zh": "吃午餐"
+            },
+            {
+              "ab": "malafi",
+              "zh": "吃晚餐"
+            },
+            {
+              "ab": "malitemoh",
+              "zh": "遇到"
+            },
+            {
+              "ab": "fana’",
+              "zh": "知道"
+            },
+            {
+              "ab": "nengneng",
+              "zh": "看"
+            },
+            {
+              "ab": "sowal",
+              "zh": "說"
+            },
+            {
+              "ab": "tawalen",
+              "zh": "忘記(祈使)"
+            },
+            {
+              "ab": "kepit",
+              "zh": "閉(眼睛)"
+            },
+            {
+              "ab": "hanek",
+              "zh": "聞(如聞味道)"
+            },
+            {
+              "ab": "kapkap",
+              "zh": "觸摸(物品)"
+            },
+            {
+              "ab": "tahidang",
+              "zh": "邀請"
+            },
+            {
+              "ab": "pasowal",
+              "zh": "告訴(別人)"
+            },
+            {
+              "ab": "iyoy",
+              "zh": "叫喚(如餵雞前會叫喚)"
+            },
+            {
+              "ab": "licay",
+              "zh": "詢問"
+            },
+            {
+              "ab": "mihayda",
+              "zh": "答應"
+            },
+            {
+              "ab": "pakaso’elin",
+              "zh": "相信"
+            },
+            {
+              "ab": "po’i",
+              "zh": "漫罵"
+            },
+            {
+              "ab": "tefing",
+              "zh": "觸碰(如碰觸到身體)"
+            },
+            {
+              "ab": "pacako",
+              "zh": "回應"
+            },
+            {
+              "ab": "tengil",
+              "zh": "聽"
+            },
+            {
+              "ab": "nacnac",
+              "zh": "舔"
+            },
+            {
+              "ab": "patolon",
+              "zh": "交代(事情)"
+            },
+            {
+              "ab": "cengaw",
+              "zh": "睜眼"
+            }
+          ]
+        },
+        {
+          "lesson": 17,
+          "title": "801–850",
+          "cards": [
+            {
+              "ab": "patosek",
+              "zh": "瞄準"
+            },
+            {
+              "ab": "pakafana’",
+              "zh": "教(如教人寫字)"
+            },
+            {
+              "ab": "haratengen",
+              "zh": "想(思考)"
+            },
+            {
+              "ab": "nengneng",
+              "zh": "觀察"
+            },
+            {
+              "ab": "mafana’",
+              "zh": "會(做某事)"
+            },
+            {
+              "ab": "tolon",
+              "zh": "禱告"
+            },
+            {
+              "ab": "olah",
+              "zh": "喜歡"
+            },
+            {
+              "ab": "olah",
+              "zh": "喜愛"
+            },
+            {
+              "ab": "talaw",
+              "zh": "害怕"
+            },
+            {
+              "ab": "tangic",
+              "zh": "哭"
+            },
+            {
+              "ab": "olah",
+              "zh": "疼愛"
+            },
+            {
+              "ab": "hemek",
+              "zh": "高興"
+            },
+            {
+              "ab": "keter",
+              "zh": "生氣"
+            },
+            {
+              "ab": "dimokos",
+              "zh": "愛護"
+            },
+            {
+              "ab": "cekok",
+              "zh": "嚇一跳"
+            },
+            {
+              "ab": "lipahak",
+              "zh": "快樂"
+            },
+            {
+              "ab": "solimet",
+              "zh": "整理"
+            },
+            {
+              "ab": "faca’",
+              "zh": "洗(衣物)"
+            },
+            {
+              "ab": "tayal",
+              "zh": "工作"
+            },
+            {
+              "ab": "pasela’",
+              "zh": "停止"
+            },
+            {
+              "ab": "saloya’",
+              "zh": "浪費"
+            },
+            {
+              "ab": "lomowad",
+              "zh": "起床"
+            },
+            {
+              "ab": "arayom",
+              "zh": "再見(如互道再見)"
+            },
+            {
+              "ab": "maisi’",
+              "zh": "小便"
+            },
+            {
+              "ab": "foti’",
+              "zh": "睡覺"
+            },
+            {
+              "ab": "mipacok",
+              "zh": "殺牲畜"
+            },
+            {
+              "ab": "toma’i",
+              "zh": "大便"
+            },
+            {
+              "ab": "pahanhan",
+              "zh": "休息"
+            },
+            {
+              "ab": "tokatok",
+              "zh": "睏(想睡覺)"
+            },
+            {
+              "ab": "asik",
+              "zh": "打掃"
+            },
+            {
+              "ab": "minanam",
+              "zh": "學習"
+            },
+            {
+              "ab": "ti’enang",
+              "zh": "躺臥"
+            },
+            {
+              "ab": "cinitiih",
+              "zh": "做惡夢"
+            },
+            {
+              "ab": "takaw",
+              "zh": "偷竊"
+            },
+            {
+              "ab": "misafel",
+              "zh": "煮(菜)"
+            },
+            {
+              "ab": "todoh",
+              "zh": "燒(如燒稻 草)"
+            },
+            {
+              "ab": "masowaf",
+              "zh": "打哈欠"
+            },
+            {
+              "ab": "tamek",
+              "zh": "烤(如烤地瓜)"
+            },
+            {
+              "ab": "tangtang",
+              "zh": "烹煮(飯/肉/地瓜)"
+            },
+            {
+              "ab": "tala",
+              "zh": "等待"
+            },
+            {
+              "ab": "patalakal",
+              "zh": "陷獵"
+            },
+            {
+              "ab": "pawali",
+              "zh": "曬乾(如將衣服曬乾)"
+            },
+            {
+              "ab": "cihoken",
+              "zh": "以杓汲水 (祈使)"
+            },
+            {
+              "ab": "lowanen ko nanom",
+              "zh": "將水排出 (疏減)"
+            },
+            {
+              "ab": "solimeten",
+              "zh": "收拾(祈使,如收拾東⻄)"
+            },
+            {
+              "ab": "tifek",
+              "zh": "碾(米)"
+            },
+            {
+              "ab": "pawali",
+              "zh": "晾乾"
+            },
+            {
+              "ab": "sisawfa",
+              "zh": "蓋被子"
+            },
+            {
+              "ab": "patedi",
+              "zh": "照起來/照明"
+            },
+            {
+              "ab": "ehir",
+              "zh": "炒(如炒花生)"
+            }
+          ]
+        },
+        {
+          "lesson": 18,
+          "title": "851–900",
+          "cards": [
+            {
+              "ab": "pafo^fo",
+              "zh": "以籠捕魚蝦"
+            },
+            {
+              "ab": "mirahekad",
+              "zh": "蒸(如蒸飯)"
+            },
+            {
+              "ab": "paloma",
+              "zh": "種植"
+            },
+            {
+              "ab": "pacemot",
+              "zh": "釣魚"
+            },
+            {
+              "ab": "romrom",
+              "zh": "生火"
+            },
+            {
+              "ab": "sakiroen",
+              "zh": "醃漬(祈使)"
+            },
+            {
+              "ab": "’ong’ong",
+              "zh": "燒焦"
+            },
+            {
+              "ab": "dipot",
+              "zh": "照顧"
+            },
+            {
+              "ab": "leceng",
+              "zh": "剪(頭髮)"
+            },
+            {
+              "ab": "nengel",
+              "zh": "浸泡"
+            },
+            {
+              "ab": "fohat",
+              "zh": "掀開(如掀開蓋子)"
+            },
+            {
+              "ab": "tadem",
+              "zh": "掩埋"
+            },
+            {
+              "ab": "celol",
+              "zh": "替換(衣服)"
+            },
+            {
+              "ab": "ta^ta",
+              "zh": "鎖上"
+            },
+            {
+              "ab": "misikal",
+              "zh": "鋪床"
+            },
+            {
+              "ab": "ecic",
+              "zh": "燒(如燒獵物的毛)"
+            },
+            {
+              "ab": "pitpit",
+              "zh": "剝葉"
+            },
+            {
+              "ab": "cafool",
+              "zh": "尿急"
+            },
+            {
+              "ab": "fakeciw",
+              "zh": "量測"
+            },
+            {
+              "ab": "todoh",
+              "zh": "燃燒"
+            },
+            {
+              "ab": "ca’iten",
+              "zh": "懸掛(祈使)"
+            },
+            {
+              "ab": "todong",
+              "zh": "模仿"
+            },
+            {
+              "ab": "pariri’",
+              "zh": "飼養"
+            },
+            {
+              "ab": "ciyan",
+              "zh": "炒(飯菜)"
+            },
+            {
+              "ab": "totom",
+              "zh": "點火"
+            },
+            {
+              "ab": "mitilid",
+              "zh": "讀書"
+            },
+            {
+              "ab": "minanom",
+              "zh": "喝(水)"
+            },
+            {
+              "ab": "korkor",
+              "zh": "(用鋤具)挖掘"
+            },
+            {
+              "ab": "aro’",
+              "zh": "(居)住"
+            },
+            {
+              "ab": "romadiw",
+              "zh": "唱歌"
+            },
+            {
+              "ab": "salama",
+              "zh": "玩耍"
+            },
+            {
+              "ab": "patay",
+              "zh": "死亡"
+            },
+            {
+              "ab": "adada",
+              "zh": "好痛"
+            },
+            {
+              "ab": "madoka’",
+              "zh": "受傷"
+            },
+            {
+              "ab": "masiday",
+              "zh": "遺失"
+            },
+            {
+              "ab": "adada",
+              "zh": "痛"
+            },
+            {
+              "ab": "ma’irang",
+              "zh": "流血"
+            },
+            {
+              "ab": "sipoyapoy",
+              "zh": "懷孕"
+            },
+            {
+              "ab": "ma’oripay",
+              "zh": "活的"
+            },
+            {
+              "ab": "maesos",
+              "zh": "放屁"
+            },
+            {
+              "ab": "pi’iw",
+              "zh": "跛腳"
+            },
+            {
+              "ab": "dipot",
+              "zh": "撫養"
+            },
+            {
+              "ab": "malengaw",
+              "zh": "生⻑"
+            },
+            {
+              "ab": "kamamit",
+              "zh": "疤"
+            },
+            {
+              "ab": "caenget",
+              "zh": "癢"
+            },
+            {
+              "ab": "tokatok",
+              "zh": "打瞌睡"
+            },
+            {
+              "ab": "’esing",
+              "zh": "打噴嚏"
+            },
+            {
+              "ab": "adada",
+              "zh": "痠痛"
+            },
+            {
+              "ab": "adada",
+              "zh": "生病"
+            },
+            {
+              "ab": "cifena’",
+              "zh": "化膿"
+            }
+          ]
+        },
+        {
+          "lesson": 19,
+          "title": "901–950",
+          "cards": [
+            {
+              "ab": "ngiliw",
+              "zh": "瘦(身形)"
+            },
+            {
+              "ab": "kareteng",
+              "zh": "重(重量)"
+            },
+            {
+              "ab": "kahemaw",
+              "zh": "輕(重量)"
+            },
+            {
+              "ab": "akawang",
+              "zh": "高(身高)"
+            },
+            {
+              "ab": "taangayay",
+              "zh": "大的"
+            },
+            {
+              "ab": "amerek",
+              "zh": "矮(身高)"
+            },
+            {
+              "ab": "lalok",
+              "zh": "勤勞"
+            },
+            {
+              "ab": "sienaw",
+              "zh": "冷"
+            },
+            {
+              "ab": "mimingay",
+              "zh": "小的"
+            },
+            {
+              "ab": "adihay",
+              "zh": "多"
+            },
+            {
+              "ab": "makapah",
+              "zh": "漂亮"
+            },
+            {
+              "ab": "kietec",
+              "zh": "冰冷"
+            },
+            {
+              "ab": "maso’et",
+              "zh": "悶熱"
+            },
+            {
+              "ab": "mimingay",
+              "zh": "少的"
+            },
+            {
+              "ab": "malasang",
+              "zh": "酒醉"
+            },
+            {
+              "ab": "tawa",
+              "zh": "笑"
+            },
+            {
+              "ab": "cepa’",
+              "zh": "濕的"
+            },
+            {
+              "ab": "rohem",
+              "zh": "熟"
+            },
+            {
+              "ab": "kifetolay",
+              "zh": "厚的"
+            },
+            {
+              "ab": "manta’",
+              "zh": "未熟的(如這塊肉是生的)"
+            },
+            {
+              "ab": "kohepicay",
+              "zh": "薄的"
+            },
+            {
+              "ab": "kadit",
+              "zh": "髒"
+            },
+            {
+              "ab": "toka",
+              "zh": "懶惰"
+            },
+            {
+              "ab": "makorac",
+              "zh": "乾淨"
+            },
+            {
+              "ab": "kaliki",
+              "zh": "很快"
+            },
+            {
+              "ab": "tadengal",
+              "zh": "明亮"
+            },
+            {
+              "ab": "so^eso",
+              "zh": "胖(身形)"
+            },
+            {
+              "ab": "ma’icangay",
+              "zh": "乾的"
+            },
+            {
+              "ab": "roray",
+              "zh": "累"
+            },
+            {
+              "ab": "kasini’adaan",
+              "zh": "好可憐"
+            },
+            {
+              "ab": "fa^elohay",
+              "zh": "新的"
+            },
+            {
+              "ab": "matelangay",
+              "zh": "舊的"
+            },
+            {
+              "ab": "ngata",
+              "zh": "近"
+            },
+            {
+              "ab": "cedet",
+              "zh": "燙"
+            },
+            {
+              "ab": "matastas",
+              "zh": "壞掉"
+            },
+            {
+              "ab": "kacedah",
+              "zh": "辣"
+            },
+            {
+              "ab": "raay",
+              "zh": "遠"
+            },
+            {
+              "ab": "lifawa",
+              "zh": "腫"
+            },
+            {
+              "ab": "ikong",
+              "zh": "彎曲"
+            },
+            {
+              "ab": "halafinay",
+              "zh": "久的"
+            },
+            {
+              "ab": "mapohaway to",
+              "zh": "瞎了"
+            },
+            {
+              "ab": "warak",
+              "zh": "毒"
+            },
+            {
+              "ab": "’aredet",
+              "zh": "很好吃"
+            },
+            {
+              "ab": "kohenac",
+              "zh": "滑"
+            },
+            {
+              "ab": "anenger",
+              "zh": "苦"
+            },
+            {
+              "ab": "koengel",
+              "zh": "脆弱(如這根鐵絲易斷裂)"
+            },
+            {
+              "ab": "manta’ay",
+              "zh": "未成熟的(果實)"
+            },
+            {
+              "ab": "hokhok",
+              "zh": "偷偷地"
+            },
+            {
+              "ab": "aloman",
+              "zh": "(人)眾多"
+            },
+            {
+              "ab": "kahemaw",
+              "zh": "輕快"
+            }
+          ]
+        },
+        {
+          "lesson": 20,
+          "title": "951–1000",
+          "cards": [
+            {
+              "ab": "’acicim",
+              "zh": "酸"
+            },
+            {
+              "ab": "kahecid",
+              "zh": "鹹"
+            },
+            {
+              "ab": "patodong",
+              "zh": "故意"
+            },
+            {
+              "ab": "maponi’ay",
+              "zh": "稀爛的"
+            },
+            {
+              "ab": "tanoktok",
+              "zh": "壯碩"
+            },
+            {
+              "ab": "diheko",
+              "zh": "暖和"
+            },
+            {
+              "ab": "malaresay",
+              "zh": "鈍的"
+            },
+            {
+              "ab": "koesan",
+              "zh": "甘甜"
+            },
+            {
+              "ab": "copelak / copelas",
+              "zh": "澀澀的(味覺)"
+            },
+            {
+              "ab": "akawang a mangiliw",
+              "zh": "高瘦(身材)"
+            },
+            {
+              "ab": "isil",
+              "zh": "(傾)斜"
+            },
+            {
+              "ab": "kona’i",
+              "zh": "軟"
+            },
+            {
+              "ab": "atekak",
+              "zh": "很硬"
+            },
+            {
+              "ab": "’angliw",
+              "zh": "酸臭"
+            },
+            {
+              "ab": "moecel",
+              "zh": "直"
+            },
+            {
+              "ab": "matomesay to",
+              "zh": "滿了"
+            },
+            {
+              "ab": "nga’ayay",
+              "zh": "好好的"
+            },
+            {
+              "ab": "kakahad",
+              "zh": "(空間)寬敞"
+            },
+            {
+              "ab": "tatodong",
+              "zh": "正確"
+            },
+            {
+              "ab": "maopic",
+              "zh": "全濕透"
+            },
+            {
+              "ab": "tayo",
+              "zh": "慢慢"
+            },
+            {
+              "ab": "fala^efaay",
+              "zh": "溫的(水)"
+            },
+            {
+              "ab": "taakay",
+              "zh": "粗(物)"
+            },
+            {
+              "ab": "ki’edaw",
+              "zh": "⻑"
+            },
+            {
+              "ab": "kohepic",
+              "zh": "細"
+            },
+            {
+              "ab": "amoto’",
+              "zh": "短"
+            },
+            {
+              "ab": "faedet",
+              "zh": "炎熱"
+            },
+            {
+              "ab": "rohem",
+              "zh": "成熟(果實)"
+            },
+            {
+              "ab": "tomes",
+              "zh": "滿滿"
+            },
+            {
+              "ab": "kapah",
+              "zh": "英俊"
+            },
+            {
+              "ab": "mamahaehaen aca",
+              "zh": "應該"
+            },
+            {
+              "ab": "cowa ka eca",
+              "zh": "一定"
+            },
+            {
+              "ab": "maedeng",
+              "zh": "能夠"
+            },
+            {
+              "ab": "alatek",
+              "zh": "可能"
+            },
+            {
+              "ab": "maacang",
+              "zh": "慶祝"
+            },
+            {
+              "ab": "sipasip",
+              "zh": "擦拭"
+            },
+            {
+              "ab": "ocol",
+              "zh": "使喚"
+            },
+            {
+              "ab": "tepik",
+              "zh": "摺疊"
+            },
+            {
+              "ab": "pera’",
+              "zh": "裂開"
+            },
+            {
+              "ab": "cokaymas",
+              "zh": "使用"
+            },
+            {
+              "ab": "lifowas",
+              "zh": "溢出(如水溢出來)"
+            },
+            {
+              "ab": "patado",
+              "zh": "幫忙"
+            },
+            {
+              "ab": "keting",
+              "zh": "(有東⻄)附著"
+            },
+            {
+              "ab": "lamlam",
+              "zh": "混以某物"
+            },
+            {
+              "ab": "mangiyangi",
+              "zh": "被(搖)動的"
+            },
+            {
+              "ab": "mitawasi",
+              "zh": "刷除"
+            },
+            {
+              "ab": "ti’er",
+              "zh": "依賴"
+            },
+            {
+              "ab": "taktak",
+              "zh": "倒入"
+            },
+            {
+              "ab": "’eteng",
+              "zh": "阻擋"
+            },
+            {
+              "ab": "siday",
+              "zh": "留下"
+            }
+          ]
+        },
+        {
+          "lesson": 21,
+          "title": "1001–1050",
+          "cards": [
+            {
+              "ab": "ngiha",
+              "zh": "聲響"
+            },
+            {
+              "ab": "ta’elif",
+              "zh": "超過"
+            },
+            {
+              "ab": "pelal",
+              "zh": "崩落"
+            },
+            {
+              "ab": "fo’ot",
+              "zh": "煞車"
+            },
+            {
+              "ab": "kilim",
+              "zh": "尋找"
+            },
+            {
+              "ab": "falah / sawad",
+              "zh": "丟棄"
+            },
+            {
+              "ab": "lalang",
+              "zh": "禁止"
+            },
+            {
+              "ab": "ira",
+              "zh": "有"
+            },
+            {
+              "ab": "’osaw",
+              "zh": "剩下"
+            },
+            {
+              "ab": "pateli",
+              "zh": "設置"
+            },
+            {
+              "ab": "satapang",
+              "zh": "開始"
+            },
+            {
+              "ab": "laheci",
+              "zh": "完成"
+            },
+            {
+              "ab": "mikilimay to papo’ien",
+              "zh": "找碴"
+            },
+            {
+              "ab": "sanga’",
+              "zh": "製作(物品)"
+            },
+            {
+              "ab": "makilim",
+              "zh": "找到"
+            },
+            {
+              "ab": "sa’osi",
+              "zh": "數(計算)"
+            },
+            {
+              "ab": "matalakal",
+              "zh": "(獵物掉入陷阱)陷中"
+            },
+            {
+              "ab": "misontol",
+              "zh": "撞擊某物"
+            },
+            {
+              "ab": "liyon",
+              "zh": "旋轉"
+            },
+            {
+              "ab": "takelen",
+              "zh": "圍著某物"
+            },
+            {
+              "ab": "nga’ay",
+              "zh": "好"
+            },
+            {
+              "ab": "ahowiday",
+              "zh": "謝謝"
+            },
+            {
+              "ab": "awa",
+              "zh": "沒有"
+            },
+            {
+              "ab": "nga’ay to",
+              "zh": "沒關係"
+            },
+            {
+              "ab": "aka to",
+              "zh": "不要"
+            },
+            {
+              "ab": "ca kanga’ay",
+              "zh": "不可以"
+            },
+            {
+              "ab": "cowa",
+              "zh": "不是(回答用)"
+            },
+            {
+              "ab": "awa",
+              "zh": "沒有(表擁有的否定詞)"
+            },
+            {
+              "ab": "aka ka",
+              "zh": "不要(祈使"
+            },
+            {
+              "ab": "hayken",
+              "zh": "不知道"
+            },
+            {
+              "ab": "so’elinay",
+              "zh": "真的"
+            },
+            {
+              "ab": "simaanay",
+              "zh": "隨意"
+            },
+            {
+              "ab": "nga’ay to",
+              "zh": "好的(沒問題)"
+            },
+            {
+              "ab": "nawhani",
+              "zh": "因為"
+            },
+            {
+              "ab": "ano masamaan to",
+              "zh": "不論"
+            },
+            {
+              "ab": "tangsol",
+              "zh": "立即"
+            },
+            {
+              "ab": "maedeng",
+              "zh": "足夠"
+            },
+            {
+              "ab": "liyaw",
+              "zh": "再"
+            },
+            {
+              "ab": "edengan",
+              "zh": "只有"
+            },
+            {
+              "ab": "isawni",
+              "zh": "剛剛"
+            },
+            {
+              "ab": "mamang",
+              "zh": "少許"
+            },
+            {
+              "ab": "haen han ho",
+              "zh": "暫時(離開一下)"
+            },
+            {
+              "ab": "cowa ka",
+              "zh": "從不"
+            },
+            {
+              "ab": "aka to",
+              "zh": "不該"
+            },
+            {
+              "ab": "mansa",
+              "zh": "所以"
+            },
+            {
+              "ab": "rarid",
+              "zh": "經常"
+            },
+            {
+              "ab": "ato",
+              "zh": "和"
+            },
+            {
+              "ab": "ihaw",
+              "zh": "是嗎(語助詞)"
+            },
+            {
+              "ab": "ho",
+              "zh": "還(尚未)"
+            },
+            {
+              "ab": "ano",
+              "zh": "如果"
+            }
+          ]
+        },
+        {
+          "lesson": 22,
+          "title": "1051–1063",
+          "cards": [
+            {
+              "ab": "nga",
+              "zh": "如此"
+            },
+            {
+              "ab": "isawni",
+              "zh": "剛才"
+            },
+            {
+              "ab": "saromi’ad",
+              "zh": "整天"
+            },
+            {
+              "ab": "saheto",
+              "zh": "都"
+            },
+            {
+              "ab": "edengan",
+              "zh": "僅僅"
+            },
+            {
+              "ab": "ano",
+              "zh": "雖然"
+            },
+            {
+              "ab": "haw",
+              "zh": "嗎(用在問句)"
+            },
+            {
+              "ab": "ci, ko, ca, koni, kora, koya",
+              "zh": "主格標記 (各族用語)"
+            },
+            {
+              "ab": "to, ci…an, toya, tora, toni",
+              "zh": "受格標記 (各族用語)"
+            },
+            {
+              "ab": "no, ni, noni, nora, noya",
+              "zh": "屬格標記 (各族用語)"
+            },
+            {
+              "ab": "i(tini)",
+              "zh": "在(這裡)"
+            },
+            {
+              "ab": "nga’ay",
+              "zh": "可以(做某事)"
+            },
+            {
+              "ab": "apa",
+              "zh": "傻瓜"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -42,3 +42,7 @@ supabase/.temp
 temp_learn/
 temp_scrape/
 Book_1_nocirc_nobg*.png
+
+# Amis1k source data — JSON output is what matters
+packages/amis1k/source.csv
+packages/amis1k/convert.js
