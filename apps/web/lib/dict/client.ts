@@ -43,7 +43,7 @@ export type DialectRow = {
   sub_dialects: string
 }
 
-export function searchWords(q: string, glid?: string, dialect?: string, fuzzy = false, limit = 30): WordRow[] {
+export function searchWords(q: string, glid?: string, dialect?: string, fuzzy = false): WordRow[] {
   const db = getDb()
 
   if (fuzzy) {
@@ -56,12 +56,10 @@ export function searchWords(q: string, glid?: string, dialect?: string, fuzzy = 
       ${glid    ? 'AND v.glid = ?'         : ''}
       ${dialect ? 'AND v.dialect_name = ?' : ''}
       ORDER BY exact DESC, LENGTH(v.word_ab) ASC
-      LIMIT ?
     `
     const params: (string | number)[] = [q, like]
     if (glid)    params.push(glid)
     if (dialect) params.push(dialect)
-    params.push(limit)
     return db.prepare(base).all(...params) as WordRow[]
   }
 
@@ -75,16 +73,14 @@ export function searchWords(q: string, glid?: string, dialect?: string, fuzzy = 
     ${glid    ? 'AND v.glid = ?'         : ''}
     ${dialect ? 'AND v.dialect_name = ?' : ''}
     ORDER BY exact DESC, LENGTH(v.word_ab) ASC
-    LIMIT ?
   `
   const params: (string | number)[] = [q, pattern]
   if (glid)    params.push(glid)
   if (dialect) params.push(dialect)
-  params.push(limit)
   return db.prepare(base).all(...params) as WordRow[]
 }
 
-export function searchSentences(q: string, glid?: string, dialect?: string, fuzzy = false, limit = 20): SentenceRow[] {
+export function searchSentences(q: string, glid?: string, dialect?: string, fuzzy = false): SentenceRow[] {
   const db = getDb()
 
   if (fuzzy) {
@@ -97,12 +93,10 @@ export function searchSentences(q: string, glid?: string, dialect?: string, fuzz
       ${glid    ? 'AND s.glid = ?'         : ''}
       ${dialect ? 'AND o.dialect_name = ?' : ''}
       ORDER BY o.source
-      LIMIT ?
     `
     const params: (string | number)[] = [like]
     if (glid)    params.push(glid)
     if (dialect) params.push(dialect)
-    params.push(limit)
     return db.prepare(base).all(...params) as SentenceRow[]
   }
 
@@ -116,12 +110,10 @@ export function searchSentences(q: string, glid?: string, dialect?: string, fuzz
     ${glid    ? 'AND s.glid = ?'         : ''}
     ${dialect ? 'AND o.dialect_name = ?' : ''}
     ORDER BY o.source
-    LIMIT ?
   `
   const params: (string | number)[] = [pattern]
   if (glid)    params.push(glid)
   if (dialect) params.push(dialect)
-  params.push(limit)
   return db.prepare(base).all(...params) as SentenceRow[]
 }
 
