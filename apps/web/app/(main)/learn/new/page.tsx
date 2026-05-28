@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
@@ -19,13 +19,14 @@ const INITIAL_LEVELS: LevelInput[] = [{ lessons: [{ title: '', cards: [{ ab: '',
 export default function NewCollectionPage() {
   const router = useRouter()
 
-  const [step,     setStep]     = useState<Step>('identity')
-  const [method,   setMethod]   = useState<Method>('manual')
-  const [name,     setName]     = useState('')
-  const [langCode, setLangCode] = useState('ami')
-  const [levels,   setLevels]   = useState<LevelInput[]>(INITIAL_LEVELS)
-  const [saving,   setSaving]   = useState(false)
-  const [error,    setError]    = useState<string | null>(null)
+  const [step,          setStep]          = useState<Step>('identity')
+  const [method,        setMethod]        = useState<Method>('manual')
+  const [importParsed,  setImportParsed]  = useState(false)
+  const [name,          setName]          = useState('')
+  const [langCode,      setLangCode]      = useState('ami')
+  const [levels,        setLevels]        = useState<LevelInput[]>(INITIAL_LEVELS)
+  const [saving,        setSaving]        = useState(false)
+  const [error,         setError]         = useState<string | null>(null)
 
   // ── Step 1 → 2 ──────────────────────────────────────────────────────────────
   const canContinue = name.trim().length > 0
@@ -49,8 +50,9 @@ export default function NewCollectionPage() {
     setName(prev => prev || result.name)
     setLangCode(result.language)
     setLevels(result.levels)
-    setMethod('manual')
+    setImportParsed(true)
     setStep('editor')
+    // keep method = 'import' so we show the summary, not the CollectionEditor
   }
 
   return (
@@ -197,12 +199,13 @@ export default function NewCollectionPage() {
             </button>
           </div>
 
-          {method === 'import' ? (
+          {method === 'import' && !importParsed && (
             <ImportDropzone onParsed={handleImportParsed} />
-          ) : (
-            <>
-              <CollectionEditor levels={levels} onChange={setLevels} />
+          )}
 
+          {method === 'import' && importParsed && (
+            <>
+              <ImportedSummary levels={levels} />
               {error && (
                 <div style={{
                   padding: '10px 14px', borderRadius: 10,
@@ -210,12 +213,23 @@ export default function NewCollectionPage() {
                   fontSize: 13, color: T.crimsonDp,
                 }}>{error}</div>
               )}
+              <button onClick={handleSave} disabled={saving} style={primaryBtnStyle(saving)}>
+                {saving ? 'Saving…' : 'Save collection'}
+              </button>
+            </>
+          )}
 
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={primaryBtnStyle(saving)}
-              >
+          {method === 'manual' && (
+            <>
+              <CollectionEditor levels={levels} onChange={setLevels} />
+              {error && (
+                <div style={{
+                  padding: '10px 14px', borderRadius: 10,
+                  background: T.crimsonBg, border: `1px solid #EFCAB8`,
+                  fontSize: 13, color: T.crimsonDp,
+                }}>{error}</div>
+              )}
+              <button onClick={handleSave} disabled={saving} style={primaryBtnStyle(saving)}>
                 {saving ? 'Saving…' : 'Save collection'}
               </button>
             </>
@@ -239,6 +253,65 @@ export default function NewCollectionPage() {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function ImportedSummary({ levels }: { levels: LevelInput[] }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const toggle = useCallback((key: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next
+    })
+  }, [])
+  const totalCards = levels.reduce((s, lv) => s + lv.lessons.reduce((ss, ls) => ss + ls.cards.length, 0), 0)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ fontSize: 12, color: T.inkFaint, marginBottom: 4 }}>
+        {totalCards} cards · {levels.reduce((s, lv) => s + lv.lessons.length, 0)} lessons
+      </div>
+      {levels.flatMap((lv, li) =>
+        lv.lessons.map((ls, lsi) => {
+          const key = `${li}-${lsi}`
+          const open = expanded.has(key)
+          return (
+            <div key={key} style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                onClick={() => toggle(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  width: '100%', padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon name="chevron" size={12} strokeWidth={2} color={T.inkFaint}
+                    style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform .15s' }} />
+                  <span style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 10, color: T.inkFaint }}>
+                    L{li + 1}-{lsi + 1}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: T.ink }}>
+                    {ls.title || <em style={{ color: T.inkFaint, fontWeight: 400 }}>Untitled</em>}
+                  </span>
+                </span>
+                <span style={{ fontSize: 11, color: T.inkFaint }}>{ls.cards.length} cards</span>
+              </button>
+              {open && (
+                <div style={{ borderTop: `1px solid ${T.lineSoft}`, padding: '6px 12px 8px' }}>
+                  {ls.cards.slice(0, 10).map((c, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 12, padding: '3px 0', fontSize: 12 }}>
+                      <span style={{ color: T.ink, minWidth: 100, flexShrink: 0 }}>{c.ab}</span>
+                      <span style={{ color: T.inkSoft }}>{c.zh}</span>
+                    </div>
+                  ))}
+                  {ls.cards.length > 10 && (
+                    <span style={{ fontSize: 11, color: T.inkFaint }}>+{ls.cards.length - 10} more…</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })
+      )}
+    </div>
+  )
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
