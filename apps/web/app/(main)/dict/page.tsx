@@ -70,10 +70,10 @@ function ExactWordCard({ word, onSave, onCapture }: {
         padding: 12, borderTop: `1px solid ${T.lineSoft}`, background: T.paper,
         display: 'flex', gap: 8,
       }}>
-        <Button variant="primary" size="md" icon="bookmark" style={{ flex: 1 }} onClick={() => onSave(word)}>
+        <Button variant="primary" size="md" icon="bookmark" style={{ flex: 1 }} title="Save to your notebook" onClick={() => onSave(word)}>
           Save word
         </Button>
-        <Button variant="secondary" size="md" icon="capture" style={{ flex: 1 }} onClick={() => onCapture(word)}>
+        <Button variant="secondary" size="md" icon="capture" style={{ flex: 1 }} title="Open in Capture to add a sentence example" onClick={() => onCapture(word)}>
           Add context
         </Button>
       </div>
@@ -82,10 +82,21 @@ function ExactWordCard({ word, onSave, onCapture }: {
 }
 
 // ─── Sentence card ────────────────────────────────────────────
-function SentenceCard({ s }: { s: SentenceResult }) {
+function SentenceCard({ s, onSave, onCapture }: {
+  s: SentenceResult
+  onSave: (s: SentenceResult) => void
+  onCapture: (s: SentenceResult) => void
+}) {
   function playAudio() {
     if (s.audio_url) new Audio(s.audio_url).play().catch(() => {})
   }
+
+  const btnStyle: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: 8,
+    background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+  }
+
   return (
     <div style={{
       padding: '12px 14px', background: T.paperHi,
@@ -104,16 +115,19 @@ function SentenceCard({ s }: { s: SentenceResult }) {
         <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase' }}>
           {s.source}
         </span>
-        {s.audio_url && (
-          <button onClick={playAudio} style={{
-            marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 11, color: T.inkSoft, background: 'none', border: 'none',
-            cursor: 'pointer', padding: 0,
-          }}>
-            <Icon name="speaker" size={13} strokeWidth={1.8} />
-            Play
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+          {s.audio_url && (
+            <button onClick={playAudio} title="Play audio" style={btnStyle}>
+              <Icon name="speaker" size={13} strokeWidth={1.8} />
+            </button>
+          )}
+          <button onClick={() => onSave(s)} title="Save sentence" aria-label="Save sentence" style={btnStyle}>
+            <Icon name="bookmark" size={14} strokeWidth={1.8} />
           </button>
-        )}
+          <button onClick={() => onCapture(s)} title="Add context in Capture" aria-label="Add context in Capture" style={btnStyle}>
+            <Icon name="capture" size={14} strokeWidth={1.8} />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -201,6 +215,17 @@ export default function DictionaryPage() {
 
   function handleCapture(word: WordResult) {
     const params = new URLSearchParams({ text: word.word_ab, notes: word.word_ch })
+    router.push(`/capture?${params}`)
+  }
+
+  async function handleSaveSentence(s: SentenceResult) {
+    await createItem({ text: s.ab, type: 'sentence', language: s.dialect_name, notes: s.zh })
+    setSaveMsg('Sentence saved')
+    setTimeout(() => setSaveMsg(null), 2000)
+  }
+
+  function handleCaptureSentence(s: SentenceResult) {
+    const params = new URLSearchParams({ text: s.ab, notes: s.zh })
     router.push(`/capture?${params}`)
   }
 
@@ -370,14 +395,14 @@ export default function DictionaryPage() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => handleSave(w)} aria-label="Save word" style={{
+                          <button onClick={() => handleSave(w)} title="Save word" aria-label="Save word" style={{
                             width: 32, height: 32, borderRadius: 9,
                             background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                           }}>
                             <Icon name="bookmark" size={15} strokeWidth={1.8} />
                           </button>
-                          <button onClick={() => handleCapture(w)} aria-label="Open in Capture" style={{
+                          <button onClick={() => handleCapture(w)} title="Add context in Capture" aria-label="Add context in Capture" style={{
                             width: 32, height: 32, borderRadius: 9,
                             background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -411,7 +436,9 @@ export default function DictionaryPage() {
               )}
               {sentences.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {sentences.map(s => <SentenceCard key={s.id} s={s} />)}
+                  {sentences.map(s => (
+                    <SentenceCard key={s.id} s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} />
+                  ))}
                 </div>
               )}
             </>
