@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
-import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   getGlid, getDefaultDialect, getGrmptsDialect
 } from '@/lib/lang/lang-bridge'
@@ -13,14 +13,14 @@ import rawPatternLabels from '@/lib/learn/grmpts_type_labels.json'
 const PATTERN_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(rawPatternLabels as Record<string, string>).map(([k, v]) => [k, v.replace(/^\d+\s*-\s*/, '')])
 )
-import { createItem } from '@/lib/db/items'
-import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/completions'
-import type { CurriculumRow } from '@/lib/learn/db'
+import { createItem } from '@/lib/db/notebook/items'
+import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/progress/completions'
+import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import Icon from '@/components/ui/Icon'
 import StudyCard from './StudyCard'
 import ActionBar from './ActionBar'
 import ContentSheet from './ContentSheet'
-import LookupInline from './LookupInline'
+import LookupInline from '@/components/lookup/LookupInline'
 import SettingsPanel, { type ZhMode } from './SettingsPanel'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
@@ -32,7 +32,7 @@ const SOURCE_NAMES: Record<Source, string> = {
 type Props = { source: Source }
 
 export default function StudyView({ source }: Props) {
-  const { lang, dialect: profileDialect } = useActiveLang()
+  const { lang, dialect: profileDialect } = useLang()
   const langCode = lang.code
   const glid     = getGlid(langCode) ?? '01'
 
@@ -106,7 +106,7 @@ export default function StudyView({ source }: Props) {
   // ── Fetch first title_zh for essay/dialogue when titleZh is empty ───────────
   useEffect(() => {
     if ((source === 'essay' || source === 'dialogue') && !titleZh && dialect) {
-      fetch(`/api/geometry?source=${source}&dialect=${encodeURIComponent(dialect)}`)
+      fetch(`/api/learn/geometry?source=${source}&dialect=${encodeURIComponent(dialect)}`)
         .then(r => r.json())
         .then((d: { items: Array<{ index: number; title_zh: string; available: boolean }> }) => {
           const first = d.items.find(i => i.available)
@@ -136,7 +136,7 @@ export default function StudyView({ source }: Props) {
     const params = new URLSearchParams({
       source, dialect, title_zh: apiTitleZh, level: apiLevel,
     })
-    fetch(`/api/curriculum?${params}`)
+    fetch(`/api/learn/curriculum?${params}`)
       .then(r => r.json())
       .then((d: { results: CurriculumRow[] }) => setResults(d.results ?? []))
       .catch(() => setResults([]))
@@ -185,7 +185,7 @@ export default function StudyView({ source }: Props) {
       const classes = ['1','2','3','4','5','6','7','8','9','10']
       setNavOrder(levels.flatMap(lv => classes.map(cl => `${lv}::${cl}`)))
     } else if (source === 'grmpts') {
-      fetch(`/api/geometry?source=grmpts&glid=${glid}`)
+      fetch(`/api/learn/geometry?source=grmpts&glid=${glid}`)
         .then(r => r.json())
         .then((d: { levels: string[]; counts: Record<string, Record<string, number>> }) => {
           setNavOrder(d.levels.flatMap(lv =>
@@ -196,7 +196,7 @@ export default function StudyView({ source }: Props) {
         })
         .catch(() => {})
     } else {
-      fetch(`/api/geometry?source=${source}&dialect=${encodeURIComponent(dialect || ' ')}`)
+      fetch(`/api/learn/geometry?source=${source}&dialect=${encodeURIComponent(dialect || ' ')}`)
         .then(r => r.json())
         .then((d: { items: Array<{ index: number; title_zh: string; available: boolean }> }) => {
           setNavOrder(d.items.filter(i => i.available).map(i => i.title_zh))

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import geometryData from '@/lib/learn/corpus_geometry.json'
-import { queryTwelve, queryGrmpts, queryEssayOrDialogue } from '@/lib/learn/db'
+import { queryTwelve, queryGrmpts, queryEssayOrDialogue } from '@/lib/corpus/curriculum'
 
 export const runtime = 'nodejs'
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { lookupWord } from '@/lib/learn/db'
+import { lookupWord } from '@/lib/corpus/curriculum'
 
 export const runtime = 'nodejs'
 

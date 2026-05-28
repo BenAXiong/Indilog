@@ -6,12 +6,12 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Button, SectionHead, Icon, Toast } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { useActiveLang } from '@/lib/hooks/useActiveLang'
-import { createItem, updateItem, listItems, type Item, type ItemType } from '@/lib/db/items'
+import { useLang } from '@/lib/context/LangDialectProvider'
+import { createItem, updateItem, listItems, type Item, type ItemType } from '@/lib/db/notebook/items'
 import { createClient } from '@/lib/supabase/client'
-import { incrementCapturedToday } from '@/lib/db/stats'
-import { listSources, createSource, type Source } from '@/lib/db/sources'
-import { listSpeakers, createSpeaker, type Speaker } from '@/lib/db/speakers'
+import { incrementCapturedToday } from '@/lib/db/progress/stats'
+import { listSources, createSource, type Source } from '@/lib/db/notebook/sources'
+import { listSpeakers, createSpeaker, type Speaker } from '@/lib/db/notebook/speakers'
 import { LANGUAGES } from '@/lib/languages'
 import { GLID_FAMILIES, shortDialectLabel } from '@/lib/lang/dialects'
 import { getGlid } from '@/lib/lang/lang-bridge'
@@ -46,7 +46,7 @@ const headerBtnStyle: React.CSSProperties = {
 }
 
 function CapturePageInner() {
-  const { lang, dialect: profileDialect, dialectLabel } = useActiveLang()
+  const { lang, dialect: profileDialect, dialectLabel } = useLang()
   const searchParams = useSearchParams()
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -186,7 +186,7 @@ function CapturePageInner() {
 
     const results = await Promise.all(deduped.map(async tok => {
       try {
-        const r = await fetch(`/api/lookup?word=${encodeURIComponent(cleanToken(tok))}`)
+        const r = await fetch(`/api/learn/lookup?word=${encodeURIComponent(cleanToken(tok))}`)
         const d = await r.json() as { results: LookupRow[] }
         let rows = d.results ?? []
         if (dialect && rows.length > 1) {

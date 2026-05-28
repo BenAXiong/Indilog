@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { listDialects } from '@/lib/dict/client'
+import { listDialects } from '@/lib/corpus/dict'
 
 export const runtime = 'nodejs'
 

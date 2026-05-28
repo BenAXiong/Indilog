@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
-import type { LevelInput } from '@/lib/db/collections'
+import type { LevelInput } from '@/lib/db/progress/collections'
 
 type ParsedCollection = {
   name: string

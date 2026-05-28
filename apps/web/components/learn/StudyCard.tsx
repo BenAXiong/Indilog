@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
-import type { CurriculumRow } from '@/lib/learn/db'
+import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import type { ZhMode } from './SettingsPanel'
 
 type Props = {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchWords, searchSentences, type SentenceRow } from '@/lib/dict/client'
+import { searchWords, searchSentences, type SentenceRow } from '@/lib/corpus/dict'
 
 export const runtime = 'nodejs'
 

@@ -9,7 +9,7 @@ import Icon from '@/components/ui/Icon'
 import LangAvatar from '@/components/ui/LangAvatar'
 import CollectionEditor from '@/components/learn/CollectionEditor'
 import ImportDropzone from '@/components/learn/ImportDropzone'
-import { saveCollection, type LevelInput } from '@/lib/db/collections'
+import { saveCollection, type LevelInput } from '@/lib/db/progress/collections'
 
 type Method = 'manual' | 'import'
 type Step   = 'identity' | 'method' | 'editor'

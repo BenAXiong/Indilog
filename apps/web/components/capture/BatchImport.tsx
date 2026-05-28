@@ -3,8 +3,8 @@
 import { useState, useRef } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
-import { createItem } from '@/lib/db/items'
-import type { Source } from '@/lib/db/sources'
+import { createItem } from '@/lib/db/notebook/items'
+import type { Source } from '@/lib/db/notebook/sources'
 
 type ParsedRow = { text: string; meaning?: string }
 

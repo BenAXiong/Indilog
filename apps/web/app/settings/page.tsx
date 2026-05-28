@@ -7,16 +7,11 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, LangAvatar, Icon } from '@/components/ui'
-import { LANGUAGES, getLanguage } from '@/lib/languages'
+import { LANGUAGES } from '@/lib/languages'
 import { getGlid, getDialectsForLang } from '@/lib/lang/lang-bridge'
 import { shortDialectLabel } from '@/lib/lang/dialects'
+import { useLang } from '@/lib/context/LangDialectProvider'
 import type { User } from '@supabase/supabase-js'
-
-type Profile = {
-  active_study_language: string
-  default_dialect: string | null
-  ui_locale: string
-}
 
 function SettingsContent() {
   const searchParams = useSearchParams()
@@ -24,21 +19,18 @@ function SettingsContent() {
   const from = searchParams.get('from') ?? '/'
   const router = useRouter()
 
-  const [user,          setUser]          = useState<User | null>(null)
-  const [activeLang,    setActiveLang]    = useState('ami')
-  const [activeDialect, setActiveDialect] = useState<string | null>(null)
-  const [locale,        setLocale]        = useState('en')
-  const [saving,        setSaving]        = useState(false)
-  const [langPickerOpen, setLangPickerOpen] = useState(false)
-  const [pickedLang,    setPickedLang]    = useState<string | null>(null)
-  const [userId,        setUserId]        = useState<string | null>(null)
+  const { lang, dialect, dialectLabel, setLang, setDialect } = useLang()
+
+  const [user,            setUser]            = useState<User | null>(null)
+  const [locale,          setLocale]          = useState('en')
+  const [saving,          setSaving]          = useState(false)
+  const [langPickerOpen,  setLangPickerOpen]  = useState(false)
+  const [pickedLang,      setPickedLang]      = useState<string | null>(null)
+  const [userId,          setUserId]          = useState<string | null>(null)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement>(null)
 
-  // Capture settings
-  const [autoLookup, setAutoLookup] = useState(true)
-
-  // Dict settings
+  const [autoLookup,  setAutoLookup]  = useState(true)
   const [dictSources, setDictSources] = useState<string[]>(['klokah'])
 
   useEffect(() => {
@@ -50,6 +42,7 @@ function SettingsContent() {
     }
   }, [])
 
+  // Fetch user identity and locale only — lang/dialect come from LangDialectProvider
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -58,15 +51,10 @@ function SettingsContent() {
       setUserId(user.id)
       supabase
         .from('ind_profiles')
-        .select('active_study_language, default_dialect, ui_locale')
+        .select('ui_locale')
         .eq('user_id', user.id)
         .single()
-        .then(({ data }) => {
-          if (!data) return
-          setActiveLang(data.active_study_language)
-          setActiveDialect(data.default_dialect)
-          setLocale(data.ui_locale)
-        })
+        .then(({ data }) => { if (data) setLocale(data.ui_locale) })
     })
   }, [])
 
@@ -80,24 +68,19 @@ function SettingsContent() {
     return () => document.removeEventListener('mousedown', onOutside)
   }, [])
 
-  const saveProfile = useCallback(async (patch: Partial<Profile>) => {
+  const saveLocale = useCallback(async (locale: string) => {
     if (!userId) return
     setSaving(true)
-    const supabase = createClient()
-    await supabase.from('ind_profiles').update(patch).eq('user_id', userId)
+    await createClient().from('ind_profiles').update({ ui_locale: locale }).eq('user_id', userId)
     setSaving(false)
   }, [userId])
 
   async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await createClient().auth.signOut()
     router.push('/login')
   }
 
-  function closePicker() {
-    setLangPickerOpen(false)
-    setPickedLang(null)
-  }
+  function closePicker() { setLangPickerOpen(false); setPickedLang(null) }
 
   function toggleAutoLookup() {
     const next = !autoLookup
@@ -112,10 +95,6 @@ function SettingsContent() {
       return next
     })
   }
-
-  const currentLang  = getLanguage(activeLang) ?? LANGUAGES[0]
-  const langGlid     = getGlid(activeLang) ?? '01'
-  const dialectLabel = activeDialect ? shortDialectLabel(activeDialect, langGlid) : null
 
   const displayName  = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '—'
   const displayEmail = user?.email ?? '—'
@@ -163,7 +142,6 @@ function SettingsContent() {
                   {displayEmail}
                 </div>
               </div>
-              {/* "..." menu */}
               <div ref={accountMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
                 <button
                   onClick={() => setAccountMenuOpen(v => !v)}
@@ -187,7 +165,7 @@ function SettingsContent() {
                     {[
                       { label: 'Change account', icon: 'user' as const,   action: () => {} },
                       { label: 'About Indilog',  icon: 'leaf' as const,   action: () => {} },
-                      { label: 'Sign out',        icon: 'logout' as const, action: handleSignOut, danger: true },
+                      { label: 'Sign out',       icon: 'logout' as const, action: handleSignOut, danger: true },
                     ].map((item, i, arr) => (
                       <button
                         key={item.label}
@@ -229,10 +207,10 @@ function SettingsContent() {
                 textAlign: 'left',
               }}
             >
-              <LangAvatar letter={currentLang.letter} color={currentLang.color} size={32} />
+              <LangAvatar letter={lang.letter} color={lang.color} size={32} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 600, color: T.ink }}>
-                  {currentLang.name}
+                  {lang.name}
                 </div>
                 {dialectLabel && (
                   <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 1 }}>{dialectLabel}</div>
@@ -245,9 +223,7 @@ function SettingsContent() {
           {/* Preferences */}
           <div style={{ padding: '0 18px' }}>
             <SectionHead title="Preferences" />
-            <div style={{
-              background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden',
-            }}>
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
               <div style={{ padding: '12px 14px' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, marginBottom: 8 }}>Interface language</div>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -264,7 +240,7 @@ function SettingsContent() {
                         onClick={() => {
                           if (o.soon) return
                           setLocale(o.id)
-                          saveProfile({ ui_locale: o.id })
+                          saveLocale(o.id)
                         }}
                         style={{
                           flex: 1, padding: '8px', borderRadius: 10,
@@ -289,13 +265,9 @@ function SettingsContent() {
       {/* ── Capture tab ── */}
       {tab === 'capture' && (
         <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-          {/* Lookup */}
           <div>
             <SectionHead title="Lookup" />
-            <div style={{
-              background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden',
-            }}>
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Auto-lookup</div>
@@ -324,15 +296,12 @@ function SettingsContent() {
               </div>
             </div>
           </div>
-
         </div>
       )}
 
       {/* ── Dictionary tab ── */}
       {tab === 'dict' && (
         <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-          {/* Interface language */}
           <div>
             <SectionHead title="Interface language" />
             <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
@@ -350,7 +319,7 @@ function SettingsContent() {
                         onClick={() => {
                           if (o.soon) return
                           setLocale(o.id)
-                          saveProfile({ ui_locale: o.id })
+                          saveLocale(o.id)
                         }}
                         style={{
                           flex: 1, padding: '8px', borderRadius: 10,
@@ -370,7 +339,6 @@ function SettingsContent() {
             </div>
           </div>
 
-          {/* Dictionary source */}
           <div>
             <SectionHead title="Dictionary source" />
             <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
@@ -411,17 +379,13 @@ function SettingsContent() {
               </div>
             </div>
           </div>
-
         </div>
       )}
 
       {/* Language + dialect picker overlay */}
       {langPickerOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-          <div
-            onClick={closePicker}
-            style={{ position: 'absolute', inset: 0, background: 'rgba(30,15,5,0.4)' }}
-          />
+          <div onClick={closePicker} style={{ position: 'absolute', inset: 0, background: 'rgba(30,15,5,0.4)' }} />
           <div style={{
             position: 'relative', background: T.paper,
             borderRadius: '20px 20px 0 0',
@@ -429,17 +393,11 @@ function SettingsContent() {
             maxHeight: '80dvh', overflowY: 'auto',
           }}>
             <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '0 auto 16px' }} />
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0 18px', marginBottom: 12,
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', marginBottom: 12 }}>
               <span style={{ fontSize: 16, fontWeight: 600, color: T.ink, fontFamily: 'Newsreader, Georgia, serif' }}>
                 {pickedLang ? 'Choose dialect' : 'Study language'}
               </span>
-              <button
-                onClick={closePicker}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: T.inkSoft }}
-              >
+              <button onClick={closePicker} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: T.inkSoft }}>
                 <Icon name="x" size={20} strokeWidth={2} color={T.inkSoft} />
               </button>
             </div>
@@ -447,7 +405,7 @@ function SettingsContent() {
             <div style={{ padding: '0 10px' }}>
               {pickedLang === null ? (
                 LANGUAGES.map(l => {
-                  const isActive = l.code === activeLang
+                  const isActive = l.code === lang.code
                   return (
                     <button
                       key={l.code}
@@ -456,10 +414,7 @@ function SettingsContent() {
                         if (dialects.length > 1) {
                           setPickedLang(l.code)
                         } else {
-                          const dialect = dialects[0] ?? null
-                          setActiveLang(l.code)
-                          setActiveDialect(dialect)
-                          saveProfile({ active_study_language: l.code, default_dialect: dialect })
+                          setLang(l.code)
                           closePicker()
                         }
                       }}
@@ -485,26 +440,20 @@ function SettingsContent() {
                 <div>
                   <button
                     onClick={() => setPickedLang(null)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: T.inkSoft, fontSize: 13, marginBottom: 10, padding: '4px 8px',
-                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: T.inkSoft, fontSize: 13, marginBottom: 10, padding: '4px 8px' }}
                   >
                     <Icon name="arrow-l" size={15} strokeWidth={2} color={T.inkSoft} />
                     Back
                   </button>
                   {getDialectsForLang(pickedLang).map(d => {
-                    const dGlid   = getGlid(pickedLang) ?? '01'
-                    const label   = shortDialectLabel(d, dGlid)
-                    const isActive = d === activeDialect && pickedLang === activeLang
+                    const label    = shortDialectLabel(d, getGlid(pickedLang) ?? '01')
+                    const isActive = d === dialect && pickedLang === lang.code
                     return (
                       <button
                         key={d}
                         onClick={() => {
-                          setActiveLang(pickedLang)
-                          setActiveDialect(d)
-                          saveProfile({ active_study_language: pickedLang, default_dialect: d })
+                          setLang(pickedLang)
+                          setDialect(d)
                           closePicker()
                         }}
                         style={{

@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, rateCard,
   type FlashcardWithItem, type Rating,
-} from '@/lib/db/flashcards'
-import { listItems, type Item } from '@/lib/db/items'
+} from '@/lib/db/srs/flashcards'
+import { listItems, type Item } from '@/lib/db/notebook/items'
 
 const RATINGS: { id: Rating; label: string; sub: string; color: string }[] = [
   { id: 'again', label: 'Again', sub: '<10m', color: T.crimson },
@@ -159,7 +159,7 @@ function ReviewSession({
 
 // ─── Review Landing ───────────────────────────────────────────
 export default function ReviewPage() {
-  const { lang, dialectLabel } = useActiveLang()
+  const { lang, dialectLabel } = useLang()
   const [mode, setMode] = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [dueCards, setDueCards] = useState<FlashcardWithItem[]>([])
   const [savedItems, setSavedItems] = useState<Item[]>([])

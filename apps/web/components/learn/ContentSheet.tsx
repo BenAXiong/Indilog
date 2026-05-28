@@ -73,16 +73,16 @@ export default function ContentSheet(props: Props) {
   useEffect(() => {
     if (!open) return
     if (props.source === 'twelve' && !twelveGeo) {
-      fetch('/api/geometry?source=twelve')
+      fetch('/api/learn/geometry?source=twelve')
         .then(r => r.json()).then(setTwelveGeo).catch(() => {})
     }
     if (props.source === 'grmpts' && !grmptsGeo) {
-      fetch(`/api/geometry?source=grmpts&glid=${props.glid}`)
+      fetch(`/api/learn/geometry?source=grmpts&glid=${props.glid}`)
         .then(r => r.json()).then(setGrmptsGeo).catch(() => {})
     }
     if ((props.source === 'essay' || props.source === 'dialogue') && !essayGeo) {
       const d = (props as { source: 'essay' | 'dialogue'; dialect: string }).dialect
-      fetch(`/api/geometry?source=${props.source}&dialect=${encodeURIComponent(d)}`)
+      fetch(`/api/learn/geometry?source=${props.source}&dialect=${encodeURIComponent(d)}`)
         .then(r => r.json()).then(setEssayGeo).catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

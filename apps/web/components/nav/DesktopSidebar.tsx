@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Icon, LangAvatar, Wordmark } from '@/components/ui'
-import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { useLang } from '@/lib/context/LangDialectProvider'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', href: '/',          icon: 'home'      as const },
@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 
 export default function DesktopSidebar() {
   const pathname = usePathname()
-  const { lang } = useActiveLang()
+  const { lang } = useLang()
 
   const activeId = pathname === '/' ? 'dashboard'
     : NAV_ITEMS.find(it => it.href !== '/' && pathname.startsWith(it.href))?.id ?? ''

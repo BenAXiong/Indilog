@@ -6,10 +6,10 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { useLang } from '@/lib/context/LangDialectProvider'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import { GLID_FAMILIES } from '@/lib/lang/dialects'
-import { createItem } from '@/lib/db/items'
+import { createItem } from '@/lib/db/notebook/items'
 
 type WordResult = {
   id: number
@@ -223,7 +223,7 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
 
 // ─── Main page ────────────────────────────────────────────────
 export default function DictionaryPage() {
-  const { lang, dialectLabel } = useActiveLang()
+  const { lang, dialectLabel } = useLang()
   const router = useRouter()
 
   const [q, setQ] = useState('')

@@ -16,7 +16,7 @@ export default function LookupInline({ word, anchorRect, onClose }: Props) {
 
   useEffect(() => {
     setRows(null)
-    fetch(`/api/lookup?word=${encodeURIComponent(word)}`)
+    fetch(`/api/learn/lookup?word=${encodeURIComponent(word)}`)
       .then(r => r.json())
       .then(d => setRows(d.results ?? []))
       .catch(() => setRows([]))

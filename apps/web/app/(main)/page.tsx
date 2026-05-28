@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, Stat, SectionHead, LangAvatar, Icon, Wordmark } from '@/components/ui'
-import { getDashboardStats } from '@/lib/db/stats-server'
-import { getActiveLangServer } from '@/lib/db/profiles-server'
+import { getDashboardStats } from '@/lib/db/progress/stats-server'
+import { getActiveLangServer } from '@/lib/db/profile/server'
 
 function QuickAction({ dueCount, capturedTotal }: { dueCount: number; capturedTotal: number }) {
   const hasCards = dueCount > 0

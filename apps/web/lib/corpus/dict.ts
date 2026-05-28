@@ -1,5 +1,4 @@
-import { getDb } from './sqlite'
-export { getDb }
+import { getDb } from './db'
 
 export type WordRow = {
   id: number

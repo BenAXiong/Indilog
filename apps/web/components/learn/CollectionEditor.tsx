@@ -2,7 +2,7 @@
 
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
-import type { LevelInput, LessonInput, CardInput } from '@/lib/db/collections'
+import type { LevelInput, LessonInput, CardInput } from '@/lib/db/progress/collections'
 
 type Props = {
   levels: LevelInput[]

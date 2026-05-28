@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
-import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { useLang } from '@/lib/context/LangDialectProvider'
 import { TRANSLATION_LANGUAGES, getValidTargets, isPairSupported } from '@/lib/translation-pairs'
-import { createItem } from '@/lib/db/items'
+import { createItem } from '@/lib/db/notebook/items'
 
 const MAX_CHARS = 800
 
@@ -15,7 +15,7 @@ function langLabel(code: string): string {
 }
 
 export default function TranslatePage() {
-  const { lang, dialectLabel } = useActiveLang()
+  const { lang, dialectLabel } = useLang()
   const [src, setSrc] = useState('zho_Hant')
   const [tgt, setTgt] = useState('ami_Latn')
   const [text, setText] = useState('')

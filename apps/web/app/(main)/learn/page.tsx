@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import Icon, { type IconName } from '@/components/ui/Icon'
-import { useActiveLang } from '@/lib/hooks/useActiveLang'
+import { useLang } from '@/lib/context/LangDialectProvider'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import { GRMPTS_LEVEL_NAMES, stageName, lessonDifficultyOf } from '@/lib/lang/dialects'
-import { fetchCompletions } from '@/lib/db/completions'
+import { fetchCompletions } from '@/lib/db/progress/completions'
 import HubSearch from '@/components/learn/HubSearch'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
@@ -116,7 +116,7 @@ type EssayGeo  = { items: Array<{ index: number; title_zh: string; available: bo
 type TwelveGeo = { levels: string[]; classes: number[]; titles?: Record<string, Record<string, string>> }
 
 export default function LearnPage() {
-  const { lang, dialect, dialectLabel } = useActiveLang()
+  const { lang, dialect, dialectLabel } = useLang()
   const langCode = lang.code
 
   const [counts,     setCounts]     = useState<Record<Source, number>>({ twelve: 0, grmpts: 0, essay: 0, dialogue: 0 })
@@ -137,10 +137,10 @@ export default function LearnPage() {
       fetchCompletions(langCode, 'grmpts'),
       fetchCompletions(langCode, 'essay'),
       fetchCompletions(langCode, 'dialogue'),
-      fetch('/api/geometry?source=twelve').then(r => r.json()) as Promise<TwelveGeo>,
-      fetch(`/api/geometry?source=grmpts&glid=${glid}`).then(r => r.json()) as Promise<GrmptsGeo>,
-      fetch(`/api/geometry?source=essay&dialect=${enc}`).then(r => r.json()) as Promise<EssayGeo>,
-      fetch(`/api/geometry?source=dialogue&dialect=${enc}`).then(r => r.json()) as Promise<EssayGeo>,
+      fetch('/api/learn/geometry?source=twelve').then(r => r.json()) as Promise<TwelveGeo>,
+      fetch(`/api/learn/geometry?source=grmpts&glid=${glid}`).then(r => r.json()) as Promise<GrmptsGeo>,
+      fetch(`/api/learn/geometry?source=essay&dialect=${enc}`).then(r => r.json()) as Promise<EssayGeo>,
+      fetch(`/api/learn/geometry?source=dialogue&dialect=${enc}`).then(r => r.json()) as Promise<EssayGeo>,
     ]).then(([tc, gc, ec, dc, tgeo, ggeo, egeo, dgeo]) => {
       const gTotal = ggeo.levels.reduce((sum, lv) => sum + Object.keys(ggeo.counts[lv] ?? {}).length, 0)
       const eTotal = egeo.items.filter(i => i.available).length
