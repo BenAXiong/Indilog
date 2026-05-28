@@ -198,19 +198,19 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
           padding: '8px 14px 10px',
           borderBottom: si < entry.dialectSections.length - 1 ? `1px solid ${T.lineSoft}` : 'none',
         }}>
-          <div style={{ textAlign: 'right', marginBottom: 5 }}>
-            <span style={{ fontSize: 9.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>
-              {section.dialect_name}
-            </span>
-          </div>
           {section.defs.map((def, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < section.defs.length - 1 ? 5 : 0 }}>
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: i < section.defs.length - 1 ? 5 : 0 }}>
               {section.defs.length > 1 && (
-                <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', marginTop: 2, flexShrink: 0 }}>
+                <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>
                   {i + 1}.
                 </span>
               )}
-              <span style={{ fontSize: 14, color: T.ink, fontWeight: 500, lineHeight: 1.35 }}>{def}</span>
+              <span style={{ flex: 1, fontSize: 14, color: T.ink, fontWeight: 500, lineHeight: 1.35 }}>{def}</span>
+              {i === 0 && (
+                <span style={{ fontSize: 9.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>
+                  {section.dialect_name}
+                </span>
+              )}
             </div>
           ))}
         </div>
