@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
@@ -237,6 +238,7 @@ export default function DictionaryPage() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
+  const [fuzzy, setFuzzy] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
 
@@ -260,13 +262,14 @@ export default function DictionaryPage() {
     }
   }, [lang, dialects, userChangedGlid])
 
-  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string) => {
+  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean) => {
     if (!term.trim()) { setWords([]); setSentences([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)
     const params = new URLSearchParams({ q: term })
     if (glidFilter) params.set('glid', glidFilter)
     if (dialectF)   params.set('dialect', dialectF)
+    if (isFuzzy)    params.set('fuzzy', '1')
     const res = await fetch(`/api/dict/search?${params}`)
     const data = await res.json()
     if (data.error) setDbError(data.error)
@@ -277,9 +280,9 @@ export default function DictionaryPage() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter), 320)
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, fuzzy), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, dialectFilter, runSearch])
+  }, [q, glid, dialectFilter, fuzzy, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
@@ -395,7 +398,41 @@ export default function DictionaryPage() {
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <ScreenHeader title="Dictionary" langName={lang.name} langDialect={dialectLabel} settingsTab="dict" />
+      <ScreenHeader
+        title="Dictionary"
+        langName={lang.name}
+        langDialect={dialectLabel}
+        right={
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+            <button
+              onClick={() => setFuzzy(f => !f)}
+              title={fuzzy ? 'Fuzzy search (contains) — click for prefix' : 'Prefix search — click for fuzzy (contains)'}
+              style={{
+                width: 36, height: 36, borderRadius: 999,
+                background: fuzzy ? T.crimsonBg : T.paperHi,
+                border: `1px solid ${fuzzy ? T.crimson : T.line}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: fuzzy ? T.crimson : T.inkSoft,
+                fontSize: 17, fontFamily: '"JetBrains Mono", monospace', lineHeight: 1,
+              }}
+            >
+              ≈
+            </button>
+            <Link
+              href="/settings?from=/dict&tab=dict"
+              aria-label="Settings"
+              style={{
+                width: 36, height: 36, borderRadius: 999,
+                background: T.paperHi, border: `1px solid ${T.line}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: T.inkSoft, flexShrink: 0,
+              }}
+            >
+              <Icon name="settings" size={17} strokeWidth={1.6} />
+            </Link>
+          </div>
+        }
+      />
 
       {/* DB error banner */}
       {dbError && (

@@ -43,10 +43,29 @@ export type DialectRow = {
   sub_dialects: string
 }
 
-export function searchWords(q: string, glid?: string, dialect?: string, limit = 30): WordRow[] {
+export function searchWords(q: string, glid?: string, dialect?: string, fuzzy = false, limit = 30): WordRow[] {
   const db = getDb()
-  const pattern = `"${q.replace(/"/g, '""')}"*`
 
+  if (fuzzy) {
+    const like = `%${q}%`
+    const base = `
+      SELECT v.id, v.word_ab, v.word_ch, v.dialect_name, v.glid,
+             (LOWER(v.word_ab) = LOWER(?)) as exact
+      FROM ilrdf_vocabulary v
+      WHERE LOWER(v.word_ab) LIKE LOWER(?)
+      ${glid    ? 'AND v.glid = ?'         : ''}
+      ${dialect ? 'AND v.dialect_name = ?' : ''}
+      ORDER BY exact DESC, LENGTH(v.word_ab) ASC
+      LIMIT ?
+    `
+    const params: (string | number)[] = [q, like]
+    if (glid)    params.push(glid)
+    if (dialect) params.push(dialect)
+    params.push(limit)
+    return db.prepare(base).all(...params) as WordRow[]
+  }
+
+  const pattern = `"${q.replaceAll('"', '""')}"*`
   const base = `
     SELECT v.id, v.word_ab, v.word_ch, v.dialect_name, v.glid,
            (LOWER(v.word_ab) = LOWER(?)) as exact
@@ -62,14 +81,32 @@ export function searchWords(q: string, glid?: string, dialect?: string, limit = 
   if (glid)    params.push(glid)
   if (dialect) params.push(dialect)
   params.push(limit)
-
   return db.prepare(base).all(...params) as WordRow[]
 }
 
-export function searchSentences(q: string, glid?: string, dialect?: string, limit = 20): SentenceRow[] {
+export function searchSentences(q: string, glid?: string, dialect?: string, fuzzy = false, limit = 20): SentenceRow[] {
   const db = getDb()
-  const pattern = `"${q.replace(/"/g, '""')}"*`
 
+  if (fuzzy) {
+    const like = `%${q}%`
+    const base = `
+      SELECT s.id, s.ab, s.zh, o.dialect_name, o.source, o.audio_url
+      FROM sentences s
+      JOIN occurrences o ON o.sentence_id = s.id
+      WHERE LOWER(s.ab) LIKE LOWER(?)
+      ${glid    ? 'AND s.glid = ?'         : ''}
+      ${dialect ? 'AND o.dialect_name = ?' : ''}
+      ORDER BY o.source
+      LIMIT ?
+    `
+    const params: (string | number)[] = [like]
+    if (glid)    params.push(glid)
+    if (dialect) params.push(dialect)
+    params.push(limit)
+    return db.prepare(base).all(...params) as SentenceRow[]
+  }
+
+  const pattern = `"${q.replaceAll('"', '""')}"*`
   const base = `
     SELECT s.id, s.ab, s.zh, o.dialect_name, o.source, o.audio_url
     FROM sentences_fts f
@@ -85,7 +122,6 @@ export function searchSentences(q: string, glid?: string, dialect?: string, limi
   if (glid)    params.push(glid)
   if (dialect) params.push(dialect)
   params.push(limit)
-
   return db.prepare(base).all(...params) as SentenceRow[]
 }
 
