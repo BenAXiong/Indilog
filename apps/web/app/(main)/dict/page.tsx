@@ -207,6 +207,11 @@ export default function DictionaryPage() {
   const exactWord = words.find(w => w.exact)
   const otherWords = words.filter(w => !w.exact)
 
+  const selectedDialect = dialects.find(d => d.glid === glid)
+  const searchPlaceholder = selectedDialect
+    ? `Search in ${selectedDialect.group_name}, Chinese or English`
+    : 'Search in all languages, Chinese or English'
+
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <ScreenHeader title="Dictionary" langName={lang.name} langDialect={dialectLabel} />
@@ -233,7 +238,7 @@ export default function DictionaryPage() {
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="Search the YCM corpus"
+            placeholder={searchPlaceholder}
             autoComplete="off"
             style={{
               flex: 1, border: 0, background: 'transparent', outline: 'none',
