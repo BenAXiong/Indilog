@@ -133,13 +133,12 @@ function SentenceCard({ s, onSave, onCapture }: {
   )
 }
 
-// ─── Merged entry (words only, deduped defs, cross-dialect) ──
+// ─── Merged entry (words only, per-dialect sections) ─────────
 type MergedEntry = {
   ab: string        // display form, first letter capitalised
-  dialects: string[]
   glid: string
   exact: boolean
-  defs: string[]
+  dialectSections: { dialect_name: string; defs: string[] }[]
 }
 
 function MergedEntryCard({ entry, onSave, onCapture }: {
@@ -147,69 +146,75 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
   onSave: (ab: string, dialect: string, def: string) => void
   onCapture: (ab: string, def: string) => void
 }) {
-  const primaryDef = entry.defs[0] ?? ''
+  const firstSection = entry.dialectSections[0]
+  const primaryDef   = firstSection?.defs[0] ?? ''
+  const primaryDialect = firstSection?.dialect_name ?? ''
+
   const btnStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: 8,
     background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
     display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
   }
+
   return (
     <div style={{
       background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14,
       overflow: 'hidden', boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
     }}>
-      <div style={{ padding: '12px 14px 10px', borderBottom: `1px solid ${T.lineSoft}` }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink, lineHeight: 1.2 }}>
+      {/* Header: word + exact badge + action buttons */}
+      <div style={{
+        padding: '11px 14px', borderBottom: `1px solid ${T.lineSoft}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink }}>
             {entry.ab}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-            {entry.exact && (
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3,
-                padding: '2px 7px', borderRadius: 999,
-                background: T.sageBg, color: T.sage, border: `1px solid #D2D8AE`,
-                fontSize: 10, fontWeight: 600,
-              }}>
-                <Icon name="check" size={9} color={T.sage} strokeWidth={2.5} />
-                exact
-              </span>
-            )}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'flex-end' }}>
-              {entry.dialects.map(d => (
-                <span key={d} style={{
-                  fontSize: 9.5, color: T.inkFaint,
-                  fontFamily: '"JetBrains Mono", monospace',
-                  background: T.paper, border: `1px solid ${T.lineSoft}`,
-                  borderRadius: 4, padding: '1px 5px',
-                }}>
-                  {d}
-                </span>
-              ))}
-            </div>
-          </div>
+          </span>
+          {entry.exact && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '2px 7px', borderRadius: 999,
+              background: T.sageBg, color: T.sage, border: `1px solid #D2D8AE`,
+              fontSize: 10, fontWeight: 600, flexShrink: 0,
+            }}>
+              <Icon name="check" size={9} color={T.sage} strokeWidth={2.5} />
+              exact
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          <button onClick={() => onSave(entry.ab, primaryDialect, primaryDef)} title="Save word" style={btnStyle}>
+            <Icon name="bookmark" size={14} strokeWidth={1.8} />
+          </button>
+          <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
+            <Icon name="capture" size={14} strokeWidth={1.8} />
+          </button>
         </div>
       </div>
-      <div style={{ padding: '10px 14px' }}>
-        {entry.defs.map((def, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < entry.defs.length - 1 ? 6 : 0 }}>
-            {entry.defs.length > 1 && (
-              <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', marginTop: 2, flexShrink: 0 }}>
-                {i + 1}.
-              </span>
-            )}
-            <span style={{ fontSize: 14, color: T.ink, fontWeight: 500, lineHeight: 1.35 }}>{def}</span>
+
+      {/* One section per dialect */}
+      {entry.dialectSections.map((section, si) => (
+        <div key={section.dialect_name} style={{
+          padding: '8px 14px 10px',
+          borderBottom: si < entry.dialectSections.length - 1 ? `1px solid ${T.lineSoft}` : 'none',
+        }}>
+          <div style={{ textAlign: 'right', marginBottom: 5 }}>
+            <span style={{ fontSize: 9.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>
+              {section.dialect_name}
+            </span>
           </div>
-        ))}
-      </div>
-      <div style={{ padding: '8px 14px', borderTop: `1px solid ${T.lineSoft}`, display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-        <button onClick={() => onSave(entry.ab, entry.dialects[0] ?? '', primaryDef)} title="Save word" style={btnStyle}>
-          <Icon name="bookmark" size={14} strokeWidth={1.8} />
-        </button>
-        <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
-          <Icon name="capture" size={14} strokeWidth={1.8} />
-        </button>
-      </div>
+          {section.defs.map((def, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: i < section.defs.length - 1 ? 5 : 0 }}>
+              {section.defs.length > 1 && (
+                <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', marginTop: 2, flexShrink: 0 }}>
+                  {i + 1}.
+                </span>
+              )}
+              <span style={{ fontSize: 14, color: T.ink, fontWeight: 500, lineHeight: 1.35 }}>{def}</span>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   )
 }
@@ -304,17 +309,21 @@ export default function DictionaryPage() {
 
     const map = new Map<string, MergedEntry>()
     for (const w of words) {
-      const key = normKey(w.word_ab)  // dialect dropped — same word across dialects → one card
-      if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), dialects: [], glid: w.glid, exact: false, defs: [] })
+      const key = normKey(w.word_ab)
+      if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), glid: w.glid, exact: false, dialectSections: [] })
       const e = map.get(key)!
       if (w.exact) e.exact = true
-      if (!e.dialects.includes(w.dialect_name)) e.dialects.push(w.dialect_name)
+      let section = e.dialectSections.find(s => s.dialect_name === w.dialect_name)
+      if (!section) {
+        section = { dialect_name: w.dialect_name, defs: [] }
+        e.dialectSections.push(section)
+      }
       for (const def of parseDefs(w.word_ch)) {
-        e.defs = addDef(def, e.defs)
+        section.defs = addDef(def, section.defs)
       }
     }
     return Array.from(map.values())
-      .filter(e => e.defs.length > 0)
+      .filter(e => e.dialectSections.length > 0)
       .sort((a, b) => {
         if (a.exact !== b.exact) return a.exact ? -1 : 1
         return a.ab.length - b.ab.length
