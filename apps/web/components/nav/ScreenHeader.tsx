@@ -15,11 +15,13 @@ type ScreenHeaderProps = {
   showHome?: boolean
   /** Slot for a custom right-side element. Defaults to settings gear. */
   right?: ReactNode
+  /** Which settings tab the gear icon opens. Defaults to none (general). */
+  settingsTab?: string
 }
 
-export default function ScreenHeader({ title, langName, langDialect, showHome = true, right }: ScreenHeaderProps) {
+export default function ScreenHeader({ title, langName, langDialect, showHome = true, right, settingsTab }: ScreenHeaderProps) {
   const pathname = usePathname()
-  const settingsHref = '/settings?from=' + encodeURIComponent(pathname)
+  const settingsHref = '/settings?from=' + encodeURIComponent(pathname) + (settingsTab ? `&tab=${settingsTab}` : '')
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>

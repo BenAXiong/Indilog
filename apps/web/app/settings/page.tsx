@@ -20,7 +20,7 @@ type Profile = {
 
 function SettingsContent() {
   const searchParams = useSearchParams()
-  const tab  = (searchParams.get('tab') ?? 'general') as 'general' | 'capture'
+  const tab  = (searchParams.get('tab') ?? 'general') as 'general' | 'capture' | 'dict'
   const from = searchParams.get('from') ?? '/'
   const router = useRouter()
 
@@ -38,9 +38,16 @@ function SettingsContent() {
   // Capture settings
   const [autoLookup, setAutoLookup] = useState(true)
 
+  // Dict settings
+  const [dictSources, setDictSources] = useState<string[]>(['klokah'])
+
   useEffect(() => {
     const stored = localStorage.getItem('ind_auto_lookup')
     if (stored !== null) setAutoLookup(stored === 'true')
+    const storedSources = localStorage.getItem('ind_dict_sources')
+    if (storedSources) {
+      try { setDictSources(JSON.parse(storedSources)) } catch {}
+    }
   }, [])
 
   useEffect(() => {
@@ -96,6 +103,14 @@ function SettingsContent() {
     const next = !autoLookup
     setAutoLookup(next)
     localStorage.setItem('ind_auto_lookup', String(next))
+  }
+
+  function toggleDictSource(id: string) {
+    setDictSources(prev => {
+      const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+      localStorage.setItem('ind_dict_sources', JSON.stringify(next))
+      return next
+    })
   }
 
   const currentLang  = getLanguage(activeLang) ?? LANGUAGES[0]
@@ -306,6 +321,93 @@ function SettingsContent() {
                     boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                   }} />
                 </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── Dictionary tab ── */}
+      {tab === 'dict' && (
+        <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          {/* Interface language */}
+          <div>
+            <SectionHead title="Interface language" />
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 14px' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[
+                    { id: 'en', label: 'English',   soon: false },
+                    { id: 'zh', label: '繁體中文', soon: true  },
+                  ].map(o => {
+                    const isActive = locale === o.id
+                    return (
+                      <button
+                        key={o.id}
+                        disabled={o.soon}
+                        onClick={() => {
+                          if (o.soon) return
+                          setLocale(o.id)
+                          saveProfile({ ui_locale: o.id })
+                        }}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: 10,
+                          background: isActive ? T.ink : T.paper,
+                          color: isActive ? T.cream : o.soon ? T.inkFaint : T.ink,
+                          border: `1px solid ${isActive ? T.ink : T.lineSoft}`,
+                          fontSize: 13, fontWeight: 500,
+                          cursor: o.soon ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {o.label}{o.soon ? ' · soon' : ''}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Dictionary source */}
+          <div>
+            <SectionHead title="Dictionary source" />
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 14px' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {([
+                    { id: 'klokah', label: 'Klokah',        soon: false },
+                    { id: 'ytd',    label: '族語言線上辭典', soon: true  },
+                    { id: 'moe',    label: 'MoE Dict',       soon: true  },
+                  ] as const).map(o => {
+                    const isActive = dictSources.includes(o.id)
+                    return (
+                      <button
+                        key={o.id}
+                        disabled={o.soon}
+                        onClick={() => { if (!o.soon) toggleDictSource(o.id) }}
+                        style={{
+                          flex: 1, padding: '8px 6px', borderRadius: 10,
+                          background: isActive ? T.ink : T.paper,
+                          border: `1px solid ${isActive ? T.ink : T.lineSoft}`,
+                          cursor: o.soon ? 'not-allowed' : 'pointer',
+                          opacity: o.soon ? 0.5 : 1,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        }}
+                      >
+                        <span style={{ fontSize: 12, fontWeight: 500, color: isActive ? T.cream : T.ink, lineHeight: 1.2 }}>
+                          {o.label}
+                        </span>
+                        {o.soon && (
+                          <span style={{ fontSize: 9.5, color: isActive ? T.cream : T.inkFaint, fontWeight: 400 }}>
+                            soon
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </div>

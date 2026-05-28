@@ -239,7 +239,7 @@ export default function DictionaryPage() {
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <ScreenHeader title="Dictionary" langName={lang.name} langDialect={dialectLabel} />
+      <ScreenHeader title="Dictionary" langName={lang.name} langDialect={dialectLabel} settingsTab="dict" />
 
       {/* DB error banner */}
       {dbError && (
