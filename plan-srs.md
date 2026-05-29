@@ -16,10 +16,10 @@ The Anki trap: spend months on the tool, never use it. Every feature below shoul
 pass the test "would I stop studying without this?" Tier 1 items do. Tier 3 items
 don't — they improve an already-working loop.
 
-**Fixed intervals → SM-2 → FSRS is the upgrade path.**
-Fixed intervals are already live. SM-2 is the right first algorithm upgrade — it's
-simple, proven, and personalizes per card. FSRS is better but complex; only worth
-it once there's enough review history to benefit from it.
+**Fixed intervals → FormoSRS-1 → FSRS is the upgrade path.**
+Fixed intervals are already live. FormoSRS-1 (SM-2 with targeted fixes, see T1-A)
+is the right first upgrade. FSRS is better but is out of scope for v1 — revisit
+after serious production review data.
 
 ---
 
@@ -35,22 +35,32 @@ it once there's enough review history to benefit from it.
 
 ---
 
+## Navigation (settled 2026-05-29)
+
+Tab order: **Dashboard · Study · Capture · Translate · Dict**
+
+The current Learn and Review tabs merge into a single **Study** tab. Study is
+the single entry point for all flashcard activity. The existing Learn content
+(Lessons / Patterns / Essays / Dialogs) surfaces in Study as Curriculum decks.
+
+---
+
 ## Schema additions needed
 
 Apply each in the Supabase SQL editor as the feature requiring it is built.
 
 ```sql
--- SM-2 state per card (Tier 1)
+-- FormoSRS-1 state per card (T1-A)
 ALTER TABLE ind_flashcards
   ADD COLUMN IF NOT EXISTS ease_factor   real    NOT NULL DEFAULT 2.5,
   ADD COLUMN IF NOT EXISTS interval_days integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS repetitions   integer NOT NULL DEFAULT 0;
 
--- Suspension (Tier 3)
+-- Suspension (T3-B)
 ALTER TABLE ind_flashcards
   ADD COLUMN IF NOT EXISTS suspended_at timestamptz;
 
--- Flags (Tier 3)
+-- Flags (T3-C)
 ALTER TABLE ind_flashcards
   ADD COLUMN IF NOT EXISTS flagged boolean NOT NULL DEFAULT false;
 ```
@@ -61,45 +71,94 @@ ALTER TABLE ind_flashcards
 
 *Goal: a session you'd actually sit down and do every day.*
 
-### T1-A — SM-2 algorithm (`lib/db/srs/schedule.ts`)
+### T1-A — FormoSRS-1 algorithm (`lib/db/srs/schedule.ts`)
+
+FormoSRS-1 = SM-2 base + Anki Hard behavior (no reset on Hard) + fuzz + ease
+recovery on Good.
 
 - [ ] Define `SMState { ease_factor, interval_days, repetitions }` type
-- [ ] `nextSM2(state, rating)` → `{ due_at, new_state }` — pure function, no DB
-- [ ] Update `rateCard()` to call `nextSM2` and write `ease_factor`, `interval_days`, `repetitions`
-- [ ] Migrate existing cards: set default SM-2 state (ease 2.5, interval 0, reps 0) — already handled by column defaults
+- [ ] `nextFormoSRS1(state, rating)` → `{ due_at, new_state }` — pure function, no DB
+- [ ] Update `rateCard()` to call `nextFormoSRS1`, write SM-2 columns
+- [ ] Column defaults handle existing cards (ease 2.5, interval 0, reps 0)
 
-Rating → SM-2 mapping:
-| Rating | Effect |
-|---|---|
-| Again | interval = 1 day · ease -= 0.2 · reps = 0 |
-| Hard  | interval = max(1, interval × 1.2) · ease -= 0.15 |
-| Good  | interval = interval × ease (min 1 day on first rep) |
-| Easy  | interval = interval × ease × 1.3 · ease += 0.15 |
-| Min ease factor: 1.3 | |
+Rating → algorithm mapping:
 
-### T1-B — Daily goal session
+| Rating | Interval | Ease delta | Reps |
+|---|---|---|---|
+| Again | 1 day | −0.20 | reset to 0 |
+| Hard  | max(1, prev × 1.2) | −0.15 | unchanged |
+| Good  | prev × ease (min 1 day on rep 0) | **+0.02** | +1 |
+| Easy  | prev × ease × 1.3 | +0.15 | +1 |
 
-- [ ] Settings: daily goal slider in General tab (already in `ind_profiles.daily_goal` schema)
-- [ ] Session counter: track cards reviewed today, stop offering new cards once goal reached
-- [ ] Session start screen: show due count, goal remaining, "Begin" button
-- [ ] Session end screen: cards reviewed, accuracy %, streak update
-- [ ] Keyboard shortcuts: 1/2/3/4 = Again/Hard/Good/Easy, Space = reveal
+Min ease factor: 1.3
 
-### T1-C — Review page overhaul
+**Good +0.02 (ease hell fix):** Anki's pure-zero Good means ease only moves down
+(Hard/Again) or up (Easy), so after ~6 total Again ratings a card hits the 1.3
+floor permanently. +0.02 on Good means consistent correct answers slowly recover
+ease: 10 consecutive Goods = +0.2 ease recovery. Avoids mean-reversion complexity.
 
-- [ ] Landing: "You have N cards due" + daily goal ring + Begin button
-- [ ] Replace current flat reveal/rate with: front → tap/Space to reveal → rate buttons
-- [ ] Progress bar at top (not dots — too many for 1063 cards)
-- [ ] Undo last rating (within session, single level)
-- [ ] Skip card (send to end of session queue)
-- [ ] Card source label: "Amis1k", "Capture", "Dict save" (from `ind_learn_cards` or `ind_items`)
+**Fuzz ±5%:** random variation applied to all intervals ≥ 2 days prevents cards
+clustering on the same day. `interval = Math.round(interval * (0.95 + Math.random() * 0.1))`
 
-### T1-D — Content sources wired
+**Learn phase (pending design discussion):** Anki-style fixed steps (e.g. 1m → 10m
+→ graduate) before a card enters FormoSRS-1. Crucial for new-card acquisition.
+Deferred to T3-A — needs its own design pass as it changes session UX.
+
+### T1-B — Study tab (navigation overhaul)
+
+Replaces both the Learn and Review tabs.
+
+- [ ] New route `/study` with subtab bar: Decks | Browser | Stats
+- [ ] Deck list with 3 sections: Curriculum / My Collections / Captures
+- [ ] "Review all — N due" primary CTA at top of Decks view
+- [ ] Per-deck "..." menu: rename · delete · export · share · toggle in Review all
+- [ ] Import button in page header (single, no ghost row)
+- [ ] Browser and Stats subtabs: placeholder empty states (built in T2)
+- [ ] Redirect `/learn` → `/study`, `/review` → `/study`
+- [ ] Update BottomNav: Dashboard · Study · Capture · Translate · Dict
+
+### T1-C — Dashboard overhaul
+
+Dashboard is the primary motivational hub and the main review entry point.
+
+- [ ] Streak hero: chain visual + day count
+- [ ] Learning goal widget: placeholder ("Set a goal →") until T2-A ships
+- [ ] Today's ring: circular progress reviewed/goal + "N due today"
+- [ ] Primary CTA: "Review N due → (~N min)" — goes directly into session
+- [ ] Real heatmap: `ind_daily_stats` data, intensity = reviewed_count (~16 weeks)
+- [ ] Quick stats 2×2: Mastered · Active · This week · Due tomorrow
+- [ ] Remove seed-based heatmap and fake streak
+
+### T1-D — Review session overhaul
+
+Full-screen session, BottomNav hidden during review.
+
+- [ ] Session header: back button · deck name · "X / N" counter
+- [ ] Single thin progress bar (not per-card dots)
+- [ ] Card contained on cream background (rounded, shadow, not edge-to-edge)
+- [ ] Tap card = reveal (no animation — answer appears)
+- [ ] Swipe left = Again, swipe right = Good
+- [ ] Subtle swipe edge indicators on card (visible before reveal)
+- [ ] Rating row: Again · Hard · Good · Easy with interval label (mono)
+- [ ] Hard + Easy togglable off in options
+- [ ] Full immersion mode: hide button row entirely, gestures only
+- [ ] Options sheet via gear icon in session header
+
+### T1-E — Session end screen
+
+- [ ] Hero: "N cards reviewed" (large serif)
+- [ ] "N due tomorrow"
+- [ ] Confetti: triggers when daily goal met
+- [ ] Share: native share API ("Reviewed N cards · 🔥 X-day streak")
+- [ ] CTAs: "Review more" (if cards due) · "Capture more" (nudge if tomorrow low) · "Done"
+
+### T1-F — Content sources wired
 
 - [x] From `ind_items` (captures, dict/learn saves) — existing
 - [x] From `ind_learn_collections` (Amis1k) — done
-- [ ] Source filter on review landing: All / Captures / Collections (per collection)
-- [ ] `ensureFlashcards()` called on Review landing, not just on mount — dedup safe
+- [ ] From curriculum (Lessons/Patterns/Essays/Dialogs) — filtered `ind_items` by
+  source; appear as Curriculum deck rows in Study tab
+- [ ] `ensureFlashcards()` called on Study landing, dedup safe
 
 ---
 
@@ -107,29 +166,29 @@ Rating → SM-2 mapping:
 
 *Goal: feel the progress, stay motivated.*
 
-### T2-A — Dashboard heatmap (real data)
+### T2-A — Learning goal feature
 
-- [ ] Replace seed-based heatmap with real `ind_daily_stats` data
-- [ ] Color intensity = reviewed_count, not captured_count
-- [ ] Show streak count accurately (currently computed from captured_count)
+- [ ] Goal-setting UI: sheet/overlay — select target deck, set daily cards or target
+  date (bidirectional: lock one, the other calculates)
+- [ ] Stores in `ind_profiles`: target deck, daily goal cards, goal due date
+- [ ] Dashboard widget when active: "[Deck] · N days left · X% mastered" + progress bar
 
-### T2-B — Daily goal ring
+### T2-B — Stats subtab
 
-- [ ] Dashboard: ring showing today's reviewed / goal
-- [ ] Review landing: same ring
-- [ ] Green when goal met, amber when close, red when 0
+- [ ] Cards total / due today / mastered (ease ≥ 2.5 and interval ≥ 21d = "known",
+  ≥ 60d = "mastered")
+- [ ] Amis1k coverage: X of 1063 mastered
+- [ ] Weekly pace chart
+- [ ] Populates the Stats subtab in Study
 
-### T2-C — Per-language stats
+### T2-C — Card browser (Browser subtab)
 
-- [ ] Cards total / due today / mastered (ease_factor ≥ 2.5 and interval_days ≥ 21)
-- [ ] Show on Review landing or a dedicated Stats page
-- [ ] Amis1k coverage: X of 1063 cards mastered
-
-### T2-D — Session summary screen
-
-- [ ] After rating last card: show cards reviewed, accuracy %, time spent
-- [ ] If daily goal met: celebration state
-- [ ] "Review more" (if cards remain) vs "Come back tomorrow"
+- [ ] List all `ind_flashcards` for current language
+- [ ] Show: front, back, source, due date, ease factor, interval
+- [ ] Edit front/back inline
+- [ ] Filter: all / due / new / suspended / flagged
+- [ ] Sort: by due date, by ease, by creation date
+- [ ] Ease reset action (safety valve for ease-hell edge cases)
 
 ---
 
@@ -137,93 +196,129 @@ Rating → SM-2 mapping:
 
 *Only after Tier 1 and 2 are solid and you've been studying for a few weeks.*
 
-### T3-A — Card browser
+### T3-A — Learn phase
 
-- [ ] List all `ind_flashcards` for current language
-- [ ] Show: front, back, source, due date, ease factor, interval
-- [ ] Edit front/back inline
-- [ ] Filter: all / due / new / suspended / flagged
-- [ ] Sort: by due date, by ease, by creation date
+- [ ] Learning steps before graduating to FormoSRS-1 (e.g. 1m → 10m → graduate)
+- [ ] Again in learning: back to step 1; Good: next step; Easy: graduate immediately
+- [ ] Requires dedicated design discussion — changes session UX significantly
 
 ### T3-B — Card suspension
 
-- [ ] Suspend button on card during review (skips until manually unsuspended)
-- [ ] Unsuspend in card browser
-- [ ] Suspended cards excluded from `listDueFlashcards`
+- [ ] Suspend during review (skips until manually unsuspended in Browser)
+- [ ] Excluded from `listDueFlashcards`
 
 ### T3-C — Flags
 
-- [ ] Flag button during review (mark for later attention)
-- [ ] Flagged filter in card browser
-- [ ] Review flagged cards as a separate session
+- [ ] Flag during review (mark for attention)
+- [ ] Flagged filter in Browser
+- [ ] "Review flagged" as a separate session
 
 ### T3-D — Card types
 
 - [ ] Reverse cards (zh → ab)
-- [ ] Audio-only cards (play audio, produce ab text) — requires audio data
+- [ ] Audio cards — requires audio data
 - [ ] Card type selector per collection on import
 
-### T3-E — FSRS upgrade
+### T3-E — FSRS
 
-- [ ] Replace SM-2 with FSRS-4.5 if scheduling quality feels wrong after 4+ weeks of data
-- [ ] FSRS requires retrievability estimation — more complex but better for long intervals
-- [ ] Keep SM-2 as fallback
+**Not in v1.** FormoSRS-1 with the +0.02 Good ease recovery adequately addresses
+ease hell for the v1 timeframe. FSRS solves it structurally via mean reversion
+of difficulty — revisit after 4+ weeks of real review data when scheduling quality
+can actually be measured.
 
 ---
 
-## Design notes
+## Design decisions (settled 2026-05-29)
 
-The review session is the most important screen in the app — it needs to feel
-satisfying, not clinical. Key design decisions to make before building T1-C:
+### Navigation
 
-- **Card size**: full-screen card or contained card on cream background?
-- **Reveal animation**: flip (current `animate-iv-flip`) or slide up?
-- **Rating buttons**: horizontal row (current) or arc/radial layout?
-- **Streak/goal feedback**: subtle (number) or expressive (animation on goal met)?
-- **Font**: Newsreader for the indigenous text? Needs to be large and clear.
+Tab order: **Dashboard · Study · Capture · Translate · Dict**
 
-Consider a design checkpoint (sketch/mockup) before building T1-C overhaul.
+### Study tab — deck architecture
+
+Three sections under the Decks subtab:
+
+**Curriculum** (app-provided, corpus-backed — the 4 existing Learn tab sources)
+- Lessons / Patterns / Essays / Dialogs — one row each, due badge
+
+**My Collections** (user-imported)
+- Each collection: name + card count + due badge + "..." menu
+- Import button in page header (single)
+
+**Captures** (virtual deck from `ind_items`)
+- Single row: "Captures & lookups" + due badge + "..." menu
+
+Per-deck "..." menu: rename · delete · export · share · toggle in Review all
+(checkbox — checked = included in "Review all" CTA, default on).
+
+Subtab bar present from day 1: Decks (active) · Browser (placeholder) · Stats
+(placeholder). Fourth section "Pre-made packs" added when curriculum packs ship.
+
+### Dashboard widget order
+
+1. ScreenHeader (existing component)
+2. Streak hero + goal widget (same row or stacked — leave to CD)
+3. Today's ring (reviewed / daily goal) + "N due today"
+4. Primary CTA: "Review N due → (~N min)"
+5. Heatmap (~16 weeks, intensity = reviewed count)
+6. Quick stats 2×2: Mastered · Active · This week · Due tomorrow
+
+Goal widget: active → "[Deck] · N days left" + thin progress bar.
+Inactive → "Set a goal →" tertiary prompt. Goal-setting UI is T2-A.
+
+### Review session
+
+- Full screen, BottomNav hidden
+- Card contained on cream bg (rounded, shadow — not edge-to-edge)
+- Tap card = reveal (no animation, answer appears)
+- Swipe left = Again, swipe right = Good
+- Subtle edge indicators on card face (before reveal)
+- Rating row: Again · Hard · Good · Easy + interval estimate (mono)
+- Hard + Easy togglable; full immersion = hide entire row
+- Options via gear icon in session header
+
+### Session end screen
+
+- Hero: "N cards reviewed" (large serif) — no accuracy %
+- "N due tomorrow"
+- Confetti on goal met
+- Share (native API)
+- CTAs: "Review more" · "Capture more" nudge · "Done"
 
 ---
 
 ## Sequence
 
 ```
-Now:       T1-A (SM-2)         ← algorithm, pure function, no UI
-           T1-B partial        ← goal session counter, session end screen
-           T1-D source filter  ← source labels on cards
+Now:       T1-A FormoSRS-1        ← algorithm + schema migration, no UI
+           CD wireframes          ← Dashboard / Study tab / Review / End screen
 
-Week 1:    T1-C review overhaul ← after design decision
-           T1-B complete        ← start screen, keyboard shortcuts
+Week 1:    T1-B Study tab         ← nav overhaul, deck list, subtab bar
+           T1-C Dashboard         ← real data widgets, CTA
+           T1-D/E Review session  ← full-screen, gestures, options, end screen
 
-Week 2:    T2-A heatmap         ← quick win, real data
-           T2-B goal ring
-           T2-D session summary
+Week 2:    T2-A goal feature      ← goal-setting UI, dashboard widget live
+           T2-B stats subtab      ← mastery metrics, pace chart
 
-Later:     T2-C stats
-           T3-A card browser    ← when you actually want to edit cards
-           T3-B suspension      ← when you have cards you want to skip
-           T3-C flags
+Later:     T2-C card browser
+           T3-A learn phase       ← after dedicated design discussion
+           T3-B/C suspension, flags
            T3-D card types
-           T3-E FSRS            ← after 4+ weeks of data
+           T3-E FSRS              ← not in v1
 ```
 
 ---
 
 ## Open design questions
 
-1. **Algorithm first or session UX first?** SM-2 is a code change only; session UX
-   requires design. Recommend: ship SM-2 silently first (users won't notice), then
-   redesign the session UX with the better algorithm already under the hood.
+1. **Learn phase design:** How do learning steps feel in the session? Rating buttons
+   change meaning in learning vs review phase. Needs a dedicated design pass
+   before T3-A implementation.
 
-2. **Where do stats live?** Dedicated `/stats` route, or embedded in Dashboard and
-   Review landing? Leaning toward: Dashboard gets the ring + streak, Review landing
-   gets the per-language breakdown, no separate route needed for Tier 2.
+2. **Mastery definition:** ease_factor ≥ 2.5 AND interval_days ≥ 21 = "known".
+   interval_days ≥ 60 = "mastered". Confirm before building T2-B stats so the
+   metric is consistent across the app.
 
-3. **Card browser route?** `/review/cards` or `/library` (which also shows captures)?
-   If Library (M2) shows all `ind_items` and the card browser shows `ind_flashcards`,
-   they're different enough to warrant separate routes.
-
-4. **Amis1k mastery definition?** ease_factor ≥ 2.5 AND interval_days ≥ 21 is a
-   reasonable "known" threshold. "Mastered" could be ≥ 60 days. Define before
-   building T2-C so the metric is consistent.
+3. **Curriculum deck generation:** The 4 Learn sources (Lessons/Patterns/Essays/
+   Dialogs) each need a flashcard generation path. Currently only `ind_items`
+   filtered by source — verify this is the right model before T1-F.
