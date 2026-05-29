@@ -58,7 +58,7 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
         {/* Left: ab + zh text */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
           {/* ab — tokenized for lookup */}
-          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 21, lineHeight: 1.45, color: T.ink }}>
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 21, lineHeight: 1.45, color: T.ink, overflowWrap: 'break-word', minWidth: 0 }}>
             {tokens.map((tok, i) => (
               <span
                 key={i}
