@@ -3,6 +3,7 @@ import { T } from '@/lib/tokens'
 import { Stat, SectionHead, LangAvatar, Icon, Wordmark, Card } from '@/components/ui'
 import { getDashboardStats } from '@/lib/db/progress/stats-server'
 import { getActiveLangServer } from '@/lib/db/profile/server'
+import GoalWidget from '@/components/widgets/GoalWidget'
 
 const INTENSITY = [T.lineSoft, '#F1D8C6', '#E5A88E', '#C66848', T.crimsonDp]
 
@@ -38,25 +39,6 @@ function StreakCard({ streak, chain }: { streak: number; chain: boolean[] }) {
   )
 }
 
-function GoalCard() {
-  return (
-    <Link href="/settings" style={{
-      flex: 1, padding: '13px 14px', borderRadius: 16,
-      background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-      boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-      display: 'flex', flexDirection: 'column', textDecoration: 'none',
-    }}>
-      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-        Goal
-      </div>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-        <Icon name="plus" size={14} color={T.inkFaint} strokeWidth={2} />
-        <span style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>Set a goal</span>
-      </div>
-      <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 10 }} />
-    </Link>
-  )
-}
 
 // ─── Progress ring + CTA ─────────────────────────────────────────────────────
 
@@ -249,7 +231,11 @@ export default async function DashboardPage() {
       {/* Streak + goal row */}
       <div style={{ display: 'flex', gap: 10 }}>
         <StreakCard streak={stats.streak} chain={stats.chain} />
-        <GoalCard />
+        <GoalWidget initialGoal={{
+          daily_goal:         stats.dailyGoal,
+          goal_collection_id: stats.goalCollectionId,
+          goal_due_date:      stats.goalDueDate,
+        }} />
       </div>
 
       {/* Ring + CTA */}

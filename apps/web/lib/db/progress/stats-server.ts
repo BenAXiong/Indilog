@@ -13,6 +13,9 @@ export type DashboardStats = {
   mastered: number          // ease_factor >= 2.5 AND interval_days >= 21
   active: number            // total flashcards
   thisWeek: number          // sum reviewed_count last 7 days
+  // Goal
+  goalCollectionId: string | null
+  goalDueDate: string | null
   // Legacy
   capturedTotal: number
   capturedToday: number
@@ -28,6 +31,7 @@ const EMPTY: DashboardStats = {
   heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
   monthLabels: new Array(16).fill(null) as (string | null)[],
   mastered: 0, active: 0, thisWeek: 0,
+  goalCollectionId: null, goalDueDate: null,
   capturedTotal: 0, capturedToday: 0, recentItems: [],
 }
 
@@ -109,7 +113,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
 
     supabase
       .from('ind_profiles')
-      .select('daily_goal, captured_count_today:captured_count')
+      .select('daily_goal, goal_collection_id, goal_due_date')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -192,6 +196,8 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     mastered:      masteredRes.count ?? 0,
     active:        activeRes.count ?? 0,
     thisWeek,
+    goalCollectionId: profileData?.goal_collection_id ?? null,
+    goalDueDate:      profileData?.goal_due_date       ?? null,
     capturedTotal: totalItemsRes.count ?? 0,
     capturedToday: todayStats?.captured ?? 0,
     recentItems:   recentRes.data ?? [],
