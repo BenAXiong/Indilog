@@ -11,6 +11,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
 import { getDueStats, type DueStats } from '@/lib/db/srs/flashcards'
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
+import BrowserView from '@/components/study/BrowserView'
 
 // ─── Due badge ───────────────────────────────────────────────────────────────
 
@@ -458,9 +459,7 @@ export default function StudyPage() {
       )}
 
       {/* ── Browser ── */}
-      {activeTab === 'browser' && (
-        <EmptyTab icon="search" title="Browser" line1="Search and browse every card" line2="across all your decks." />
-      )}
+      {activeTab === 'browser' && <BrowserView />}
 
       {/* ── Stats ── */}
       {activeTab === 'stats' && (
