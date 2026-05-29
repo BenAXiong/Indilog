@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
+import { nextFormoSRS1, type SMState, type Rating } from './schedule'
+
+export type { Rating } from './schedule'
 
 export type Flashcard = {
   id: string
@@ -8,6 +11,9 @@ export type Flashcard = {
   back: string
   due_at: string | null
   created_at: string
+  ease_factor: number
+  interval_days: number
+  repetitions: number
 }
 
 export type FlashcardWithItem = Flashcard & {
@@ -29,15 +35,6 @@ export function cardMeta(card: FlashcardWithItem) {
     dialect:  null,
     type:     'word',
   }
-}
-
-export type Rating = 'again' | 'hard' | 'good' | 'easy'
-
-const INTERVALS: Record<Rating, number> = {
-  again: 10 * 60 * 1000,
-  hard:  1  * 24 * 60 * 60 * 1000,
-  good:  3  * 24 * 60 * 60 * 1000,
-  easy:  7  * 24 * 60 * 60 * 1000,
 }
 
 export async function ensureFlashcards(): Promise<void> {
@@ -118,16 +115,27 @@ export async function listDueFlashcards(): Promise<FlashcardWithItem[]> {
   return (data ?? []) as FlashcardWithItem[]
 }
 
-export async function rateCard(flashcardId: string, rating: Rating): Promise<void> {
+// currentState is passed in from the caller (already loaded via listDueFlashcards)
+// to avoid an extra DB round-trip.
+export async function rateCard(
+  flashcardId: string,
+  rating: Rating,
+  currentState: SMState,
+): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const due_at = new Date(Date.now() + INTERVALS[rating]).toISOString()
+  const { due_at, new_state } = nextFormoSRS1(currentState, rating)
   const today = new Date().toISOString().slice(0, 10)
 
   await Promise.all([
-    supabase.from('ind_flashcards').update({ due_at }).eq('id', flashcardId),
+    supabase.from('ind_flashcards').update({
+      due_at,
+      ease_factor:   new_state.ease_factor,
+      interval_days: new_state.interval_days,
+      repetitions:   new_state.repetitions,
+    }).eq('id', flashcardId),
     supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at }),
     supabase.rpc('increment_reviewed_today', { p_user_id: user.id, p_date: today }),
   ])

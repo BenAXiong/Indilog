@@ -36,7 +36,11 @@ function ReviewSession({
   const total = cards.length
 
   const handleRate = async (rating: Rating) => {
-    await rateCard(card.id, rating)
+    await rateCard(card.id, rating, {
+      ease_factor:   card.ease_factor,
+      interval_days: card.interval_days,
+      repetitions:   card.repetitions,
+    })
     setFlipping(true)
     setTimeout(() => {
       const next = cardIdx + 1

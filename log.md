@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-30 00:30 | FEATURE | T1-A FormoSRS-1: schedule.ts pure algorithm (SM-2 + Anki Hard + ±5% fuzz + ease recovery on Good); migration 20260529020000 adds ease_factor/interval_days/repetitions; rateCard updated, INTERVALS removed |
 | 2026-05-29 23:55 | FIX | package.json: pnpm.onlyBuiltDependencies — pnpm v10 blocked better-sqlite3 native binary compilation; all corpus content (Lessons/Patterns/Essays/Dialogs) was silently empty on Vercel |
 | 2026-05-29 23:45 | FIX | next.config.ts: outputFileTracingIncludes for ycm_master.db — ensures 215MB SQLite file is traced into serverless function bundles (LFS + tracing both required) |
 | 2026-05-29 23:30 | CONFIG | design-handoff: SRS screens from Claude Design — Dashboard, Study tab, Review session (4-btn + 2-btn + options sheet), Review end (goal-met + low-due variants) |
