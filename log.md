@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-30 02:02 | FEATURE | T2-A/B Goal feature + study stats: GoalWidget (dashboard card, opens GoalSheet bottom drawer), goal.ts (saveGoalData/clearGoal/getDeckGoalStats), ind_profiles migration adds goal_collection_id+goal_due_date; T2-B stats-client.ts + Study Stats subtab — overview 2×2 (total/due/known/mastered), per-deck coverage bars, 14-day pace bar chart |
 | 2026-05-29 22:11 | FEATURE | T1-D/E Review session overhaul: full-screen card (contained on cream bg), tap-to-reveal, swipe ←/→ (Again/Good), rating buttons with live FormoSRS-1 interval labels, Hard+Easy toggle, full-immersion mode (buttons hidden), options bottom sheet (localStorage-persisted), keyboard shortcuts (Space/1-4/arrows), session end screen (confetti on goal met, due tomorrow, share, CTAs); schedule.ts: estimateInterval + formatDays |
 | 2026-05-29 21:43 | FEATURE | T1-C Dashboard overhaul: real streak (reviewed_count-based), 7-day chain, today's ring (reviewed/goal SVG), Review N due CTA, real 16-week heatmap, quick stats (Mastered/Active/This week/Due tomorrow), goal widget placeholder; removed seed-based heatmap and fake streak |
 | 2026-05-29 21:35 | FEATURE | T1-B Study tab: /study page with Curriculum/Collections/Captures deck list, Decks/Browser/Stats subtabs (Browser+Stats placeholders), getDueStats() per-source due counts; BottomNav updated to Dashboard·Study·Capture·Translate·Dict; DesktopSidebar updated |
