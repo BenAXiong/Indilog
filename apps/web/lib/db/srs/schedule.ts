@@ -7,7 +7,7 @@ export type SMState = {
 export type Rating = 'again' | 'hard' | 'good' | 'easy'
 
 const MIN_EASE = 1.3
-const MAX_EASE = 4.0
+const MAX_EASE = 4
 
 function fuzz(interval: number): number {
   if (interval < 2) return interval
@@ -25,6 +25,29 @@ function fuzz(interval: number): number {
  * Easy:  interval=4d (rep0) | max(good+1, prev×ease×1.3), ease+=0.15, reps+1
  * Min ease: 1.3 · Max ease: 4.0 · Fuzz: ±5% on intervals ≥ 2d
  */
+// Deterministic interval estimate (no fuzz) — for display only, not for scheduling
+export function estimateInterval(state: SMState, rating: Rating): number {
+  const { ease_factor, interval_days, repetitions } = state
+  switch (rating) {
+    case 'again': return 1
+    case 'hard':  return Math.max(1, Math.round(interval_days * 1.2))
+    case 'good':  return repetitions === 0 ? 1 : Math.max(1, Math.round(interval_days * ease_factor))
+    case 'easy': {
+      if (repetitions === 0) return 4
+      const good = Math.max(1, Math.round(interval_days * ease_factor))
+      return Math.max(good + 1, Math.round(interval_days * ease_factor * 1.3))
+    }
+  }
+}
+
+export function formatDays(days: number): string {
+  if (days <= 1) return `${days}d`
+  if (days < 14)  return `${days}d`
+  if (days < 60)  return `${Math.round(days / 7)}w`
+  if (days < 548) return `${Math.round(days / 30)}mo`
+  return `${Math.round(days / 365)}y`
+}
+
 export function nextFormoSRS1(
   state: SMState,
   rating: Rating,
@@ -35,7 +58,7 @@ export function nextFormoSRS1(
   switch (rating) {
     case 'again':
       nextInterval = 1
-      ease_factor = Math.max(MIN_EASE, ease_factor - 0.20)
+      ease_factor = Math.max(MIN_EASE, ease_factor - 0.2)
       repetitions = 0
       break
 
