@@ -7,7 +7,7 @@ import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, rateCard,
+  ensureFlashcards, listDueFlashcards, rateCard, cardMeta,
   type FlashcardWithItem, type Rating,
 } from '@/lib/db/srs/flashcards'
 import { listItems, type Item } from '@/lib/db/notebook/items'
@@ -51,7 +51,7 @@ function ReviewSession({
     }, 300)
   }
 
-  const lang = card.ind_items
+  const lang = cardMeta(card)
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -100,7 +100,7 @@ function ReviewSession({
       >
         <div style={{ position: 'absolute', top: 14, right: 14 }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {card.ind_items.type}
+            {lang.type}
           </span>
         </div>
 

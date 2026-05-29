@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/client'
 
 export type Flashcard = {
   id: string
-  item_id: string
+  item_id: string | null
+  collection_card_id: string | null
   front: string
   back: string
   due_at: string | null
@@ -10,12 +11,28 @@ export type Flashcard = {
 }
 
 export type FlashcardWithItem = Flashcard & {
-  ind_items: { type: string; language: string; dialect: string | null }
+  ind_items: { type: string; language: string; dialect: string | null } | null
+  ind_learn_cards: { ind_learn_collections: { name: string; language: string } | null } | null
+}
+
+// Extract display metadata regardless of flashcard source
+export function cardMeta(card: FlashcardWithItem) {
+  if (card.ind_items) {
+    return {
+      language: card.ind_items.language,
+      dialect:  card.ind_items.dialect,
+      type:     card.ind_items.type,
+    }
+  }
+  return {
+    language: card.ind_learn_cards?.ind_learn_collections?.language ?? '',
+    dialect:  null,
+    type:     'word',
+  }
 }
 
 export type Rating = 'again' | 'hard' | 'good' | 'easy'
 
-// Fixed intervals in ms
 const INTERVALS: Record<Rating, number> = {
   again: 10 * 60 * 1000,
   hard:  1  * 24 * 60 * 60 * 1000,
@@ -29,7 +46,7 @@ export async function ensureFlashcards(): Promise<void> {
   if (!user) return
 
   const [{ data: existing }, { data: items }] = await Promise.all([
-    supabase.from('ind_flashcards').select('item_id').eq('user_id', user.id),
+    supabase.from('ind_flashcards').select('item_id').eq('user_id', user.id).not('item_id', 'is', null),
     supabase.from('ind_items').select('id, text, notes, meaning, type').eq('user_id', user.id),
   ])
 
@@ -48,12 +65,51 @@ export async function ensureFlashcards(): Promise<void> {
   )
 }
 
+export async function generateFlashcardsFromCollection(collectionId: string): Promise<number> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const [{ data: cards }, { data: existing }] = await Promise.all([
+    supabase
+      .from('ind_learn_cards')
+      .select('id, ab, zh')
+      .eq('collection_id', collectionId)
+      .limit(10000),
+    supabase
+      .from('ind_flashcards')
+      .select('collection_card_id')
+      .eq('user_id', user.id)
+      .not('collection_card_id', 'is', null),
+  ])
+
+  if (!cards?.length) return 0
+  const existingIds = new Set(existing?.map(r => r.collection_card_id) ?? [])
+  const newCards = cards.filter(c => !existingIds.has(c.id))
+  if (!newCards.length) return 0
+
+  const CHUNK = 200
+  for (let i = 0; i < newCards.length; i += CHUNK) {
+    const { error } = await supabase.from('ind_flashcards').insert(
+      newCards.slice(i, i + CHUNK).map(c => ({
+        user_id:            user.id,
+        collection_card_id: c.id,
+        front: c.ab,
+        back:  c.zh ?? '(no translation)',
+      }))
+    )
+    if (error) { console.error('generateFlashcardsFromCollection chunk:', error); return i }
+  }
+
+  return newCards.length
+}
+
 export async function listDueFlashcards(): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
   const { data, error } = await supabase
     .from('ind_flashcards')
-    .select('*, ind_items(type, language, dialect)')
+    .select('*, ind_items(type, language, dialect), ind_learn_cards(ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
     .order('due_at', { ascending: true, nullsFirst: true })
     .limit(20)
