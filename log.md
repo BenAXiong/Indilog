@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-29 23:45 | FIX | next.config.ts: outputFileTracingIncludes for ycm_master.db — Git LFS file wasn't being pulled by Vercel, leaving a pointer file; curriculum/dict content showed empty on production |
 | 2026-05-29 23:30 | CONFIG | design-handoff: SRS screens from Claude Design — Dashboard, Study tab, Review session (4-btn + 2-btn + options sheet), Review end (goal-met + low-due variants) |
 | 2026-05-29 23:00 | CONFIG | plan-srs.md: full design decisions — FormoSRS-1 algo (SM-2 + fuzz + ease recovery), nav overhaul (Dashboard·Study·Capture·Translate·Dict), Study tab deck architecture (Curriculum/Collections/Captures + subtab bar), Dashboard widget order, review session spec, session end screen spec; FSRS marked not-v1 |
 | 2026-05-29 02:44 | FIX | collections: batch card inserts in chunks of 200 to avoid PostgREST body limit on large imports |
