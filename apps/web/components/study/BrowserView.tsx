@@ -1,18 +1,22 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
   listBrowserCards, updateCardFrontBack, resetCardEase,
+  suspendCard, unsuspendCard, flagCard, unflagCard,
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
 import { formatDays } from '@/lib/db/srs/schedule'
 
 const FILTERS: { value: BrowserFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'due', label: 'Due' },
-  { value: 'new', label: 'New' },
+  { value: 'all',       label: 'All'       },
+  { value: 'due',       label: 'Due'       },
+  { value: 'new',       label: 'New'       },
+  { value: 'flagged',   label: 'Flagged'   },
+  { value: 'suspended', label: 'Suspended' },
 ]
 
 const SORT_OPTIONS: { value: BrowserSort; label: string }[] = [
@@ -24,49 +28,79 @@ const SORT_OPTIONS: { value: BrowserSort; label: string }[] = [
 // ─── Card row ─────────────────────────────────────────────────────────────────
 
 type CardRowProps = {
-  card: BrowserCard
+  card:     BrowserCard
   expanded: boolean
   onToggle: () => void
-  onSave: (front: string, back: string) => void
-  onReset: () => void
+  onUpdate: (patch: Partial<BrowserCard>) => void
+  onRemove: () => void
 }
 
-function CardRow({ card, expanded, onToggle, onSave, onReset }: CardRowProps) {
-  const [editFront,  setEditFront]  = useState(card.front)
-  const [editBack,   setEditBack]   = useState(card.back)
-  const [saving,     setSaving]     = useState(false)
-  const [resetting,  setResetting]  = useState(false)
+function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps) {
+  const [editFront, setEditFront] = useState(card.front)
+  const [editBack,  setEditBack]  = useState(card.back)
+  const [saving,    setSaving]    = useState(false)
+  const [busy,      setBusy]      = useState(false)
 
   useEffect(() => {
     if (expanded) { setEditFront(card.front); setEditBack(card.back) }
   }, [expanded, card.front, card.back])
 
-  const now    = new Date().toISOString()
-  const isDue  = !card.due_at || card.due_at <= now
-  const isNew  = card.repetitions === 0
+  const now        = new Date().toISOString()
+  const isDue      = !card.due_at || card.due_at <= now
+  const isNew      = card.repetitions === 0
+  const isSuspended = !!card.suspended_at
+  const isFlagged  = card.flagged
+  const isReverse  = card.card_type === 'reverse'
 
   async function handleSave() {
-    const f = editFront.trim()
-    const b = editBack.trim()
+    const f = editFront.trim(), b = editBack.trim()
     if (!f) return
     setSaving(true)
     await updateCardFrontBack(card.id, f, b)
-    onSave(f, b)
+    onUpdate({ front: f, back: b })
     setSaving(false)
   }
 
-  async function handleReset() {
-    setResetting(true)
+  async function handleResetEase() {
+    setBusy(true)
     await resetCardEase(card.id)
-    onReset()
-    setResetting(false)
+    onUpdate({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
+    setBusy(false)
+  }
+
+  async function handleSuspendToggle() {
+    setBusy(true)
+    if (isSuspended) {
+      await unsuspendCard(card.id)
+      onUpdate({ suspended_at: null })
+    } else {
+      const ts = new Date().toISOString()
+      await suspendCard(card.id)
+      onUpdate({ suspended_at: ts })
+      onRemove()
+    }
+    setBusy(false)
+  }
+
+  async function handleFlagToggle() {
+    setBusy(true)
+    if (isFlagged) {
+      await unflagCard(card.id)
+      onUpdate({ flagged: false })
+    } else {
+      await flagCard(card.id)
+      onUpdate({ flagged: true })
+    }
+    setBusy(false)
   }
 
   return (
     <div style={{
-      background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+      background: isSuspended ? T.paper : T.paperHi,
+      border: `1px solid ${isSuspended ? T.line : T.lineSoft}`,
       borderRadius: 12, overflow: 'hidden',
       boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
+      opacity: isSuspended ? 0.75 : 1,
     }}>
       {/* Collapsed row */}
       <button onClick={onToggle} style={{
@@ -76,31 +110,24 @@ function CardRow({ card, expanded, onToggle, onSave, onReset }: CardRowProps) {
       }}>
         {/* Status badge */}
         <div style={{ paddingTop: 3, flexShrink: 0 }}>
-          {isNew ? (
-            <span style={{
-              fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace',
-              color: T.amber, padding: '2px 5px', borderRadius: 4,
-              background: T.amberBg, border: `1px solid #EBD49A`,
-            }}>NEW</span>
+          {isSuspended ? (
+            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 5px', borderRadius: 4, background: T.paper, border: `1px solid ${T.line}` }}>SUSP</span>
+          ) : isNew ? (
+            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: T.amber, padding: '2px 5px', borderRadius: 4, background: T.amberBg, border: `1px solid #EBD49A` }}>NEW</span>
           ) : isDue ? (
-            <span style={{
-              fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace',
-              color: T.crimson, padding: '2px 5px', borderRadius: 4,
-              background: T.crimsonBg, border: `1px solid #EFCAB8`,
-            }}>DUE</span>
+            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: T.crimson, padding: '2px 5px', borderRadius: 4, background: T.crimsonBg, border: `1px solid #EFCAB8` }}>DUE</span>
           ) : (
-            <span style={{
-              fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace',
-              color: T.inkFaint, padding: '2px 5px', borderRadius: 4,
-              background: T.paper, border: `1px solid ${T.lineSoft}`,
-            }}>{formatDays(card.interval_days)}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint, padding: '2px 5px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
+              {formatDays(card.interval_days)}
+            </span>
           )}
         </div>
 
         {/* Text */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 500, color: T.ink,
+            fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 500,
+            color: isSuspended ? T.inkSoft : T.ink,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{card.front}</div>
           <div style={{
@@ -109,15 +136,20 @@ function CardRow({ card, expanded, onToggle, onSave, onReset }: CardRowProps) {
           }}>{card.back}</div>
         </div>
 
-        {/* Meta */}
-        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-          <div style={{
-            fontSize: 11, color: T.inkMute, maxWidth: 72,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{card.source}</div>
-          <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, marginTop: 2,
-          }}>e{card.ease_factor.toFixed(1)}</div>
+        {/* Meta + icons */}
+        <div style={{ flexShrink: 0, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {isFlagged && <Icon name="bookmarkF" size={11} color={T.amber} />}
+            {isReverse && (
+              <span style={{ fontSize: 9, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', padding: '1px 4px', borderRadius: 3, border: `1px solid ${T.lineSoft}` }}>REV</span>
+            )}
+            <span style={{ fontSize: 11, color: T.inkMute, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {card.source}
+            </span>
+          </div>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
+            e{card.ease_factor.toFixed(1)}
+          </div>
         </div>
       </button>
 
@@ -125,62 +157,39 @@ function CardRow({ card, expanded, onToggle, onSave, onReset }: CardRowProps) {
       {expanded && (
         <div style={{ padding: '0 12px 12px', borderTop: `1px solid ${T.lineSoft}` }}>
           <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Front */}
             <div>
               <label style={labelStyle}>Front</label>
-              <textarea
-                value={editFront}
-                onChange={e => setEditFront(e.target.value)}
-                rows={2}
-                style={{
-                  width: '100%', padding: '8px 10px', borderRadius: 8,
-                  background: T.paper, border: `1px solid ${T.line}`,
-                  fontSize: 14, fontFamily: 'Newsreader, Georgia, serif',
-                  color: T.ink, resize: 'vertical', boxSizing: 'border-box',
-                }}
-              />
+              <textarea value={editFront} onChange={e => setEditFront(e.target.value)} rows={2} style={textareaStyle('serif')} />
             </div>
-
-            {/* Back */}
             <div>
               <label style={labelStyle}>Back</label>
-              <textarea
-                value={editBack}
-                onChange={e => setEditBack(e.target.value)}
-                rows={2}
-                style={{
-                  width: '100%', padding: '8px 10px', borderRadius: 8,
-                  background: T.paper, border: `1px solid ${T.line}`,
-                  fontSize: 14, fontFamily: 'inherit', color: T.inkSoft,
-                  resize: 'vertical', boxSizing: 'border-box',
-                }}
-              />
+              <textarea value={editBack} onChange={e => setEditBack(e.target.value)} rows={2} style={textareaStyle('sans')} />
             </div>
 
-            {/* Action row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={handleSave} disabled={saving} style={{
-                  height: 34, padding: '0 14px', borderRadius: 8, border: 'none',
-                  background: T.crimson, color: '#fff', fontSize: 13, fontWeight: 600,
-                  cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1,
-                }}>
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button onClick={onToggle} style={{
-                  height: 34, padding: '0 12px', borderRadius: 8,
-                  border: `1px solid ${T.lineSoft}`, background: T.paperHi,
-                  color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                }}>Cancel</button>
-              </div>
-              <button onClick={handleReset} disabled={resetting} style={{
-                height: 34, padding: '0 12px', borderRadius: 8,
-                border: `1px solid #EFCAB8`, background: T.crimsonBg,
-                color: T.crimson, fontSize: 12, fontWeight: 500,
-                cursor: resetting ? 'default' : 'pointer', opacity: resetting ? 0.6 : 1,
-              }}>
-                {resetting ? '…' : 'Reset ease'}
+            {/* Primary actions */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
+                {saving ? 'Saving…' : 'Save'}
               </button>
+              <button onClick={onToggle} style={ghostBtn}>Cancel</button>
+            </div>
+
+            {/* Secondary actions */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button onClick={handleFlagToggle} disabled={busy} style={ghostBtn}>
+                {isFlagged ? 'Unflag' : 'Flag'}
+              </button>
+              <button onClick={handleSuspendToggle} disabled={busy} style={ghostBtn}>
+                {isSuspended ? 'Unsuspend' : 'Suspend'}
+              </button>
+              {!isSuspended && (
+                <button onClick={handleResetEase} disabled={busy} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8,
+                  border: `1px solid #EFCAB8`, background: T.crimsonBg,
+                  color: T.crimson, fontSize: 12, fontWeight: 500,
+                  cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+                }}>Reset ease</button>
+              )}
             </div>
           </div>
         </div>
@@ -213,6 +222,15 @@ export default function BrowserView() {
     )
   }, [cards, search])
 
+  function updateCard(id: string, patch: Partial<BrowserCard>) {
+    setCards(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
+  }
+
+  function removeCard(id: string) {
+    setCards(prev => prev.filter(c => c.id !== id))
+    setExpandedId(null)
+  }
+
   return (
     <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
@@ -234,46 +252,52 @@ export default function BrowserView() {
       </div>
 
       {/* Filter + sort */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', flex: 1 }}>
           {FILTERS.map(f => (
             <button key={f.value} onClick={() => setFilter(f.value)} style={{
-              height: 32, padding: '0 12px', borderRadius: 8,
+              height: 30, padding: '0 10px', borderRadius: 8,
               background: filter === f.value ? T.crimson : T.paperHi,
               border: `1px solid ${filter === f.value ? T.crimsonDp : T.line}`,
               color: filter === f.value ? '#fff' : T.inkSoft,
-              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
             }}>
               {f.label}
             </button>
           ))}
         </div>
 
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
           <select value={sort} onChange={e => setSort(e.target.value as BrowserSort)} style={{
-            height: 32, padding: '0 28px 0 10px', borderRadius: 8,
+            height: 30, padding: '0 26px 0 10px', borderRadius: 8,
             background: T.paperHi, border: `1px solid ${T.line}`,
             fontSize: 12, color: T.inkSoft, fontFamily: 'inherit', cursor: 'pointer',
             appearance: 'none', WebkitAppearance: 'none',
           }}>
-            {SORT_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
+            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <div style={{
-            position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-            pointerEvents: 'none', color: T.inkMute,
-          }}>
-            <Icon name="chev-d" size={12} strokeWidth={2} />
+          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+            <Icon name="chev-d" size={11} strokeWidth={2} />
           </div>
         </div>
       </div>
 
+      {/* Review flagged CTA */}
+      {filter === 'flagged' && filtered.length > 0 && (
+        <Link href="/review?filter=flagged" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          height: 46, borderRadius: 13, textDecoration: 'none',
+          background: T.amber, color: '#fff',
+          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset',
+          fontSize: 14, fontWeight: 600,
+        }}>
+          <Icon name="play" size={13} color="#fff" />
+          Review flagged ({filtered.length} due)
+        </Link>
+      )}
+
       {/* Count */}
-      <div style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute,
-        paddingLeft: 2,
-      }}>
+      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, paddingLeft: 2 }}>
         {loading ? '…' : `${filtered.length} card${filtered.length !== 1 ? 's' : ''}`}
       </div>
 
@@ -287,7 +311,7 @@ export default function BrowserView() {
       ) : filtered.length === 0 ? (
         <div style={{ padding: '40px 0', textAlign: 'center' }}>
           <div style={{ fontSize: 13, color: T.inkMute }}>
-            {search ? 'No cards match your search.' : 'No cards here yet.'}
+            {search ? 'No cards match your search.' : 'No cards here.'}
           </div>
         </div>
       ) : (
@@ -298,18 +322,8 @@ export default function BrowserView() {
               card={card}
               expanded={expandedId === card.id}
               onToggle={() => setExpandedId(prev => prev === card.id ? null : card.id)}
-              onSave={(front, back) => {
-                setCards(prev => prev.map(c => c.id === card.id ? { ...c, front, back } : c))
-                setExpandedId(null)
-              }}
-              onReset={() => {
-                setCards(prev => prev.map(c =>
-                  c.id === card.id
-                    ? { ...c, ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null }
-                    : c
-                ))
-                setExpandedId(null)
-              }}
+              onUpdate={patch => updateCard(card.id, patch)}
+              onRemove={() => removeCard(card.id)}
             />
           ))}
         </div>
@@ -324,4 +338,24 @@ const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: 10.5, fontWeight: 600, color: T.inkMute,
   textTransform: 'uppercase', letterSpacing: '0.08em',
   fontFamily: '"JetBrains Mono", monospace', marginBottom: 4,
+}
+
+const textareaStyle = (family: 'serif' | 'sans'): React.CSSProperties => ({
+  width: '100%', padding: '8px 10px', borderRadius: 8,
+  background: T.paper, border: `1px solid ${T.line}`,
+  fontSize: 14, color: family === 'serif' ? T.ink : T.inkSoft,
+  fontFamily: family === 'serif' ? 'Newsreader, Georgia, serif' : 'inherit',
+  resize: 'vertical', boxSizing: 'border-box',
+})
+
+const actionBtn = (bg: string, disabled: boolean): React.CSSProperties => ({
+  height: 34, padding: '0 14px', borderRadius: 8, border: 'none',
+  background: bg, color: '#fff', fontSize: 13, fontWeight: 600,
+  cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.7 : 1,
+})
+
+const ghostBtn: React.CSSProperties = {
+  height: 34, padding: '0 12px', borderRadius: 8,
+  border: `1px solid ${T.lineSoft}`, background: T.paperHi,
+  color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: 'pointer',
 }

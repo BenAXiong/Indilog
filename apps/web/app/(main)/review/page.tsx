@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, rateCard, cardMeta,
+  suspendCard, flagCard, unflagCard,
   type FlashcardWithItem, type Rating,
 } from '@/lib/db/srs/flashcards'
 import { estimateInterval, formatDays, type SMState } from '@/lib/db/srs/schedule'
@@ -67,6 +69,7 @@ async function countDueTomorrow(): Promise<number> {
     .eq('user_id', user.id)
     .gt('due_at', now)
     .lte('due_at', in24h)
+    .is('suspended_at', null)
   return count ?? 0
 }
 
@@ -141,12 +144,13 @@ function ReviewSession({
   ctx: SessionContext
   onExit: (reviewed: number) => void
 }) {
-  const [idx,         setIdx]         = useState(0)
-  const [revealed,    setRevealed]    = useState(false)
-  const [reviewed,    setReviewed]    = useState(0)
-  const [showOptions, setShowOptions] = useState(false)
+  const [idx,          setIdx]         = useState(0)
+  const [revealed,     setRevealed]    = useState(false)
+  const [reviewed,     setReviewed]    = useState(0)
+  const [showOptions,  setShowOptions] = useState(false)
   const [showHardEasy, setShowHardEasyRaw] = useState(true)
   const [showButtons,  setShowButtonsRaw]  = useState(true)
+  const [flaggedIds,   setFlaggedIds]  = useState<Set<string>>(new Set())
   const swipeX = useRef(0)
 
   // Persist options to localStorage
@@ -198,6 +202,29 @@ function ReviewSession({
       setIdx(next)
     }
   }
+
+  function skipCurrent() {
+    const next = idx + 1
+    setRevealed(false)
+    if (next >= total) { onExit(reviewed) } else { setIdx(next) }
+  }
+
+  async function handleSuspend() {
+    await suspendCard(card.id)
+    skipCurrent()
+  }
+
+  function handleFlag() {
+    const wasFlagged = flaggedIds.has(card.id)
+    setFlaggedIds(prev => {
+      const next = new Set(prev)
+      wasFlagged ? next.delete(card.id) : next.add(card.id)
+      return next
+    })
+    wasFlagged ? unflagCard(card.id) : flagCard(card.id)
+  }
+
+  const isCardFlagged = flaggedIds.has(card.id)
 
   // Swipe on card
   function onTouchStart(e: React.TouchEvent) { swipeX.current = e.touches[0].clientX }
@@ -285,6 +312,25 @@ function ReviewSession({
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               {lang.type}
             </span>
+          </div>
+
+          {/* Flag + suspend actions */}
+          <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 2 }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={handleFlag} aria-label={isCardFlagged ? 'Unflag' : 'Flag'} style={{
+              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: isCardFlagged ? T.amber : T.inkFaint,
+            }}>
+              <Icon name={isCardFlagged ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
+            </button>
+            <button onClick={handleSuspend} aria-label="Suspend card" style={{
+              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: T.inkFaint,
+            }}>
+              <Icon name="archive" size={15} strokeWidth={1.8} />
+            </button>
           </div>
 
           {/* Swipe affordances — only before reveal */}
@@ -529,6 +575,9 @@ function ReviewEnd({
 
 export default function ReviewPage() {
   const { lang, dialectLabel } = useLang()
+  const searchParams = useSearchParams()
+  const filterFlagged = searchParams.get('filter') === 'flagged'
+
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
   const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0 })
@@ -537,7 +586,10 @@ export default function ReviewPage() {
 
   async function reload() {
     await ensureFlashcards()
-    const [c, context] = await Promise.all([listDueFlashcards(), loadSessionContext()])
+    const [c, context] = await Promise.all([
+      listDueFlashcards({ filterFlagged }),
+      loadSessionContext(),
+    ])
     setCards(c)
     setCtx(context)
     setLoading(false)
@@ -586,7 +638,7 @@ export default function ReviewPage() {
             {lang.name}{dialectLabel ? ` · ${dialectLabel}` : ''}
           </div>
           <h1 style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, margin: 0, letterSpacing: '-0.025em', lineHeight: 1.1, marginTop: 2 }}>
-            Review
+            {filterFlagged ? 'Flagged' : 'Review'}
           </h1>
         </div>
       </div>

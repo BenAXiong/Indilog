@@ -14,6 +14,9 @@ export type Flashcard = {
   ease_factor: number
   interval_days: number
   repetitions: number
+  suspended_at: string | null
+  flagged: boolean
+  card_type: string
 }
 
 export type FlashcardWithItem = Flashcard & {
@@ -75,8 +78,50 @@ export async function generateFlashcardsFromCollection(collectionId: string): Pr
       .limit(10000),
     supabase
       .from('ind_flashcards')
-      .select('collection_card_id')
+      .select('collection_card_id, card_type')
       .eq('user_id', user.id)
+      .not('collection_card_id', 'is', null),
+  ])
+
+  if (!cards?.length) return 0
+  const existingKeys = new Set(existing?.map(r => `${r.collection_card_id}:${r.card_type ?? 'forward'}`) ?? [])
+  const newCards = cards.filter(c => !existingKeys.has(`${c.id}:forward`))
+  if (!newCards.length) return 0
+
+  const CHUNK = 200
+  for (let i = 0; i < newCards.length; i += CHUNK) {
+    const { error } = await supabase.from('ind_flashcards').insert(
+      newCards.slice(i, i + CHUNK).map(c => ({
+        user_id:            user.id,
+        collection_card_id: c.id,
+        front: c.ab,
+        back:  c.zh ?? '(no translation)',
+        card_type: 'forward',
+      }))
+    )
+    if (error) { console.error('generateFlashcardsFromCollection chunk:', error); return i }
+  }
+
+  return newCards.length
+}
+
+export async function generateReverseCardsForCollection(collectionId: string): Promise<number> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const [{ data: cards }, { data: existing }] = await Promise.all([
+    supabase
+      .from('ind_learn_cards')
+      .select('id, ab, zh')
+      .eq('collection_id', collectionId)
+      .not('zh', 'is', null)
+      .limit(10000),
+    supabase
+      .from('ind_flashcards')
+      .select('collection_card_id, card_type')
+      .eq('user_id', user.id)
+      .eq('card_type', 'reverse')
       .not('collection_card_id', 'is', null),
   ])
 
@@ -91,11 +136,12 @@ export async function generateFlashcardsFromCollection(collectionId: string): Pr
       newCards.slice(i, i + CHUNK).map(c => ({
         user_id:            user.id,
         collection_card_id: c.id,
-        front: c.ab,
-        back:  c.zh ?? '(no translation)',
+        front: c.zh!,
+        back:  c.ab,
+        card_type: 'reverse',
       }))
     )
-    if (error) { console.error('generateFlashcardsFromCollection chunk:', error); return i }
+    if (error) { console.error('generateReverseCards chunk:', error); return i }
   }
 
   return newCards.length
@@ -138,18 +184,44 @@ export async function getDueStats(): Promise<DueStats> {
   return { total: data.length, captures, byCollection }
 }
 
-export async function listDueFlashcards(): Promise<FlashcardWithItem[]> {
+export async function listDueFlashcards(
+  opts: { filterFlagged?: boolean } = {},
+): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  const { data, error } = await supabase
+  let q = supabase
     .from('ind_flashcards')
     .select('*, ind_items(type, language, dialect), ind_learn_cards(ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
+    .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
     .limit(20)
 
+  if (opts.filterFlagged) q = q.eq('flagged', true)
+
+  const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
   return (data ?? []) as FlashcardWithItem[]
+}
+
+export async function suspendCard(id: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ suspended_at: new Date().toISOString() }).eq('id', id)
+}
+
+export async function unsuspendCard(id: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ suspended_at: null }).eq('id', id)
+}
+
+export async function flagCard(id: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ flagged: true }).eq('id', id)
+}
+
+export async function unflagCard(id: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ flagged: false }).eq('id', id)
 }
 
 // currentState is passed in from the caller (already loaded via listDueFlashcards)

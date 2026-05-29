@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+export { suspendCard, unsuspendCard, flagCard, unflagCard } from './flashcards'
 
 export type BrowserCard = {
   id: string
@@ -9,11 +10,14 @@ export type BrowserCard = {
   interval_days: number
   repetitions: number
   created_at: string
+  suspended_at: string | null
+  flagged: boolean
+  card_type: string
   source: string
   sourceType: 'collection' | 'capture'
 }
 
-export type BrowserFilter = 'all' | 'due' | 'new'
+export type BrowserFilter = 'all' | 'due' | 'new' | 'flagged' | 'suspended'
 export type BrowserSort   = 'due' | 'ease' | 'added'
 
 export async function listBrowserCards(
@@ -28,13 +32,14 @@ export async function listBrowserCards(
 
   let q = supabase
     .from('ind_flashcards')
-    .select('id, front, back, due_at, ease_factor, interval_days, repetitions, created_at, item_id, ind_learn_cards(collection_id, ind_learn_collections(name))')
+    .select('id, front, back, due_at, ease_factor, interval_days, repetitions, created_at, suspended_at, flagged, card_type, item_id, ind_learn_cards(collection_id, ind_learn_collections(name))')
     .eq('user_id', user.id)
 
-  if (filter === 'due') {
-    q = q.or(`due_at.is.null,due_at.lte.${now}`)
-  } else if (filter === 'new') {
-    q = q.eq('repetitions', 0)
+  switch (filter) {
+    case 'due':       q = q.or(`due_at.is.null,due_at.lte.${now}`).is('suspended_at', null); break
+    case 'new':       q = q.eq('repetitions', 0).is('suspended_at', null); break
+    case 'flagged':   q = q.eq('flagged', true).is('suspended_at', null); break
+    case 'suspended': q = q.not('suspended_at', 'is', null); break
   }
 
   switch (sort) {
@@ -59,9 +64,12 @@ export async function listBrowserCards(
       interval_days: row.interval_days,
       repetitions:   row.repetitions,
       created_at:    row.created_at,
+      suspended_at:  row.suspended_at,
+      flagged:       row.flagged ?? false,
+      card_type:     row.card_type ?? 'forward',
       source,
       sourceType: row.item_id ? 'capture' : 'collection',
-    } as BrowserCard
+    }
   })
 }
 
