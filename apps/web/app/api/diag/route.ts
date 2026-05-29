@@ -1,4 +1,4 @@
-// TEMPORARY — remove after Vercel LFS issue is confirmed fixed
+// TEMPORARY — remove after Vercel db issue is confirmed fixed
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -11,7 +11,7 @@ export async function GET() {
     path.join(cwd, '../../packages/dictionary/ycm_master.db'),
   ]
 
-  const checks = candidates.map(p => {
+  const fileChecks = candidates.map(p => {
     try {
       const stat = fs.statSync(p)
       const fd = fs.openSync(p, 'r')
@@ -22,14 +22,27 @@ export async function GET() {
         path: p,
         exists: true,
         sizeBytes: stat.size,
-        sizeMB: (stat.size / 1024 / 1024).toFixed(1),
-        isSQLite: buf.slice(0, 15).toString('ascii') === 'SQLite format 3',
-        header: buf.toString('hex'),
+        isSQLite: buf.subarray(0, 15).toString('ascii') === 'SQLite format 3',
       }
     } catch (e) {
       return { path: p, exists: false, error: String(e) }
     }
   })
 
-  return Response.json({ cwd, checks })
+  // Test better-sqlite3 can actually open and query the db
+  let sqliteTest: Record<string, unknown> = { skipped: true }
+  const dbPath = fileChecks.find(c => c.exists && c.isSQLite)?.path
+  if (dbPath) {
+    try {
+      const Database = (await import('better-sqlite3')).default
+      const db = new Database(dbPath, { readonly: true })
+      const row = db.prepare('SELECT count(*) as n FROM ilrdf_vocabulary').get() as { n: number }
+      db.close()
+      sqliteTest = { ok: true, rowCount: row.n }
+    } catch (e) {
+      sqliteTest = { ok: false, error: String(e) }
+    }
+  }
+
+  return Response.json({ cwd, fileChecks, sqliteTest })
 }
