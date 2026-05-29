@@ -101,6 +101,43 @@ export async function generateFlashcardsFromCollection(collectionId: string): Pr
   return newCards.length
 }
 
+export type DueStats = {
+  total: number
+  captures: number
+  byCollection: Record<string, number>
+}
+
+export async function getDueStats(): Promise<DueStats> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { total: 0, captures: 0, byCollection: {} }
+
+  const now = new Date().toISOString()
+  const { data } = await supabase
+    .from('ind_flashcards')
+    .select('item_id, collection_card_id, ind_learn_cards(collection_id)')
+    .eq('user_id', user.id)
+    .or(`due_at.is.null,due_at.lte.${now}`)
+    .limit(10000)
+
+  if (!data) return { total: 0, captures: 0, byCollection: {} }
+
+  let captures = 0
+  const byCollection: Record<string, number> = {}
+  for (const row of data) {
+    if (row.item_id) {
+      captures++
+    } else {
+      // PostgREST returns a single object for many-to-one joins
+      const card = (row.ind_learn_cards as unknown as { collection_id: string } | null)
+      if (card?.collection_id) {
+        byCollection[card.collection_id] = (byCollection[card.collection_id] ?? 0) + 1
+      }
+    }
+  }
+  return { total: data.length, captures, byCollection }
+}
+
 export async function listDueFlashcards(): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()

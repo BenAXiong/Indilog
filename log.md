@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-30 01:00 | FEATURE | T1-B Study tab: /study page with Curriculum/Collections/Captures deck list, Decks/Browser/Stats subtabs (Browser+Stats placeholders), getDueStats() per-source due counts; BottomNav updated to Dashboard·Study·Capture·Translate·Dict; DesktopSidebar updated |
 | 2026-05-30 00:30 | FEATURE | T1-A FormoSRS-1: schedule.ts pure algorithm (SM-2 + Anki Hard + ±5% fuzz + ease recovery on Good); migration 20260529020000 adds ease_factor/interval_days/repetitions; rateCard updated, INTERVALS removed |
 | 2026-05-29 23:55 | FIX | package.json: pnpm.onlyBuiltDependencies — pnpm v10 blocked better-sqlite3 native binary compilation; all corpus content (Lessons/Patterns/Essays/Dialogs) was silently empty on Vercel |
 | 2026-05-29 23:45 | FIX | next.config.ts: outputFileTracingIncludes for ycm_master.db — ensures 215MB SQLite file is traced into serverless function bundles (LFS + tracing both required) |

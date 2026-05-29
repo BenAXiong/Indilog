@@ -6,19 +6,19 @@ import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 
 const TABS = [
-  { id: 'learn',     label: 'Learn',      href: '/learn',     icon: 'learn'     as const },
-  { id: 'review',    label: 'Review',     href: '/review',    icon: 'review'    as const },
+  { id: 'home',      label: 'Dashboard',  href: '/',          icon: 'home'      as const },
+  { id: 'study',     label: 'Study',      href: '/study',     icon: 'learn'     as const },
   { id: 'capture',   label: 'Capture',    href: '/capture',   icon: 'capture'   as const, center: true },
-  { id: 'dict',      label: 'Dictionary', href: '/dict',      icon: 'dict'      as const },
   { id: 'translate', label: 'Translate',  href: '/translate', icon: 'translate' as const },
+  { id: 'dict',      label: 'Dictionary', href: '/dict',      icon: 'dict'      as const },
 ]
 
 export default function BottomNav() {
   const pathname = usePathname()
 
-  const activeId = pathname === '/'
-    ? 'dashboard'
-    : TABS.find(t => pathname.startsWith(t.href))?.id ?? ''
+  const activeId = TABS.find(t =>
+    t.href === '/' ? pathname === '/' : pathname.startsWith(t.href)
+  )?.id ?? ''
 
   return (
     <div
