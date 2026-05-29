@@ -7,7 +7,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, rateCard, cardMeta,
+  ensureFlashcards, listDueFlashcards, rateCard, rateCardRelearn, cardMeta,
   suspendCard, setFlagColor,
   type FlashcardWithItem, type Rating,
 } from '@/lib/db/srs/flashcards'
@@ -79,13 +79,15 @@ async function countDueTomorrow(): Promise<number> {
 function OptionsSheet({
   showHardEasy, setShowHardEasy,
   showButtons, setShowButtons,
+  learningSteps, setLearningSteps,
   onClose,
 }: {
   showHardEasy: boolean; setShowHardEasy: (v: boolean) => void
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
+  learningSteps: number; setLearningSteps: (v: number) => void
   onClose: () => void
 }) {
-  const Row = ({ label, sub, on, onToggle }: { label: string; sub: string; on: boolean; onToggle: () => void }) => (
+  const Toggle = ({ label, sub, on, onToggle }: { label: string; sub: string; on: boolean; onToggle: () => void }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>{label}</div>
@@ -106,23 +108,45 @@ function OptionsSheet({
 
   return (
     <>
-      <div
-        onClick={onClose}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(30,22,16,0.32)', zIndex: 20 }}
-      />
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(30,22,16,0.32)', zIndex: 20 }} />
       <div style={{
         position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 21,
         background: T.cream, borderRadius: '22px 22px 0 0',
-        padding: '10px 0 32px',
-        boxShadow: '0 -12px 36px rgba(40,30,20,0.2)',
+        padding: '10px 0 32px', boxShadow: '0 -12px 36px rgba(40,30,20,0.2)',
       }}>
         <div style={{ width: 40, height: 5, borderRadius: 999, background: T.line, margin: '0 auto 14px' }} />
         <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, padding: '0 16px 10px' }}>
           Session options
         </div>
         <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
-          <Row label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
-          <Row label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
+          <Toggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
+          <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
+
+          {/* Learning passes stepper */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>Learning passes</div>
+              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Times a new card repeats before graduating</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <button onClick={() => setLearningSteps(learningSteps - 1)} disabled={learningSteps <= 1} style={{
+                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
+                background: T.paperHi, color: T.inkSoft, cursor: learningSteps <= 1 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 300, opacity: learningSteps <= 1 ? 0.35 : 1,
+              }}>−</button>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, fontWeight: 700, color: T.ink, minWidth: 20, textAlign: 'center' }}>
+                {learningSteps}
+              </span>
+              <button onClick={() => setLearningSteps(learningSteps + 1)} disabled={learningSteps >= 5} style={{
+                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
+                background: T.paperHi, color: T.inkSoft, cursor: learningSteps >= 5 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 300, opacity: learningSteps >= 5 ? 0.35 : 1,
+              }}>+</button>
+            </div>
+          </div>
+
           <div style={{ padding: '14px 16px' }}>
             <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
               ← Again · → Good · ↑ Easy · ↓ Suspend
@@ -136,6 +160,18 @@ function OptionsSheet({
 
 // ─── ReviewSession ────────────────────────────────────────────────────────────
 
+type CardPhase = 'review' | 'new' | 'relearn'
+
+type QueueEntry = {
+  card:             FlashcardWithItem
+  pass:             number    // 0 = first encounter, 1+ = requeue pass
+  phase:            CardPhase
+  originalInterval: number   // for relearn: the interval before the lapse
+}
+
+// Mature threshold: cards with interval ≥ 7d trigger a relearn burst on lapse
+const MATURE_THRESHOLD = 7
+
 function ReviewSession({
   cards,
   ctx,
@@ -145,35 +181,63 @@ function ReviewSession({
   ctx: SessionContext
   onExit: (reviewed: number) => void
 }) {
-  const [idx,            setIdx]           = useState(0)
+  const [queue, setQueue] = useState<QueueEntry[]>(() =>
+    cards.map(c => ({
+      card: c, pass: 0,
+      phase: (c.repetitions === 0 && c.interval_days === 0) ? 'new' : 'review',
+      originalInterval: c.interval_days,
+    }))
+  )
+  const [qIdx,          setQIdx]          = useState(0)
+  const completedRef                       = useRef(new Set<string>())
   const [revealed,       setRevealed]      = useState(false)
-  const [reviewed,       setReviewed]      = useState(0)
   const [showOptions,    setShowOptions]   = useState(false)
   const [showHardEasy,   setShowHardEasyRaw] = useState(true)
   const [showButtons,    setShowButtonsRaw]  = useState(true)
+  const [learningSteps,  setLearningStepsRaw] = useState(3)
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
   const swipeStart = useRef({ x: 0, y: 0 })
 
-  // Persist options to localStorage
   useEffect(() => {
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
+    const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
+    setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
   }, [])
 
-  function setShowHardEasy(v: boolean) {
-    setShowHardEasyRaw(v)
-    localStorage.setItem('srs_show_hard_easy', String(v))
-  }
-  function setShowButtons(v: boolean) {
-    setShowButtonsRaw(v)
-    localStorage.setItem('srs_show_buttons', String(v))
+  function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
+  function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v)) }
+  function setLearningSteps(v: number) {
+    const n = Math.min(5, Math.max(1, v))
+    setLearningStepsRaw(n)
+    localStorage.setItem('srs_learning_steps', String(n))
   }
 
-  const card = cards[idx]
-  const lang = cardMeta(card)
+  // Session end: fires when queue is exhausted
+  useEffect(() => {
+    if (queue.length > 0 && qIdx >= queue.length) onExit(completedRef.current.size)
+  }, [qIdx, queue.length, onExit])
+
+  const entry = queue[qIdx]
+  if (!entry) return null  // transitioning to done state
+
+  const { card, phase, pass, originalInterval } = entry
+  const lang  = cardMeta(card)
   const state = cardSMState(card)
-  const total = cards.length
+  const isLearning = phase !== 'review'
+
+  // Phase label / color for top-right of card
+  const phaseLabel =
+    phase === 'relearn' ? 'Relearning'
+    : phase === 'new' && pass > 0 ? 'Learning'
+    : phase === 'new' ? 'New'
+    : lang.type
+  const phaseColor =
+    phase === 'relearn' ? T.amber : phase === 'new' ? T.sage : T.inkFaint
+
+  // Pending requeue count
+  const pendingRequeue = queue.slice(qIdx + 1).filter(e => e.pass > 0).length
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -182,34 +246,67 @@ function ReviewSession({
       if (!revealed) {
         if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
       } else {
-        if      (e.key === '1' || e.key === 'ArrowLeft')                    submit('again')
-        else if (e.key === '2' && showHardEasy)                             submit('hard')
-        else if (e.key === '3' || e.key === 'ArrowRight')                   submit('good')
-        else if (e.key === '4' && showHardEasy || e.key === 'ArrowUp')      submit('easy')
-        else if (e.key === 'ArrowDown')                                      handleSuspend()
+        if      (e.key === '1' || e.key === 'ArrowLeft')               submit('again')
+        else if (e.key === '2' && showHardEasy && !isLearning)         submit('hard')
+        else if (e.key === '3' || e.key === 'ArrowRight')              submit('good')
+        else if ((e.key === '4' && showHardEasy) || e.key === 'ArrowUp') submit('easy')
+        else if (e.key === 'ArrowDown')                                 handleSuspend()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [revealed, showHardEasy, showOptions]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [revealed, showHardEasy, showOptions, isLearning]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit(rating: Rating) {
-    await rateCard(card.id, rating, state)
-    const next = idx + 1
-    const newReviewed = reviewed + 1
-    setReviewed(newReviewed)
-    setRevealed(false)
-    if (next >= total) {
-      onExit(newReviewed)
-    } else {
-      setIdx(next)
+    // Hard is not meaningful in learning/relearn — treat as Again
+    const r: Rating = (isLearning && rating === 'hard') ? 'again' : rating
+
+    if (phase === 'review') {
+      if (r === 'again' && card.interval_days >= MATURE_THRESHOLD) {
+        // Mature lapse → relearn burst (no DB write yet)
+        setQueue(prev => [...prev, { card, pass: 0, phase: 'relearn', originalInterval: card.interval_days }])
+      } else {
+        await rateCard(card.id, r, state)
+        completedRef.current.add(card.id)
+      }
+
+    } else if (phase === 'new') {
+      if (r === 'easy') {
+        // Immediate graduation
+        await rateCard(card.id, 'easy', state)
+        completedRef.current.add(card.id)
+      } else if (pass < learningSteps - 1) {
+        // Requeue for another learning pass
+        setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
+      } else {
+        // Final pass — graduate with this rating
+        await rateCard(card.id, r, state)
+        completedRef.current.add(card.id)
+      }
+
+    } else { // relearn
+      if (r === 'easy' || r === 'good') {
+        // Successful relearn: 50% recovery
+        await rateCardRelearn(card.id, r, state, originalInterval)
+        completedRef.current.add(card.id)
+      } else if (pass < learningSteps - 1) {
+        // Keep drilling
+        setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
+      } else {
+        // Exhausted passes with Again → full reset
+        await rateCard(card.id, 'again', state)
+        completedRef.current.add(card.id)
+      }
     }
+
+    setRevealed(false)
+    setShowFlagPicker(false)
+    setQIdx(qi => qi + 1)
   }
 
   function skipCurrent() {
-    const next = idx + 1
     setRevealed(false)
-    if (next >= total) { onExit(reviewed) } else { setIdx(next) }
+    setQIdx(qi => qi + 1)
   }
 
   async function handleSuspend() {
@@ -224,52 +321,58 @@ function ReviewSession({
     setFlagColor(card.id, color)
   }
 
-  const currentFlag = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
+  const currentFlag    = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
   const currentFlagHex = flagColorHex(currentFlag)
 
   function onTouchStart(e: React.TouchEvent) {
     swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
   }
   function onTouchEnd(e: React.TouchEvent) {
-    const dx   = e.changedTouches[0].clientX - swipeStart.current.x
-    const dy   = e.changedTouches[0].clientY - swipeStart.current.y
+    const dx = e.changedTouches[0].clientX - swipeStart.current.x
+    const dy = e.changedTouches[0].clientY - swipeStart.current.y
     const absX = Math.abs(dx), absY = Math.abs(dy)
-    if (!revealed) {
-      if (absX < 10 && absY < 10) setRevealed(true)
-      return
-    }
+    if (!revealed) { if (absX < 10 && absY < 10) setRevealed(true); return }
     const THRESH = 70
-    if (absX > absY && absX > THRESH) {
-      submit(dx < 0 ? 'again' : 'good')
-    } else if (absY > absX && absY > THRESH) {
-      if (dy < 0) submit('easy')
-      else        handleSuspend()
-    }
+    if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : 'good')
+    else if (absY > absX && absY > THRESH) { if (dy < 0) submit('easy'); else handleSuspend() }
   }
 
-  // Rating buttons config
+  // Rating buttons
   const RATINGS: { id: Rating; label: string; color: string }[] = [
     { id: 'again', label: 'Again', color: T.crimson },
-    { id: 'hard',  label: 'Hard',  color: T.terra },
-    { id: 'good',  label: 'Good',  color: T.sage },
-    { id: 'easy',  label: 'Easy',  color: T.amber },
+    { id: 'hard',  label: 'Hard',  color: T.terra   },
+    { id: 'good',  label: 'Good',  color: T.sage    },
+    { id: 'easy',  label: 'Easy',  color: T.amber   },
   ]
-  const visibleRatings = showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
+  const visibleRatings = isLearning
+    ? RATINGS.filter(r => r.id !== 'hard')
+    : showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
 
-  // Precompute intervals for visible ratings
+  // Interval labels (context-aware)
   const intervals = useMemo(() =>
     Object.fromEntries(RATINGS.map(r => [r.id, formatDays(estimateInterval(state, r.id))])),
   [card.id, card.ease_factor, card.interval_days, card.repetitions] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
+  function intervalLabel(id: Rating): string {
+    if (phase === 'relearn') {
+      if (id === 'again') return pass < learningSteps - 1 ? 'retry' : '1d'
+      return formatDays(Math.max(1, Math.floor(originalInterval * 0.5)))
+    }
+    if (phase === 'new') {
+      if (id === 'again') return 'retry'
+      if (id === 'easy')  return 'done'
+      return pass < learningSteps - 1 ? 'more' : intervals[id]
+    }
+    return intervals[id]
+  }
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 50,
-      background: T.cream, display: 'flex', flexDirection: 'column',
-    }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
+
       {/* Session header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 0', flexShrink: 0 }}>
-        <button onClick={() => onExit(reviewed)} aria-label="Exit session" style={{
+        <button onClick={() => onExit(completedRef.current.size)} aria-label="Exit session" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
@@ -284,12 +387,11 @@ function ReviewSession({
         </div>
 
         <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em', flexShrink: 0 }}>
-          {idx + 1} / {total}
+          {qIdx + 1} / {queue.length}
         </span>
 
         <button onClick={() => setShowOptions(true)} aria-label="Session options" style={{
-          width: 36, height: 36, borderRadius: 999,
-          background: T.paperHi, border: `1px solid ${T.line}`,
+          width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
         }}>
@@ -297,11 +399,16 @@ function ReviewSession({
         </button>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar + requeue indicator */}
       <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
-          <div style={{ width: `${(idx / total) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
+          <div style={{ width: `${(qIdx / Math.max(queue.length, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
         </div>
+        {pendingRequeue > 0 && (
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, marginTop: 5, textAlign: 'right', letterSpacing: '0.03em' }}>
+            ↩ {pendingRequeue} returning
+          </div>
+        )}
       </div>
 
       {/* Card area */}
@@ -320,25 +427,21 @@ function ReviewSession({
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >
-          {/* Card type */}
+          {/* Phase label */}
           <div style={{ position: 'absolute', top: 14, right: 16 }}>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {lang.type}
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: phaseColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {phaseLabel}
             </span>
           </div>
 
-          {/* Flag + suspend actions */}
+          {/* Flag + suspend */}
           <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 2, alignItems: 'center' }}
             onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => setShowFlagPicker(p => !p)}
-              aria-label="Set flag"
-              style={{
-                width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: currentFlagHex ?? T.inkFaint,
-              }}
-            >
+            <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
+              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: currentFlagHex ?? T.inkFaint,
+            }}>
               <Icon name={currentFlag ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
             </button>
             <button onClick={handleSuspend} aria-label="Suspend card" style={{
@@ -348,17 +451,13 @@ function ReviewSession({
             }}>
               <Icon name="archive" size={15} strokeWidth={1.8} />
             </button>
-
-            {/* Inline flag color picker */}
             {showFlagPicker && (
               <div style={{ display: 'flex', gap: 5, alignItems: 'center', paddingLeft: 4 }}>
                 {FLAG_COLORS.map(fc => (
                   <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
                     width: 22, height: 22, borderRadius: 999, border: 'none',
                     background: fc.color, cursor: 'pointer', flexShrink: 0,
-                    boxShadow: currentFlag === fc.key
-                      ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}`
-                      : 'none',
+                    boxShadow: currentFlag === fc.key ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}` : 'none',
                   }} />
                 ))}
                 <button onClick={() => handleSetFlag(null)} style={{
@@ -371,7 +470,7 @@ function ReviewSession({
             )}
           </div>
 
-          {/* Swipe affordances — only before reveal */}
+          {/* Swipe affordances */}
           {!revealed && (
             <>
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.5 }}>
@@ -390,13 +489,12 @@ function ReviewSession({
             <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
               {card.front}
             </div>
-            {/* Audio button — hidden until audio data is wired */}
             <button style={{ display: 'none' }} aria-label="Play audio">
               <Icon name="speaker" size={14} strokeWidth={1.8} />
             </button>
           </div>
 
-          {/* Reveal / Answer */}
+          {/* Answer */}
           {revealed ? (
             <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ height: 1, background: T.lineSoft }} />
@@ -435,7 +533,7 @@ function ReviewSession({
                 onPointerLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = T.paperHi; (e.currentTarget as HTMLButtonElement).style.color = r.color }}
               >
                 <span style={{ fontSize: 13.5 }}>{r.label}</span>
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, opacity: 0.75, fontWeight: 500 }}>{intervals[r.id]}</span>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, opacity: 0.75, fontWeight: 500 }}>{intervalLabel(r.id)}</span>
               </button>
             ))}
           </div>
@@ -445,8 +543,9 @@ function ReviewSession({
       {/* Options sheet */}
       {showOptions && (
         <OptionsSheet
-          showHardEasy={showHardEasy} setShowHardEasy={setShowHardEasy}
-          showButtons={showButtons}   setShowButtons={setShowButtons}
+          showHardEasy={showHardEasy}   setShowHardEasy={setShowHardEasy}
+          showButtons={showButtons}     setShowButtons={setShowButtons}
+          learningSteps={learningSteps} setLearningSteps={setLearningSteps}
           onClose={() => setShowOptions(false)}
         />
       )}

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { nextFormoSRS1, type SMState, type Rating } from './schedule'
+import { nextFormoSRS1, nextRelearn, type SMState, type Rating } from './schedule'
 
 export type { Rating } from './schedule'
 
@@ -204,6 +204,32 @@ export async function listDueFlashcards(
   const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
   return (data ?? []) as FlashcardWithItem[]
+}
+
+// Used when a mature card completes its relearn burst (Good/Easy = 50% recovery).
+export async function rateCardRelearn(
+  flashcardId: string,
+  rating: 'good' | 'easy' | 'again',
+  currentState: SMState,
+  lapsedInterval: number,
+): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { due_at, new_state } = nextRelearn(currentState, rating, lapsedInterval)
+  const today = new Date().toISOString().slice(0, 10)
+
+  await Promise.all([
+    supabase.from('ind_flashcards').update({
+      due_at,
+      ease_factor:   new_state.ease_factor,
+      interval_days: new_state.interval_days,
+      repetitions:   new_state.repetitions,
+    }).eq('id', flashcardId),
+    supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at }),
+    supabase.rpc('increment_reviewed_today', { p_user_id: user.id, p_date: today }),
+  ])
 }
 
 export async function suspendCard(id: string): Promise<void> {

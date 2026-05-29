@@ -196,11 +196,28 @@ Full-screen session, BottomNav hidden during review.
 
 *Only after Tier 1 and 2 are solid and you've been studying for a few weeks.*
 
-### T3-A — Learn phase
+### T3-A — Learn phase + Relearn burst
 
-- [ ] Learning steps before graduating to FormoSRS-1 (e.g. 1m → 10m → graduate)
-- [ ] Again in learning: back to step 1; Good: next step; Easy: graduate immediately
-- [ ] Requires dedicated design discussion — changes session UX significantly
+Session queue model: `QueueEntry[]` replaces `cards + idx`. Cards append
+on requeue; `qIdx` advances linearly. DB writes only on graduation.
+
+**Learning** (new cards: `repetitions === 0 && interval_days === 0`):
+- `learningSteps` requeue passes (default 3, configurable 1–5 in OptionsSheet)
+- Again / Hard / Good → requeue until final pass, then graduate with that rating
+- Easy at any pass → graduate immediately; Hard treated as Again
+- Rating buttons: Again · Good · Easy (Hard hidden); labels: retry / more / done
+
+**Relearn burst** (mature lapse: `interval_days ≥ 7` + Again):
+- Same `learningSteps` depth; no DB write at the moment of lapse
+- Good / Easy → `rateCardRelearn`: 50% recovery interval + ease −0.2
+- Again exhausted → `rateCard('again')`: full reset (1d, ease −0.2, reps = 0)
+- `nextRelearn()` in schedule.ts; `rateCardRelearn()` in flashcards.ts
+
+**UI changes**:
+- Card phase label (top-right): New · Learning (sage) · Relearning (amber)
+- Progress bar: `qIdx / queue.length` (shrinks on requeue — communicates extra work)
+- `↩ N returning` micro-label below progress bar when pending requeue > 0
+- OptionsSheet: Learning passes stepper (1–5), localStorage `srs_learning_steps`
 
 ### T3-B — Card suspension
 

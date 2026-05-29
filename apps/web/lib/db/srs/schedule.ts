@@ -6,7 +6,7 @@ export type SMState = {
 
 export type Rating = 'again' | 'hard' | 'good' | 'easy'
 
-const MIN_EASE = 1.3
+export const MIN_EASE = 1.3
 const MAX_EASE = 4
 
 function fuzz(interval: number): number {
@@ -96,4 +96,32 @@ export function nextFormoSRS1(
     due_at,
     new_state: { ease_factor, interval_days: nextInterval, repetitions },
   }
+}
+
+/**
+ * Relearn scheduling: applied when a mature card (interval ≥ 7d) completes its
+ * relearn burst. Good/Easy recover at 50% of the lapsed interval; Again full-resets.
+ * Ease is always penalised — the card did lapse regardless of relearn outcome.
+ */
+export function nextRelearn(
+  state: SMState,
+  rating: 'good' | 'easy' | 'again',
+  lapsedInterval: number,
+): { due_at: string; new_state: SMState } {
+  let { ease_factor, repetitions } = state
+  let nextInterval: number
+
+  if (rating === 'again') {
+    nextInterval = 1
+    ease_factor  = Math.max(MIN_EASE, ease_factor - 0.2)
+    repetitions  = 0
+  } else {
+    nextInterval = Math.max(1, Math.floor(lapsedInterval * 0.5))
+    ease_factor  = Math.max(MIN_EASE, ease_factor - 0.2)
+    repetitions  = repetitions + 1
+  }
+
+  nextInterval = fuzz(nextInterval)
+  const due_at = new Date(Date.now() + nextInterval * 86400000).toISOString()
+  return { due_at, new_state: { ease_factor, interval_days: nextInterval, repetitions } }
 }
