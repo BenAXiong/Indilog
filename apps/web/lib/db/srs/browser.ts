@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-export { suspendCard, unsuspendCard, flagCard, unflagCard } from './flashcards'
+export { suspendCard, unsuspendCard, setFlagColor } from './flashcards'
 
 export type BrowserCard = {
   id: string
@@ -11,8 +11,8 @@ export type BrowserCard = {
   repetitions: number
   created_at: string
   suspended_at: string | null
-  flagged: boolean
-  card_type: string
+  flag_color:   string | null
+  card_type:    string
   source: string
   sourceType: 'collection' | 'capture'
 }
@@ -23,6 +23,7 @@ export type BrowserSort   = 'due' | 'ease' | 'added'
 export async function listBrowserCards(
   filter: BrowserFilter,
   sort: BrowserSort,
+  flagColorFilter?: string | null,
 ): Promise<BrowserCard[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -32,13 +33,16 @@ export async function listBrowserCards(
 
   let q = supabase
     .from('ind_flashcards')
-    .select('id, front, back, due_at, ease_factor, interval_days, repetitions, created_at, suspended_at, flagged, card_type, item_id, ind_learn_cards(collection_id, ind_learn_collections(name))')
+    .select('id, front, back, due_at, ease_factor, interval_days, repetitions, created_at, suspended_at, flag_color, card_type, item_id, ind_learn_cards(collection_id, ind_learn_collections(name))')
     .eq('user_id', user.id)
 
   switch (filter) {
     case 'due':       q = q.or(`due_at.is.null,due_at.lte.${now}`).is('suspended_at', null); break
     case 'new':       q = q.eq('repetitions', 0).is('suspended_at', null); break
-    case 'flagged':   q = q.eq('flagged', true).is('suspended_at', null); break
+    case 'flagged':
+      q = q.not('flag_color', 'is', null).is('suspended_at', null)
+      if (flagColorFilter) q = q.eq('flag_color', flagColorFilter)
+      break
     case 'suspended': q = q.not('suspended_at', 'is', null); break
   }
 
@@ -65,7 +69,7 @@ export async function listBrowserCards(
       repetitions:   row.repetitions,
       created_at:    row.created_at,
       suspended_at:  row.suspended_at,
-      flagged:       row.flagged ?? false,
+      flag_color:    row.flag_color ?? null,
       card_type:     row.card_type ?? 'forward',
       source,
       sourceType: row.item_id ? 'capture' : 'collection',

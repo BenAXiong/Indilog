@@ -15,8 +15,8 @@ export type Flashcard = {
   interval_days: number
   repetitions: number
   suspended_at: string | null
-  flagged: boolean
-  card_type: string
+  flag_color:   string | null
+  card_type:    string
 }
 
 export type FlashcardWithItem = Flashcard & {
@@ -164,6 +164,7 @@ export async function getDueStats(): Promise<DueStats> {
     .select('item_id, collection_card_id, ind_learn_cards(collection_id)')
     .eq('user_id', user.id)
     .or(`due_at.is.null,due_at.lte.${now}`)
+    .is('suspended_at', null)
     .limit(10000)
 
   if (!data) return { total: 0, captures: 0, byCollection: {} }
@@ -185,7 +186,7 @@ export async function getDueStats(): Promise<DueStats> {
 }
 
 export async function listDueFlashcards(
-  opts: { filterFlagged?: boolean } = {},
+  opts: { flagColor?: string | 'any' } = {},
 ): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
@@ -197,7 +198,8 @@ export async function listDueFlashcards(
     .order('due_at', { ascending: true, nullsFirst: true })
     .limit(20)
 
-  if (opts.filterFlagged) q = q.eq('flagged', true)
+  if (opts.flagColor === 'any') q = q.not('flag_color', 'is', null)
+  else if (opts.flagColor)      q = q.eq('flag_color', opts.flagColor)
 
   const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
@@ -214,14 +216,9 @@ export async function unsuspendCard(id: string): Promise<void> {
   await supabase.from('ind_flashcards').update({ suspended_at: null }).eq('id', id)
 }
 
-export async function flagCard(id: string): Promise<void> {
+export async function setFlagColor(id: string, color: string | null): Promise<void> {
   const supabase = createClient()
-  await supabase.from('ind_flashcards').update({ flagged: true }).eq('id', id)
-}
-
-export async function unflagCard(id: string): Promise<void> {
-  const supabase = createClient()
-  await supabase.from('ind_flashcards').update({ flagged: false }).eq('id', id)
+  await supabase.from('ind_flashcards').update({ flag_color: color }).eq('id', id)
 }
 
 // currentState is passed in from the caller (already loaded via listDueFlashcards)

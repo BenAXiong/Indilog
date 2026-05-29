@@ -37,7 +37,7 @@ export async function getStudyStats(): Promise<StudyStats> {
   const [cardsRes, dailyRes] = await Promise.all([
     supabase
       .from('ind_flashcards')
-      .select('ease_factor, interval_days, due_at, item_id, collection_card_id, ind_learn_cards(collection_id, ind_learn_collections(id, name))')
+      .select('ease_factor, interval_days, due_at, suspended_at, item_id, collection_card_id, ind_learn_cards(collection_id, ind_learn_collections(id, name))')
       .eq('user_id', user.id)
       .limit(10000),
     supabase
@@ -59,9 +59,10 @@ export async function getStudyStats(): Promise<StudyStats> {
   const colMap = new Map<string, CollectionStat>()
 
   for (const card of cards) {
+    const suspended  = !!(card as Record<string, unknown>).suspended_at
     const isKnown    = card.ease_factor >= 2.5 && card.interval_days >= 21
     const isMastered = card.interval_days >= 60
-    const isDue      = !card.due_at || card.due_at <= now
+    const isDue      = (!card.due_at || card.due_at <= now) && !suspended
 
     if (isKnown)    known++
     if (isMastered) mastered++

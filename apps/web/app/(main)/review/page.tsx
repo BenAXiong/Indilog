@@ -8,9 +8,10 @@ import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, rateCard, cardMeta,
-  suspendCard, flagCard, unflagCard,
+  suspendCard, setFlagColor,
   type FlashcardWithItem, type Rating,
 } from '@/lib/db/srs/flashcards'
+import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { estimateInterval, formatDays, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 
@@ -123,8 +124,8 @@ function OptionsSheet({
           <Row label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
           <Row label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
           <div style={{ padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.5 }}>
-              Swipe ← for Again · Swipe → for Good
+            <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
+              ← Again · → Good · ↑ Easy · ↓ Suspend
             </div>
           </div>
         </div>
@@ -144,14 +145,15 @@ function ReviewSession({
   ctx: SessionContext
   onExit: (reviewed: number) => void
 }) {
-  const [idx,          setIdx]         = useState(0)
-  const [revealed,     setRevealed]    = useState(false)
-  const [reviewed,     setReviewed]    = useState(0)
-  const [showOptions,  setShowOptions] = useState(false)
-  const [showHardEasy, setShowHardEasyRaw] = useState(true)
-  const [showButtons,  setShowButtonsRaw]  = useState(true)
-  const [flaggedIds,   setFlaggedIds]  = useState<Set<string>>(new Set())
-  const swipeX = useRef(0)
+  const [idx,            setIdx]           = useState(0)
+  const [revealed,       setRevealed]      = useState(false)
+  const [reviewed,       setReviewed]      = useState(0)
+  const [showOptions,    setShowOptions]   = useState(false)
+  const [showHardEasy,   setShowHardEasyRaw] = useState(true)
+  const [showButtons,    setShowButtonsRaw]  = useState(true)
+  const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
+  const [showFlagPicker, setShowFlagPicker] = useState(false)
+  const swipeStart = useRef({ x: 0, y: 0 })
 
   // Persist options to localStorage
   useEffect(() => {
@@ -180,10 +182,11 @@ function ReviewSession({
       if (!revealed) {
         if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
       } else {
-        if (e.key === '1' || e.key === 'ArrowLeft') submit('again')
-        else if (e.key === '2' && showHardEasy) submit('hard')
-        else if (e.key === '3' || e.key === 'ArrowRight') submit('good')
-        else if (e.key === '4' && showHardEasy) submit('easy')
+        if      (e.key === '1' || e.key === 'ArrowLeft')                    submit('again')
+        else if (e.key === '2' && showHardEasy)                             submit('hard')
+        else if (e.key === '3' || e.key === 'ArrowRight')                   submit('good')
+        else if (e.key === '4' && showHardEasy || e.key === 'ArrowUp')      submit('easy')
+        else if (e.key === 'ArrowDown')                                      handleSuspend()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -211,30 +214,37 @@ function ReviewSession({
 
   async function handleSuspend() {
     await suspendCard(card.id)
+    setShowFlagPicker(false)
     skipCurrent()
   }
 
-  function handleFlag() {
-    const wasFlagged = flaggedIds.has(card.id)
-    setFlaggedIds(prev => {
-      const next = new Set(prev)
-      wasFlagged ? next.delete(card.id) : next.add(card.id)
-      return next
-    })
-    wasFlagged ? unflagCard(card.id) : flagCard(card.id)
+  function handleSetFlag(color: string | null) {
+    setCardFlags(prev => ({ ...prev, [card.id]: color }))
+    setShowFlagPicker(false)
+    setFlagColor(card.id, color)
   }
 
-  const isCardFlagged = flaggedIds.has(card.id)
+  const currentFlag = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
+  const currentFlagHex = flagColorHex(currentFlag)
 
-  // Swipe on card
-  function onTouchStart(e: React.TouchEvent) { swipeX.current = e.touches[0].clientX }
+  function onTouchStart(e: React.TouchEvent) {
+    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
   function onTouchEnd(e: React.TouchEvent) {
-    const dx = e.changedTouches[0].clientX - swipeX.current
+    const dx   = e.changedTouches[0].clientX - swipeStart.current.x
+    const dy   = e.changedTouches[0].clientY - swipeStart.current.y
+    const absX = Math.abs(dx), absY = Math.abs(dy)
     if (!revealed) {
-      if (Math.abs(dx) < 10) setRevealed(true)
+      if (absX < 10 && absY < 10) setRevealed(true)
       return
     }
-    if (Math.abs(dx) > 70) submit(dx < 0 ? 'again' : 'good')
+    const THRESH = 70
+    if (absX > absY && absX > THRESH) {
+      submit(dx < 0 ? 'again' : 'good')
+    } else if (absY > absX && absY > THRESH) {
+      if (dy < 0) submit('easy')
+      else        handleSuspend()
+    }
   }
 
   // Rating buttons config
@@ -299,7 +309,10 @@ function ReviewSession({
         <div
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
-          onClick={() => { if (!revealed) setRevealed(true) }}
+          onClick={() => {
+            if (showFlagPicker) { setShowFlagPicker(false); return }
+            if (!revealed) setRevealed(true)
+          }}
           style={{
             position: 'relative', background: T.paperHi, borderRadius: 22,
             border: `1px solid ${T.lineSoft}`, padding: '26px 22px', minHeight: 280,
@@ -315,14 +328,18 @@ function ReviewSession({
           </div>
 
           {/* Flag + suspend actions */}
-          <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 2 }}
+          <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 2, alignItems: 'center' }}
             onClick={e => e.stopPropagation()}>
-            <button onClick={handleFlag} aria-label={isCardFlagged ? 'Unflag' : 'Flag'} style={{
-              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: isCardFlagged ? T.amber : T.inkFaint,
-            }}>
-              <Icon name={isCardFlagged ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
+            <button
+              onClick={() => setShowFlagPicker(p => !p)}
+              aria-label="Set flag"
+              style={{
+                width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: currentFlagHex ?? T.inkFaint,
+              }}
+            >
+              <Icon name={currentFlag ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
             </button>
             <button onClick={handleSuspend} aria-label="Suspend card" style={{
               width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
@@ -331,6 +348,27 @@ function ReviewSession({
             }}>
               <Icon name="archive" size={15} strokeWidth={1.8} />
             </button>
+
+            {/* Inline flag color picker */}
+            {showFlagPicker && (
+              <div style={{ display: 'flex', gap: 5, alignItems: 'center', paddingLeft: 4 }}>
+                {FLAG_COLORS.map(fc => (
+                  <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
+                    width: 22, height: 22, borderRadius: 999, border: 'none',
+                    background: fc.color, cursor: 'pointer', flexShrink: 0,
+                    boxShadow: currentFlag === fc.key
+                      ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}`
+                      : 'none',
+                  }} />
+                ))}
+                <button onClick={() => handleSetFlag(null)} style={{
+                  width: 22, height: 22, borderRadius: 999,
+                  border: `1.5px solid ${T.lineSoft}`, background: T.paper,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
+                }}>×</button>
+              </div>
+            )}
           </div>
 
           {/* Swipe affordances — only before reveal */}
@@ -401,17 +439,7 @@ function ReviewSession({
               </button>
             ))}
           </div>
-        ) : !revealed ? (
-          <div style={{ textAlign: 'center', fontSize: 12, color: T.inkMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-            <Icon name="swap" size={14} color={T.inkFaint} strokeWidth={1.8} />
-            Swipe ← Again · Good →
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', fontSize: 12, color: T.inkMute, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-            <Icon name="swap" size={14} color={T.inkFaint} strokeWidth={1.8} />
-            Swipe ← Again · Good →
-          </div>
-        )}
+        ) : null}
       </div>
 
       {/* Options sheet */}
@@ -576,7 +604,9 @@ function ReviewEnd({
 export default function ReviewPage() {
   const { lang, dialectLabel } = useLang()
   const searchParams = useSearchParams()
-  const filterFlagged = searchParams.get('filter') === 'flagged'
+  const flagParam    = searchParams.get('flag')    // specific color: 'red' etc
+  const filterParam  = searchParams.get('filter')  // 'flagged' = any color
+  const flagColor    = flagParam ?? (filterParam === 'flagged' ? 'any' : undefined)
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
@@ -587,7 +617,7 @@ export default function ReviewPage() {
   async function reload() {
     await ensureFlashcards()
     const [c, context] = await Promise.all([
-      listDueFlashcards({ filterFlagged }),
+      listDueFlashcards({ flagColor }),
       loadSessionContext(),
     ])
     setCards(c)
@@ -638,7 +668,7 @@ export default function ReviewPage() {
             {lang.name}{dialectLabel ? ` · ${dialectLabel}` : ''}
           </div>
           <h1 style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, margin: 0, letterSpacing: '-0.025em', lineHeight: 1.1, marginTop: 2 }}>
-            {filterFlagged ? 'Flagged' : 'Review'}
+            {flagColor ? 'Flagged' : 'Review'}
           </h1>
         </div>
       </div>

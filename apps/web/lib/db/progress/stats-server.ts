@@ -78,14 +78,16 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
       .from('ind_flashcards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .or(`due_at.is.null,due_at.lte.${now}`),
+      .or(`due_at.is.null,due_at.lte.${now}`)
+      .is('suspended_at', null),
 
     supabase
       .from('ind_flashcards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .gt('due_at', now)
-      .lte('due_at', in24h),
+      .lte('due_at', in24h)
+      .is('suspended_at', null),
 
     supabase
       .from('ind_flashcards')

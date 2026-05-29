@@ -62,7 +62,7 @@ ALTER TABLE ind_flashcards
 
 -- Flags (T3-C)
 ALTER TABLE ind_flashcards
-  ADD COLUMN IF NOT EXISTS flagged boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS flag_color text;  -- null | 'red' | 'orange' | 'yellow' | 'green' | 'blue'
 ```
 
 ---
@@ -209,9 +209,17 @@ Full-screen session, BottomNav hidden during review.
 
 ### T3-C — Flags
 
-- [ ] Flag during review (mark for attention)
-- [ ] Flagged filter in Browser
-- [ ] "Review flagged" as a separate session
+Five color flags (red · orange · yellow · green · blue) act as free-form
+tags. No semantics imposed — the user decides what each color means.
+
+- [ ] `flag_color text` column (null = no flag; values: red/orange/yellow/green/blue)
+- [ ] Review session: bookmark icon opens inline color picker (5 dots + clear ×);
+  active flag shown by filled bookmark in that color; optimistic update
+- [ ] Browser: Flagged filter shows all flagged cards; color sub-filter row (5 dots)
+  narrows to specific color; colored dot badge on card rows
+- [ ] "Review flagged" amber CTA in Browser links to `/review?filter=flagged` (any
+  color) or `/review?flag=red` etc. for a specific color
+- [ ] `setFlagColor(id, color | null)` in flashcards.ts
 
 ### T3-D — Card types
 
@@ -271,11 +279,12 @@ Inactive → "Set a goal →" tertiary prompt. Goal-setting UI is T2-A.
 - Full screen, BottomNav hidden
 - Card contained on cream bg (rounded, shadow — not edge-to-edge)
 - Tap card = reveal (no animation, answer appears)
-- Swipe left = Again, swipe right = Good
-- Subtle edge indicators on card face (before reveal)
+- Swipe ← = Again · Swipe → = Good · Swipe ↑ = Easy · Swipe ↓ = Suspend
+- Subtle edge indicators on card face (← again / → good, before reveal)
 - Rating row: Again · Hard · Good · Easy + interval estimate (mono)
 - Hard + Easy togglable; full immersion = hide entire row
-- Options via gear icon in session header
+- Options via gear icon in session header (shows all 4 gestures)
+- Flag icon (bookmark) opens 5-color picker; suspend icon skips card
 
 ### Session end screen
 

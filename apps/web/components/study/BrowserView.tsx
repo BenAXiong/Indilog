@@ -6,10 +6,11 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
   listBrowserCards, updateCardFrontBack, resetCardEase,
-  suspendCard, unsuspendCard, flagCard, unflagCard,
+  suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
 import { formatDays } from '@/lib/db/srs/schedule'
+import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 
 const FILTERS: { value: BrowserFilter; label: string }[] = [
   { value: 'all',       label: 'All'       },
@@ -24,6 +25,30 @@ const SORT_OPTIONS: { value: BrowserSort; label: string }[] = [
   { value: 'ease',  label: 'Ease'     },
   { value: 'added', label: 'Added'    },
 ]
+
+// ─── Flag color picker (reusable inline picker) ───────────────────────────────
+
+function FlagPicker({ current, onChange }: { current: string | null; onChange: (c: string | null) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+      {FLAG_COLORS.map(fc => (
+        <button key={fc.key} onClick={() => onChange(current === fc.key ? null : fc.key)} style={{
+          width: 22, height: 22, borderRadius: 999, border: 'none',
+          background: fc.color, cursor: 'pointer', flexShrink: 0,
+          boxShadow: current === fc.key ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}` : 'none',
+        }} />
+      ))}
+      {current && (
+        <button onClick={() => onChange(null)} style={{
+          width: 22, height: 22, borderRadius: 999,
+          border: `1.5px solid ${T.lineSoft}`, background: T.paper,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
+        }}>×</button>
+      )}
+    </div>
+  )
+}
 
 // ─── Card row ─────────────────────────────────────────────────────────────────
 
@@ -45,12 +70,12 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
     if (expanded) { setEditFront(card.front); setEditBack(card.back) }
   }, [expanded, card.front, card.back])
 
-  const now        = new Date().toISOString()
-  const isDue      = !card.due_at || card.due_at <= now
-  const isNew      = card.repetitions === 0
+  const now         = new Date().toISOString()
+  const isDue       = !card.due_at || card.due_at <= now
+  const isNew       = card.repetitions === 0
   const isSuspended = !!card.suspended_at
-  const isFlagged  = card.flagged
-  const isReverse  = card.card_type === 'reverse'
+  const isReverse   = card.card_type === 'reverse'
+  const flagHex     = flagColorHex(card.flag_color)
 
   async function handleSave() {
     const f = editFront.trim(), b = editBack.trim()
@@ -74,33 +99,24 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
       await unsuspendCard(card.id)
       onUpdate({ suspended_at: null })
     } else {
-      const ts = new Date().toISOString()
       await suspendCard(card.id)
-      onUpdate({ suspended_at: ts })
       onRemove()
     }
     setBusy(false)
   }
 
-  async function handleFlagToggle() {
-    setBusy(true)
-    if (isFlagged) {
-      await unflagCard(card.id)
-      onUpdate({ flagged: false })
-    } else {
-      await flagCard(card.id)
-      onUpdate({ flagged: true })
-    }
-    setBusy(false)
+  async function handleFlagChange(color: string | null) {
+    await setFlagColor(card.id, color)
+    onUpdate({ flag_color: color })
   }
 
   return (
     <div style={{
       background: isSuspended ? T.paper : T.paperHi,
-      border: `1px solid ${isSuspended ? T.line : T.lineSoft}`,
+      border: `1px solid ${flagHex ? flagHex + '55' : isSuspended ? T.line : T.lineSoft}`,
       borderRadius: 12, overflow: 'hidden',
       boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-      opacity: isSuspended ? 0.75 : 1,
+      opacity: isSuspended ? 0.72 : 1,
     }}>
       {/* Collapsed row */}
       <button onClick={onToggle} style={{
@@ -136,10 +152,12 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
           }}>{card.back}</div>
         </div>
 
-        {/* Meta + icons */}
+        {/* Meta + flag dot */}
         <div style={{ flexShrink: 0, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {isFlagged && <Icon name="bookmarkF" size={11} color={T.amber} />}
+            {flagHex && (
+              <span style={{ width: 10, height: 10, borderRadius: 999, background: flagHex, flexShrink: 0 }} />
+            )}
             {isReverse && (
               <span style={{ fontSize: 9, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', padding: '1px 4px', borderRadius: 3, border: `1px solid ${T.lineSoft}` }}>REV</span>
             )}
@@ -166,7 +184,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               <textarea value={editBack} onChange={e => setEditBack(e.target.value)} rows={2} style={textareaStyle('sans')} />
             </div>
 
-            {/* Primary actions */}
+            {/* Save / cancel */}
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
                 {saving ? 'Saving…' : 'Save'}
@@ -174,11 +192,14 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               <button onClick={onToggle} style={ghostBtn}>Cancel</button>
             </div>
 
-            {/* Secondary actions */}
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button onClick={handleFlagToggle} disabled={busy} style={ghostBtn}>
-                {isFlagged ? 'Unflag' : 'Flag'}
-              </button>
+            {/* Flag row */}
+            <div>
+              <label style={labelStyle}>Flag</label>
+              <FlagPicker current={card.flag_color} onChange={handleFlagChange} />
+            </div>
+
+            {/* Suspend + ease reset */}
+            <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={handleSuspendToggle} disabled={busy} style={ghostBtn}>
                 {isSuspended ? 'Unsuspend' : 'Suspend'}
               </button>
@@ -201,18 +222,24 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
 // ─── Browser ──────────────────────────────────────────────────────────────────
 
 export default function BrowserView() {
-  const [filter,     setFilter]     = useState<BrowserFilter>('all')
-  const [sort,       setSort]       = useState<BrowserSort>('due')
-  const [search,     setSearch]     = useState('')
-  const [cards,      setCards]      = useState<BrowserCard[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [filter,          setFilter]          = useState<BrowserFilter>('all')
+  const [flagColorFilter, setFlagColorFilter] = useState<string | null>(null)
+  const [sort,            setSort]            = useState<BrowserSort>('due')
+  const [search,          setSearch]          = useState('')
+  const [cards,           setCards]           = useState<BrowserCard[]>([])
+  const [loading,         setLoading]         = useState(true)
+  const [expandedId,      setExpandedId]      = useState<string | null>(null)
+
+  useEffect(() => {
+    if (filter !== 'flagged') setFlagColorFilter(null)
+  }, [filter])
 
   useEffect(() => {
     setLoading(true)
     setExpandedId(null)
-    listBrowserCards(filter, sort).then(c => { setCards(c); setLoading(false) })
-  }, [filter, sort])
+    listBrowserCards(filter, sort, filter === 'flagged' ? flagColorFilter : undefined)
+      .then(c => { setCards(c); setLoading(false) })
+  }, [filter, sort, flagColorFilter])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return cards
@@ -266,7 +293,6 @@ export default function BrowserView() {
             </button>
           ))}
         </div>
-
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <select value={sort} onChange={e => setSort(e.target.value as BrowserSort)} style={{
             height: 30, padding: '0 26px 0 10px', borderRadius: 8,
@@ -282,15 +308,26 @@ export default function BrowserView() {
         </div>
       </div>
 
+      {/* Flag color sub-filter (when Flagged is selected) */}
+      {filter === 'flagged' && (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace' }}>Color:</span>
+          <FlagPicker current={flagColorFilter} onChange={setFlagColorFilter} />
+        </div>
+      )}
+
       {/* Review flagged CTA */}
       {filter === 'flagged' && filtered.length > 0 && (
-        <Link href="/review?filter=flagged" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          height: 46, borderRadius: 13, textDecoration: 'none',
-          background: T.amber, color: '#fff',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset',
-          fontSize: 14, fontWeight: 600,
-        }}>
+        <Link
+          href={flagColorFilter ? `/review?flag=${flagColorFilter}` : '/review?filter=flagged'}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            height: 46, borderRadius: 13, textDecoration: 'none',
+            background: flagColorFilter ? (flagColorHex(flagColorFilter) ?? T.amber) : T.amber,
+            color: '#fff',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset',
+            fontSize: 14, fontWeight: 600,
+          }}>
           <Icon name="play" size={13} color="#fff" />
           Review flagged ({filtered.length} due)
         </Link>
