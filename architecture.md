@@ -213,23 +213,18 @@ ind_flashcards
 
 ## Migration status
 
-⚠️ **T-UNIFY not yet applied.** Current codebase still uses the pre-unification schema:
+✅ **T-UNIFY complete (2026-05-30, branch `redesign/srs-overhaul`).** All four migrations applied:
 
-| What | Current (legacy) | Target |
-|------|-----------------|--------|
-| Note field | `ind_items.text` | `ind_items.ab` |
-| Note field | `ind_items.meaning` | `ind_items.zh` |
-| Note field | `ind_items.audio_url` | `ind_items.audio` |
-| Card FK | `ind_flashcards.item_id` + `collection_card_id` | `ind_flashcards.note_id` |
-| Card fields | `ind_flashcards.front`, `front.back` | dropped |
-| Collection notes | `ind_learn_cards` | `ind_items` with `collection_id` |
-
-See `plan-srs.md` → T-UNIFY for the full migration task list.
+- M1: `ind_items.text→ab`, `meaning→zh`, `audio_url→audio`; added `note_source`, `collection_id`
+- M2: Migrated all `ind_learn_cards` rows into `ind_items` with `note_source='collection'`; added `level`/`lesson`/`position` structural columns
+- M3: Added `note_id` FK to `ind_flashcards`; dropped `item_id`, `collection_card_id`, `front`, `back`; deleted reverse cards; renamed `forward→default`
+- M4: Dropped `ind_learn_cards` table; deleted `generateFlashcardsFromCollection` / `generateReverseCardsForCollection`
 
 ---
 
-## Known data inconsistencies (pre-T-UNIFY)
+## Known data notes
 
-1. `StudyView.handleSave` stores zh → `ind_items.notes` (should be `meaning`/`zh`). `ensureFlashcards` falls back to `notes` so cards work, but data is in the wrong column.
-2. `ind_flashcards.front`/`back` are snapshots — if `ind_items` is edited, card copies don't update.
-3. Existing `card_type='reverse'` rows will be deleted in T-UNIFY (no production users, clean break).
+- `StudyView.handleSave` now saves zh to `ind_items.zh` directly (fixed in T-UNIFY / audio step 6).
+- `front`/`back` snapshots eliminated — cards render live from `note.ab`/`note.zh`.
+- Pre-existing `card_type='reverse'` rows deleted in M3 (no production users).
+- Pre-fix curriculum bookmarks (before audio step 6) have `ind_items.audio = null` — no auto-repair.

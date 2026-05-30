@@ -372,7 +372,7 @@ Remaining open items:
   [x] T3-D   Audio steps 1–6 — done (see audio plan above)
   T3-D   STS Card Template — spec in architecture.md; needs T-UNIFY first
   T3-D   Card type selector on import — deferred
-  T-UNIFY  Schema + code unification — see T-UNIFY section below (next major task)
+  [x] T-UNIFY  Schema + code unification — complete (M1–M4, 2026-05-30)
 ```
 
 ---

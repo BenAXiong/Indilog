@@ -2,6 +2,10 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-30 20:13 | SCHEMA | T-UNIFY M4: DROP ind_learn_cards; DROP legacy_learn_card_id; delete generateFlashcardsFromCollection/generateReverseCardsForCollection; listCollections counts via ind_items; collection page uses ensureFlashcards; reverse card button removed |
+| 2026-05-30 20:10 | SCHEMA | T-UNIFY M3: note_id FK on ind_flashcards; remap from item_id + legacy mapping; delete reverse cards; rename forward→default; DROP item_id/collection_card_id/front/back; update review/browser/stats/goal |
+| 2026-05-30 20:00 | SCHEMA | T-UNIFY M2: add level/lesson/position/metadata/legacy_learn_card_id to ind_items; migrate 1063 ind_learn_cards rows into ind_items (note_source=collection); saveCollection + listCollectionCards updated |
+| 2026-05-30 19:54 | SCHEMA | T-UNIFY M1: ind_items text→ab, meaning→zh, audio_url→audio; add note_source/collection_id; all createItem() call sites updated; note_source set per save point |
 | 2026-05-30 19:39 | DECISION | DEC-ARCH02 + architecture.md: unified Note/Card model settled — ab/zh fields, front/back banned, one card per note, session modes display-only, note_source enum, STS spec drafted; T-UNIFY migration plan written; CLAUDE.md + agents.md updated |
 | 2026-05-30 18:40 | FEATURE | Audio step 6 — curriculum save now threads audio_url through onSave → createItem → ind_items; cardAudio() join resolves at review time; T1-F reframed: bookmarks-only, universal pipeline, no bulk generation |
 | 2026-05-30 18:18 | FEATURE | T2-F reset SRS data: rotate-ccw icon; resetCollectionSRS/resetCapturesSRS; DeckActionSheet reset view (confirm dialog); Captures row now has kebab → action sheet (reset only); collections get Reset in menu above Delete; handleReset refreshes due stats |
