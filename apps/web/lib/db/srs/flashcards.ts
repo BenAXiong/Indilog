@@ -242,6 +242,40 @@ export async function rateCardRelearn(
   ])
 }
 
+export async function resetCollectionSRS(collectionId: string): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: cards } = await supabase
+    .from('ind_learn_cards')
+    .select('id')
+    .eq('collection_id', collectionId)
+    .limit(10000)
+
+  if (!cards?.length) return
+  const cardIds = cards.map(c => c.id)
+
+  const CHUNK = 100
+  for (let i = 0; i < cardIds.length; i += CHUNK) {
+    await supabase.from('ind_flashcards')
+      .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
+      .eq('user_id', user.id)
+      .in('collection_card_id', cardIds.slice(i, i + CHUNK))
+  }
+}
+
+export async function resetCapturesSRS(): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase.from('ind_flashcards')
+    .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
+    .eq('user_id', user.id)
+    .not('item_id', 'is', null)
+}
+
 export async function suspendCard(id: string): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_flashcards').update({ suspended_at: new Date().toISOString() }).eq('id', id)

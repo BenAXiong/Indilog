@@ -9,9 +9,11 @@ import type { IconName } from '@/components/ui/Icon'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
-import { getDueStats, type DueStats } from '@/lib/db/srs/flashcards'
+import { ensureFlashcards, getDueStats, type DueStats } from '@/lib/db/srs/flashcards'
+import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
 import BrowserView from '@/components/study/BrowserView'
+import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
 
 // ─── Due badge ───────────────────────────────────────────────────────────────
 
@@ -39,16 +41,19 @@ function DueBadge({ n }: { n: number }) {
 // ─── Deck row ────────────────────────────────────────────────────────────────
 
 type DeckRowProps = {
-  dot?: string
+  icon: IconName
+  iconColor: string
+  iconBg: string
   name: string
   sub?: string
   due: number
   href: string
   kebab?: boolean
+  onKebab?: () => void
   last?: boolean
 }
 
-function DeckRow({ dot = T.inkFaint, name, sub, due, href, kebab = false, last = false }: DeckRowProps) {
+function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, kebab = false, onKebab, last = false }: DeckRowProps) {
   return (
     <Link href={href} style={{
       display: 'flex', alignItems: 'center', gap: 12,
@@ -56,7 +61,12 @@ function DeckRow({ dot = T.inkFaint, name, sub, due, href, kebab = false, last =
       borderBottom: last ? 'none' : `1px solid ${T.lineSoft}`,
       textDecoration: 'none',
     }}>
-      <span style={{ width: 9, height: 9, borderRadius: 999, background: dot, flexShrink: 0 }} />
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon name={icon} size={19} color={iconColor} strokeWidth={1.6} />
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontFamily: 'Newsreader, Georgia, serif',
@@ -74,7 +84,7 @@ function DeckRow({ dot = T.inkFaint, name, sub, due, href, kebab = false, last =
       {kebab && (
         <button
           aria-label="Deck actions"
-          onClick={e => { e.preventDefault(); e.stopPropagation() }}
+          onClick={e => { e.preventDefault(); e.stopPropagation(); onKebab?.() }}
           style={{
             width: 30, height: 30, borderRadius: 8, color: T.inkMute,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -84,6 +94,79 @@ function DeckRow({ dot = T.inkFaint, name, sub, due, href, kebab = false, last =
           <Icon name="more-v" size={17} strokeWidth={2} />
         </button>
       )}
+    </Link>
+  )
+}
+
+// ─── Curriculum row ──────────────────────────────────────────────────────────
+
+function CurriculumRow({ icon, name, href, meta, langName, last }: {
+  icon: IconName; name: string; href: string
+  meta: CurriculumProgressItem | null; langName: string; last?: boolean
+}) {
+  const pct = meta && meta.total > 0 ? Math.round(meta.completed / meta.total * 100) : 0
+  return (
+    <Link href={href} style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '13px 14px',
+      borderBottom: last ? 'none' : `1px solid ${T.lineSoft}`,
+      textDecoration: 'none',
+    }}>
+      {/* Icon */}
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: '#F9E8E6',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon name={icon} size={19} color={T.crimson} strokeWidth={1.6} />
+      </div>
+
+      {/* Name + Next */}
+      <div style={{ flex: '1 1 0', minWidth: 0 }}>
+        <div style={{
+          fontFamily: 'Newsreader, Georgia, serif',
+          fontSize: 16, fontWeight: 500, color: T.ink,
+          letterSpacing: '-0.015em', lineHeight: 1.15,
+        }}>{name}</div>
+        {meta ? (
+          <div style={{
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: 10.5, color: T.inkMute, marginTop: 2,
+          }}>
+            {meta.total > 0
+              ? (meta.nextLabel ? `Next: ${meta.nextLabel}` : 'All done ✓')
+              : '—'}
+          </div>
+        ) : (
+          <div className="animate-iv-shimmer" style={{
+            height: 9, width: 110, borderRadius: 4, background: T.lineSoft, marginTop: 4,
+          }} />
+        )}
+      </div>
+
+      {/* Bar — 1/3 card width, centered */}
+      <div style={{ flex: '0 0 33%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+        <div style={{ width: '100%', height: 3, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', borderRadius: 999, transition: 'width 0.4s ease',
+            width: `${pct}%`,
+            background: pct >= 80 ? T.sage : pct >= 40 ? T.amber : T.crimson,
+          }} />
+        </div>
+        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.inkFaint }}>
+          {meta ? (meta.total > 0 ? `${meta.completed}/${meta.total}` : '—') : '…'}
+        </span>
+      </div>
+
+      {/* Lang pill */}
+      <span style={{
+        fontSize: 9.5, fontFamily: '"JetBrains Mono", monospace',
+        padding: '2px 7px', borderRadius: 999, flexShrink: 0,
+        background: '#F9E8E6', color: T.crimson,
+        fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+      }}>{langName}</span>
+
+      <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
     </Link>
   )
 }
@@ -268,11 +351,11 @@ function StatsLoading() {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const CURRICULUM = [
-  { id: 'lessons',  name: 'Lessons',  sub: 'Step-by-step',   href: '/learn/lessons'   },
-  { id: 'patterns', name: 'Patterns', sub: 'Grammar shapes',  href: '/learn/patterns'  },
-  { id: 'essays',   name: 'Essays',   sub: 'Long reads',      href: '/learn/essays'    },
-  { id: 'dialogs',  name: 'Dialogs',  sub: 'Two-speaker',     href: '/learn/dialogues' },
+const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] = [
+  { id: 'lessons',  name: 'Lessons',  icon: 'learn',  href: '/learn/lessons'   },
+  { id: 'patterns', name: 'Patterns', icon: 'layers', href: '/learn/patterns'  },
+  { id: 'essays',   name: 'Essays',   icon: 'pen',    href: '/learn/essays'    },
+  { id: 'dialogs',  name: 'Dialogs',  icon: 'wave',   href: '/learn/dialogues' },
 ]
 
 const SUBTABS = [
@@ -291,29 +374,60 @@ const btnStyle: CSSProperties = {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function StudyPage() {
-  const { lang, dialectLabel } = useLang()
+  const { lang, dialect, dialectLabel } = useLang()
   const [activeTab, setActiveTab] = useState<'decks' | 'browser' | 'stats'>('decks')
   const [collections, setCollections]     = useState<CollectionMeta[]>([])
   const [due, setDue]                     = useState<DueStats>({ total: 0, captures: 0, byCollection: {} })
   const [loading, setLoading]             = useState(true)
   const [studyStats, setStudyStats]       = useState<StudyStats | null>(null)
   const [statsLoading, setStatsLoading]   = useState(false)
+  const [actionDeck, setActionDeck]         = useState<CollectionMeta | null>(null)
+  const [settingsOpen, setSettingsOpen]     = useState(false)
+  const [showAllLangs, setShowAllLangs]     = useState(false)
+  const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
 
   useEffect(() => {
     if (!lang.code) return
-    Promise.all([listCollections(lang.code), getDueStats()])
-      .then(([cols, stats]) => {
-        setCollections(cols)
-        setDue(stats)
-        setLoading(false)
-      })
-  }, [lang.code])
+    setCurriculumMeta(null)
+    Promise.all([
+      listCollections(lang.code),
+      getDueStats(),
+      ensureFlashcards(),
+    ]).then(([cols, stats]) => {
+      setCollections(cols)
+      setDue(stats)
+      setLoading(false)
+    })
+    const enc = dialect ? encodeURIComponent(dialect) : ''
+    fetch(`/api/learn/curriculum-progress?lang=${lang.code}&dialect=${enc}`)
+      .then(r => r.json())
+      .then(setCurriculumMeta)
+      .catch(() => {})
+  }, [lang.code, dialect, dialectLabel])
 
   useEffect(() => {
     if (activeTab !== 'stats' || studyStats || statsLoading) return
     setStatsLoading(true)
     getStudyStats().then(s => { setStudyStats(s); setStatsLoading(false) })
   }, [activeTab, studyStats, statsLoading])
+
+  function handleRenamed(id: string, newName: string) {
+    setCollections(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c))
+  }
+
+  function handleDeleted(id: string) {
+    setCollections(prev => prev.filter(c => c.id !== id))
+    setDue(prev => {
+      const collDue = prev.byCollection[id] ?? 0
+      const { [id]: _, ...rest } = prev.byCollection
+      return { total: prev.total - collDue, captures: prev.captures, byCollection: rest }
+    })
+  }
+
+  async function handleReset() {
+    const stats = await getDueStats()
+    setDue(stats)
+  }
 
   return (
     <div style={{ paddingBottom: 110, display: 'flex', flexDirection: 'column' }}>
@@ -325,9 +439,13 @@ export default function StudyPage() {
           langName={lang.name}
           langDialect={dialectLabel}
           right={
-            <Link href="/learn/new" style={btnStyle} aria-label="Import collection">
-              <Icon name="plus" size={17} strokeWidth={2} />
-            </Link>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Study settings"
+              style={{ ...btnStyle, cursor: 'pointer' }}
+            >
+              <Icon name="settings" size={17} strokeWidth={1.6} />
+            </button>
           }
         />
       </div>
@@ -387,13 +505,13 @@ export default function StudyPage() {
             <SectionHead title="Curriculum" />
             <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
               {CURRICULUM.map((deck, i) => (
-                <DeckRow
+                <CurriculumRow
                   key={deck.id}
-                  dot={T.crimson}
+                  icon={deck.icon}
                   name={deck.name}
-                  sub={deck.sub}
-                  due={0}
                   href={deck.href}
+                  meta={curriculumMeta?.[deck.id as keyof typeof curriculumMeta] ?? null}
+                  langName={lang.name}
                   last={i === CURRICULUM.length - 1}
                 />
               ))}
@@ -402,7 +520,21 @@ export default function StudyPage() {
 
           {/* My Collections */}
           <div>
-            <SectionHead title="My collections" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginBottom: 10 }}>
+              <span style={{
+                fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+                fontSize: 11, fontWeight: 500, color: T.inkMute,
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>My collections</span>
+              <Link href="/learn/new" aria-label="Import collection" style={{
+                width: 22, height: 22, borderRadius: 999,
+                border: `1.5px solid ${T.lineSoft}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: T.inkMute, textDecoration: 'none', flexShrink: 0,
+              }}>
+                <Icon name="plus" size={12} strokeWidth={2.2} />
+              </Link>
+            </div>
             <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
               {loading ? (
                 <div style={{ padding: '16px 14px' }}>
@@ -412,31 +544,19 @@ export default function StudyPage() {
                 collections.map((col, i) => (
                   <DeckRow
                     key={col.id}
-                    dot={T.amber}
+                    icon="archive"
+                    iconColor={T.amber}
+                    iconBg={T.amberBg}
                     name={col.name}
                     sub={`${col.card_count} cards`}
                     due={due.byCollection[col.id] ?? 0}
                     href={`/learn/collection/${col.id}`}
                     kebab
+                    onKebab={() => setActionDeck(col)}
                     last={i === collections.length - 1}
                   />
                 ))
               )}
-              <Link href="/learn/new" style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '13px 14px',
-                borderTop: !loading && collections.length > 0 ? `1px solid ${T.lineSoft}` : 'none',
-                color: T.inkSoft, textDecoration: 'none',
-              }}>
-                <span style={{
-                  width: 20, height: 20, borderRadius: 999,
-                  border: `1.5px dashed ${T.inkFaint}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  <Icon name="plus" size={12} color={T.inkMute} strokeWidth={2.2} />
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 500 }}>Import new collection</span>
-              </Link>
             </div>
           </div>
 
@@ -445,11 +565,18 @@ export default function StudyPage() {
             <SectionHead title="Captures" />
             <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
               <DeckRow
-                dot={T.sage}
+                icon="bookmark"
+                iconColor={T.sage}
+                iconBg={T.sageBg}
                 name="Captures & lookups"
                 sub="words saved while reading"
                 due={due.captures}
                 href="/review"
+                kebab
+                onKebab={() => setActionDeck({
+                  id: CAPTURES_DECK_ID, name: 'Captures & lookups',
+                  language: '', created_at: '', card_count: 0,
+                })}
                 last
               />
             </div>
@@ -466,6 +593,80 @@ export default function StudyPage() {
         statsLoading || !studyStats
           ? <StatsLoading />
           : <StudyStatsView stats={studyStats} />
+      )}
+
+      {settingsOpen && (
+        <>
+          <div
+            onClick={() => setSettingsOpen(false)}
+            onKeyDown={e => { if (e.key === 'Escape') setSettingsOpen(false) }}
+            role="button" tabIndex={-1} aria-label="Close"
+            style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,10,0.35)', zIndex: 70 }}
+          />
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            background: T.paper, borderRadius: '20px 20px 0 0',
+            border: `1px solid ${T.line}`, zIndex: 71,
+            boxShadow: '0 -8px 32px rgba(40,20,10,0.12)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineSoft }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 18px 0' }}>
+              <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink }}>
+                Study settings
+              </span>
+              <button onClick={() => setSettingsOpen(false)} style={{
+                width: 28, height: 28, borderRadius: 999,
+                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: T.inkMute,
+              }}>
+                <Icon name="x" size={14} strokeWidth={2} />
+              </button>
+            </div>
+            <div style={{ height: 1, background: T.lineSoft, margin: '10px 18px 0' }} />
+            <div style={{ padding: '16px 18px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <button
+                onClick={() => setShowAllLangs(v => !v)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '13px 0', background: 'none', border: 'none', cursor: 'pointer', width: '100%',
+                }}
+              >
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: T.ink }}>Show all languages</div>
+                  <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
+                    Captures deck shows cards from all languages
+                  </div>
+                </div>
+                <div style={{
+                  width: 44, height: 26, borderRadius: 999, flexShrink: 0, marginLeft: 16,
+                  background: showAllLangs ? T.crimson : T.lineSoft,
+                  position: 'relative', transition: 'background 0.2s',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 3, left: showAllLangs ? 21 : 3,
+                    width: 20, height: 20, borderRadius: 999, background: '#fff',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {actionDeck && (
+        <DeckActionSheet
+          deck={actionDeck}
+          onClose={() => setActionDeck(null)}
+          onRenamed={handleRenamed}
+          onDeleted={handleDeleted}
+          onReset={handleReset}
+        />
       )}
 
     </div>
