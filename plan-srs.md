@@ -273,9 +273,10 @@ Audio terminology: Note (source fact) · Card (review question) · Note Type (fi
 - Fallback: cards without audio shown as text (silent, no session interruption)
 - Rating updates same Card's SRS state — one schedule regardless of mode
 
-**Step 6 — Curriculum audio** _(after T1-F)_
-- Curriculum flashcard generator (T1-F) copies `CurriculumRow.audio_url` into `ind_flashcards.audio_url`
-- No SQLite join at review time — `cardAudio()` priority-1 picks it up
+**Step 6 — Curriculum audio** _(zero extra work — one-liner inside T1-F generator, blocked until T1-F exists)_
+- At T1-F generation time, copy `CurriculumRow.audio_url` → `ind_flashcards.audio_url`
+- No review session changes needed — `cardAudio()` priority-1 picks it up automatically
+- Step 6 has no standalone implementation; it merges into T1-F
 
 ### T3-E — FSRS
 
@@ -368,7 +369,7 @@ Remaining open items:
   T1-F   Curriculum flashcard generation (Learn content → flashcards; needs design)
   T2-D   Language workflow rethink — may split decks by language; wire showAllLangs toggle once direction settled
   T2-E   Favourites system — star/pin a deck to top of My collections
-  [x] T2-F   Reset SRS data — resetCollectionSRS/resetCapturesSRS; DeckActionSheet reset view; Captures kebab
+  [~] T2-F   Reset SRS data — implementation shipped but needs alignment check (user intent unclear); review before relying on it
   [x] T3-D   Audio step 1 — wire playback on captured-item cards
   [x] T3-D   Audio step 2 — audio_url on ind_learn_cards (migration)
   [x] T3-D   Audio step 3 — audio_url + metadata on ind_flashcards (migration)
