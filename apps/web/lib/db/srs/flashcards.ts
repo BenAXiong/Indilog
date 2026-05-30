@@ -17,11 +17,13 @@ export type Flashcard = {
   suspended_at: string | null
   flag_color:   string | null
   card_type:    string
+  audio_url:    string | null
+  metadata:     Record<string, unknown> | null
 }
 
 export type FlashcardWithItem = Flashcard & {
-  ind_items: { type: string; language: string; dialect: string | null; audio_url: string | null } | null
-  ind_learn_cards: { ind_learn_collections: { name: string; language: string } | null } | null
+  ind_items:       { type: string; language: string; dialect: string | null; audio_url: string | null } | null
+  ind_learn_cards: { audio_url: string | null; ind_learn_collections: { name: string; language: string } | null } | null
 }
 
 // Extract display metadata regardless of flashcard source
@@ -40,9 +42,12 @@ export function cardMeta(card: FlashcardWithItem) {
   }
 }
 
-// Resolve audio URL — priority: captured item join (Steps 2–3 will extend this)
+// Resolve audio URL — priority: card snapshot (curriculum) › captured item › collection card
 export function cardAudio(card: FlashcardWithItem): string | null {
-  return card.ind_items?.audio_url ?? null
+  return card.audio_url
+    ?? card.ind_items?.audio_url
+    ?? card.ind_learn_cards?.audio_url
+    ?? null
 }
 
 export async function ensureFlashcards(): Promise<void> {
@@ -197,7 +202,7 @@ export async function listDueFlashcards(
   const now = new Date().toISOString()
   let q = supabase
     .from('ind_flashcards')
-    .select('*, ind_items(type, language, dialect, audio_url), ind_learn_cards(ind_learn_collections(name, language))')
+    .select('*, ind_items(type, language, dialect, audio_url), ind_learn_cards(audio_url, ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
