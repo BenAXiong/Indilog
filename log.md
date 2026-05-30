@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-30 18:06 | FEATURE | Audio step 5 — audio session mode: OptionsSheet toggle (srs_audio_mode localStorage); audioMode front = large crimson play button; fallback to text + "♪ no audio" when card has no audio; reveal shows card.front above meaning; autoplay on card advance |
 | 2026-05-30 17:50 | SCHEMA | Audio steps 2+3: ind_learn_cards.audio_url, ind_flashcards.audio_url (curriculum snapshot), ind_flashcards.metadata jsonb (STS/future card templates); Flashcard type + FlashcardWithItem updated; cardAudio() priority chain; listDueFlashcards select updated |
 | 2026-05-30 17:48 | FEATURE | Audio step 1: wire playback on captured-item cards — listDueFlashcards joins ind_items.audio_url; cardAudio() helper; review/page speaker button shown + wired when audio present; audio stops on card advance |
 | 2026-05-30 17:48 | DECISION | DEC-NOTE01/02/03: Note/Card/Note Type/Card Template terminology adopted; note unification deferred (trigger = STS impl); metadata jsonb approach for extensible card templates |

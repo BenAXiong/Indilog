@@ -369,10 +369,10 @@ Remaining open items:
   T2-D   Language workflow rethink — may split decks by language; wire showAllLangs toggle once direction settled
   T2-E   Favourites system — star/pin a deck to top of My collections
   T2-F   Reset SRS data — reset ease/interval/reps/due_at to defaults, keep card content; optional wipe of ind_reviews
-  T3-D   Audio step 1 — wire playback on captured-item cards (no migration)
-  T3-D   Audio step 2 — audio_url on ind_learn_cards (migration)
-  T3-D   Audio step 3 — audio_url + metadata on ind_flashcards (migration)
-  T3-D   Audio step 5 — audio session mode (OptionsSheet toggle)
+  [x] T3-D   Audio step 1 — wire playback on captured-item cards
+  [x] T3-D   Audio step 2 — audio_url on ind_learn_cards (migration)
+  [x] T3-D   Audio step 3 — audio_url + metadata on ind_flashcards (migration)
+  [x] T3-D   Audio step 5 — audio session mode (OptionsSheet toggle)
   T3-D   Audio step 6 — curriculum audio (after T1-F)
   T3-D   STS Card Template (needs metadata jsonb from step 3, deferred)
   T3-D   Card type selector on import (deferred)
