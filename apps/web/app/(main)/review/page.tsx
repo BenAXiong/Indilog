@@ -167,10 +167,13 @@ type QueueEntry = {
   pass:             number    // 0 = first encounter, 1+ = requeue pass
   phase:            CardPhase
   originalInterval: number   // for relearn: the interval before the lapse
+  restarts:         number    // how many times this card has been reset to pass 0
 }
 
 // Mature threshold: cards with interval ≥ 7d trigger a relearn burst on lapse
 const MATURE_THRESHOLD = 7
+// Max full restarts before forcing Good graduation
+const MAX_RESTARTS = 3
 
 function ReviewSession({
   cards,
@@ -183,7 +186,7 @@ function ReviewSession({
 }) {
   const [queue, setQueue] = useState<QueueEntry[]>(() =>
     cards.map(c => ({
-      card: c, pass: 0,
+      card: c, pass: 0, restarts: 0,
       phase: (c.repetitions === 0 && c.interval_days === 0) ? 'new' : 'review',
       originalInterval: c.interval_days,
     }))
@@ -222,19 +225,26 @@ function ReviewSession({
   const entry = queue[qIdx]
   if (!entry) return null  // transitioning to done state
 
-  const { card, phase, pass, originalInterval } = entry
+  const { card, phase, pass, originalInterval, restarts } = entry
   const lang  = cardMeta(card)
   const state = cardSMState(card)
-  const isLearning = phase !== 'review'
+  const isLearning  = phase !== 'review'
+  const isFinalPass = pass >= learningSteps - 1
 
   // Phase label / color for top-right of card
   const phaseLabel =
     phase === 'relearn' ? 'Relearning'
-    : phase === 'new' && pass > 0 ? 'Learning'
+    : phase === 'new' && (pass > 0 || restarts > 0) ? 'Learning'
     : phase === 'new' ? 'New'
     : lang.type
   const phaseColor =
     phase === 'relearn' ? T.amber : phase === 'new' ? T.sage : T.inkFaint
+
+  // Card border tint based on phase
+  const cardBorderColor =
+    phase === 'relearn' ? '#EBD49A'
+    : phase === 'new' ? '#D2D8AE'
+    : T.lineSoft
 
   // Pending requeue count
   const pendingRequeue = queue.slice(qIdx + 1).filter(e => e.pass > 0).length
@@ -258,43 +268,54 @@ function ReviewSession({
   }, [revealed, showHardEasy, showOptions, isLearning]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit(rating: Rating) {
-    // Hard is not meaningful in learning/relearn — treat as Again
     const r: Rating = (isLearning && rating === 'hard') ? 'again' : rating
 
     if (phase === 'review') {
       if (r === 'again' && card.interval_days >= MATURE_THRESHOLD) {
-        // Mature lapse → relearn burst (no DB write yet)
-        setQueue(prev => [...prev, { card, pass: 0, phase: 'relearn', originalInterval: card.interval_days }])
+        setQueue(prev => [...prev, { card, pass: 0, restarts: 0, phase: 'relearn', originalInterval: card.interval_days }])
       } else {
         await rateCard(card.id, r, state)
         completedRef.current.add(card.id)
       }
 
     } else if (phase === 'new') {
-      if (r === 'easy') {
-        // Immediate graduation
-        await rateCard(card.id, 'easy', state)
-        completedRef.current.add(card.id)
-      } else if (pass < learningSteps - 1) {
-        // Requeue for another learning pass
-        setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
+      if (r === 'again') {
+        // "Repeat"
+        if (isFinalPass) {
+          if (restarts >= MAX_RESTARTS) {
+            // Cap reached → force Good graduation
+            await rateCard(card.id, 'good', state)
+            completedRef.current.add(card.id)
+          } else {
+            // Reset to pass 0
+            setQueue(prev => [...prev, { ...entry, pass: 0, restarts: restarts + 1 }])
+          }
+        } else {
+          setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
+        }
       } else {
-        // Final pass — graduate with this rating
-        await rateCard(card.id, r, state)
+        // "Easy" (first attempt, non-final) or "Got it!" (final / after restart)
+        const useGood = isFinalPass || restarts >= 1
+        await rateCard(card.id, useGood ? 'good' : 'easy', state)
         completedRef.current.add(card.id)
       }
 
     } else { // relearn
-      if (r === 'easy' || r === 'good') {
-        // Successful relearn: 50% recovery
-        await rateCardRelearn(card.id, r, state, originalInterval)
-        completedRef.current.add(card.id)
-      } else if (pass < learningSteps - 1) {
-        // Keep drilling
-        setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
+      if (r === 'again') {
+        // "Repeat"
+        if (isFinalPass) {
+          if (restarts >= MAX_RESTARTS) {
+            await rateCard(card.id, 'again', state)
+            completedRef.current.add(card.id)
+          } else {
+            setQueue(prev => [...prev, { ...entry, pass: 0, restarts: restarts + 1 }])
+          }
+        } else {
+          setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
+        }
       } else {
-        // Exhausted passes with Again → full reset
-        await rateCard(card.id, 'again', state)
+        // "Got it!" — 50% recovery
+        await rateCardRelearn(card.id, 'good', state, originalInterval)
         completedRef.current.add(card.id)
       }
     }
@@ -344,25 +365,42 @@ function ReviewSession({
     { id: 'good',  label: 'Good',  color: T.sage    },
     { id: 'easy',  label: 'Easy',  color: T.amber   },
   ]
+  // Learning/relearn: 2 buttons only (Repeat + Easy/Got it!)
   const visibleRatings = isLearning
-    ? RATINGS.filter(r => r.id !== 'hard')
+    ? RATINGS.filter(r => r.id === 'again' || r.id === 'easy')
     : showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
 
-  // Interval labels (context-aware)
   const intervals = useMemo(() =>
     Object.fromEntries(RATINGS.map(r => [r.id, formatDays(estimateInterval(state, r.id))])),
   [card.id, card.ease_factor, card.interval_days, card.repetitions] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
-  function intervalLabel(id: Rating): string {
-    if (phase === 'relearn') {
-      if (id === 'again') return pass < learningSteps - 1 ? 'retry' : '1d'
-      return formatDays(Math.max(1, Math.floor(originalInterval * 0.5)))
-    }
+  // Context-aware button label
+  function ratingLabel(id: Rating): string {
     if (phase === 'new') {
-      if (id === 'again') return 'retry'
-      if (id === 'easy')  return 'done'
-      return pass < learningSteps - 1 ? 'more' : intervals[id]
+      if (id === 'again') return 'Repeat'
+      const useGotIt = isFinalPass || restarts >= 1
+      return useGotIt ? 'Got it!' : 'Easy'
+    }
+    if (phase === 'relearn') {
+      return id === 'again' ? 'Repeat' : 'Got it!'
+    }
+    return { again: 'Again', hard: 'Hard', good: 'Good', easy: 'Easy' }[id] ?? id
+  }
+
+  // Context-aware interval sub-label
+  function intervalLabel(id: Rating): string {
+    if (phase === 'new') {
+      if (id === 'again') {
+        if (isFinalPass) return restarts >= MAX_RESTARTS ? formatDays(estimateInterval(state, 'good')) : '↩ 0'
+        return '↩'
+      }
+      const useGood = isFinalPass || restarts >= 1
+      return formatDays(estimateInterval(state, useGood ? 'good' : 'easy'))
+    }
+    if (phase === 'relearn') {
+      if (id === 'again') return isFinalPass ? '↩ 0' : '↩'
+      return formatDays(Math.max(1, Math.floor(originalInterval * 0.5)))
     }
     return intervals[id]
   }
@@ -422,7 +460,7 @@ function ReviewSession({
           }}
           style={{
             position: 'relative', background: T.paperHi, borderRadius: 22,
-            border: `1px solid ${T.lineSoft}`, padding: '26px 22px', minHeight: 280,
+            border: `1px solid ${cardBorderColor}`, padding: '26px 22px', minHeight: 280,
             display: 'flex', flexDirection: 'column', cursor: revealed ? 'default' : 'pointer',
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
@@ -514,6 +552,20 @@ function ReviewSession({
         </div>
       </div>
 
+      {/* Pass dots (learning / relearn only) */}
+      {phase !== 'review' && (
+        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', gap: 7, padding: '10px 0 0' }}>
+          {Array.from({ length: learningSteps }).map((_, i) => (
+            <div key={i} style={{
+              width: 7, height: 7, borderRadius: 999,
+              background: i <= pass ? phaseColor : 'transparent',
+              border: `1.5px solid ${i <= pass ? phaseColor : T.line}`,
+              transition: 'all .2s',
+            }} />
+          ))}
+        </div>
+      )}
+
       {/* Rating row */}
       <div style={{ padding: '16px 16px 32px', flexShrink: 0 }}>
         {revealed && showButtons ? (
@@ -532,7 +584,7 @@ function ReviewSession({
                 onPointerUp={e => { (e.currentTarget as HTMLButtonElement).style.background = T.paperHi; (e.currentTarget as HTMLButtonElement).style.color = r.color }}
                 onPointerLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = T.paperHi; (e.currentTarget as HTMLButtonElement).style.color = r.color }}
               >
-                <span style={{ fontSize: 13.5 }}>{r.label}</span>
+                <span style={{ fontSize: 13.5 }}>{ratingLabel(r.id)}</span>
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, opacity: 0.75, fontWeight: 500 }}>{intervalLabel(r.id)}</span>
               </button>
             ))}
