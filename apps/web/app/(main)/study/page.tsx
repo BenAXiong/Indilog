@@ -8,7 +8,7 @@ import { Icon, SectionHead } from '@/components/ui'
 import type { IconName } from '@/components/ui/Icon'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useLang } from '@/lib/context/LangDialectProvider'
-import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
+import { listCollections, pinCollection, type CollectionMeta } from '@/lib/db/progress/collections'
 import { ensureFlashcards, getDueStats, listUserLanguages, type DueStats } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
@@ -50,12 +50,13 @@ type DeckRowProps = {
   due: number
   href: string
   pinned?: boolean
+  onPin?: () => void
   kebab?: boolean
   onKebab?: () => void
   last?: boolean
 }
 
-function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false, kebab = false, onKebab, last = false }: DeckRowProps) {
+function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false, onPin, kebab = false, onKebab, last = false }: DeckRowProps) {
   return (
     <Link href={href} style={{
       display: 'flex', alignItems: 'center', gap: 12,
@@ -87,6 +88,20 @@ function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false
         )}
       </div>
       <DueBadge n={due} />
+      {onPin !== undefined && (
+        <button
+          aria-label={pinned ? 'Unpin' : 'Pin to top'}
+          onClick={e => { e.preventDefault(); e.stopPropagation(); onPin() }}
+          style={{
+            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: pinned ? T.amber : T.inkFaint,
+          }}
+        >
+          <Icon name="pin" size={15} strokeWidth={1.8} />
+        </button>
+      )}
       {kebab && (
         <button
           aria-label="Deck actions"
@@ -398,6 +413,15 @@ export default function StudyPage() {
   })
   const [availLangs, setAvailLangs]         = useState<string[] | null>(null)
   const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    const base: Record<string, boolean> = { curriculum: false, captures: false, collections: false }
+    if (typeof window === 'undefined') return base
+    return {
+      curriculum:  localStorage.getItem('study_collapse_curriculum')  === 'true',
+      captures:    localStorage.getItem('study_collapse_captures')    === 'true',
+      collections: localStorage.getItem('study_collapse_collections') === 'true',
+    }
+  })
 
   useEffect(() => {
     if (!lang.code) return
@@ -450,6 +474,19 @@ export default function StudyPage() {
     setCollections(prev => {
       const updated = prev.map(c => c.id === id ? { ...c, pinned } : c)
       return [...updated.filter(c => c.pinned), ...updated.filter(c => !c.pinned)]
+    })
+  }
+
+  async function handlePinInline(id: string, pinned: boolean) {
+    handlePinned(id, pinned)  // optimistic
+    await pinCollection(id, pinned)
+  }
+
+  function toggleSection(key: string) {
+    setCollapsed(prev => {
+      const next = !prev[key]
+      localStorage.setItem(`study_collapse_${key}`, String(next))
+      return { ...prev, [key]: next }
     })
   }
 
@@ -553,52 +590,61 @@ export default function StudyPage() {
 
           {/* Curriculum */}
           <div>
-            <SectionHead title="Curriculum" />
-            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
-              {CURRICULUM.map((deck, i) => (
-                <CurriculumRow
-                  key={deck.id}
-                  icon={deck.icon}
-                  name={deck.name}
-                  href={deck.href}
-                  meta={curriculumMeta?.[deck.id as keyof typeof curriculumMeta] ?? null}
-                  langName={lang.name}
-                  last={i === CURRICULUM.length - 1}
-                />
-              ))}
-            </div>
+            <button onClick={() => toggleSection('curriculum')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0 4px', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}>
+              <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1, textAlign: 'left' }}>Curriculum</span>
+              <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.curriculum ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+            </button>
+            {!collapsed.curriculum && (
+              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+                {CURRICULUM.map((deck, i) => (
+                  <CurriculumRow
+                    key={deck.id}
+                    icon={deck.icon}
+                    name={deck.name}
+                    href={deck.href}
+                    meta={curriculumMeta?.[deck.id as keyof typeof curriculumMeta] ?? null}
+                    langName={lang.name}
+                    last={i === CURRICULUM.length - 1}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Captures */}
           <div>
-            <SectionHead title="Captures" />
-            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
-              <DeckRow
-                icon="bookmark"
-                iconColor={T.sage}
-                iconBg={T.sageBg}
-                name="Captures & lookups"
-                sub="words saved while reading"
-                due={due.captures}
-                href="/review"
-                kebab
-                onKebab={() => setActionDeck({
-                  id: CAPTURES_DECK_ID, name: 'Captures & lookups',
-                  language: '', created_at: '', card_count: 0, pinned: false,
-                })}
-                last
-              />
-            </div>
+            <button onClick={() => toggleSection('captures')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0 4px', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}>
+              <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1, textAlign: 'left' }}>Captures</span>
+              <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.captures ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+            </button>
+            {!collapsed.captures && (
+              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+                <DeckRow
+                  icon="bookmark"
+                  iconColor={T.sage}
+                  iconBg={T.sageBg}
+                  name="Captures & lookups"
+                  sub="words saved while reading"
+                  due={due.captures}
+                  href="/review"
+                  kebab
+                  onKebab={() => setActionDeck({
+                    id: CAPTURES_DECK_ID, name: 'Captures & lookups',
+                    language: '', created_at: '', card_count: 0, pinned: false,
+                  })}
+                  last
+                />
+              </div>
+            )}
           </div>
 
           {/* My Collections */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginBottom: 10 }}>
-              <span style={{
-                fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-                fontSize: 11, fontWeight: 500, color: T.inkMute,
-                textTransform: 'uppercase', letterSpacing: '0.08em',
-              }}>My collections</span>
+              <button onClick={() => toggleSection('collections')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>My collections</span>
+                <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.collections ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+              </button>
               <Link href="/learn/new" aria-label="Import collection" style={{
                 width: 22, height: 22, borderRadius: 999,
                 border: `1.5px solid ${T.lineSoft}`,
@@ -608,30 +654,33 @@ export default function StudyPage() {
                 <Icon name="plus" size={12} strokeWidth={2.2} />
               </Link>
             </div>
-            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
-              {loading ? (
-                <div style={{ padding: '16px 14px' }}>
-                  <div className="animate-iv-shimmer" style={{ height: 14, borderRadius: 6, background: T.lineSoft, width: '60%' }} />
-                </div>
-              ) : (
-                collections.map((col, i) => (
-                  <DeckRow
-                    key={col.id}
-                    icon="archive"
-                    iconColor={T.amber}
-                    iconBg={T.amberBg}
-                    name={col.name}
-                    sub={`${col.card_count} cards`}
-                    due={due.byCollection[col.id] ?? 0}
-                    href={`/learn/collection/${col.id}`}
-                    pinned={col.pinned}
-                    kebab
-                    onKebab={() => setActionDeck(col)}
-                    last={i === collections.length - 1}
-                  />
-                ))
-              )}
-            </div>
+            {!collapsed.collections && (
+              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+                {loading ? (
+                  <div style={{ padding: '16px 14px' }}>
+                    <div className="animate-iv-shimmer" style={{ height: 14, borderRadius: 6, background: T.lineSoft, width: '60%' }} />
+                  </div>
+                ) : (
+                  collections.map((col, i) => (
+                    <DeckRow
+                      key={col.id}
+                      icon="archive"
+                      iconColor={T.amber}
+                      iconBg={T.amberBg}
+                      name={col.name}
+                      sub={`${col.card_count} cards`}
+                      due={due.byCollection[col.id] ?? 0}
+                      href={`/learn/collection/${col.id}`}
+                      pinned={col.pinned}
+                      onPin={() => handlePinInline(col.id, !col.pinned)}
+                      kebab
+                      onKebab={() => setActionDeck(col)}
+                      last={i === collections.length - 1}
+                    />
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
         </div>
@@ -753,7 +802,6 @@ export default function StudyPage() {
           onRenamed={handleRenamed}
           onDeleted={handleDeleted}
           onReset={handleReset}
-          onPinned={handlePinned}
         />
       )}
 

@@ -7,7 +7,6 @@ import {
   renameCollection,
   deleteCollection,
   listCollectionCards,
-  pinCollection,
   type CollectionMeta,
 } from '@/lib/db/progress/collections'
 import { resetCollectionSRS, resetCapturesSRS } from '@/lib/db/srs/flashcards'
@@ -20,7 +19,6 @@ type Props = {
   onRenamed: (id: string, name: string) => void
   onDeleted: (id: string) => void
   onReset?:  () => void
-  onPinned?: (id: string, pinned: boolean) => void
 }
 
 type View = 'menu' | 'rename' | 'delete' | 'reset'
@@ -33,7 +31,7 @@ const labelStyle: React.CSSProperties = {
   fontFamily: '"JetBrains Mono", monospace', marginBottom: 6,
 }
 
-export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, onReset, onPinned }: Readonly<Props>) {
+export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, onReset }: Readonly<Props>) {
   const [view, setView] = useState<View>('menu')
   const [name, setName] = useState(deck.name)
   const [busy, setBusy]     = useState(false)
@@ -76,15 +74,6 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
     setBusy(true)
     await deleteCollection(deck.id)
     onDeleted(deck.id)
-    setBusy(false)
-    onClose()
-  }
-
-  async function handlePin() {
-    setBusy(true)
-    const next = !deck.pinned
-    await pinCollection(deck.id, next)
-    onPinned?.(deck.id, next)
     setBusy(false)
     onClose()
   }
@@ -160,8 +149,6 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
         {/* Menu */}
         {view === 'menu' && (
           <div style={{ padding: '6px 0 12px' }}>
-            {!isCaptures(deck.id) && actionRow(handlePin,
-              <Icon name="pin" size={18} strokeWidth={1.8} color={deck.pinned ? T.amber : T.inkSoft} />, deck.pinned ? 'Unpin from top' : 'Pin to top')}
             {!isCaptures(deck.id) && actionRow(() => setView('rename'),
               <Icon name="pen"       size={18} strokeWidth={1.8} color={T.inkSoft} />, 'Rename')}
             {!isCaptures(deck.id) && actionRow(handleExport,
