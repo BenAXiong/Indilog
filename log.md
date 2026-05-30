@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 01:19 | FEATURE | T2-E pin collections: pinned boolean on ind_learn_collections; Pin/Unpin in DeckActionSheet; pin indicator on DeckRow; optimistic sort; Captures moved above My Collections in Study tab |
 | 2026-05-31 01:10 | FEATURE | T2-D language filter: getLangName(), listUserLanguages(), excludeLangs on getDueStats/listDueFlashcards; Study + Review OptionsSheet wired with toggle + dynamic checkboxes; session remounts on filter change |
 | 2026-05-31 00:43 | FEATURE | T2-F reset SRS: wipeReviewsAndReset() deletes ind_reviews + resets scheduling; Reset moved to danger zone in DeckActionSheet; confirm copy updated |
 | 2026-05-31 00:43 | DECISION | DEC-SRS02: reset scope = SRS state + ind_reviews; ind_daily_stats preserved (habit record, hard to subtract retroactively) |

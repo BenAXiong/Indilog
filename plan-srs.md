@@ -367,7 +367,7 @@ Remaining open items:
   [x] T1-F   ensureFlashcards() on Study landing — done
   [x] T1-F   Curriculum audio: audio_url threaded through onSave — done
   [x] T2-D   Language filter: Show all languages toggle + per-language checkboxes in Study settings + Review OptionsSheet; excludeLangs propagated to getDueStats/listDueFlashcards
-  T2-E   Favourites system — star/pin a deck to top of My collections
+  [x] T2-E   Pin collections: pinned boolean on ind_learn_collections; Pin/Unpin in kebab; pin indicator on row; pinned sort to top
   [x] T2-F   Reset SRS data — wipes ind_reviews + scheduling; Reset in danger zone
   [x] T3-D   Audio steps 1–6 — done (see audio plan above)
   T3-D   STS Card Template — spec in architecture.md; needs T-UNIFY first
