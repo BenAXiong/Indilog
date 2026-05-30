@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 14:30 | CONFIG | Update plan-srs.md + decisions.md: T3-D STS spec, T2-D/E/F done, DEC-NOTE03 metadata shape corrected, DEC-SRS02 marked implemented |
 | 2026-05-31 14:00 | SCHEMA | T3-D STS: add target_word text to ind_items; migration 20260531030000 |
 | 2026-05-31 14:00 | FEATURE | T3-D STS: ensureFlashcards() creates card_type='sts' for notes with target_word; setTargetWord() syncs note + card; target dot button on lookup cards in Capture; STS word/sentence layout in ReviewSession |
 | 2026-05-31 01:27 | FEATURE | Pin button inline on DeckRow (between due pill and kebab); collapsible section headers with chevron in Study Decks tab; collapse state persisted in localStorage |
