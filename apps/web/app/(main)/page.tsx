@@ -288,7 +288,7 @@ export default async function DashboardPage() {
                   <span style={{
                     fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 500, color: T.ink,
                     display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{item.text}</span>
+                  }}>{item.ab}</span>
                   <span style={{ fontSize: 12, color: T.inkSoft, display: 'block', marginTop: 2 }}>
                     {item.language}
                   </span>

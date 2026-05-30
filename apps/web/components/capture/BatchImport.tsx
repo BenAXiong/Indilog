@@ -45,8 +45,8 @@ export default function BatchImport({ langCode, selectedSource, onClose, onImpor
     const outcomes: { text: string; ok: boolean }[] = []
     for (const row of parsed) {
       const item = await createItem({
-        text:      row.text,
-        meaning:   row.meaning,
+        ab:        row.text,
+        zh:        row.meaning,
         type:      'sentence',
         language:  langCode,
         source_id: selectedSource?.id,

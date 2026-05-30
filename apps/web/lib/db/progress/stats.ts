@@ -8,7 +8,7 @@ export type DashboardStats = {
   dueCount: number
   recentItems: {
     id: string
-    text: string
+    ab: string
     type: string
     language: string
     created_at: string
@@ -45,7 +45,7 @@ export async function getDashboardStats(language?: string): Promise<DashboardSta
     // 5 most recent items
     supabase
       .from('ind_items')
-      .select('id, text, type, language, created_at')
+      .select('id, ab, type, language, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5),

@@ -280,8 +280,8 @@ function CapturePageInner() {
   function loadItem(item: Item) {
     setEditingId(item.id)
     setEditingType(item.type as ItemType)
-    setText(item.text)
-    setMeaning(item.meaning ?? '')
+    setText(item.ab)
+    setMeaning(item.zh ?? '')
     setDialect(item.dialect ?? '')
     setPlace(item.place_heard ?? '')
     setNotes(item.notes ?? '')
@@ -343,8 +343,8 @@ function CapturePageInner() {
     }
 
     const payload = {
-      text:        text.trim(),
-      meaning:     meaning.trim() || undefined,
+      ab:          text.trim(),
+      zh:          meaning.trim() || undefined,
       type:        editingId ? editingType : 'sentence' as ItemType,
       language:    lang.code,
       dialect:     dialect.trim() || undefined,
@@ -352,7 +352,7 @@ function CapturePageInner() {
       notes:       notes.trim() || undefined,
       source_id:   selectedSource?.id,
       speaker_id:  selectedSpeaker?.id,
-      audio_url:   audioUrl,
+      audio:       audioUrl,
       tags:        selectedTags.length ? selectedTags : undefined,
     }
 
@@ -941,15 +941,15 @@ function CapturePageInner() {
                       fontSize: 14, fontWeight: 500, color: T.ink,
                       display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {item.text}
+                      {item.ab}
                     </span>
-                    {item.meaning && (
+                    {item.zh && (
                       <span style={{
                         fontSize: 12, color: T.inkFaint, display: 'block',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         marginTop: 2,
                       }}>
-                        {item.meaning}
+                        {item.zh}
                       </span>
                     )}
                   </div>

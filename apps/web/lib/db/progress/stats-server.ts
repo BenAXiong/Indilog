@@ -20,7 +20,7 @@ export type DashboardStats = {
   capturedTotal: number
   capturedToday: number
   recentItems: {
-    id: string; text: string; type: string; language: string; created_at: string
+    id: string; ab: string; type: string; language: string; created_at: string
   }[]
 }
 
@@ -108,7 +108,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
 
     supabase
       .from('ind_items')
-      .select('id, text, type, language, created_at')
+      .select('id, ab, type, language, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5),

@@ -78,7 +78,7 @@ export default function TranslatePage() {
   async function handleSave() {
     if (!output) return
     await createItem({
-      text: output,
+      ab: output,
       type: 'sentence',
       language: langLabel(tgt),
       notes: `Translated from: ${text.trim()}`,

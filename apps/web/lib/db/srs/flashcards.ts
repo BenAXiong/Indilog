@@ -22,7 +22,7 @@ export type Flashcard = {
 }
 
 export type FlashcardWithItem = Flashcard & {
-  ind_items:       { type: string; language: string; dialect: string | null; audio_url: string | null } | null
+  ind_items:       { type: string; language: string; dialect: string | null; audio: string | null; ab: string; zh: string | null; note_source: string } | null
   ind_learn_cards: { audio_url: string | null; ind_learn_collections: { name: string; language: string } | null } | null
 }
 
@@ -42,10 +42,10 @@ export function cardMeta(card: FlashcardWithItem) {
   }
 }
 
-// Resolve audio URL — priority: card snapshot (curriculum) › captured item › collection card
+// Resolve audio — priority: card snapshot (curriculum) › note join › collection card join
 export function cardAudio(card: FlashcardWithItem): string | null {
   return card.audio_url
-    ?? card.ind_items?.audio_url
+    ?? card.ind_items?.audio
     ?? card.ind_learn_cards?.audio_url
     ?? null
 }
@@ -57,7 +57,7 @@ export async function ensureFlashcards(): Promise<void> {
 
   const [{ data: existing }, { data: items }] = await Promise.all([
     supabase.from('ind_flashcards').select('item_id').eq('user_id', user.id).not('item_id', 'is', null),
-    supabase.from('ind_items').select('id, text, notes, meaning, type').eq('user_id', user.id),
+    supabase.from('ind_items').select('id, ab, notes, zh, type').eq('user_id', user.id),
   ])
 
   if (!items?.length) return
@@ -69,8 +69,8 @@ export async function ensureFlashcards(): Promise<void> {
     newItems.map(item => ({
       user_id: user.id,
       item_id: item.id,
-      front: item.text,
-      back: item.meaning?.trim() || item.notes?.trim() || (item.type === 'word' ? '(no definition)' : '(no translation)'),
+      front: item.ab,
+      back: item.zh?.trim() || item.notes?.trim() || (item.type === 'word' ? '(no definition)' : '(no translation)'),
     }))
   )
 }
@@ -202,7 +202,7 @@ export async function listDueFlashcards(
   const now = new Date().toISOString()
   let q = supabase
     .from('ind_flashcards')
-    .select('*, ind_items(type, language, dialect, audio_url), ind_learn_cards(audio_url, ind_learn_collections(name, language))')
+    .select('*, ind_items(type, language, dialect, audio, ab, zh, note_source), ind_learn_cards(audio_url, ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
