@@ -1,10 +1,13 @@
+'use client'
+
 import { createClient } from '@/lib/supabase/client'
 export { suspendCard, unsuspendCard, setFlagColor } from './flashcards'
 
 export type BrowserCard = {
   id: string
-  front: string
-  back: string
+  note_id: string
+  ab: string
+  zh: string | null
   due_at: string | null
   ease_factor: number
   interval_days: number
@@ -14,7 +17,7 @@ export type BrowserCard = {
   flag_color:   string | null
   card_type:    string
   source: string
-  sourceType: 'collection' | 'capture'
+  note_source: string
 }
 
 export type BrowserFilter = 'all' | 'due' | 'new' | 'flagged' | 'suspended'
@@ -33,7 +36,7 @@ export async function listBrowserCards(
 
   let q = supabase
     .from('ind_flashcards')
-    .select('id, front, back, due_at, ease_factor, interval_days, repetitions, created_at, suspended_at, flag_color, card_type, item_id, ind_learn_cards(collection_id, ind_learn_collections(name))')
+    .select('id, note_id, due_at, ease_factor, interval_days, repetitions, created_at, suspended_at, flag_color, card_type, ind_items(ab, zh, note_source, collection_id, ind_learn_collections(name))')
     .eq('user_id', user.id)
 
   switch (filter) {
@@ -47,22 +50,23 @@ export async function listBrowserCards(
   }
 
   switch (sort) {
-    case 'due':   q = q.order('due_at',   { ascending: true, nullsFirst: true }); break
+    case 'due':   q = q.order('due_at',      { ascending: true, nullsFirst: true }); break
     case 'ease':  q = q.order('ease_factor', { ascending: true }); break
-    case 'added': q = q.order('created_at', { ascending: false }); break
+    case 'added': q = q.order('created_at',  { ascending: false }); break
   }
 
   const { data } = await q.limit(500)
   if (!data) return []
 
   return data.map(row => {
-    type LC = { collection_id: string; ind_learn_collections: { name: string } | null } | null
-    const lc     = row.ind_learn_cards as unknown as LC
-    const source = lc?.ind_learn_collections?.name ?? (row.item_id ? 'Captures' : '—')
+    type NoteJoin = { ab: string; zh: string | null; note_source: string; collection_id: string | null; ind_learn_collections: { name: string } | null } | null
+    const note   = row.ind_items as unknown as NoteJoin
+    const source = note?.ind_learn_collections?.name ?? (note?.note_source === 'collection' ? '—' : 'Captures')
     return {
       id:            row.id,
-      front:         row.front,
-      back:          row.back,
+      note_id:       row.note_id,
+      ab:            note?.ab ?? '',
+      zh:            note?.zh ?? null,
       due_at:        row.due_at,
       ease_factor:   row.ease_factor,
       interval_days: row.interval_days,
@@ -70,16 +74,16 @@ export async function listBrowserCards(
       created_at:    row.created_at,
       suspended_at:  row.suspended_at,
       flag_color:    row.flag_color ?? null,
-      card_type:     row.card_type ?? 'forward',
+      card_type:     row.card_type ?? 'default',
       source,
-      sourceType: row.item_id ? 'capture' : 'collection',
+      note_source:   note?.note_source ?? 'captured',
     }
   })
 }
 
-export async function updateCardFrontBack(id: string, front: string, back: string): Promise<void> {
+export async function updateNoteContent(noteId: string, ab: string, zh: string): Promise<void> {
   const supabase = createClient()
-  await supabase.from('ind_flashcards').update({ front, back }).eq('id', id)
+  await supabase.from('ind_items').update({ ab, zh }).eq('id', noteId)
 }
 
 export async function resetCardEase(id: string): Promise<void> {

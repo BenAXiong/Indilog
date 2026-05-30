@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
-  listBrowserCards, updateCardFrontBack, resetCardEase,
+  listBrowserCards, updateNoteContent, resetCardEase,
   suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
@@ -61,28 +61,28 @@ type CardRowProps = {
 }
 
 function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps) {
-  const [editFront, setEditFront] = useState(card.front)
-  const [editBack,  setEditBack]  = useState(card.back)
+  const [editFront, setEditFront] = useState(card.ab)
+  const [editBack,  setEditBack]  = useState(card.zh ?? '')
   const [saving,    setSaving]    = useState(false)
   const [busy,      setBusy]      = useState(false)
 
   useEffect(() => {
-    if (expanded) { setEditFront(card.front); setEditBack(card.back) }
-  }, [expanded, card.front, card.back])
+    if (expanded) { setEditFront(card.ab); setEditBack(card.zh ?? '') }
+  }, [expanded, card.ab, card.zh])
 
   const now         = new Date().toISOString()
   const isDue       = !card.due_at || card.due_at <= now
   const isNew       = card.repetitions === 0
   const isSuspended = !!card.suspended_at
-  const isReverse   = card.card_type === 'reverse'
+  const isSTS       = card.card_type === 'sts'
   const flagHex     = flagColorHex(card.flag_color)
 
   async function handleSave() {
     const f = editFront.trim(), b = editBack.trim()
     if (!f) return
     setSaving(true)
-    await updateCardFrontBack(card.id, f, b)
-    onUpdate({ front: f, back: b })
+    await updateNoteContent(card.note_id, f, b)
+    onUpdate({ ab: f, zh: b })
     setSaving(false)
   }
 
@@ -145,11 +145,11 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
             fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 500,
             color: isSuspended ? T.inkSoft : T.ink,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{card.front}</div>
+          }}>{card.ab}</div>
           <div style={{
             fontSize: 12.5, color: T.inkMute, marginTop: 1.5,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{card.back}</div>
+          }}>{card.zh}</div>
         </div>
 
         {/* Meta + flag dot */}
@@ -158,8 +158,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
             {flagHex && (
               <span style={{ width: 10, height: 10, borderRadius: 999, background: flagHex, flexShrink: 0 }} />
             )}
-            {isReverse && (
-              <span style={{ fontSize: 9, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', padding: '1px 4px', borderRadius: 3, border: `1px solid ${T.lineSoft}` }}>REV</span>
+            {isSTS && (
+              <span style={{ fontSize: 9, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', padding: '1px 4px', borderRadius: 3, border: `1px solid ${T.lineSoft}` }}>STS</span>
             )}
             <span style={{ fontSize: 11, color: T.inkMute, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {card.source}
@@ -245,7 +245,7 @@ export default function BrowserView() {
     if (!search.trim()) return cards
     const q = search.toLowerCase()
     return cards.filter(c =>
-      c.front.toLowerCase().includes(q) || c.back.toLowerCase().includes(q)
+      c.ab.toLowerCase().includes(q) || (c.zh ?? '').toLowerCase().includes(q)
     )
   }, [cards, search])
 

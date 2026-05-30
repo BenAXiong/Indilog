@@ -24,6 +24,32 @@ const EMPTY: StudyStats = {
   collections: [], dailyCounts: [], avgPerDay: 0,
 }
 
+type NoteJoin = {
+  note_source: string
+  collection_id: string | null
+  ind_learn_collections: { id: string; name: string } | null
+} | null
+
+function accumulateCard(
+  note: NoteJoin,
+  isKnown: boolean,
+  colMap: Map<string, CollectionStat>,
+  captures: { total: number; known: number },
+): void {
+  if (note?.note_source === 'collection' && note.collection_id) {
+    const colId   = note.collection_id
+    const colName = note.ind_learn_collections?.name ?? colId
+    const existing = colMap.get(colId)
+    const entry = existing ?? { id: colId, name: colName, total: 0, known: 0 }
+    if (!existing) colMap.set(colId, entry)
+    entry.total++
+    if (isKnown) entry.known++
+  } else {
+    captures.total++
+    if (isKnown) captures.known++
+  }
+}
+
 export async function getStudyStats(): Promise<StudyStats> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -37,7 +63,7 @@ export async function getStudyStats(): Promise<StudyStats> {
   const [cardsRes, dailyRes] = await Promise.all([
     supabase
       .from('ind_flashcards')
-      .select('ease_factor, interval_days, due_at, suspended_at, item_id, collection_card_id, ind_learn_cards(collection_id, ind_learn_collections(id, name))')
+      .select('ease_factor, interval_days, due_at, suspended_at, ind_items(note_source, collection_id, ind_learn_collections(id, name))')
       .eq('user_id', user.id)
       .limit(10000),
     supabase
@@ -49,44 +75,20 @@ export async function getStudyStats(): Promise<StudyStats> {
   ])
 
   const cards = cardsRes.data ?? []
-
-  let totalCards = cards.length
-  let dueToday = 0
-  let known = 0
-  let mastered = 0
-  let capturesTotal = 0
-  let capturesKnown = 0
-  const colMap = new Map<string, CollectionStat>()
+  let dueToday = 0, known = 0, mastered = 0
+  const captures = { total: 0, known: 0 }
+  const colMap   = new Map<string, CollectionStat>()
 
   for (const card of cards) {
-    const suspended  = !!(card as Record<string, unknown>).suspended_at
+    const suspended  = !!card.suspended_at
     const isKnown    = card.ease_factor >= 2.5 && card.interval_days >= 21
-    const isMastered = card.interval_days >= 60
     const isDue      = (!card.due_at || card.due_at <= now) && !suspended
 
-    if (isKnown)    known++
-    if (isMastered) mastered++
-    if (isDue)      dueToday++
+    if (isKnown)              known++
+    if (card.interval_days >= 60) mastered++
+    if (isDue)                dueToday++
 
-    if (card.item_id) {
-      capturesTotal++
-      if (isKnown) capturesKnown++
-    } else {
-      type LearnCard = {
-        collection_id: string
-        ind_learn_collections: { id: string; name: string } | null
-      } | null
-      const lc = card.ind_learn_cards as unknown as LearnCard
-      if (lc?.collection_id) {
-        const colName = lc.ind_learn_collections?.name ?? lc.collection_id
-        if (!colMap.has(lc.collection_id)) {
-          colMap.set(lc.collection_id, { id: lc.collection_id, name: colName, total: 0, known: 0 })
-        }
-        const entry = colMap.get(lc.collection_id)!
-        entry.total++
-        if (isKnown) entry.known++
-      }
-    }
+    accumulateCard(card.ind_items as unknown as NoteJoin, isKnown, colMap, captures) // NOSONAR — TS2352 without unknown bridge
   }
 
   // Fill 14-day counts including zeros
@@ -108,11 +110,11 @@ export async function getStudyStats(): Promise<StudyStats> {
   const avgPerDay     = activeDays > 0 ? Math.round(totalReviewed / activeDays) : 0
 
   return {
-    totalCards,
+    totalCards: cards.length,
     dueToday,
     known,
     mastered,
-    captures: { id: 'captures', name: 'Captures & lookups', total: capturesTotal, known: capturesKnown },
+    captures: { id: 'captures', name: 'Captures & lookups', total: captures.total, known: captures.known },
     collections: Array.from(colMap.values()).sort((a, b) => b.total - a.total),
     dailyCounts,
     avgPerDay,

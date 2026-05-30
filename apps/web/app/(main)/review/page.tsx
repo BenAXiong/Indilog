@@ -570,7 +570,7 @@ function ReviewSession({
               /* Text mode (or audio mode fallback when no audio) */
               <>
                 <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-                  {card.front}
+                  {card.ind_items?.ab}
                 </div>
                 {audioMode && (
                   <span style={{ marginTop: 10, fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
@@ -602,11 +602,11 @@ function ReviewSession({
               <div style={{ textAlign: 'center' }}>
                 {audioMode && (
                   <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
-                    {card.front}
+                    {card.ind_items?.ab}
                   </div>
                 )}
                 <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-                  {card.back}
+                  {card.ind_items?.zh ?? '—'}
                 </div>
               </div>
             </div>

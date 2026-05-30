@@ -45,14 +45,14 @@ export async function getDeckGoalStats(collectionId: string): Promise<DeckGoalSt
   const [totalRes, masteredRes] = await Promise.all([
     supabase
       .from('ind_flashcards')
-      .select('id, ind_learn_cards!inner(collection_id)', { count: 'exact', head: true })
+      .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('ind_learn_cards.collection_id', collectionId),
+      .eq('ind_items.collection_id', collectionId),
     supabase
       .from('ind_flashcards')
-      .select('id, ind_learn_cards!inner(collection_id)', { count: 'exact', head: true })
+      .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('ind_learn_cards.collection_id', collectionId)
+      .eq('ind_items.collection_id', collectionId)
       .gte('interval_days', 21),
   ])
 

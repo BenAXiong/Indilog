@@ -5,10 +5,7 @@ export type { Rating } from './schedule'
 
 export type Flashcard = {
   id: string
-  item_id: string | null
-  collection_card_id: string | null
-  front: string
-  back: string
+  note_id: string
   due_at: string | null
   created_at: string
   ease_factor: number
@@ -22,32 +19,26 @@ export type Flashcard = {
 }
 
 export type FlashcardWithItem = Flashcard & {
-  ind_items:       { type: string; language: string; dialect: string | null; audio: string | null; ab: string; zh: string | null; note_source: string } | null
-  ind_learn_cards: { audio_url: string | null; ind_learn_collections: { name: string; language: string } | null } | null
+  ind_items: {
+    ab: string; zh: string | null; audio: string | null
+    type: string; language: string; dialect: string | null; note_source: string
+    collection_id: string | null
+    ind_learn_collections: { name: string; language: string } | null
+  } | null
 }
 
-// Extract display metadata regardless of flashcard source
+// Extract display metadata from the joined Note
 export function cardMeta(card: FlashcardWithItem) {
-  if (card.ind_items) {
-    return {
-      language: card.ind_items.language,
-      dialect:  card.ind_items.dialect,
-      type:     card.ind_items.type,
-    }
-  }
   return {
-    language: card.ind_learn_cards?.ind_learn_collections?.language ?? '',
-    dialect:  null,
-    type:     'word',
+    language: card.ind_items?.language ?? card.ind_items?.ind_learn_collections?.language ?? '',
+    dialect:  card.ind_items?.dialect ?? null,
+    type:     card.ind_items?.type ?? 'word',
   }
 }
 
-// Resolve audio — priority: card snapshot (curriculum) › note join › collection card join
+// Resolve audio — priority: card snapshot (curriculum) › note join
 export function cardAudio(card: FlashcardWithItem): string | null {
-  return card.audio_url
-    ?? card.ind_items?.audio
-    ?? card.ind_learn_cards?.audio_url
-    ?? null
+  return card.audio_url ?? card.ind_items?.audio ?? null
 }
 
 export async function ensureFlashcards(): Promise<void> {
@@ -56,21 +47,19 @@ export async function ensureFlashcards(): Promise<void> {
   if (!user) return
 
   const [{ data: existing }, { data: items }] = await Promise.all([
-    supabase.from('ind_flashcards').select('item_id').eq('user_id', user.id).not('item_id', 'is', null),
-    supabase.from('ind_items').select('id, ab, notes, zh, type').eq('user_id', user.id),
+    supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id),
+    supabase.from('ind_items').select('id').eq('user_id', user.id),
   ])
 
   if (!items?.length) return
-  const existingIds = new Set(existing?.map(r => r.item_id) ?? [])
+  const existingIds = new Set(existing?.map(r => r.note_id) ?? [])
   const newItems = items.filter(i => !existingIds.has(i.id))
   if (!newItems.length) return
 
   await supabase.from('ind_flashcards').insert(
     newItems.map(item => ({
       user_id: user.id,
-      item_id: item.id,
-      front: item.ab,
-      back: item.zh?.trim() || item.notes?.trim() || (item.type === 'word' ? '(no definition)' : '(no translation)'),
+      note_id: item.id,
     }))
   )
 }
@@ -171,7 +160,7 @@ export async function getDueStats(): Promise<DueStats> {
   const now = new Date().toISOString()
   const { data } = await supabase
     .from('ind_flashcards')
-    .select('item_id, collection_card_id, ind_learn_cards(collection_id)')
+    .select('note_id, ind_items(note_source, collection_id)')
     .eq('user_id', user.id)
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
@@ -182,14 +171,11 @@ export async function getDueStats(): Promise<DueStats> {
   let captures = 0
   const byCollection: Record<string, number> = {}
   for (const row of data) {
-    if (row.item_id) {
-      captures++
+    const note = row.ind_items as unknown as { note_source: string; collection_id: string | null } | null
+    if (note?.note_source === 'collection' && note.collection_id) {
+      byCollection[note.collection_id] = (byCollection[note.collection_id] ?? 0) + 1
     } else {
-      // PostgREST returns a single object for many-to-one joins
-      const card = (row.ind_learn_cards as unknown as { collection_id: string } | null)
-      if (card?.collection_id) {
-        byCollection[card.collection_id] = (byCollection[card.collection_id] ?? 0) + 1
-      }
+      captures++
     }
   }
   return { total: data.length, captures, byCollection }
@@ -202,7 +188,7 @@ export async function listDueFlashcards(
   const now = new Date().toISOString()
   let q = supabase
     .from('ind_flashcards')
-    .select('*, ind_items(type, language, dialect, audio, ab, zh, note_source), ind_learn_cards(audio_url, ind_learn_collections(name, language))')
+    .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
@@ -247,21 +233,21 @@ export async function resetCollectionSRS(collectionId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const { data: cards } = await supabase
-    .from('ind_learn_cards')
+  const { data: notes } = await supabase
+    .from('ind_items')
     .select('id')
     .eq('collection_id', collectionId)
     .limit(10000)
 
-  if (!cards?.length) return
-  const cardIds = cards.map(c => c.id)
+  if (!notes?.length) return
+  const noteIds = notes.map(n => n.id)
 
   const CHUNK = 100
-  for (let i = 0; i < cardIds.length; i += CHUNK) {
+  for (let i = 0; i < noteIds.length; i += CHUNK) {
     await supabase.from('ind_flashcards')
       .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
       .eq('user_id', user.id)
-      .in('collection_card_id', cardIds.slice(i, i + CHUNK))
+      .in('note_id', noteIds.slice(i, i + CHUNK))
   }
 }
 
@@ -270,10 +256,24 @@ export async function resetCapturesSRS(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  await supabase.from('ind_flashcards')
-    .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
+  // Reset flashcards whose note is not a collection card
+  const { data: notes } = await supabase
+    .from('ind_items')
+    .select('id')
     .eq('user_id', user.id)
-    .not('item_id', 'is', null)
+    .neq('note_source', 'collection')
+    .limit(10000)
+
+  if (!notes?.length) return
+  const noteIds = notes.map(n => n.id)
+
+  const CHUNK = 100
+  for (let i = 0; i < noteIds.length; i += CHUNK) {
+    await supabase.from('ind_flashcards')
+      .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
+      .eq('user_id', user.id)
+      .in('note_id', noteIds.slice(i, i + CHUNK))
+  }
 }
 
 export async function suspendCard(id: string): Promise<void> {
