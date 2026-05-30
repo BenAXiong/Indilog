@@ -10,7 +10,7 @@ import {
   renameCollection, deleteCollection,
   type CollectionCard,
 } from '@/lib/db/progress/collections'
-import { generateFlashcardsFromCollection, generateReverseCardsForCollection } from '@/lib/db/srs/flashcards'
+import { ensureFlashcards } from '@/lib/db/srs/flashcards'
 
 type LessonGroup = { lesson: number; cards: CollectionCard[] }
 type LevelGroup  = { level: number; lessons: LessonGroup[] }
@@ -32,10 +32,7 @@ export default function CollectionPage() {
   const [renaming,   setRenaming]   = useState(false)
   const [nameEdit,   setNameEdit]   = useState('')
   const [confirmDel, setConfirmDel] = useState(false)
-  const [queueing,      setQueueing]      = useState(false)
-  const [queued,        setQueued]        = useState<number | null>(null)
-  const [revQueueing,   setRevQueueing]   = useState(false)
-  const [revQueued,     setRevQueued]     = useState<number | null>(null)
+  const [queueing, setQueueing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -84,22 +81,13 @@ export default function CollectionPage() {
 
   async function handleStartReview() {
     setQueueing(true)
-    const added = await generateFlashcardsFromCollection(id)
+    await ensureFlashcards()
     setQueueing(false)
-    setQueued(added)
-    if (added > 0) router.push('/review')
-  }
-
-  async function handleGenerateReverse() {
-    setRevQueueing(true)
-    const added = await generateReverseCardsForCollection(id)
-    setRevQueueing(false)
-    setRevQueued(added)
+    router.push('/review')
   }
 
   const totalCards   = levels.reduce((s, lv) => s + lv.lessons.reduce((ss, ls) => ss + ls.cards.length, 0), 0)
   const totalLessons = levels.reduce((s, lv) => s + lv.lessons.length, 0)
-  const reviewBtnLabel = reviewLabel(queueing, queued)
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -183,28 +171,7 @@ export default function CollectionPage() {
         }}
       >
         <Icon name="review" size={18} strokeWidth={1.8} color={queueing ? T.inkFaint : '#fff'} />
-        {reviewBtnLabel}
-      </button>
-
-      {/* Generate reverse cards */}
-      <button
-        onClick={handleGenerateReverse}
-        disabled={revQueueing}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          height: 40, borderRadius: 12, fontSize: 13, fontWeight: 500,
-          background: T.paperHi, color: revQueueing ? T.inkFaint : T.inkSoft,
-          border: `1px solid ${T.lineSoft}`, cursor: revQueueing ? 'default' : 'pointer',
-        }}
-      >
-        <Icon name="swap" size={14} strokeWidth={2} color={revQueueing ? T.inkFaint : T.inkMute} />
-        {revQueueing
-          ? 'Generating…'
-          : revQueued === null
-            ? 'Generate reverse cards (zh → ab)'
-            : revQueued > 0
-              ? `${revQueued} reverse cards added`
-              : 'All reverse cards already generated'}
+        {queueing ? 'Preparing…' : 'Study this collection'}
       </button>
 
       {/* Level / lesson groups */}
@@ -266,10 +233,4 @@ export default function CollectionPage() {
       ))}
     </div>
   )
-}
-
-function reviewLabel(queueing: boolean, queued: number | null): string {
-  if (queueing) return 'Adding to queue…'
-  if (queued === 0) return 'Already in review queue'
-  return 'Start reviewing'
 }

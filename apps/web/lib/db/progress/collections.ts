@@ -76,7 +76,7 @@ export async function listCollections(language?: string): Promise<CollectionMeta
   if (!user) return []
   let q = supabase
     .from('ind_learn_collections')
-    .select('id, name, language, created_at, ind_learn_cards(count)')
+    .select('id, name, language, created_at, ind_items(count)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
   if (language) q = q.eq('language', language)
@@ -86,7 +86,7 @@ export async function listCollections(language?: string): Promise<CollectionMeta
     name:       row.name as string,
     language:   row.language as string,
     created_at: row.created_at as string,
-    card_count: (row.ind_learn_cards as { count: number }[])?.[0]?.count ?? 0,
+    card_count: (row.ind_items as { count: number }[])?.[0]?.count ?? 0,
   }))
 }
 

@@ -12,7 +12,7 @@ export type StudyStats = {
   dueToday: number
   known: number        // ease_factor >= 2.5 AND interval_days >= 21
   mastered: number     // interval_days >= 60
-  captures: CollectionStat   // item_id-backed cards
+  captures: CollectionStat   // non-collection notes (captured, dict, curriculum)
   collections: CollectionStat[]
   dailyCounts: Array<{ date: string; count: number }>  // last 14 days
   avgPerDay: number
