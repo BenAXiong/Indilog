@@ -7,10 +7,12 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, rateCard, rateCardRelearn, cardMeta, cardAudio,
+  ensureFlashcards, listDueFlashcards, listUserLanguages,
+  rateCard, rateCardRelearn, cardMeta, cardAudio,
   suspendCard, setFlagColor,
   type FlashcardWithItem, type Rating,
 } from '@/lib/db/srs/flashcards'
+import { getLangName } from '@/lib/lang/lang-bridge'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { estimateInterval, formatDays, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
@@ -81,14 +83,41 @@ function OptionsSheet({
   showButtons, setShowButtons,
   learningSteps, setLearningSteps,
   audioMode, setAudioMode,
+  showAllLangs, setShowAllLangs,
+  excludedLangs, setExcludedLangs,
+  onReloadNeeded,
   onClose,
 }: {
   showHardEasy: boolean; setShowHardEasy: (v: boolean) => void
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
   learningSteps: number; setLearningSteps: (v: number) => void
   audioMode:    boolean; setAudioMode:    (v: boolean) => void
+  showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
+  excludedLangs: string[]; setExcludedLangs: (v: string[]) => void
+  onReloadNeeded: () => void
   onClose: () => void
 }) {
+  const [availLangs, setAvailLangs] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    if (!showAllLangs && availLangs === null) listUserLanguages().then(setAvailLangs)
+  }, [showAllLangs, availLangs])
+
+  function handleToggleShowAll(v: boolean) {
+    setShowAllLangs(v)
+    localStorage.setItem('srs_show_all_langs', String(v))
+    if (v) { setExcludedLangs([]); localStorage.setItem('srs_excluded_langs', '[]') }
+    onReloadNeeded()
+  }
+
+  function handleToggleLang(code: string) {
+    const nowExcluded = !excludedLangs.includes(code)
+    const next = nowExcluded ? [...excludedLangs, code] : excludedLangs.filter(l => l !== code)
+    setExcludedLangs(next)
+    localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
+    onReloadNeeded()
+  }
+
   const Toggle = ({ label, sub, on, onToggle }: { label: string; sub: string; on: boolean; onToggle: () => void }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
       <div style={{ flex: 1 }}>
@@ -156,6 +185,49 @@ function OptionsSheet({
             </div>
           </div>
         </div>
+
+        {/* Language filter */}
+        <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '10px 14px 0', overflow: 'hidden' }}>
+          <Toggle
+            label="Show all languages"
+            sub="Include all languages in this session"
+            on={showAllLangs}
+            onToggle={() => handleToggleShowAll(!showAllLangs)}
+          />
+          {!showAllLangs && (
+            <div style={{ padding: '4px 16px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 0 8px' }}>
+                Languages
+              </div>
+              {availLangs === null ? (
+                <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
+              ) : availLangs.map(code => {
+                const included = !excludedLangs.includes(code)
+                return (
+                  <button key={code} onClick={() => handleToggleLang(code)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    width: '100%', padding: '8px 0', background: 'none', border: 'none',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                      background: included ? T.crimson : 'transparent',
+                      border: `1.5px solid ${included ? T.crimson : T.line}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
+                    </div>
+                    <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint }}>{code}</span>
+                  </button>
+                )
+              })}
+              <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
+                Excluded languages still accumulate due cards.
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   )
@@ -182,10 +254,12 @@ function ReviewSession({
   cards,
   ctx,
   onExit,
+  onReloadNeeded,
 }: {
   cards: FlashcardWithItem[]
   ctx: SessionContext
   onExit: (reviewed: number) => void
+  onReloadNeeded: () => void
 }) {
   const [queue, setQueue] = useState<QueueEntry[]>(() =>
     cards.map(c => ({
@@ -204,6 +278,8 @@ function ReviewSession({
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
   const [audioMode,      setAudioModeRaw]  = useState(false)
+  const [showAllLangs,   setShowAllLangsRaw] = useState(true)
+  const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
   const swipeStart = useRef({ x: 0, y: 0 })
   const audioRef   = useRef<HTMLAudioElement | null>(null)
 
@@ -233,6 +309,8 @@ function ReviewSession({
     const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
     setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
     setAudioModeRaw(localStorage.getItem('srs_audio_mode') === 'true')
+    setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
+    try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
 
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
@@ -243,6 +321,8 @@ function ReviewSession({
     localStorage.setItem('srs_learning_steps', String(n))
   }
   function setAudioMode(v: boolean) { setAudioModeRaw(v); localStorage.setItem('srs_audio_mode', String(v)) }
+  function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
+  function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
   // Session end: fires when queue is exhausted
   useEffect(() => {
@@ -663,10 +743,13 @@ function ReviewSession({
       {/* Options sheet */}
       {showOptions && (
         <OptionsSheet
-          showHardEasy={showHardEasy}   setShowHardEasy={setShowHardEasy}
-          showButtons={showButtons}     setShowButtons={setShowButtons}
-          learningSteps={learningSteps} setLearningSteps={setLearningSteps}
-          audioMode={audioMode}         setAudioMode={setAudioMode}
+          showHardEasy={showHardEasy}       setShowHardEasy={setShowHardEasy}
+          showButtons={showButtons}         setShowButtons={setShowButtons}
+          learningSteps={learningSteps}     setLearningSteps={setLearningSteps}
+          audioMode={audioMode}             setAudioMode={setAudioMode}
+          showAllLangs={showAllLangs}       setShowAllLangs={setShowAllLangs}
+          excludedLangs={excludedLangs}     setExcludedLangs={setExcludedLangs}
+          onReloadNeeded={onReloadNeeded}
           onClose={() => setShowOptions(false)}
         />
       )}
@@ -833,16 +916,29 @@ export default function ReviewPage() {
   const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0 })
   const [loading, setLoading] = useState(true)
   const [sessionCount, setSessionCount] = useState(0)
+  const [sessionKey,   setSessionKey]   = useState(0)
+
+  function getExcludeLangs(): string[] {
+    if (localStorage.getItem('srs_show_all_langs') === 'false') {
+      try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch {}
+    }
+    return []
+  }
 
   async function reload() {
     await ensureFlashcards()
     const [c, context] = await Promise.all([
-      listDueFlashcards({ flagColor }),
+      listDueFlashcards({ flagColor, excludeLangs: getExcludeLangs() }),
       loadSessionContext(),
     ])
     setCards(c)
     setCtx(context)
     setLoading(false)
+  }
+
+  async function handleReloadNeeded() {
+    await reload()
+    setSessionKey(k => k + 1)
   }
 
   useEffect(() => { reload() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -865,7 +961,7 @@ export default function ReviewPage() {
 
   // Full-screen overlays (reviewing + done)
   if (mode === 'reviewing' && cards.length > 0) {
-    return <ReviewSession cards={cards} ctx={ctx} onExit={handleSessionExit} />
+    return <ReviewSession key={sessionKey} cards={cards} ctx={ctx} onExit={handleSessionExit} onReloadNeeded={handleReloadNeeded} />
   }
 
   if (mode === 'done') {

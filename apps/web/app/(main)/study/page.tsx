@@ -9,7 +9,8 @@ import type { IconName } from '@/components/ui/Icon'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
-import { ensureFlashcards, getDueStats, type DueStats } from '@/lib/db/srs/flashcards'
+import { ensureFlashcards, getDueStats, listUserLanguages, type DueStats } from '@/lib/db/srs/flashcards'
+import { getLangName } from '@/lib/lang/lang-bridge'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
 import BrowserView from '@/components/study/BrowserView'
@@ -383,15 +384,23 @@ export default function StudyPage() {
   const [statsLoading, setStatsLoading]   = useState(false)
   const [actionDeck, setActionDeck]         = useState<CollectionMeta | null>(null)
   const [settingsOpen, setSettingsOpen]     = useState(false)
-  const [showAllLangs, setShowAllLangs]     = useState(false)
+  const [showAllLangs, setShowAllLangs]     = useState<boolean>(() =>
+    typeof window === 'undefined' ? true : localStorage.getItem('srs_show_all_langs') !== 'false'
+  )
+  const [excludedLangs, setExcludedLangs]   = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] }
+  })
+  const [availLangs, setAvailLangs]         = useState<string[] | null>(null)
   const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
 
   useEffect(() => {
     if (!lang.code) return
     setCurriculumMeta(null)
+    const excludeLangs = showAllLangs ? [] : excludedLangs
     Promise.all([
       listCollections(lang.code),
-      getDueStats(),
+      getDueStats({ excludeLangs }),
       ensureFlashcards(),
     ]).then(([cols, stats]) => {
       setCollections(cols)
@@ -424,9 +433,39 @@ export default function StudyPage() {
     })
   }
 
-  async function handleReset() {
-    const stats = await getDueStats()
+  async function refreshDue(overrideExcluded?: string[]) {
+    const excludeLangs = showAllLangs ? [] : (overrideExcluded ?? excludedLangs)
+    const stats = await getDueStats({ excludeLangs })
     setDue(stats)
+  }
+
+  async function handleReset() { await refreshDue() }
+
+  // Lazy-load language list when settings sheet opens with filter active
+  useEffect(() => {
+    if (settingsOpen && !showAllLangs && availLangs === null) {
+      listUserLanguages().then(setAvailLangs)
+    }
+  }, [settingsOpen, showAllLangs, availLangs])
+
+  function handleToggleShowAll(v: boolean) {
+    setShowAllLangs(v)
+    localStorage.setItem('srs_show_all_langs', String(v))
+    if (v) {
+      setExcludedLangs([])
+      localStorage.setItem('srs_excluded_langs', '[]')
+      refreshDue([])
+    }
+  }
+
+  function handleToggleLang(lang: string) {
+    const nowExcluded = !excludedLangs.includes(lang)
+    const next = nowExcluded
+      ? [...excludedLangs, lang]
+      : excludedLangs.filter(l => l !== lang)
+    setExcludedLangs(next)
+    localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
+    refreshDue(next)
   }
 
   return (
@@ -629,7 +668,7 @@ export default function StudyPage() {
             <div style={{ height: 1, background: T.lineSoft, margin: '10px 18px 0' }} />
             <div style={{ padding: '16px 18px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <button
-                onClick={() => setShowAllLangs(v => !v)}
+                onClick={() => handleToggleShowAll(!showAllLangs)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '13px 0', background: 'none', border: 'none', cursor: 'pointer', width: '100%',
@@ -638,7 +677,7 @@ export default function StudyPage() {
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: 15, fontWeight: 500, color: T.ink }}>Show all languages</div>
                   <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
-                    Captures deck shows cards from all languages
+                    Include all languages in Review all
                   </div>
                 </div>
                 <div style={{
@@ -654,6 +693,41 @@ export default function StudyPage() {
                   }} />
                 </div>
               </button>
+
+              {!showAllLangs && (
+                <div style={{ paddingTop: 4 }}>
+                  <div style={{
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute,
+                    textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10,
+                  }}>Languages</div>
+                  {availLangs === null ? (
+                    <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
+                  ) : availLangs.map(code => {
+                    const included = !excludedLangs.includes(code)
+                    return (
+                      <button key={code} onClick={() => handleToggleLang(code)} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        width: '100%', padding: '9px 0', background: 'none', border: 'none',
+                        cursor: 'pointer', textAlign: 'left',
+                      }}>
+                        <div style={{
+                          width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                          background: included ? T.crimson : 'transparent',
+                          border: `1.5px solid ${included ? T.crimson : T.line}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
+                        </div>
+                        <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
+                        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, marginLeft: 2 }}>{code}</span>
+                      </button>
+                    )
+                  })}
+                  <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 8, lineHeight: 1.5 }}>
+                    Excluded languages still accumulate due cards.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>

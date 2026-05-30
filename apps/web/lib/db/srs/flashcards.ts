@@ -71,7 +71,21 @@ export type DueStats = {
   byCollection: Record<string, number>
 }
 
-export async function getDueStats(): Promise<DueStats> {
+export async function listUserLanguages(): Promise<string[]> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data } = await supabase
+    .from('ind_items')
+    .select('language')
+    .eq('user_id', user.id)
+    .limit(10000)
+  return [...new Set((data ?? []).map(r => r.language).filter(Boolean) as string[])].sort()
+}
+
+export async function getDueStats(
+  opts: { excludeLangs?: string[] } = {},
+): Promise<DueStats> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { total: 0, captures: 0, byCollection: {} }
@@ -79,7 +93,7 @@ export async function getDueStats(): Promise<DueStats> {
   const now = new Date().toISOString()
   const { data } = await supabase
     .from('ind_flashcards')
-    .select('note_id, ind_items(note_source, collection_id)')
+    .select('note_id, ind_items(note_source, collection_id, language)')
     .eq('user_id', user.id)
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
@@ -87,38 +101,48 @@ export async function getDueStats(): Promise<DueStats> {
 
   if (!data) return { total: 0, captures: 0, byCollection: {} }
 
+  let total = 0
   let captures = 0
   const byCollection: Record<string, number> = {}
   for (const row of data) {
-    const note = row.ind_items as unknown as { note_source: string; collection_id: string | null } | null
+    const note = row.ind_items as unknown as { note_source: string; collection_id: string | null; language: string } | null
+    if (opts.excludeLangs?.length && opts.excludeLangs.includes(note?.language ?? '')) continue
+    total++
     if (note?.note_source === 'collection' && note.collection_id) {
       byCollection[note.collection_id] = (byCollection[note.collection_id] ?? 0) + 1
     } else {
       captures++
     }
   }
-  return { total: data.length, captures, byCollection }
+  return { total, captures, byCollection }
 }
 
 export async function listDueFlashcards(
-  opts: { flagColor?: string | 'any' } = {},
+  opts: { flagColor?: string | 'any'; excludeLangs?: string[] } = {},
 ): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
+  const dbLimit = opts.excludeLangs?.length ? 200 : 20
   let q = supabase
     .from('ind_flashcards')
     .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
-    .limit(20)
+    .limit(dbLimit)
 
   if (opts.flagColor === 'any') q = q.not('flag_color', 'is', null)
   else if (opts.flagColor)      q = q.eq('flag_color', opts.flagColor)
 
   const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
-  return (data ?? []) as FlashcardWithItem[]
+  let results = (data ?? []) as FlashcardWithItem[]
+  if (opts.excludeLangs?.length) {
+    results = results
+      .filter(c => !opts.excludeLangs!.includes(c.ind_items?.language ?? ''))
+      .slice(0, 20)
+  }
+  return results
 }
 
 // Used when a mature card completes its relearn burst (Good/Easy = 50% recovery).
