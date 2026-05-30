@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/client'
 import { ensureFlashcards } from '@/lib/db/srs/flashcards'
 
+export async function pinCollection(id: string, pinned: boolean): Promise<boolean> {
+  const supabase = createClient()
+  const { error } = await supabase.from('ind_learn_collections').update({ pinned }).eq('id', id)
+  return !error
+}
+
 export type CardInput    = { ab: string; zh?: string }
 export type LessonInput  = { title?: string; cards: CardInput[] }
 export type LevelInput   = { lessons: LessonInput[] }
@@ -70,6 +76,7 @@ export type CollectionMeta = {
   language: string
   created_at: string
   card_count: number
+  pinned: boolean
 }
 
 export async function listCollections(language?: string): Promise<CollectionMeta[]> {
@@ -78,8 +85,9 @@ export async function listCollections(language?: string): Promise<CollectionMeta
   if (!user) return []
   let q = supabase
     .from('ind_learn_collections')
-    .select('id, name, language, created_at, ind_items(count)')
+    .select('id, name, language, created_at, pinned, ind_items(count)')
     .eq('user_id', user.id)
+    .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
   if (language) q = q.eq('language', language)
   const { data } = await q
@@ -89,6 +97,7 @@ export async function listCollections(language?: string): Promise<CollectionMeta
     language:   row.language as string,
     created_at: row.created_at as string,
     card_count: (row.ind_items as { count: number }[])?.[0]?.count ?? 0,
+    pinned:     (row.pinned as boolean) ?? false,
   }))
 }
 

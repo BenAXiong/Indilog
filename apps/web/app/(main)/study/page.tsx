@@ -49,12 +49,13 @@ type DeckRowProps = {
   sub?: string
   due: number
   href: string
+  pinned?: boolean
   kebab?: boolean
   onKebab?: () => void
   last?: boolean
 }
 
-function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, kebab = false, onKebab, last = false }: DeckRowProps) {
+function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false, kebab = false, onKebab, last = false }: DeckRowProps) {
   return (
     <Link href={href} style={{
       display: 'flex', alignItems: 'center', gap: 12,
@@ -74,7 +75,11 @@ function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, kebab = false,
           fontSize: 16, fontWeight: 500, color: T.ink,
           letterSpacing: '-0.015em', lineHeight: 1.15,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{name}</div>
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
+          {pinned && <Icon name="pin" size={12} color={T.amber} strokeWidth={2} style={{ flexShrink: 0 }} />}
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+        </div>
         {sub && (
           <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, marginTop: 2 }}>
             {sub}
@@ -441,6 +446,13 @@ export default function StudyPage() {
 
   async function handleReset() { await refreshDue() }
 
+  function handlePinned(id: string, pinned: boolean) {
+    setCollections(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, pinned } : c)
+      return [...updated.filter(c => c.pinned), ...updated.filter(c => !c.pinned)]
+    })
+  }
+
   // Lazy-load language list when settings sheet opens with filter active
   useEffect(() => {
     if (settingsOpen && !showAllLangs && availLangs === null) {
@@ -557,6 +569,28 @@ export default function StudyPage() {
             </div>
           </div>
 
+          {/* Captures */}
+          <div>
+            <SectionHead title="Captures" />
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+              <DeckRow
+                icon="bookmark"
+                iconColor={T.sage}
+                iconBg={T.sageBg}
+                name="Captures & lookups"
+                sub="words saved while reading"
+                due={due.captures}
+                href="/review"
+                kebab
+                onKebab={() => setActionDeck({
+                  id: CAPTURES_DECK_ID, name: 'Captures & lookups',
+                  language: '', created_at: '', card_count: 0, pinned: false,
+                })}
+                last
+              />
+            </div>
+          </div>
+
           {/* My Collections */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginBottom: 10 }}>
@@ -590,34 +624,13 @@ export default function StudyPage() {
                     sub={`${col.card_count} cards`}
                     due={due.byCollection[col.id] ?? 0}
                     href={`/learn/collection/${col.id}`}
+                    pinned={col.pinned}
                     kebab
                     onKebab={() => setActionDeck(col)}
                     last={i === collections.length - 1}
                   />
                 ))
               )}
-            </div>
-          </div>
-
-          {/* Captures */}
-          <div>
-            <SectionHead title="Captures" />
-            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
-              <DeckRow
-                icon="bookmark"
-                iconColor={T.sage}
-                iconBg={T.sageBg}
-                name="Captures & lookups"
-                sub="words saved while reading"
-                due={due.captures}
-                href="/review"
-                kebab
-                onKebab={() => setActionDeck({
-                  id: CAPTURES_DECK_ID, name: 'Captures & lookups',
-                  language: '', created_at: '', card_count: 0,
-                })}
-                last
-              />
             </div>
           </div>
 
@@ -740,6 +753,7 @@ export default function StudyPage() {
           onRenamed={handleRenamed}
           onDeleted={handleDeleted}
           onReset={handleReset}
+          onPinned={handlePinned}
         />
       )}
 
