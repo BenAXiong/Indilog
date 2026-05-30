@@ -155,15 +155,11 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
               <Icon name="download"  size={18} strokeWidth={1.8} color={T.inkSoft} />, busy ? 'Exporting…' : 'Export as JSON')}
             {!isCaptures(deck.id) && actionRow(handleShare,
               <Icon name="share"     size={18} strokeWidth={1.8} color={T.inkSoft} />, 'Share')}
+            <div style={{ height: 1, background: T.lineSoft, margin: '4px 18px' }} />
             {actionRow(() => setView('reset'),
-              <Icon name="rotate-ccw" size={18} strokeWidth={1.8} color={T.inkSoft} />, 'Reset progress')}
-            {!isCaptures(deck.id) && (
-              <>
-                <div style={{ height: 1, background: T.lineSoft, margin: '4px 18px' }} />
-                {actionRow(() => setView('delete'),
-                  <Icon name="trash" size={18} strokeWidth={1.8} color={T.crimson} />, 'Delete collection', true)}
-              </>
-            )}
+              <Icon name="rotate-ccw" size={18} strokeWidth={1.8} color={T.crimson} />, 'Reset progress', true)}
+            {!isCaptures(deck.id) && actionRow(() => setView('delete'),
+              <Icon name="trash" size={18} strokeWidth={1.8} color={T.crimson} />, 'Delete collection', true)}
           </div>
         )}
 
@@ -213,7 +209,7 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
           <div style={{ padding: '16px 18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p style={{ margin: 0, fontSize: 14, color: T.inkSoft, lineHeight: 1.55 }}>
               Reset all cards in <strong style={{ color: T.ink }}>{deck.name}</strong> back to New?
-              Scheduling starts fresh — your review history is kept.
+              Scheduling and review history will both be erased. This cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setView('menu')} style={{

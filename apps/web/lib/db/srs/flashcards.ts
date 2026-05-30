@@ -147,6 +147,32 @@ export async function rateCardRelearn(
   ])
 }
 
+async function wipeReviewsAndReset(supabase: ReturnType<typeof createClient>, userId: string, noteIds: string[]): Promise<void> {
+  const CHUNK = 100
+  // Collect flashcard IDs so we can wipe ind_reviews (one Card per Note, but chunk for safety)
+  const cardIds: string[] = []
+  for (let i = 0; i < noteIds.length; i += CHUNK) {
+    const { data } = await supabase
+      .from('ind_flashcards')
+      .select('id')
+      .eq('user_id', userId)
+      .in('note_id', noteIds.slice(i, i + CHUNK))
+    cardIds.push(...(data ?? []).map((c: { id: string }) => c.id))
+  }
+  for (let i = 0; i < cardIds.length; i += CHUNK) {
+    await supabase.from('ind_reviews')
+      .delete()
+      .eq('user_id', userId)
+      .in('flashcard_id', cardIds.slice(i, i + CHUNK))
+  }
+  for (let i = 0; i < noteIds.length; i += CHUNK) {
+    await supabase.from('ind_flashcards')
+      .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
+      .eq('user_id', userId)
+      .in('note_id', noteIds.slice(i, i + CHUNK))
+  }
+}
+
 export async function resetCollectionSRS(collectionId: string): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -159,15 +185,7 @@ export async function resetCollectionSRS(collectionId: string): Promise<void> {
     .limit(10000)
 
   if (!notes?.length) return
-  const noteIds = notes.map(n => n.id)
-
-  const CHUNK = 100
-  for (let i = 0; i < noteIds.length; i += CHUNK) {
-    await supabase.from('ind_flashcards')
-      .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
-      .eq('user_id', user.id)
-      .in('note_id', noteIds.slice(i, i + CHUNK))
-  }
+  await wipeReviewsAndReset(supabase, user.id, notes.map(n => n.id))
 }
 
 export async function resetCapturesSRS(): Promise<void> {
@@ -175,7 +193,6 @@ export async function resetCapturesSRS(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  // Reset flashcards whose note is not a collection card
   const { data: notes } = await supabase
     .from('ind_items')
     .select('id')
@@ -184,15 +201,7 @@ export async function resetCapturesSRS(): Promise<void> {
     .limit(10000)
 
   if (!notes?.length) return
-  const noteIds = notes.map(n => n.id)
-
-  const CHUNK = 100
-  for (let i = 0; i < noteIds.length; i += CHUNK) {
-    await supabase.from('ind_flashcards')
-      .update({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
-      .eq('user_id', user.id)
-      .in('note_id', noteIds.slice(i, i + CHUNK))
-  }
+  await wipeReviewsAndReset(supabase, user.id, notes.map(n => n.id))
 }
 
 export async function suspendCard(id: string): Promise<void> {

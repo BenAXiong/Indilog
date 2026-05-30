@@ -6,6 +6,29 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-SRS02 · Reset SRS scope — what "reset a deck" erases (2026-05-31)
+
+**Context:** A deck reset can target three distinct layers:
+
+| Layer | Table | Effect if wiped |
+|---|---|---|
+| SRS scheduling state | `ind_flashcards` cols (`ease_factor`, `interval_days`, `repetitions`, `due_at`) | Cards go back to "New" — re-study from scratch |
+| Review history | `ind_reviews` rows (one per rating event) | Raw rating log gone; heatmap unchanged (reads `ind_daily_stats`) |
+| Daily stats | `ind_daily_stats` rows (daily aggregate counts) | Heatmap goes blank, streak affected |
+
+**Decision:** Reset = SRS scheduling state + `ind_reviews` for those cards. Leave `ind_daily_stats` alone.
+
+**Why:** The user's intent is "pretend I've never reviewed these cards." That means cards re-enter as New and the per-card rating log is gone. But `ind_daily_stats` tracks "did I show up and study today" — a motivational/habit record. That effort happened; resetting a deck shouldn't wipe the streak or heatmap. Subtracting exact per-deck counts from `ind_daily_stats` retroactively would also require non-trivial work for limited gain.
+
+**Alternatives considered:**
+- SRS state only: cards go back to New but history remains — useful if you want to "re-study" but keep the habit log and also keep per-card history for analysis. Rejected: user wants a clean slate.
+- Full wipe (SRS + reviews + daily stats): complete as-if-never-used. Rejected: destroys streak/heatmap which are motivational, and `ind_daily_stats` is shared across all decks so subtracting one deck's contribution is fragile.
+- Confirmation tiers (soft reset vs. hard reset in a two-step dialog): over-engineered for the current use case. Can revisit if users want SRS-only reset as a separate option.
+
+**Date:** 2026-05-31
+
+---
+
 ### DEC-ARCH02 · Unified Note/Card model — final decisions (2026-05-30)
 
 **Canonical reference:** `architecture.md`
