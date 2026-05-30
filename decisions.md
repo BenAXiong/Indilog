@@ -6,6 +6,32 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-ARCH02 · Unified Note/Card model — final decisions (2026-05-30)
+
+**Canonical reference:** `architecture.md`
+
+Key decisions settled:
+
+1. **`ind_items` is the universal Note table.** `ind_learn_cards` is deprecated and will be merged into `ind_items` (T-UNIFY migration). After migration, all notes — captured, collection, dict, curriculum — live in `ind_items` distinguished by `note_source`.
+
+2. **`front`/`back` are banned from the data model.** They are view-layer concepts computed at render time from `note.ab` + `note.zh` + session mode. Never re-add them to `ind_items` or `ind_flashcards`.
+
+3. **Note fields:** `ab` (target-language text), `zh` (translation/definition), `notes` (personal annotation), `audio` (null | URL | storage path). Renamed from legacy `text`, `meaning`, `audio_url`.
+
+4. **One Card per Note.** `forward`/`reverse`/`audio` are session modes (localStorage), not stored card rows. `generateReverseCardsForCollection()` is deleted. Existing `card_type='reverse'` rows removed in T-UNIFY.
+
+5. **`card_type` values:** `default | sts` only. `sts` is the only template that requires stored metadata.
+
+6. **`audio` field:** Accepts null, full URL, or Supabase Storage path. Resolved at render via `cardAudio()` which checks `card.audio` → `note.audio` in priority order.
+
+7. **`note_source` values:** `captured | collection | dict | curriculum | text | video | podcast`. Future values (`text`, `video`, `podcast`) reserved for upcoming content sources.
+
+8. **`ensureFlashcards()`** is the single Card generation function. No separate `generateFlashcardsFromCollection()`. Called on Study mount and immediately after collection import.
+
+**Date:** 2026-05-30
+
+---
+
 ### DEC-NOTE01 · Note / Card / Note Type / Card Template — canonical terminology
 **Decision:** Adopt standard SRS terminology throughout all docs and code going forward.
 

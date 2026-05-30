@@ -364,18 +364,15 @@ Inactive → "Set a goal →" tertiary prompt. Goal-setting UI is T2-A.
 
 Remaining open items:
   T1-B   Kebab toggle "in Review all" (needs schema — include_in_review boolean on ind_learn_collections)
-  [x] T1-F   ensureFlashcards() on Study landing — done; called in Study page main useEffect
-  T1-F   Curriculum flashcard generation (Learn content → flashcards; needs design)
-  T2-D   Language workflow rethink — may split decks by language; wire showAllLangs toggle once direction settled
+  [x] T1-F   ensureFlashcards() on Study landing — done
+  [x] T1-F   Curriculum audio: audio_url threaded through onSave — done
+  T2-D   Language workflow rethink — wire showAllLangs toggle once direction settled
   T2-E   Favourites system — star/pin a deck to top of My collections
-  [~] T2-F   Reset SRS data — implementation shipped but needs alignment check (user intent unclear); review before relying on it
-  [x] T3-D   Audio step 1 — wire playback on captured-item cards
-  [x] T3-D   Audio step 2 — audio_url on ind_learn_cards (migration)
-  [x] T3-D   Audio step 3 — audio_url + metadata on ind_flashcards (migration)
-  [x] T3-D   Audio step 5 — audio session mode (OptionsSheet toggle)
-  [x] T3-D   Audio step 6 — curriculum audio: audio_url threaded through onSave → createItem → ind_items join handles review
-  T3-D   STS Card Template (needs metadata jsonb from step 3, deferred)
-  T3-D   Card type selector on import (deferred)
+  [~] T2-F   Reset SRS data — needs alignment check before relying on it
+  [x] T3-D   Audio steps 1–6 — done (see audio plan above)
+  T3-D   STS Card Template — spec in architecture.md; needs T-UNIFY first
+  T3-D   Card type selector on import — deferred
+  T-UNIFY  Schema + code unification — see T-UNIFY section below (next major task)
 ```
 
 ---
@@ -405,12 +402,129 @@ specific language or dialect subset without changing app-wide settings.
 
 ## Open design questions
 
-1. **Curriculum deck generation:** The 4 Learn sources (Lessons/Patterns/Essays/
-   Dialogs) need a flashcard generation path. Currently their rows link to the
-   content pages; no flashcard generation from curriculum is implemented.
+1. **T2-D Review language selector:** Session-scoped filtering vs. per-deck "pause" — see T2-D above.
 
-2. **T2-D Review language selector:** See T2-D above. Key open question is
-   whether session-scoped filtering is the right model, or whether per-deck
-   "pause" is safer for SRS health.
+2. **T3-E FSRS:** Revisit after 4+ weeks of real review data on the production branch.
 
-3. **T3-E FSRS:** Revisit after 4+ weeks of real review data on the production branch.
+---
+
+## T-UNIFY — Note/Card schema unification
+
+> Full spec in `architecture.md`. Do not start without reading it.
+> Prerequisite: branch `redesign/srs-overhaul` merged to main.
+
+### Goal
+
+Merge `ind_learn_cards` into `ind_items`. Rename legacy fields. Drop `front`/`back` from cards. Simplify all joins to a single `note_id` FK.
+
+### Migrations (run in order)
+
+**M1 — Rename ind_items fields + add note_source/collection_id**
+```sql
+ALTER TABLE ind_items RENAME COLUMN text TO ab;
+ALTER TABLE ind_items RENAME COLUMN meaning TO zh;
+ALTER TABLE ind_items RENAME COLUMN audio_url TO audio;
+ALTER TABLE ind_items ADD COLUMN note_source text NOT NULL DEFAULT 'captured';
+ALTER TABLE ind_items ADD COLUMN collection_id uuid REFERENCES ind_learn_collections(id) ON DELETE SET NULL;
+```
+
+**M2 — Migrate ind_learn_cards → ind_items**
+```sql
+-- Add temp column for FK remapping
+ALTER TABLE ind_learn_cards ADD COLUMN migrated_note_id uuid;
+
+INSERT INTO ind_items (user_id, ab, zh, audio, type, note_source, collection_id, language)
+SELECT
+  lc.user_id,
+  c.ab, c.zh, c.audio_url, 'word', 'collection', c.collection_id,
+  lc.language
+FROM ind_learn_cards c
+JOIN ind_learn_collections lc ON lc.id = c.collection_id
+RETURNING id -- capture mapping
+
+-- (handled in application code with explicit returning + update)
+```
+Note: run via application migration script (not raw SQL) to capture the id mapping for M3.
+
+**M3 — Remap ind_flashcards to note_id**
+```sql
+ALTER TABLE ind_flashcards ADD COLUMN note_id uuid REFERENCES ind_items(id);
+-- Remap item_id rows
+UPDATE ind_flashcards SET note_id = item_id WHERE item_id IS NOT NULL;
+-- Remap collection_card_id rows (using mapping from M2)
+UPDATE ind_flashcards f SET note_id = <mapped_note_id> WHERE collection_card_id IS NOT NULL;
+-- Drop old columns
+ALTER TABLE ind_flashcards DROP COLUMN item_id;
+ALTER TABLE ind_flashcards DROP COLUMN collection_card_id;
+ALTER TABLE ind_flashcards DROP COLUMN front;
+ALTER TABLE ind_flashcards DROP COLUMN back;
+-- Remove card_type='reverse' rows (replaced by session mode)
+DELETE FROM ind_flashcards WHERE card_type = 'reverse';
+-- Rename remaining card_type='forward' to 'default'
+UPDATE ind_flashcards SET card_type = 'default' WHERE card_type = 'forward' OR card_type IS NULL;
+```
+
+**M4 — Drop ind_learn_cards**
+```sql
+DROP TABLE ind_learn_cards;
+```
+
+### Code changes (file by file)
+
+**Type layer**
+- `lib/db/notebook/items.ts` — rename `text→ab`, `meaning→zh`, `audio_url→audio` in `CreateItemInput` / `Item`; add `note_source`, `collection_id`
+- `lib/db/srs/flashcards.ts`:
+  - `Flashcard` type: drop `front`, `back`, `item_id`, `collection_card_id`; add `note_id`
+  - `FlashcardWithItem`: update `ind_items` join shape (`ab`, `zh`, `audio`, `note_source`, `language`, `dialect`, `type`); remove `ind_learn_cards` join
+  - `listDueFlashcards()`: single join, update select
+  - `ensureFlashcards()`: remove `front`/`back` from insert; query all `ind_items` (covers all sources)
+  - `cardAudio()`: use `note.audio` (was `note.audio_url`)
+  - DELETE `generateFlashcardsFromCollection()`, `generateReverseCardsForCollection()`
+  - `resetCollectionSRS()`: query via `ind_items WHERE collection_id = ?`
+
+**Collection layer**
+- `lib/db/progress/collections.ts`:
+  - `saveCollection()`: INSERT into `ind_items` (with `note_source='collection'`, `collection_id`) instead of `ind_learn_cards`
+  - `listCollectionCards()`: SELECT from `ind_items WHERE collection_id = ?`
+  - `deleteCollection()`: DELETE from `ind_items WHERE collection_id = ?` (flashcards cascade via `note_id` FK)
+
+**Review session**
+- `app/(main)/review/page.tsx`:
+  - Replace all `card.front` → `noteAb(card)`, `card.back` → `noteZh(card)` (helpers that read joined note fields)
+  - `forward`: prompt = `note.ab`, reveal = `note.zh`
+  - `reverse`: prompt = `note.zh`, reveal = `note.ab`
+  - `sts`: prompt = `metadata.target_word`, hint = `metadata.hint_sentence`, reveal = meaning
+
+**Browser**
+- `components/study/BrowserView.tsx`:
+  - Read `ind_items` via join
+  - Inline edit → update `ind_items.ab` / `ind_items.zh`
+  - Show `note_source` badge
+
+**Capture + save flows (grep and update all createItem() call sites)**
+- `app/(main)/capture/page.tsx`
+- `components/learn/StudyView.tsx` (field names already partially updated)
+- `app/(main)/dict/page.tsx` — add `note_source: 'dict'`
+- Any other `createItem()` call site
+
+**Sheets**
+- `components/sheets/DeckActionSheet.tsx` — export path: read `ind_items WHERE collection_id`
+
+**API routes**
+- Grep for `ind_learn_cards` — update any direct queries
+- `app/api/learn/curriculum-progress/route.ts` — unaffected (uses completions, not flashcards)
+
+### Grep targets before starting
+```
+ind_learn_cards
+\.item_id\b
+\.collection_card_id\b
+card\.front\b
+card\.back\b
+\.text\b          (on item/note objects — catch renamed field)
+\.meaning\b
+audio_url
+createItem\(
+generateFlashcardsFromCollection
+generateReverseCardsForCollection
+```
