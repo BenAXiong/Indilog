@@ -2,7 +2,7 @@
 
 > **Canonical reference for the data model.**
 > Read this before touching `ind_items`, `ind_flashcards`, or any query layer.
-> Last updated: 2026-05-30
+> Last updated: 2026-05-31
 
 ---
 
@@ -43,10 +43,12 @@ The universal Note table. All knowledge units flow here regardless of source.
 | `source_id` | uuid | FK `ind_sources` |
 | `speaker_id` | uuid | FK `ind_speakers` |
 | `tags` | text[] | User tags |
+| `level` | int | Collection structural position — null for non-collection notes |
+| `lesson` | int | Collection structural position — null for non-collection notes |
+| `lesson_title` | text | Collection lesson label — null for non-collection notes |
+| `position` | int | Card position within a lesson — null for non-collection notes |
+| `metadata` | jsonb | Reserved for future note-level structured data |
 | `created_at`, `updated_at` | timestamptz | |
-
-> **Pre-unification names (legacy — not yet migrated):** `text` → `ab`, `meaning` → `zh`, `audio_url` → `audio`.
-> The migration is tracked in `plan-srs.md` → T-UNIFY.
 
 ### Note Sources
 
@@ -76,7 +78,7 @@ One Card per Note by default. Session mode never generates additional Card rows 
 | `user_id` | uuid | FK auth.users |
 | `note_id` | uuid | FK `ind_items` — the source Note |
 | `card_type` | text | `default \| sts` |
-| `audio` | text | Only set for curriculum bookmarks (snapshot from SQLite at save time). Null for all other sources. |
+| `audio` | text | Curriculum audio snapshot (from SQLite at bookmark time). Null for all other sources. `cardAudio()` checks this first, then falls back to `note.audio`. |
 | `metadata` | jsonb | Template-specific data — see Card Templates |
 | `ease_factor` | real | FormoSRS-1; default 2.5 |
 | `interval_days` | int | FormoSRS-1 |
