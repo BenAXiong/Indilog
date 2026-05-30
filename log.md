@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-30 18:40 | FEATURE | Audio step 6 — curriculum save now threads audio_url through onSave → createItem → ind_items; cardAudio() join resolves at review time; T1-F reframed: bookmarks-only, universal pipeline, no bulk generation |
 | 2026-05-30 18:18 | FEATURE | T2-F reset SRS data: rotate-ccw icon; resetCollectionSRS/resetCapturesSRS; DeckActionSheet reset view (confirm dialog); Captures row now has kebab → action sheet (reset only); collections get Reset in menu above Delete; handleReset refreshes due stats |
 | 2026-05-30 18:06 | FEATURE | Audio step 5 — audio session mode: OptionsSheet toggle (srs_audio_mode localStorage); audioMode front = large crimson play button; fallback to text + "♪ no audio" when card has no audio; reveal shows card.front above meaning; autoplay on card advance |
 | 2026-05-30 17:50 | SCHEMA | Audio steps 2+3: ind_learn_cards.audio_url, ind_flashcards.audio_url (curriculum snapshot), ind_flashcards.metadata jsonb (STS/future card templates); Flashcard type + FlashcardWithItem updated; cardAudio() priority chain; listDueFlashcards select updated |
