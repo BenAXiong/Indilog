@@ -1,7 +1,7 @@
 # Indivore — Claude Code Instructions
 
 ## At the start of every session
-- Read `agents.md`, `plan-v1.md`, `plan-srs.md`, `decisions.md` to orient (also skim `plan.md` for v0 history if needed)
+- Read `agents.md`, `plan-v1.md`, `decisions.md` to orient (also skim `plan.md` for v0 history if needed; `archive/plan-srs.md` for completed SRS work)
 - If touching `ind_items`, `ind_flashcards`, or any query/type layer: read `architecture.md` first
 
 ## After every commit

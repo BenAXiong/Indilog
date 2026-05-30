@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 02:45 | CONFIG | Archive plan-srs.md → archive/plan-srs.md; remove from CLAUDE.md session-start read list |
 | 2026-05-31 02:40 | FEATURE | Browser overhaul: BrowserCard gains all note fields (notes, audio, note_type, language, dialect, place_heard, tags, target_word, metadata); expanded row shows editable notes/place/target_word, STS layout toggle, info badges, audio playback |
 | 2026-05-31 02:30 | FEATURE | T1-B include_in_review: boolean on ind_learn_collections + ind_profiles; getExcludeFromReview(); getDueStats/listDueFlashcards filter excluded decks; DeckActionSheet toggle; Study + Review pages wired |
 | 2026-05-31 02:30 | SCHEMA | T1-B: migration 20260531040000 adds include_in_review to ind_learn_collections + ind_profiles |
