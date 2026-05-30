@@ -30,7 +30,7 @@ export type FlashcardWithItem = Flashcard & {
 // Extract display metadata from the joined Note
 export function cardMeta(card: FlashcardWithItem) {
   return {
-    language: card.ind_items?.language ?? card.ind_items?.ind_learn_collections?.language ?? '',
+    language: card.ind_items?.language ?? '',
     dialect:  card.ind_items?.dialect ?? null,
     type:     card.ind_items?.type ?? 'word',
   }

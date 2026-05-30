@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { ensureFlashcards } from '@/lib/db/srs/flashcards'
 
 export type CardInput    = { ab: string; zh?: string }
 export type LessonInput  = { title?: string; cards: CardInput[] }
@@ -59,6 +60,7 @@ export async function saveCollection(
     }
   }
 
+  await ensureFlashcards()
   return col.id
 }
 
