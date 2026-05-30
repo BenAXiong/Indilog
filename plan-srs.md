@@ -23,7 +23,7 @@ after serious production review data.
 
 ---
 
-## Current state (as of 2026-05-30)
+## Current state (as of 2026-05-31)
 
 All Tiers 1–3 shipped on `redesign/srs-overhaul`. Not yet merged to main.
 
@@ -36,6 +36,11 @@ All Tiers 1–3 shipped on `redesign/srs-overhaul`. Not yet merged to main.
 - [x] Card browser: search, filters (All/Due/New/Flagged/Suspended), sort, inline edit — T2-C
 - [x] Suspension (`suspended_at`), 5-color flags (`flag_color`), reverse cards (`card_type`) — T3-B/C/D
 - [x] Learn phase + relearn burst: queue-based session, Repeat/Easy/Got it! buttons, pass dots — T3-A
+- [x] Language filter in Study settings + Review OptionsSheet; excludeLangs on getDueStats/listDueFlashcards — T2-D
+- [x] Pin collections: pinned boolean, inline pin button on DeckRow, optimistic re-sort — T2-E
+- [x] Reset SRS: wipes ind_reviews + scheduling; Reset in danger zone with confirm — T2-F
+- [x] Collapsible section headers (Curriculum/Captures/My Collections) with localStorage persistence — Study UX
+- [x] STS card template: target_word on ind_items, ensureFlashcards() creates card_type='sts', word/sentence layouts in review — T3-D STS
 
 ---
 
@@ -65,6 +70,12 @@ suspended_at timestamptz, flag_color text, card_type text NOT NULL DEFAULT 'forw
 
 -- 20260530020000 · T3-C flag redesign
 DROP flagged boolean → ADD flag_color text
+
+-- 20260531020000 · T2-E pin collections
+pinned boolean NOT NULL DEFAULT false  (on ind_learn_collections)
+
+-- 20260531030000 · T3-D STS
+target_word text  (on ind_items, nullable)
 ```
 
 ---
@@ -241,6 +252,28 @@ tags. No semantics imposed — the user decides what each color means.
 - [x] Reverse cards (zh → ab): `card_type` column; `generateReverseCardsForCollection()`; "Generate reverse cards" button on collection page; REV badge in Browser
 - [ ] Card type selector per collection on import (deferred — design pending)
 
+#### STS (Single Target Sentence) — implemented 2026-05-31
+
+`card_type='sts'` with `metadata = { target_word: string, layout: 'word' | 'sentence' }`.
+
+**Data model:** `target_word text` on `ind_items` (nullable). The sentence is `ind_items.ab` — not duplicated in metadata. One field drives the whole pipeline.
+
+**Pipeline:**
+- Set `target_word` at capture time (tap a dot button on any lookup card in the Definitions section) or later via `setTargetWord(noteId, word)` from the browser
+- `ensureFlashcards()` reads `target_word` on new items: if set → inserts `card_type='sts', metadata={target_word, layout:'word'}`
+- `setTargetWord()` also handles existing cards: updates `card_type` + `metadata` atomically
+
+**Two layouts:**
+- `layout: 'word'` (default) — front: `target_word` large + blurred sentence hint → reveal → highlighted sentence + meaning
+- `layout: 'sentence'` — front: full sentence with `target_word` amber-highlighted → reveal → meaning
+
+**`renderHighlighted(sentence, target)`** — case-insensitive index match, wraps target in `<mark>` with amber tint.
+
+**Remaining for STS:**
+- [ ] Browser overhaul: show all note fields in expanded row; `target_word` field to set/clear STS on any note
+- [ ] `metadata.layout` selector per card (word vs. sentence)
+- [ ] T1-B `include_in_review` toggle for all decks (schema: boolean on `ind_learn_collections` + `ind_profiles`)
+
 #### Audio Cards — implementation plan (2026-05-30)
 
 Audio terminology: Note (source fact) · Card (review question) · Note Type (field schema) · Card Template (front/back mapping). See DEC-NOTE01.
@@ -360,19 +393,14 @@ Inactive → "Set a goal →" tertiary prompt. Goal-setting UI is T2-A.
 ✓ T3-B  Suspension
 ✓ T3-C  5-color flags
 ✓ T3-D  Reverse cards (partial — audio + import selector deferred)
+✓ T3-D  STS card template — target_word on notes, two layouts in review (2026-05-31)
   T3-E  FSRS — not in v1
 
 Remaining open items:
-  T1-B   Kebab toggle "in Review all" (needs schema — include_in_review boolean on ind_learn_collections)
-  [x] T1-F   ensureFlashcards() on Study landing — done
-  [x] T1-F   Curriculum audio: audio_url threaded through onSave — done
-  [x] T2-D   Language filter: Show all languages toggle + per-language checkboxes in Study settings + Review OptionsSheet; excludeLangs propagated to getDueStats/listDueFlashcards
-  [x] T2-E   Pin collections: pinned boolean on ind_learn_collections; Pin/Unpin in kebab; pin indicator on row; pinned sort to top
-  [x] T2-F   Reset SRS data — wipes ind_reviews + scheduling; Reset in danger zone
-  [x] T3-D   Audio steps 1–6 — done (see audio plan above)
-  T3-D   STS Card Template — spec in architecture.md; needs T-UNIFY first
+  T1-B   "Include in Review all" kebab toggle — needs include_in_review boolean on ind_learn_collections + ind_profiles
+  T3-D   Browser overhaul — full note fields in expanded row; target_word field for STS; layout selector
   T3-D   Card type selector on import — deferred
-  [x] T-UNIFY  Schema + code unification — complete (M1–M4, 2026-05-30)
+  T3-E   FSRS — revisit after 4+ weeks of real review data
 ```
 
 ---
@@ -381,22 +409,13 @@ Remaining open items:
 
 ### T2-D — Review language selector
 
-Override the global language setting for a review session. Lets users study a
-specific language or dialect subset without changing app-wide settings.
+Override the global language setting for a review session.
 
-- [ ] Language/dialect picker in OptionsSheet (or session start screen)
-- [ ] Session-scoped filter: `listDueFlashcards` respects selected lang/dialect
-- [ ] Cards outside the selection are excluded from due counts and not served
-- [ ] Global lang setting unchanged — this is session-only
-
-**Open design questions:**
-- Where to expose the picker: OptionsSheet gear icon (quick), or a pre-session
-  screen before cards load (clearer)?
-- Scope of filter: by `ind_items.language` for captures, by
-  `ind_learn_collections.language` for collections — needs both paths covered.
-- SRS implication: excluding a language long-term will let those cards accrue
-  overdue debt silently. May need a warning or a "pause deck" affordance instead
-  of just hiding cards. Details TBD.
+- [x] "Show all languages" toggle in Study settings sheet and Review OptionsSheet
+- [x] Per-language checkboxes (lazy-loaded from `listUserLanguages()`) when toggle is off
+- [x] `excludeLangs` param on `getDueStats()` + `listDueFlashcards()` — Study due counts + Review queue both filtered
+- [x] Filter persisted in localStorage (`srs_show_all_langs`, `srs_excluded_langs`)
+- [x] Session remount via `sessionKey` when filter changes mid-session
 
 ---
 

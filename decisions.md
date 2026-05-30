@@ -6,7 +6,7 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
-### DEC-SRS02 · Reset SRS scope — what "reset a deck" erases (2026-05-31)
+### DEC-SRS02 · Reset SRS scope — what "reset a deck" erases (2026-05-31) — IMPLEMENTED
 
 **Context:** A deck reset can target three distinct layers:
 
@@ -25,7 +25,7 @@ Tracks open questions and resolved architectural/product decisions.
 - Full wipe (SRS + reviews + daily stats): complete as-if-never-used. Rejected: destroys streak/heatmap which are motivational, and `ind_daily_stats` is shared across all decks so subtracting one deck's contribution is fragile.
 - Confirmation tiers (soft reset vs. hard reset in a two-step dialog): over-engineered for the current use case. Can revisit if users want SRS-only reset as a separate option.
 
-**Date:** 2026-05-31
+**Date:** 2026-05-31 · Implemented: `wipeReviewsAndReset()` in `flashcards.ts`, called from `resetCollectionSRS()` and `resetCapturesSRS()`
 
 ---
 
@@ -65,8 +65,8 @@ Key decisions settled:
 | **Note Type** | Schema defining a Note's fields (e.g., text+meaning+audio) | implicit — not yet modeled |
 | **Card Template** | How a Note's fields map to a Card's front/back/prompt | `card_type` column on `ind_flashcards` |
 
-Current Card Templates: `forward` (text → meaning), `reverse` (meaning → text).
-Planned: `audio` session mode (on-the-fly, not a stored card_type), `sts` (Single Target Sentence — a true stored card_type with metadata).
+Current Card Templates: `default` (text → meaning; was `forward`, renamed in T-UNIFY), `sts` (Single Target Sentence — target word + sentence, two layouts; implemented 2026-05-31).
+`audio` is a session mode (on-the-fly, not a stored card_type). `reverse` removed in T-UNIFY (was a card row, now session mode).
 
 **Date:** 2026-05-30
 
@@ -79,6 +79,8 @@ Planned: `audio` session mode (on-the-fly, not a stored card_type), `sts` (Singl
 
 **Trigger condition:** Implement STS Card Template. STS needs `target_word` on a Note and makes the field-mismatch between `ind_items` and `ind_learn_cards` genuinely blocking. At that point the schema requirements are concrete and the migration has clear payoff.
 
+**Status:** T-UNIFY completed 2026-05-30 (M1–M4). STS card template implemented 2026-05-31. This decision is now resolved — moving to Resolved section for history.
+
 **Date:** 2026-05-30
 
 ---
@@ -88,10 +90,10 @@ Planned: `audio` session mode (on-the-fly, not a stored card_type), `sts` (Singl
 
 **Why jsonb, not typed columns:** New templates don't require schema migrations — only a new `card_type` value and a metadata shape definition.
 
-**Planned metadata shapes:**
-- `forward`, `reverse`: no metadata
+**Implemented metadata shapes:**
+- `default` (was `forward`): no metadata
 - `audio` (session mode, not stored card_type): no metadata
-- `sts` (future): `{ target_word: string; hint_sentence: string; hint_meaning?: string }`
+- `sts`: `{ target_word: string; layout: 'word' | 'sentence' }` — sentence comes from `ind_items.ab`, not duplicated in metadata
 
 **Date:** 2026-05-30
 
