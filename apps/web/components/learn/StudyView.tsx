@@ -263,10 +263,11 @@ export default function StudyView({ source }: Props) {
   }
 
   // ── Save to ind_items ───────────────────────────────────────────────────────
-  const handleSave = async (ab: string, zh: string) => {
+  const handleSave = async (ab: string, zh: string, audioUrl?: string | null) => {
     await createItem({
       text: ab, type: 'sentence', language: langCode,
       dialect, notes: zh || undefined,
+      audio_url: audioUrl || undefined,
     })
   }
 

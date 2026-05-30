@@ -158,9 +158,8 @@ Full-screen session, BottomNav hidden during review.
 
 - [x] From `ind_items` (captures, dict/learn saves) — existing
 - [x] From `ind_learn_collections` (Amis1k) — done
-- [ ] From curriculum (Lessons/Patterns/Essays/Dialogs) — Curriculum deck rows in Study
-  tab link to content pages; flashcard generation from curriculum not yet wired
-- [ ] `ensureFlashcards()` called on Study landing, dedup safe
+- [x] From curriculum (bookmarked items only) — user bookmarks a curriculum row → `createItem()` → `ensureFlashcards()` pipeline, same as all other sources. Audio preserved via `audio_url` threaded through `onSave`. No bulk generation intended.
+- [x] `ensureFlashcards()` called on Study landing, dedup safe
 
 ---
 
@@ -374,7 +373,7 @@ Remaining open items:
   [x] T3-D   Audio step 2 — audio_url on ind_learn_cards (migration)
   [x] T3-D   Audio step 3 — audio_url + metadata on ind_flashcards (migration)
   [x] T3-D   Audio step 5 — audio session mode (OptionsSheet toggle)
-  T3-D   Audio step 6 — curriculum audio (after T1-F)
+  [x] T3-D   Audio step 6 — curriculum audio: audio_url threaded through onSave → createItem → ind_items join handles review
   T3-D   STS Card Template (needs metadata jsonb from step 3, deferred)
   T3-D   Card type selector on import (deferred)
 ```
