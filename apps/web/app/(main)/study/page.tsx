@@ -8,8 +8,9 @@ import { Icon, SectionHead } from '@/components/ui'
 import type { IconName } from '@/components/ui/Icon'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useLang } from '@/lib/context/LangDialectProvider'
-import { listCollections, pinCollection, type CollectionMeta } from '@/lib/db/progress/collections'
-import { ensureFlashcards, getDueStats, listUserLanguages, type DueStats } from '@/lib/db/srs/flashcards'
+import { listCollections, pinCollection, setIncludeInReview, type CollectionMeta } from '@/lib/db/progress/collections'
+import { ensureFlashcards, getDueStats, getExcludeFromReview, listUserLanguages, type DueStats } from '@/lib/db/srs/flashcards'
+import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
@@ -402,7 +403,8 @@ export default function StudyPage() {
   const [loading, setLoading]             = useState(true)
   const [studyStats, setStudyStats]       = useState<StudyStats | null>(null)
   const [statsLoading, setStatsLoading]   = useState(false)
-  const [actionDeck, setActionDeck]         = useState<CollectionMeta | null>(null)
+  const [actionDeck,        setActionDeck]        = useState<CollectionMeta | null>(null)
+  const [capturesIncluded,  setCapturesIncluded]  = useState(true)
   const [settingsOpen, setSettingsOpen]     = useState(false)
   const [showAllLangs, setShowAllLangs]     = useState<boolean>(() =>
     typeof window === 'undefined' ? true : localStorage.getItem('srs_show_all_langs') !== 'false'
@@ -429,9 +431,15 @@ export default function StudyPage() {
     const excludeLangs = showAllLangs ? [] : excludedLangs
     Promise.all([
       listCollections(lang.code),
-      getDueStats({ excludeLangs }),
+      getExcludeFromReview(),
       ensureFlashcards(),
-    ]).then(([cols, stats]) => {
+    ]).then(async ([cols, exclude]) => {
+      setCapturesIncluded(!exclude.captures)
+      const stats = await getDueStats({
+        excludeLangs,
+        excludeCollections: exclude.collections,
+        excludeCaptures:    exclude.captures,
+      })
       setCollections(cols)
       setDue(stats)
       setLoading(false)
@@ -462,13 +470,30 @@ export default function StudyPage() {
     })
   }
 
-  async function refreshDue(overrideExcluded?: string[]) {
-    const excludeLangs = showAllLangs ? [] : (overrideExcluded ?? excludedLangs)
-    const stats = await getDueStats({ excludeLangs })
+  async function refreshDue(overrideExcludedLangs?: string[]) {
+    const excludeLangs = showAllLangs ? [] : (overrideExcludedLangs ?? excludedLangs)
+    const excludeCollections = collections.filter(c => !c.include_in_review).map(c => c.id)
+    const stats = await getDueStats({ excludeLangs, excludeCollections, excludeCaptures: !capturesIncluded })
     setDue(stats)
   }
 
   async function handleReset() { await refreshDue() }
+
+  async function handleIncludeToggled(id: string, include: boolean) {
+    const excludeLangs = showAllLangs ? [] : excludedLangs
+    if (id === CAPTURES_DECK_ID) {
+      setCapturesIncluded(include)
+      const excludeCollections = collections.filter(c => !c.include_in_review).map(c => c.id)
+      const stats = await getDueStats({ excludeLangs, excludeCollections, excludeCaptures: !include })
+      setDue(stats)
+    } else {
+      const updatedCols = collections.map(c => c.id === id ? { ...c, include_in_review: include } : c)
+      setCollections(updatedCols)
+      const excludeCollections = updatedCols.filter(c => !c.include_in_review).map(c => c.id)
+      const stats = await getDueStats({ excludeLangs, excludeCollections, excludeCaptures: !capturesIncluded })
+      setDue(stats)
+    }
+  }
 
   function handlePinned(id: string, pinned: boolean) {
     setCollections(prev => {
@@ -631,6 +656,7 @@ export default function StudyPage() {
                   onKebab={() => setActionDeck({
                     id: CAPTURES_DECK_ID, name: 'Captures & lookups',
                     language: '', created_at: '', card_count: 0, pinned: false,
+                    include_in_review: capturesIncluded,
                   })}
                   last
                 />
@@ -802,6 +828,7 @@ export default function StudyPage() {
           onRenamed={handleRenamed}
           onDeleted={handleDeleted}
           onReset={handleReset}
+          onIncludeToggled={handleIncludeToggled}
         />
       )}
 

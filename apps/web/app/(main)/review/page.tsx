@@ -7,7 +7,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, listUserLanguages,
+  ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
   rateCard, rateCardRelearn, cardMeta, cardAudio,
   suspendCard, setFlagColor,
   type FlashcardWithItem, type Rating,
@@ -969,8 +969,14 @@ export default function ReviewPage() {
 
   async function reload() {
     await ensureFlashcards()
+    const exclude = await getExcludeFromReview()
     const [c, context] = await Promise.all([
-      listDueFlashcards({ flagColor, excludeLangs: getExcludeLangs() }),
+      listDueFlashcards({
+        flagColor,
+        excludeLangs:        getExcludeLangs(),
+        excludeCollections:  exclude.collections,
+        excludeCaptures:     exclude.captures,
+      }),
       loadSessionContext(),
     ])
     setCards(c)

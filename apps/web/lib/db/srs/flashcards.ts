@@ -89,6 +89,20 @@ export async function setTargetWord(noteId: string, targetWord: string | null): 
 }
 
 
+export async function getExcludeFromReview(): Promise<{ collections: string[]; captures: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { collections: [], captures: false }
+  const [colRes, profRes] = await Promise.all([
+    supabase.from('ind_learn_collections').select('id').eq('user_id', user.id).eq('include_in_review', false),
+    supabase.from('ind_profiles').select('include_in_review').eq('user_id', user.id).maybeSingle(),
+  ])
+  return {
+    collections: (colRes.data ?? []).map(r => r.id as string),
+    captures:    !((profRes.data?.include_in_review as boolean) ?? true),
+  }
+}
+
 export type DueStats = {
   total: number
   captures: number
@@ -108,7 +122,7 @@ export async function listUserLanguages(): Promise<string[]> {
 }
 
 export async function getDueStats(
-  opts: { excludeLangs?: string[] } = {},
+  opts: { excludeLangs?: string[]; excludeCollections?: string[]; excludeCaptures?: boolean } = {},
 ): Promise<DueStats> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -128,13 +142,18 @@ export async function getDueStats(
   let total = 0
   let captures = 0
   const byCollection: Record<string, number> = {}
+  type NoteRef = { note_source: string; collection_id: string | null; language: string }
   for (const row of data) {
-    const note = row.ind_items as unknown as { note_source: string; collection_id: string | null; language: string } | null
+    const note = row.ind_items as unknown as NoteRef | null
     if (opts.excludeLangs?.length && opts.excludeLangs.includes(note?.language ?? '')) continue
-    total++
-    if (note?.note_source === 'collection' && note.collection_id) {
-      byCollection[note.collection_id] = (byCollection[note.collection_id] ?? 0) + 1
+    const colId = note?.note_source === 'collection' ? note.collection_id : null
+    if (colId) {
+      if (opts.excludeCollections?.includes(colId)) continue
+      total++
+      byCollection[colId] = (byCollection[colId] ?? 0) + 1
     } else {
+      if (opts.excludeCaptures) continue
+      total++
       captures++
     }
   }
@@ -142,11 +161,12 @@ export async function getDueStats(
 }
 
 export async function listDueFlashcards(
-  opts: { flagColor?: string | 'any'; excludeLangs?: string[] } = {},
+  opts: { flagColor?: string | 'any'; excludeLangs?: string[]; excludeCollections?: string[]; excludeCaptures?: boolean } = {},
 ): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  const dbLimit = opts.excludeLangs?.length ? 200 : 20
+  const needsPostFilter = opts.excludeLangs?.length || opts.excludeCollections?.length || opts.excludeCaptures
+  const dbLimit = needsPostFilter ? 200 : 20
   let q = supabase
     .from('ind_flashcards')
     .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, ind_learn_collections(name, language))')
@@ -161,10 +181,17 @@ export async function listDueFlashcards(
   const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
   let results = (data ?? []) as FlashcardWithItem[]
-  if (opts.excludeLangs?.length) {
-    results = results
-      .filter(c => !opts.excludeLangs!.includes(c.ind_items?.language ?? ''))
-      .slice(0, 20)
+  if (needsPostFilter) {
+    if (opts.excludeLangs?.length)
+      results = results.filter(c => !opts.excludeLangs!.includes(c.ind_items?.language ?? ''))
+    if (opts.excludeCollections?.length || opts.excludeCaptures)
+      results = results.filter(c => {
+        const note = c.ind_items
+        if (note?.note_source === 'collection' && note.collection_id)
+          return !opts.excludeCollections?.includes(note.collection_id)
+        return !opts.excludeCaptures
+      })
+    results = results.slice(0, 20)
   }
   return results
 }

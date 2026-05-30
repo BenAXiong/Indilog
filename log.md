@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 02:30 | FEATURE | T1-B include_in_review: boolean on ind_learn_collections + ind_profiles; getExcludeFromReview(); getDueStats/listDueFlashcards filter excluded decks; DeckActionSheet toggle; Study + Review pages wired |
+| 2026-05-31 02:30 | SCHEMA | T1-B: migration 20260531040000 adds include_in_review to ind_learn_collections + ind_profiles |
 | 2026-05-31 02:05 | CONFIG | Update plan-srs.md + decisions.md: T3-D STS spec, T2-D/E/F done, DEC-NOTE03 metadata shape corrected, DEC-SRS02 marked implemented |
 | 2026-05-31 02:02 | SCHEMA | T3-D STS: add target_word text to ind_items; migration 20260531030000 |
 | 2026-05-31 02:02 | FEATURE | T3-D STS: ensureFlashcards() creates card_type='sts' for notes with target_word; setTargetWord() syncs note + card; target dot button on lookup cards in Capture; STS word/sentence layout in ReviewSession |

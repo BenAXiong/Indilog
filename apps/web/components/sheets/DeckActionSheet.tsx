@@ -7,18 +7,21 @@ import {
   renameCollection,
   deleteCollection,
   listCollectionCards,
+  setIncludeInReview,
   type CollectionMeta,
 } from '@/lib/db/progress/collections'
 import { resetCollectionSRS, resetCapturesSRS } from '@/lib/db/srs/flashcards'
+import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
 
 export const CAPTURES_DECK_ID = '__captures__'
 
 type Props = {
-  deck:      CollectionMeta
-  onClose:   () => void
-  onRenamed: (id: string, name: string) => void
-  onDeleted: (id: string) => void
-  onReset?:  () => void
+  deck:               CollectionMeta
+  onClose:            () => void
+  onRenamed:          (id: string, name: string) => void
+  onDeleted:          (id: string) => void
+  onReset?:           () => void
+  onIncludeToggled?:  (id: string, include: boolean) => void
 }
 
 type View = 'menu' | 'rename' | 'delete' | 'reset'
@@ -31,7 +34,7 @@ const labelStyle: React.CSSProperties = {
   fontFamily: '"JetBrains Mono", monospace', marginBottom: 6,
 }
 
-export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, onReset }: Readonly<Props>) {
+export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, onReset, onIncludeToggled }: Readonly<Props>) {
   const [view, setView] = useState<View>('menu')
   const [name, setName] = useState(deck.name)
   const [busy, setBusy]     = useState(false)
@@ -75,6 +78,14 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
     await deleteCollection(deck.id)
     onDeleted(deck.id)
     setBusy(false)
+    onClose()
+  }
+
+  function handleIncludeToggle() {
+    const next = !deck.include_in_review
+    if (isCaptures(deck.id)) setCapturesIncludeInReview(next)
+    else setIncludeInReview(deck.id, next)
+    onIncludeToggled?.(deck.id, next)
     onClose()
   }
 
@@ -155,6 +166,9 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
               <Icon name="download"  size={18} strokeWidth={1.8} color={T.inkSoft} />, busy ? 'Exporting…' : 'Export as JSON')}
             {!isCaptures(deck.id) && actionRow(handleShare,
               <Icon name="share"     size={18} strokeWidth={1.8} color={T.inkSoft} />, 'Share')}
+            {actionRow(handleIncludeToggle,
+              <Icon name="check" size={18} strokeWidth={1.8} color={deck.include_in_review ? T.sage : T.inkFaint} />,
+              deck.include_in_review ? 'In "Review all"' : 'Excluded from "Review all"')}
             <div style={{ height: 1, background: T.lineSoft, margin: '4px 18px' }} />
             {actionRow(() => setView('reset'),
               <Icon name="rotate-ccw" size={18} strokeWidth={1.8} color={T.crimson} />, 'Reset progress', true)}
