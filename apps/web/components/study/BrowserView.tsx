@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
-  listBrowserCards, updateNoteContent, resetCardEase,
+  listBrowserCards, updateNoteFields, setCardLayout, resetCardEase,
   suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
+import { setTargetWord } from '@/lib/db/srs/flashcards'
 import { formatDays } from '@/lib/db/srs/schedule'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 
@@ -61,14 +62,23 @@ type CardRowProps = {
 }
 
 function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps) {
-  const [editFront, setEditFront] = useState(card.ab)
-  const [editBack,  setEditBack]  = useState(card.zh ?? '')
-  const [saving,    setSaving]    = useState(false)
-  const [busy,      setBusy]      = useState(false)
+  const [editFront,  setEditFront]  = useState(card.ab)
+  const [editBack,   setEditBack]   = useState(card.zh ?? '')
+  const [editNotes,  setEditNotes]  = useState(card.notes ?? '')
+  const [editPlace,  setEditPlace]  = useState(card.place_heard ?? '')
+  const [editTarget, setEditTarget] = useState(card.target_word ?? '')
+  const [saving,     setSaving]     = useState(false)
+  const [busy,       setBusy]       = useState(false)
+  const [audioEl,    setAudioEl]    = useState<HTMLAudioElement | null>(null)
+  const [playing,    setPlaying]    = useState(false)
 
   useEffect(() => {
-    if (expanded) { setEditFront(card.ab); setEditBack(card.zh ?? '') }
-  }, [expanded, card.ab, card.zh])
+    if (expanded) {
+      setEditFront(card.ab);     setEditBack(card.zh ?? '')
+      setEditNotes(card.notes ?? ''); setEditPlace(card.place_heard ?? '')
+      setEditTarget(card.target_word ?? '')
+    }
+  }, [expanded, card.ab, card.zh, card.notes, card.place_heard, card.target_word])
 
   const now         = new Date().toISOString()
   const isDue       = !card.due_at || card.due_at <= now
@@ -81,9 +91,43 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
     const f = editFront.trim(), b = editBack.trim()
     if (!f) return
     setSaving(true)
-    await updateNoteContent(card.note_id, f, b)
-    onUpdate({ ab: f, zh: b })
+    const newTarget = editTarget.trim() || null
+    const targetChanged = newTarget !== (card.target_word || null)
+    await updateNoteFields(card.note_id, {
+      ab: f, zh: b || null,
+      notes: editNotes.trim() || null,
+      place_heard: editPlace.trim() || null,
+    })
+    const patch: Partial<BrowserCard> = {
+      ab: f, zh: b || null,
+      notes: editNotes.trim() || null,
+      place_heard: editPlace.trim() || null,
+    }
+    if (targetChanged) {
+      await setTargetWord(card.note_id, newTarget)
+      patch.target_word = newTarget
+      patch.card_type   = newTarget ? 'sts' : 'default'
+      patch.metadata    = newTarget
+        ? { target_word: newTarget, layout: (card.metadata?.layout as string) ?? 'word' }
+        : null
+    }
+    onUpdate(patch)
     setSaving(false)
+  }
+
+  async function handleLayoutChange(layout: 'word' | 'sentence') {
+    await setCardLayout(card.id, layout, card.metadata)
+    onUpdate({ metadata: { ...card.metadata, layout } })
+  }
+
+  function handleAudio() {
+    if (!card.audio) return
+    if (playing && audioEl) { audioEl.pause(); audioEl.currentTime = 0; setPlaying(false); return }
+    const a = new Audio(card.audio)
+    a.onended = () => setPlaying(false)
+    a.play().catch(() => {})
+    setAudioEl(a)
+    setPlaying(true)
   }
 
   async function handleResetEase() {
@@ -173,8 +217,10 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
 
       {/* Edit panel */}
       {expanded && (
-        <div style={{ padding: '0 12px 12px', borderTop: `1px solid ${T.lineSoft}` }}>
-          <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: '0 12px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
+          <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 9 }}>
+
+            {/* Core fields */}
             <div>
               <label style={labelStyle}>Front</label>
               <textarea value={editFront} onChange={e => setEditFront(e.target.value)} rows={2} style={textareaStyle('serif')} />
@@ -183,6 +229,44 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               <label style={labelStyle}>Back</label>
               <textarea value={editBack} onChange={e => setEditBack(e.target.value)} rows={2} style={textareaStyle('sans')} />
             </div>
+            <div>
+              <label style={labelStyle}>Notes</label>
+              <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} placeholder="Personal notes…" style={textareaStyle('sans')} />
+            </div>
+            <div>
+              <label style={labelStyle}>Place</label>
+              <input value={editPlace} onChange={e => setEditPlace(e.target.value)} placeholder="Where heard / seen" style={inputStyle} />
+            </div>
+
+            {/* STS target word */}
+            <div>
+              <label style={labelStyle}>Target word <span style={{ color: T.inkFaint, fontWeight: 400 }}>— STS</span></label>
+              <input
+                value={editTarget} onChange={e => setEditTarget(e.target.value)}
+                placeholder="Set to make this card STS…"
+                style={{ ...inputStyle, borderColor: editTarget ? T.amber : undefined }}
+              />
+            </div>
+
+            {/* Layout toggle — only for STS cards */}
+            {isSTS && (
+              <div>
+                <label style={labelStyle}>STS layout</label>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {(['word', 'sentence'] as const).map(l => {
+                    const active = ((card.metadata?.layout as string) ?? 'word') === l
+                    return (
+                      <button key={l} onClick={() => handleLayoutChange(l)} style={{
+                        height: 28, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 500,
+                        background: active ? T.amberBg : T.paperHi,
+                        border: `1px solid ${active ? T.amber : T.lineSoft}`,
+                        color: active ? T.amber : T.inkSoft, cursor: 'pointer',
+                      }}>{l}</button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Save / cancel */}
             <div style={{ display: 'flex', gap: 6 }}>
@@ -191,6 +275,30 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               </button>
               <button onClick={onToggle} style={ghostBtn}>Cancel</button>
             </div>
+
+            {/* Info strip */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>
+              {[card.language, card.dialect, card.note_type, card.note_source].filter(Boolean).map((v, i) => (
+                <span key={i} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 6px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
+                  {v}
+                </span>
+              ))}
+              {card.tags?.map(t => (
+                <span key={t} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 6px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
+                  {t}
+                </span>
+              ))}
+            </div>
+
+            {/* Audio */}
+            {card.audio && (
+              <button onClick={handleAudio} style={{ ...ghostBtn, display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content' }}>
+                <Icon name={playing ? 'stop' : 'speaker'} size={13} strokeWidth={1.8} />
+                {playing ? 'Stop' : 'Play audio'}
+              </button>
+            )}
+
+            <div style={{ height: 1, background: T.lineSoft }} />
 
             {/* Flag row */}
             <div>
@@ -375,6 +483,13 @@ const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: 10.5, fontWeight: 600, color: T.inkMute,
   textTransform: 'uppercase', letterSpacing: '0.08em',
   fontFamily: '"JetBrains Mono", monospace', marginBottom: 4,
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '7px 10px', borderRadius: 8,
+  background: T.paper, border: `1px solid ${T.line}`,
+  fontSize: 13, color: T.inkSoft, fontFamily: 'inherit',
+  boxSizing: 'border-box',
 }
 
 const textareaStyle = (family: 'serif' | 'sans'): React.CSSProperties => ({

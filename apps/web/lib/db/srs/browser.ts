@@ -16,8 +16,18 @@ export type BrowserCard = {
   suspended_at: string | null
   flag_color:   string | null
   card_type:    string
-  source: string
-  note_source: string
+  metadata:     Record<string, unknown> | null
+  source:       string
+  note_source:  string
+  // Full note fields
+  notes:        string | null
+  audio:        string | null
+  note_type:    string
+  language:     string
+  dialect:      string | null
+  place_heard:  string | null
+  tags:         string[] | null
+  target_word:  string | null
 }
 
 export type BrowserFilter = 'all' | 'due' | 'new' | 'flagged' | 'suspended'
@@ -36,7 +46,7 @@ export async function listBrowserCards(
 
   let q = supabase
     .from('ind_flashcards')
-    .select('id, note_id, due_at, ease_factor, interval_days, repetitions, created_at, suspended_at, flag_color, card_type, ind_items(ab, zh, note_source, collection_id, ind_learn_collections(name))')
+    .select('id, note_id, due_at, ease_factor, interval_days, repetitions, created_at, suspended_at, flag_color, card_type, metadata, ind_items(ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, collection_id, ind_learn_collections(name))')
     .eq('user_id', user.id)
 
   switch (filter) {
@@ -59,7 +69,13 @@ export async function listBrowserCards(
   if (!data) return []
 
   return data.map(row => {
-    type NoteJoin = { ab: string; zh: string | null; note_source: string; collection_id: string | null; ind_learn_collections: { name: string } | null } | null
+    type NoteJoin = {
+      ab: string; zh: string | null; notes: string | null; audio: string | null
+      type: string; language: string; dialect: string | null; place_heard: string | null
+      tags: unknown; target_word: string | null
+      note_source: string; collection_id: string | null
+      ind_learn_collections: { name: string } | null
+    } | null
     const note   = row.ind_items as unknown as NoteJoin
     const source = note?.ind_learn_collections?.name ?? (note?.note_source === 'collection' ? '—' : 'Captures')
     return {
@@ -75,8 +91,17 @@ export async function listBrowserCards(
       suspended_at:  row.suspended_at,
       flag_color:    row.flag_color ?? null,
       card_type:     row.card_type ?? 'default',
+      metadata:      (row.metadata as Record<string, unknown> | null) ?? null,
       source,
       note_source:   note?.note_source ?? 'captured',
+      notes:         note?.notes ?? null,
+      audio:         note?.audio ?? null,
+      note_type:     note?.type ?? 'word',
+      language:      note?.language ?? '',
+      dialect:       note?.dialect ?? null,
+      place_heard:   note?.place_heard ?? null,
+      tags:          Array.isArray(note?.tags) ? (note.tags as string[]) : null,
+      target_word:   note?.target_word ?? null,
     }
   })
 }
@@ -84,6 +109,21 @@ export async function listBrowserCards(
 export async function updateNoteContent(noteId: string, ab: string, zh: string): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_items').update({ ab, zh }).eq('id', noteId)
+}
+
+export async function updateNoteFields(
+  noteId: string,
+  patch: Partial<{ ab: string; zh: string | null; notes: string | null; place_heard: string | null }>
+): Promise<void> {
+  const supabase = createClient()
+  const clean: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(patch)) if (v !== undefined) clean[k] = v
+  await supabase.from('ind_items').update(clean).eq('id', noteId)
+}
+
+export async function setCardLayout(cardId: string, layout: 'word' | 'sentence', currentMeta: Record<string, unknown> | null): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ metadata: { ...currentMeta, layout } }).eq('id', cardId)
 }
 
 export async function resetCardEase(id: string): Promise<void> {
