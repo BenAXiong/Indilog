@@ -23,15 +23,19 @@ after serious production review data.
 
 ---
 
-## Current state (as of 2026-05-29)
+## Current state (as of 2026-05-30)
 
-- [x] `ind_flashcards` table with `front`, `back`, `due_at`
-- [x] Fixed-interval scheduling (Again: 10m / Hard: 1d / Good: 3d / Easy: 7d)
-- [x] `ensureFlashcards()` — generates cards from `ind_items`
-- [x] `generateFlashcardsFromCollection()` — generates cards from `ind_learn_cards`
-- [x] Basic review session: reveal → rate → next card
-- [x] `item_id` nullable + `collection_card_id` on `ind_flashcards`
-- [x] Amis1k collection importable, 1063 cards
+All Tiers 1–3 shipped on `redesign/srs-overhaul`. Not yet merged to main.
+
+- [x] FormoSRS-1 scheduling (SM-2 + fuzz + ease recovery) — T1-A
+- [x] Study tab: Decks / Browser / Stats subtabs, deck list (Curriculum/Collections/Captures) — T1-B
+- [x] Dashboard: real streak, ring, heatmap, quick stats, goal widget — T1-C
+- [x] Review session: full-screen, 4-dir gestures, rating buttons, options sheet — T1-D/E
+- [x] Goal feature: GoalSheet, GoalWidget, 5-color flags, deck coverage — T2-A
+- [x] Stats subtab: overview 2×2, per-deck coverage bars, 14-day pace chart — T2-B
+- [x] Card browser: search, filters (All/Due/New/Flagged/Suspended), sort, inline edit — T2-C
+- [x] Suspension (`suspended_at`), 5-color flags (`flag_color`), reverse cards (`card_type`) — T3-B/C/D
+- [x] Learn phase + relearn burst: queue-based session, Repeat/Easy/Got it! buttons, pass dots — T3-A
 
 ---
 
@@ -47,22 +51,20 @@ the single entry point for all flashcard activity. The existing Learn content
 
 ## Schema additions needed
 
-Apply each in the Supabase SQL editor as the feature requiring it is built.
+All applied via `npx supabase db query --linked`. See `supabase/migrations/`.
 
 ```sql
--- FormoSRS-1 state per card (T1-A)
-ALTER TABLE ind_flashcards
-  ADD COLUMN IF NOT EXISTS ease_factor   real    NOT NULL DEFAULT 2.5,
-  ADD COLUMN IF NOT EXISTS interval_days integer NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS repetitions   integer NOT NULL DEFAULT 0;
+-- 20260529020000 · T1-A FormoSRS-1 state
+ease_factor real NOT NULL DEFAULT 2.5, interval_days int NOT NULL DEFAULT 0, repetitions int NOT NULL DEFAULT 0
 
--- Suspension (T3-B)
-ALTER TABLE ind_flashcards
-  ADD COLUMN IF NOT EXISTS suspended_at timestamptz;
+-- 20260529030000 · T2-A Goal
+goal_collection_id text, goal_due_date date  (on ind_profiles)
 
--- Flags (T3-C)
-ALTER TABLE ind_flashcards
-  ADD COLUMN IF NOT EXISTS flag_color text;  -- null | 'red' | 'orange' | 'yellow' | 'green' | 'blue'
+-- 20260530010000 · T3-B/C/D
+suspended_at timestamptz, flag_color text, card_type text NOT NULL DEFAULT 'forward'
+
+-- 20260530020000 · T3-C flag redesign
+DROP flagged boolean → ADD flag_color text
 ```
 
 ---
@@ -76,10 +78,10 @@ ALTER TABLE ind_flashcards
 FormoSRS-1 = SM-2 base + Anki Hard behavior (no reset on Hard) + fuzz + ease
 recovery on Good.
 
-- [ ] Define `SMState { ease_factor, interval_days, repetitions }` type
-- [ ] `nextFormoSRS1(state, rating)` → `{ due_at, new_state }` — pure function, no DB
-- [ ] Update `rateCard()` to call `nextFormoSRS1`, write SM-2 columns
-- [ ] Column defaults handle existing cards (ease 2.5, interval 0, reps 0)
+- [x] Define `SMState { ease_factor, interval_days, repetitions }` type
+- [x] `nextFormoSRS1(state, rating)` → `{ due_at, new_state }` — pure function, no DB
+- [x] Update `rateCard()` to call `nextFormoSRS1`, write SM-2 columns
+- [x] Column defaults handle existing cards (ease 2.5, interval 0, reps 0)
 
 Rating → algorithm mapping:
 
@@ -108,56 +110,56 @@ Deferred to T3-A — needs its own design pass as it changes session UX.
 
 Replaces both the Learn and Review tabs.
 
-- [ ] New route `/study` with subtab bar: Decks | Browser | Stats
-- [ ] Deck list with 3 sections: Curriculum / My Collections / Captures
-- [ ] "Review all — N due" primary CTA at top of Decks view
-- [ ] Per-deck "..." menu: rename · delete · export · share · toggle in Review all
-- [ ] Import button in page header (single, no ghost row)
-- [ ] Browser and Stats subtabs: placeholder empty states (built in T2)
+- [x] New route `/study` with subtab bar: Decks | Browser | Stats
+- [x] Deck list with 3 sections: Curriculum / My Collections / Captures
+- [x] "Review all — N due" primary CTA at top of Decks view
+- [ ] Per-deck "..." menu: rename · delete · export · share · toggle in Review all (kebab is no-op placeholder)
+- [x] Import button in page header (single, no ghost row)
+- [x] Browser and Stats subtabs: built in T2
 - [ ] Redirect `/learn` → `/study`, `/review` → `/study`
-- [ ] Update BottomNav: Dashboard · Study · Capture · Translate · Dict
+- [x] Update BottomNav: Dashboard · Study · Capture · Translate · Dict
 
 ### T1-C — Dashboard overhaul
 
 Dashboard is the primary motivational hub and the main review entry point.
 
-- [ ] Streak hero: chain visual + day count
-- [ ] Learning goal widget: placeholder ("Set a goal →") until T2-A ships
-- [ ] Today's ring: circular progress reviewed/goal + "N due today"
-- [ ] Primary CTA: "Review N due → (~N min)" — goes directly into session
-- [ ] Real heatmap: `ind_daily_stats` data, intensity = reviewed_count (~16 weeks)
-- [ ] Quick stats 2×2: Mastered · Active · This week · Due tomorrow
-- [ ] Remove seed-based heatmap and fake streak
+- [x] Streak hero: chain visual + day count
+- [x] Learning goal widget: GoalWidget (T2-A)
+- [x] Today's ring: circular progress reviewed/goal + "N due today"
+- [x] Primary CTA: "Review N due → (~N min)" — goes directly into session
+- [x] Real heatmap: `ind_daily_stats` data, intensity = reviewed_count (~16 weeks)
+- [x] Quick stats 2×2: Mastered · Active · This week · Due tomorrow
+- [x] Remove seed-based heatmap and fake streak
 
 ### T1-D — Review session overhaul
 
 Full-screen session, BottomNav hidden during review.
 
-- [ ] Session header: back button · deck name · "X / N" counter
-- [ ] Single thin progress bar (not per-card dots)
-- [ ] Card contained on cream background (rounded, shadow, not edge-to-edge)
-- [ ] Tap card = reveal (no animation — answer appears)
-- [ ] Swipe left = Again, swipe right = Good
-- [ ] Subtle swipe edge indicators on card (visible before reveal)
-- [ ] Rating row: Again · Hard · Good · Easy with interval label (mono)
-- [ ] Hard + Easy togglable off in options
-- [ ] Full immersion mode: hide button row entirely, gestures only
-- [ ] Options sheet via gear icon in session header
+- [x] Session header: back button · deck name · "X / N" counter
+- [x] Single thin progress bar (spans full queue including requeued cards)
+- [x] Card contained on cream background (rounded, shadow, not edge-to-edge)
+- [x] Tap card = reveal (no animation — answer appears)
+- [x] Swipe ← Again · → Good · ↑ Easy · ↓ Suspend
+- [x] Subtle swipe edge indicators on card (visible before reveal)
+- [x] Rating row: Again · Hard · Good · Easy with interval label (mono)
+- [x] Hard + Easy togglable off in options
+- [x] Full immersion mode: hide button row entirely, gestures only
+- [x] Options sheet via gear icon in session header
 
 ### T1-E — Session end screen
 
-- [ ] Hero: "N cards reviewed" (large serif)
-- [ ] "N due tomorrow"
-- [ ] Confetti: triggers when daily goal met
-- [ ] Share: native share API ("Reviewed N cards · 🔥 X-day streak")
-- [ ] CTAs: "Review more" (if cards due) · "Capture more" (nudge if tomorrow low) · "Done"
+- [x] Hero: "N cards reviewed" (large serif)
+- [x] "N due tomorrow"
+- [x] Confetti: triggers when daily goal met
+- [x] Share: native share API ("Reviewed N cards · 🔥 X-day streak")
+- [x] CTAs: "Review more" (if cards due) · "Capture more" (nudge if tomorrow low) · "Done"
 
 ### T1-F — Content sources wired
 
 - [x] From `ind_items` (captures, dict/learn saves) — existing
 - [x] From `ind_learn_collections` (Amis1k) — done
-- [ ] From curriculum (Lessons/Patterns/Essays/Dialogs) — filtered `ind_items` by
-  source; appear as Curriculum deck rows in Study tab
+- [ ] From curriculum (Lessons/Patterns/Essays/Dialogs) — Curriculum deck rows in Study
+  tab link to content pages; flashcard generation from curriculum not yet wired
 - [ ] `ensureFlashcards()` called on Study landing, dedup safe
 
 ---
@@ -168,27 +170,25 @@ Full-screen session, BottomNav hidden during review.
 
 ### T2-A — Learning goal feature
 
-- [ ] Goal-setting UI: sheet/overlay — select target deck, set daily cards or target
-  date (bidirectional: lock one, the other calculates)
-- [ ] Stores in `ind_profiles`: target deck, daily goal cards, goal due date
-- [ ] Dashboard widget when active: "[Deck] · N days left · X% mastered" + progress bar
+- [x] Goal-setting UI: GoalSheet bottom drawer — pick deck, daily goal, optional target date with live pace hint
+- [x] Stores in `ind_profiles`: `goal_collection_id`, `goal_due_date`, `daily_goal`
+- [x] Dashboard widget: GoalWidget — active shows deck name, days left, known-% bar; inactive shows "Set a goal →"
 
 ### T2-B — Stats subtab
 
-- [ ] Cards total / due today / mastered (ease ≥ 2.5 and interval ≥ 21d = "known",
-  ≥ 60d = "mastered")
-- [ ] Amis1k coverage: X of 1063 mastered
-- [ ] Weekly pace chart
-- [ ] Populates the Stats subtab in Study
+- [x] Cards total / due today / known (ease ≥ 2.5 + interval ≥ 21d) / mastered (≥ 60d)
+- [x] Per-deck coverage bars (colour-coded sage/amber/crimson by %)
+- [x] 14-day pace bar chart with avg/day
+- [x] Populates the Stats subtab in Study
 
 ### T2-C — Card browser (Browser subtab)
 
-- [ ] List all `ind_flashcards` for current language
-- [ ] Show: front, back, source, due date, ease factor, interval
-- [ ] Edit front/back inline
-- [ ] Filter: all / due / new / suspended / flagged
-- [ ] Sort: by due date, by ease, by creation date
-- [ ] Ease reset action (safety valve for ease-hell edge cases)
+- [x] List all `ind_flashcards` (search bar, client-side filter on front+back)
+- [x] Show: front, back, source, status badge, ease factor, flag dot, REV badge
+- [x] Edit front/back inline (tap to expand, Save/Cancel)
+- [x] Filter: All / Due / New / Flagged (+ color sub-filter) / Suspended
+- [x] Sort: by due date, by ease, by added
+- [x] Ease reset, Suspend/Unsuspend, Flag color picker — all in expanded row
 
 ---
 
@@ -202,47 +202,46 @@ Session queue model: `QueueEntry[]` replaces `cards + idx`. Cards append
 on requeue; `qIdx` advances linearly. DB writes only on graduation.
 
 **Learning** (new cards: `repetitions === 0 && interval_days === 0`):
-- `learningSteps` requeue passes (default 3, configurable 1–5 in OptionsSheet)
-- Again / Hard / Good → requeue until final pass, then graduate with that rating
-- Easy at any pass → graduate immediately; Hard treated as Again
-- Rating buttons: Again · Good · Easy (Hard hidden); labels: retry / more / done
+- `learningSteps` passes (default 3, configurable 1–5 in OptionsSheet)
+- 2 buttons: **Repeat** (requeue / reset-to-0 on final) · **Easy** (non-final, first attempt, Easy interval) / **Got it!** (final pass or after first restart, Good interval)
+- Cap: 3 full restarts max → 4th final-pass Repeat forces Good graduation
+- Hard treated as Repeat (not shown as button)
 
 **Relearn burst** (mature lapse: `interval_days ≥ 7` + Again):
-- Same `learningSteps` depth; no DB write at the moment of lapse
-- Good / Easy → `rateCardRelearn`: 50% recovery interval + ease −0.2
-- Again exhausted → `rateCard('again')`: full reset (1d, ease −0.2, reps = 0)
+- Same `learningSteps` depth; no DB write at lapse moment
+- 2 buttons: **Repeat** (requeue / reset-to-0 on final, same 3-restart cap) · **Got it!** (50% recovery interval + ease −0.2 via `rateCardRelearn`)
+- Exhausted + cap: `rateCard('again')` full reset
 - `nextRelearn()` in schedule.ts; `rateCardRelearn()` in flashcards.ts
 
-**UI changes**:
-- Card phase label (top-right): New · Learning (sage) · Relearning (amber)
-- Progress bar: `qIdx / queue.length` (shrinks on requeue — communicates extra work)
-- `↩ N returning` micro-label below progress bar when pending requeue > 0
-- OptionsSheet: Learning passes stepper (1–5), localStorage `srs_learning_steps`
+**UI**:
+- Pass dots (●●○) below card — sage for learning, amber for relearn; reset on restart
+- Card border tint: sage learning / amber relearn / lineSoft review
+- Phase label: New (first pass, no restarts) · Learning (sage) · Relearning (amber)
+- `↩ N returning` micro-label below progress bar
+- OptionsSheet: Learning passes stepper (1–5), `srs_learning_steps`
 
 ### T3-B — Card suspension
 
-- [ ] Suspend during review (skips until manually unsuspended in Browser)
-- [ ] Excluded from `listDueFlashcards`
+- [x] Suspend during review (archive icon → skips card, no rating)
+- [x] Excluded from `listDueFlashcards`, due counts, stats
+- [x] Browser: Suspended filter, SUSP badge, Unsuspend in expanded row
 
 ### T3-C — Flags
 
 Five color flags (red · orange · yellow · green · blue) act as free-form
 tags. No semantics imposed — the user decides what each color means.
 
-- [ ] `flag_color text` column (null = no flag; values: red/orange/yellow/green/blue)
-- [ ] Review session: bookmark icon opens inline color picker (5 dots + clear ×);
-  active flag shown by filled bookmark in that color; optimistic update
-- [ ] Browser: Flagged filter shows all flagged cards; color sub-filter row (5 dots)
-  narrows to specific color; colored dot badge on card rows
-- [ ] "Review flagged" amber CTA in Browser links to `/review?filter=flagged` (any
-  color) or `/review?flag=red` etc. for a specific color
-- [ ] `setFlagColor(id, color | null)` in flashcards.ts
+- [x] `flag_color text` column (null = no flag; values: red/orange/yellow/green/blue)
+- [x] Review session: bookmark icon opens inline 5-color picker; optimistic update
+- [x] Browser: Flagged filter + color sub-filter row; colored dot badge on rows; flag picker in expanded row
+- [x] "Review flagged" CTA → `/review?filter=flagged` or `/review?flag=X`
+- [x] `setFlagColor(id, color | null)` in flashcards.ts; `flags.ts` with FLAG_COLORS + flagColorHex
 
 ### T3-D — Card types
 
-- [ ] Reverse cards (zh → ab)
-- [ ] Audio cards — requires audio data
-- [ ] Card type selector per collection on import
+- [x] Reverse cards (zh → ab): `card_type` column; `generateReverseCardsForCollection()`; "Generate reverse cards" button on collection page; REV badge in Browser
+- [ ] Audio cards — requires audio data (deferred)
+- [ ] Card type selector per collection on import (deferred)
 
 ### T3-E — FSRS
 
@@ -313,38 +312,36 @@ Inactive → "Set a goal →" tertiary prompt. Goal-setting UI is T2-A.
 
 ---
 
-## Sequence
+## Sequence (as of 2026-05-30 — all shipped on redesign/srs-overhaul)
 
 ```
-Now:       T1-A FormoSRS-1        ← algorithm + schema migration, no UI
-           CD wireframes          ← Dashboard / Study tab / Review / End screen
+✓ T1-A  FormoSRS-1 algorithm + schema
+✓ T1-B  Study tab (Decks/Browser/Stats)
+✓ T1-C  Dashboard overhaul
+✓ T1-D/E Review session + end screen
+✓ T2-A  Goal feature (GoalWidget + GoalSheet)
+✓ T2-B  Stats subtab (coverage bars, pace chart)
+✓ T2-C  Card browser (search, filters, inline edit)
+✓ T3-A  Learn phase + relearn burst
+✓ T3-B  Suspension
+✓ T3-C  5-color flags
+✓ T3-D  Reverse cards (partial — audio + import selector deferred)
+  T3-E  FSRS — not in v1
 
-Week 1:    T1-B Study tab         ← nav overhaul, deck list, subtab bar
-           T1-C Dashboard         ← real data widgets, CTA
-           T1-D/E Review session  ← full-screen, gestures, options, end screen
-
-Week 2:    T2-A goal feature      ← goal-setting UI, dashboard widget live
-           T2-B stats subtab      ← mastery metrics, pace chart
-
-Later:     T2-C card browser
-           T3-A learn phase       ← after dedicated design discussion
-           T3-B/C suspension, flags
-           T3-D card types
-           T3-E FSRS              ← not in v1
+Remaining open items:
+  T1-B   Kebab "..." menu actions (no-op placeholder)
+  T1-B   Redirects /learn → /study, /review → /study
+  T1-F   Curriculum flashcard generation (Learn content → flashcards)
+  T3-D   Audio cards (requires audio data)
+  T3-D   Card type selector on import
 ```
 
 ---
 
 ## Open design questions
 
-1. **Learn phase design:** How do learning steps feel in the session? Rating buttons
-   change meaning in learning vs review phase. Needs a dedicated design pass
-   before T3-A implementation.
+1. **Curriculum deck generation:** The 4 Learn sources (Lessons/Patterns/Essays/
+   Dialogs) need a flashcard generation path. Currently their rows link to the
+   content pages; no flashcard generation from curriculum is implemented.
 
-2. **Mastery definition:** ease_factor ≥ 2.5 AND interval_days ≥ 21 = "known".
-   interval_days ≥ 60 = "mastered". Confirm before building T2-B stats so the
-   metric is consistent across the app.
-
-3. **Curriculum deck generation:** The 4 Learn sources (Lessons/Patterns/Essays/
-   Dialogs) each need a flashcard generation path. Currently only `ind_items`
-   filtered by source — verify this is the right model before T1-F.
+2. **T3-E FSRS:** Revisit after 4+ weeks of real review data on the production branch.
