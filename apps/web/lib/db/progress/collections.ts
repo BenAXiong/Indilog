@@ -20,22 +20,28 @@ export async function saveCollection(
     .single()
   if (colErr || !col) return null
 
-  const cardRows: {
-    collection_id: string; level: number; lesson: number; lesson_title?: string; position: number; ab: string; zh?: string
+  const noteRows: {
+    user_id: string; collection_id: string; ab: string; zh?: string
+    type: string; note_source: string; language: string
+    level: number; lesson: number; lesson_title?: string; position: number
   }[] = []
 
   levels.forEach((lv, li) => {
     lv.lessons.forEach((ls, lsi) => {
       ls.cards.forEach((c, ci) => {
         if (c.ab.trim()) {
-          cardRows.push({
+          noteRows.push({
+            user_id:      user.id,
             collection_id: col.id,
+            ab:           c.ab.trim(),
+            zh:           c.zh?.trim() || undefined,
+            type:         'word',
+            note_source:  'collection',
+            language:     language,
             level:        li + 1,
             lesson:       lsi + 1,
             lesson_title: ls.title || undefined,
             position:     ci + 1,
-            ab:  c.ab.trim(),
-            zh:  c.zh?.trim() || undefined,
           })
         }
       })
@@ -44,10 +50,10 @@ export async function saveCollection(
 
   // Insert in chunks of 200 to stay under PostgREST body size limits
   const CHUNK = 200
-  for (let i = 0; i < cardRows.length; i += CHUNK) {
-    const { error } = await supabase.from('ind_learn_cards').insert(cardRows.slice(i, i + CHUNK))
+  for (let i = 0; i < noteRows.length; i += CHUNK) {
+    const { error } = await supabase.from('ind_items').insert(noteRows.slice(i, i + CHUNK))
     if (error) {
-      console.error('saveCollection cards chunk failed:', error)
+      console.error('saveCollection notes chunk failed:', error)
       await supabase.from('ind_learn_collections').delete().eq('id', col.id)
       return null
     }
@@ -97,11 +103,11 @@ export type CollectionCard = {
 export async function listCollectionCards(collectionId: string): Promise<CollectionCard[]> {
   const supabase = createClient()
   const { data } = await supabase
-    .from('ind_learn_cards')
+    .from('ind_items')
     .select('id, level, lesson, lesson_title, position, ab, zh')
     .eq('collection_id', collectionId)
-    .order('level').order('lesson').order('position')
-    .limit(10000) // override PostgREST default 1000-row cap
+    .order('level', { ascending: true }).order('lesson', { ascending: true }).order('position', { ascending: true })
+    .limit(10000)
   return (data ?? []) as CollectionCard[]
 }
 
@@ -116,8 +122,8 @@ export async function renameCollection(id: string, name: string): Promise<boolea
 
 export async function deleteCollection(id: string): Promise<boolean> {
   const supabase = createClient()
-  // Delete cards first (in case FK has no cascade)
-  await supabase.from('ind_learn_cards').delete().eq('collection_id', id)
+  // Delete notes first (flashcards cascade via note_id FK after M3; ind_items has collection_id FK with ON DELETE SET NULL so delete notes explicitly)
+  await supabase.from('ind_items').delete().eq('collection_id', id)
   const { error } = await supabase.from('ind_learn_collections').delete().eq('id', id)
   return !error
 }
