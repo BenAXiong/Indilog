@@ -250,6 +250,21 @@ const MATURE_THRESHOLD = 7
 // Max full restarts before forcing Good graduation
 const MAX_RESTARTS = 3
 
+function renderHighlighted(sentence: string, target: string) {
+  if (!target || !sentence) return sentence
+  const idx = sentence.toLowerCase().indexOf(target.toLowerCase())
+  if (idx === -1) return sentence
+  return (
+    <>
+      {sentence.slice(0, idx)}
+      <mark style={{ background: 'rgba(213,155,64,0.18)', color: T.amber, borderRadius: 3, padding: '0 2px', fontStyle: 'normal' }}>
+        {sentence.slice(idx, idx + target.length)}
+      </mark>
+      {sentence.slice(idx + target.length)}
+    </>
+  )
+}
+
 function ReviewSession({
   cards,
   ctx,
@@ -346,6 +361,11 @@ function ReviewSession({
     : lang.type
   const phaseColor =
     phase === 'relearn' ? T.amber : phase === 'new' ? T.sage : T.inkFaint
+
+  const isSts       = card.card_type === 'sts'
+  const stsWord     = isSts ? ((card.metadata?.target_word as string) ?? '') : ''
+  const stsSentence = card.ind_items?.ab ?? ''
+  const stsLayout   = isSts ? ((card.metadata?.layout as string) ?? 'word') : 'word'
 
   // Card border tint based on phase
   const cardBorderColor =
@@ -646,8 +666,25 @@ function ReviewSession({
               >
                 <Icon name="speaker" size={26} strokeWidth={1.6} />
               </button>
+            ) : isSts && stsLayout === 'sentence' ? (
+              /* STS sentence layout — full sentence with target highlighted */
+              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
+                {renderHighlighted(stsSentence, stsWord)}
+              </div>
+            ) : isSts ? (
+              /* STS word layout — target word + blurred sentence hint */
+              <>
+                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
+                  {stsWord}
+                </div>
+                {!revealed && stsSentence && (
+                  <div style={{ marginTop: 12, fontSize: 13, color: T.inkSoft, lineHeight: 1.5, maxWidth: 260, filter: 'blur(3px)', opacity: 0.5, userSelect: 'none', pointerEvents: 'none' }}>
+                    {stsSentence}
+                  </div>
+                )}
+              </>
             ) : (
-              /* Text mode (or audio mode fallback when no audio) */
+              /* Default layout */
               <>
                 <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
                   {card.ind_items?.ab}
@@ -680,7 +717,12 @@ function ReviewSession({
             <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ height: 1, background: T.lineSoft }} />
               <div style={{ textAlign: 'center' }}>
-                {audioMode && (
+                {isSts && stsLayout === 'word' && stsSentence && (
+                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, color: T.inkSoft, marginBottom: 10, lineHeight: 1.5 }}>
+                    {renderHighlighted(stsSentence, stsWord)}
+                  </div>
+                )}
+                {audioMode && !isSts && (
                   <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
                     {card.ind_items?.ab}
                   </div>

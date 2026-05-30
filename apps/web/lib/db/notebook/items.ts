@@ -16,6 +16,7 @@ export type CreateItemInput = {
   source_id?: string
   speaker_id?: string
   tags?: string[]
+  target_word?: string | null
 }
 
 export type Item = CreateItemInput & {

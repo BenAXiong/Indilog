@@ -48,7 +48,7 @@ export async function ensureFlashcards(): Promise<void> {
 
   const [{ data: existing }, { data: items }] = await Promise.all([
     supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id),
-    supabase.from('ind_items').select('id').eq('user_id', user.id),
+    supabase.from('ind_items').select('id, target_word').eq('user_id', user.id),
   ])
 
   if (!items?.length) return
@@ -60,8 +60,32 @@ export async function ensureFlashcards(): Promise<void> {
     newItems.map(item => ({
       user_id: user.id,
       note_id: item.id,
+      ...(item.target_word ? {
+        card_type: 'sts',
+        metadata: { target_word: item.target_word, layout: 'word' },
+      } : {}),
     }))
   )
+}
+
+export async function setTargetWord(noteId: string, targetWord: string | null): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase.from('ind_items').update({ target_word: targetWord }).eq('id', noteId).eq('user_id', user.id)
+
+  const { data: existing } = await supabase
+    .from('ind_flashcards').select('id').eq('note_id', noteId).eq('user_id', user.id).maybeSingle()
+
+  const cardType = targetWord ? 'sts' : 'default'
+  const metadata = targetWord ? { target_word: targetWord, layout: 'word' } : null
+
+  if (existing) {
+    await supabase.from('ind_flashcards').update({ card_type: cardType, metadata }).eq('id', existing.id)
+  } else {
+    await supabase.from('ind_flashcards').insert({ user_id: user.id, note_id: noteId, card_type: cardType, metadata })
+  }
 }
 
 
