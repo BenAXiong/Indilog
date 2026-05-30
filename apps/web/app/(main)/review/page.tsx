@@ -7,7 +7,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, rateCard, rateCardRelearn, cardMeta,
+  ensureFlashcards, listDueFlashcards, rateCard, rateCardRelearn, cardMeta, cardAudio,
   suspendCard, setFlagColor,
   type FlashcardWithItem, type Rating,
 } from '@/lib/db/srs/flashcards'
@@ -201,6 +201,17 @@ function ReviewSession({
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
   const swipeStart = useRef({ x: 0, y: 0 })
+  const audioRef   = useRef<HTMLAudioElement | null>(null)
+
+  // Stop audio when card advances
+  useEffect(() => { audioRef.current?.pause() }, [qIdx])
+
+  function playAudio(url: string) {
+    if (audioRef.current) audioRef.current.pause()
+    const a = new Audio(url)
+    audioRef.current = a
+    a.play().catch(() => {})
+  }
 
   useEffect(() => {
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
@@ -527,9 +538,20 @@ function ReviewSession({
             <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
               {card.front}
             </div>
-            <button style={{ display: 'none' }} aria-label="Play audio">
-              <Icon name="speaker" size={14} strokeWidth={1.8} />
-            </button>
+            {cardAudio(card) && (
+              <button
+                onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
+                aria-label="Play audio"
+                style={{
+                  marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 34, borderRadius: 999, flexShrink: 0,
+                  background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                  cursor: 'pointer', color: T.inkSoft,
+                }}
+              >
+                <Icon name="speaker" size={14} strokeWidth={1.8} />
+              </button>
+            )}
           </div>
 
           {/* Answer */}

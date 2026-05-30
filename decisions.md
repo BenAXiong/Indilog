@@ -6,6 +6,48 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-NOTE01 · Note / Card / Note Type / Card Template — canonical terminology
+**Decision:** Adopt standard SRS terminology throughout all docs and code going forward.
+
+| Term | Meaning | Current Indivore equivalent |
+|---|---|---|
+| **Note** | The underlying knowledge unit — a word, sentence, or fact | `ind_items` row, `ind_learn_cards` row, corpus item |
+| **Card** | One review question derived from a Note; has its own SRS schedule | `ind_flashcards` row |
+| **Note Type** | Schema defining a Note's fields (e.g., text+meaning+audio) | implicit — not yet modeled |
+| **Card Template** | How a Note's fields map to a Card's front/back/prompt | `card_type` column on `ind_flashcards` |
+
+Current Card Templates: `forward` (text → meaning), `reverse` (meaning → text).
+Planned: `audio` session mode (on-the-fly, not a stored card_type), `sts` (Single Target Sentence — a true stored card_type with metadata).
+
+**Date:** 2026-05-30
+
+---
+
+### DEC-NOTE02 · Note unification deferred — trigger condition defined
+**Decision:** `ind_items` and `ind_learn_cards` remain separate tables for now. Merging them into a unified `ind_notes` table is deferred.
+
+**Why not now:** `ind_items` has 10+ dependent files (capture UI, notebook, `lib/db/notebook/`, all flashcard joins). Migrating everything before knowing the final schema risks a second migration. Audio cards work fine via join without unification.
+
+**Trigger condition:** Implement STS Card Template. STS needs `target_word` on a Note and makes the field-mismatch between `ind_items` and `ind_learn_cards` genuinely blocking. At that point the schema requirements are concrete and the migration has clear payoff.
+
+**Date:** 2026-05-30
+
+---
+
+### DEC-NOTE03 · `metadata jsonb` on `ind_flashcards` for extensible Card Templates
+**Decision:** Add `metadata jsonb` column to `ind_flashcards`. Card Templates that need fields beyond `front`/`back` store them here. The review session reads `card.card_type` + `card.metadata` together.
+
+**Why jsonb, not typed columns:** New templates don't require schema migrations — only a new `card_type` value and a metadata shape definition.
+
+**Planned metadata shapes:**
+- `forward`, `reverse`: no metadata
+- `audio` (session mode, not stored card_type): no metadata
+- `sts` (future): `{ target_word: string; hint_sentence: string; hint_meaning?: string }`
+
+**Date:** 2026-05-30
+
+---
+
 ### DEC-L01 · Learn available for all 16 languages
 **Decision:** Learn is enabled for all 16 officially recognized Formosan languages, not only the 6 FormoBank translation-supported ones. The `ycm_master.db` corpus covers all 16 via GLID families.
 **Date:** 2026-05-26

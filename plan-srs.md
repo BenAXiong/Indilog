@@ -113,10 +113,10 @@ Replaces both the Learn and Review tabs.
 - [x] New route `/study` with subtab bar: Decks | Browser | Stats
 - [x] Deck list with 3 sections: Curriculum / My Collections / Captures
 - [x] "Review all — N due" primary CTA at top of Decks view
-- [ ] Per-deck "..." menu: rename · delete · export · share · toggle in Review all (kebab is no-op placeholder)
+- [x] Per-deck "..." menu: rename · delete · export · share (DeckActionSheet — toggle in Review all deferred, needs schema)
 - [x] Import button in page header (single, no ghost row)
 - [x] Browser and Stats subtabs: built in T2
-- [ ] Redirect `/learn` → `/study`, `/review` → `/study`
+- [x] Redirect `/learn` → `/study` (server-side redirect; `/review` left as-is — still active session route)
 - [x] Update BottomNav: Dashboard · Study · Capture · Translate · Dict
 
 ### T1-C — Dashboard overhaul
@@ -240,8 +240,42 @@ tags. No semantics imposed — the user decides what each color means.
 ### T3-D — Card types
 
 - [x] Reverse cards (zh → ab): `card_type` column; `generateReverseCardsForCollection()`; "Generate reverse cards" button on collection page; REV badge in Browser
-- [ ] Audio cards — requires audio data (deferred)
-- [ ] Card type selector per collection on import (deferred)
+- [ ] Card type selector per collection on import (deferred — design pending)
+
+#### Audio Cards — implementation plan (2026-05-30)
+
+Audio terminology: Note (source fact) · Card (review question) · Note Type (field schema) · Card Template (front/back mapping). See DEC-NOTE01.
+
+**Architecture decision:** Audio is a session mode (on-the-fly), NOT a stored `card_type`. Same Card shown differently depending on session mode. One SRS schedule per Card. See DEC-NOTE02, DEC-NOTE03.
+
+**Step 1 — Wire audio playback on existing Cards** _(no migration)_
+- `listDueFlashcards`: extend select `ind_items(type, language, dialect, audio_url)`
+- `FlashcardWithItem`: add `audio_url: string | null` to `ind_items` join shape
+- Add `cardAudio(card): string | null` helper — priority: `ind_items?.audio_url` (Steps 2–3 extend this)
+- `review/page.tsx`: add `audioRef`, play handler, unhide + wire button when `cardAudio(card)` is non-null
+
+**Step 2 — `audio_url` on `ind_learn_cards`** _(schema migration)_
+- Migration: `ALTER TABLE ind_learn_cards ADD COLUMN audio_url text`
+- Update select: `ind_learn_cards(audio_url, ind_learn_collections(name, language))`
+- `cardAudio()` updated: `ind_items?.audio_url ?? ind_learn_cards?.audio_url`
+
+**Step 3 — `audio_url` + `metadata` on `ind_flashcards`** _(schema migration)_
+- `audio_url text` — snapshot for curriculum Cards (populated at generation time, NULL for all existing rows)
+- `metadata jsonb` — extensible Card Template fields; STS will use `{ target_word, hint_sentence }`
+- `cardAudio()` final: `card.audio_url ?? ind_items?.audio_url ?? ind_learn_cards?.audio_url`
+
+**Step 4 — Note type architecture** _(DEC entries, no code)_
+- Log DEC-NOTE01/02/03 in `decisions.md` ✓ (done 2026-05-30)
+
+**Step 5 — Audio session mode** _(review UX)_
+- `audioMode: boolean` session param (OptionsSheet toggle or `?mode=audio` URL param)
+- When `audioMode && cardAudio(card)`: front = play button + lang pill, no text; autoplay on card load
+- Fallback: cards without audio shown as text (silent, no session interruption)
+- Rating updates same Card's SRS state — one schedule regardless of mode
+
+**Step 6 — Curriculum audio** _(after T1-F)_
+- Curriculum flashcard generator (T1-F) copies `CurriculumRow.audio_url` into `ind_flashcards.audio_url`
+- No SQLite join at review time — `cardAudio()` priority-1 picks it up
 
 ### T3-E — FSRS
 
@@ -329,12 +363,43 @@ Inactive → "Set a goal →" tertiary prompt. Goal-setting UI is T2-A.
   T3-E  FSRS — not in v1
 
 Remaining open items:
-  T1-B   Kebab "..." menu actions (no-op placeholder)
-  T1-B   Redirects /learn → /study, /review → /study
-  T1-F   Curriculum flashcard generation (Learn content → flashcards)
-  T3-D   Audio cards (requires audio data)
-  T3-D   Card type selector on import
+  T1-B   Kebab toggle "in Review all" (needs schema — include_in_review boolean on ind_learn_collections)
+  [x] T1-F   ensureFlashcards() on Study landing — done; called in Study page main useEffect
+  T1-F   Curriculum flashcard generation (Learn content → flashcards; needs design)
+  T2-D   Language workflow rethink — may split decks by language; wire showAllLangs toggle once direction settled
+  T2-E   Favourites system — star/pin a deck to top of My collections
+  T2-F   Reset SRS data — reset ease/interval/reps/due_at to defaults, keep card content; optional wipe of ind_reviews
+  T3-D   Audio step 1 — wire playback on captured-item cards (no migration)
+  T3-D   Audio step 2 — audio_url on ind_learn_cards (migration)
+  T3-D   Audio step 3 — audio_url + metadata on ind_flashcards (migration)
+  T3-D   Audio step 5 — audio session mode (OptionsSheet toggle)
+  T3-D   Audio step 6 — curriculum audio (after T1-F)
+  T3-D   STS Card Template (needs metadata jsonb from step 3, deferred)
+  T3-D   Card type selector on import (deferred)
 ```
+
+---
+
+## Tier 2 additions
+
+### T2-D — Review language selector
+
+Override the global language setting for a review session. Lets users study a
+specific language or dialect subset without changing app-wide settings.
+
+- [ ] Language/dialect picker in OptionsSheet (or session start screen)
+- [ ] Session-scoped filter: `listDueFlashcards` respects selected lang/dialect
+- [ ] Cards outside the selection are excluded from due counts and not served
+- [ ] Global lang setting unchanged — this is session-only
+
+**Open design questions:**
+- Where to expose the picker: OptionsSheet gear icon (quick), or a pre-session
+  screen before cards load (clearer)?
+- Scope of filter: by `ind_items.language` for captures, by
+  `ind_learn_collections.language` for collections — needs both paths covered.
+- SRS implication: excluding a language long-term will let those cards accrue
+  overdue debt silently. May need a warning or a "pause deck" affordance instead
+  of just hiding cards. Details TBD.
 
 ---
 
@@ -344,4 +409,8 @@ Remaining open items:
    Dialogs) need a flashcard generation path. Currently their rows link to the
    content pages; no flashcard generation from curriculum is implemented.
 
-2. **T3-E FSRS:** Revisit after 4+ weeks of real review data on the production branch.
+2. **T2-D Review language selector:** See T2-D above. Key open question is
+   whether session-scoped filtering is the right model, or whether per-deck
+   "pause" is safer for SRS health.
+
+3. **T3-E FSRS:** Revisit after 4+ weeks of real review data on the production branch.

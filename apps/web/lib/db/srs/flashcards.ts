@@ -20,7 +20,7 @@ export type Flashcard = {
 }
 
 export type FlashcardWithItem = Flashcard & {
-  ind_items: { type: string; language: string; dialect: string | null } | null
+  ind_items: { type: string; language: string; dialect: string | null; audio_url: string | null } | null
   ind_learn_cards: { ind_learn_collections: { name: string; language: string } | null } | null
 }
 
@@ -38,6 +38,11 @@ export function cardMeta(card: FlashcardWithItem) {
     dialect:  null,
     type:     'word',
   }
+}
+
+// Resolve audio URL — priority: captured item join (Steps 2–3 will extend this)
+export function cardAudio(card: FlashcardWithItem): string | null {
+  return card.ind_items?.audio_url ?? null
 }
 
 export async function ensureFlashcards(): Promise<void> {
@@ -192,7 +197,7 @@ export async function listDueFlashcards(
   const now = new Date().toISOString()
   let q = supabase
     .from('ind_flashcards')
-    .select('*, ind_items(type, language, dialect), ind_learn_cards(ind_learn_collections(name, language))')
+    .select('*, ind_items(type, language, dialect, audio_url), ind_learn_cards(ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
