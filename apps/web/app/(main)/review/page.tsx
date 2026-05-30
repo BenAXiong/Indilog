@@ -80,11 +80,13 @@ function OptionsSheet({
   showHardEasy, setShowHardEasy,
   showButtons, setShowButtons,
   learningSteps, setLearningSteps,
+  audioMode, setAudioMode,
   onClose,
 }: {
   showHardEasy: boolean; setShowHardEasy: (v: boolean) => void
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
   learningSteps: number; setLearningSteps: (v: number) => void
+  audioMode:    boolean; setAudioMode:    (v: boolean) => void
   onClose: () => void
 }) {
   const Toggle = ({ label, sub, on, onToggle }: { label: string; sub: string; on: boolean; onToggle: () => void }) => (
@@ -119,6 +121,7 @@ function OptionsSheet({
           Session options
         </div>
         <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
+          <Toggle label="Audio mode" sub="Play button as front — falls back to text when no audio" on={audioMode} onToggle={() => setAudioMode(!audioMode)} />
           <Toggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
           <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
 
@@ -200,11 +203,22 @@ function ReviewSession({
   const [learningSteps,  setLearningStepsRaw] = useState(3)
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
+  const [audioMode,      setAudioModeRaw]  = useState(false)
   const swipeStart = useRef({ x: 0, y: 0 })
   const audioRef   = useRef<HTMLAudioElement | null>(null)
 
   // Stop audio when card advances
   useEffect(() => { audioRef.current?.pause() }, [qIdx])
+
+  // Autoplay in audio mode when card changes
+  useEffect(() => {
+    if (!audioMode) return
+    const e = queue[qIdx]
+    if (!e) return
+    const url = cardAudio(e.card)
+    if (url) playAudio(url)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qIdx, audioMode])
 
   function playAudio(url: string) {
     if (audioRef.current) audioRef.current.pause()
@@ -218,6 +232,7 @@ function ReviewSession({
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
     const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
     setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
+    setAudioModeRaw(localStorage.getItem('srs_audio_mode') === 'true')
   }, [])
 
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
@@ -227,6 +242,7 @@ function ReviewSession({
     setLearningStepsRaw(n)
     localStorage.setItem('srs_learning_steps', String(n))
   }
+  function setAudioMode(v: boolean) { setAudioModeRaw(v); localStorage.setItem('srs_audio_mode', String(v)) }
 
   // Session end: fires when queue is exhausted
   useEffect(() => {
@@ -535,22 +551,47 @@ function ReviewSession({
 
           {/* Front */}
           <div style={{ flex: revealed ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 24px' }}>
-            <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-              {card.front}
-            </div>
-            {cardAudio(card) && (
+            {audioMode && cardAudio(card) ? (
+              /* Audio mode — large play button as prompt */
               <button
                 onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
                 aria-label="Play audio"
                 style={{
-                  marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 34, height: 34, borderRadius: 999, flexShrink: 0,
-                  background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                  cursor: 'pointer', color: T.inkSoft,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 64, height: 64, borderRadius: 999,
+                  background: T.crimson, border: 'none',
+                  cursor: 'pointer', color: '#fff',
+                  boxShadow: '0 2px 14px rgba(180,40,30,0.22)',
                 }}
               >
-                <Icon name="speaker" size={14} strokeWidth={1.8} />
+                <Icon name="speaker" size={26} strokeWidth={1.6} />
               </button>
+            ) : (
+              /* Text mode (or audio mode fallback when no audio) */
+              <>
+                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
+                  {card.front}
+                </div>
+                {audioMode && (
+                  <span style={{ marginTop: 10, fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
+                    ♪ no audio
+                  </span>
+                )}
+                {!audioMode && cardAudio(card) && (
+                  <button
+                    onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
+                    aria-label="Play audio"
+                    style={{
+                      marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 34, height: 34, borderRadius: 999, flexShrink: 0,
+                      background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                      cursor: 'pointer', color: T.inkSoft,
+                    }}
+                  >
+                    <Icon name="speaker" size={14} strokeWidth={1.8} />
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -559,6 +600,11 @@ function ReviewSession({
             <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ height: 1, background: T.lineSoft }} />
               <div style={{ textAlign: 'center' }}>
+                {audioMode && (
+                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
+                    {card.front}
+                  </div>
+                )}
                 <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
                   {card.back}
                 </div>
@@ -620,6 +666,7 @@ function ReviewSession({
           showHardEasy={showHardEasy}   setShowHardEasy={setShowHardEasy}
           showButtons={showButtons}     setShowButtons={setShowButtons}
           learningSteps={learningSteps} setLearningSteps={setLearningSteps}
+          audioMode={audioMode}         setAudioMode={setAudioMode}
           onClose={() => setShowOptions(false)}
         />
       )}
