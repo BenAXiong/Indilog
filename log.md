@@ -2,6 +2,9 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 01:10 | FEATURE | T2-D language filter: getLangName(), listUserLanguages(), excludeLangs on getDueStats/listDueFlashcards; Study + Review OptionsSheet wired with toggle + dynamic checkboxes; session remounts on filter change |
+| 2026-05-31 00:43 | FEATURE | T2-F reset SRS: wipeReviewsAndReset() deletes ind_reviews + resets scheduling; Reset moved to danger zone in DeckActionSheet; confirm copy updated |
+| 2026-05-31 00:43 | DECISION | DEC-SRS02: reset scope = SRS state + ind_reviews; ind_daily_stats preserved (habit record, hard to subtract retroactively) |
 | 2026-05-31 00:19 | REFACTOR | Architecture polish: ind_flashcards.audio_url→audio; ensureFlashcards() called after saveCollection(); cardMeta() fallback removed; architecture.md updated with M2 columns |
 | 2026-05-30 20:13 | SCHEMA | T-UNIFY M4: DROP ind_learn_cards; DROP legacy_learn_card_id; delete generateFlashcardsFromCollection/generateReverseCardsForCollection; listCollections counts via ind_items; collection page uses ensureFlashcards; reverse card button removed |
 | 2026-05-30 20:10 | SCHEMA | T-UNIFY M3: note_id FK on ind_flashcards; remap from item_id + legacy mapping; delete reverse cards; rename forward→default; DROP item_id/collection_card_id/front/back; update review/browser/stats/goal |

@@ -366,9 +366,9 @@ Remaining open items:
   T1-B   Kebab toggle "in Review all" (needs schema — include_in_review boolean on ind_learn_collections)
   [x] T1-F   ensureFlashcards() on Study landing — done
   [x] T1-F   Curriculum audio: audio_url threaded through onSave — done
-  T2-D   Language workflow rethink — wire showAllLangs toggle once direction settled
+  [x] T2-D   Language filter: Show all languages toggle + per-language checkboxes in Study settings + Review OptionsSheet; excludeLangs propagated to getDueStats/listDueFlashcards
   T2-E   Favourites system — star/pin a deck to top of My collections
-  [~] T2-F   Reset SRS data — needs alignment check before relying on it
+  [x] T2-F   Reset SRS data — wipes ind_reviews + scheduling; Reset in danger zone
   [x] T3-D   Audio steps 1–6 — done (see audio plan above)
   T3-D   STS Card Template — spec in architecture.md; needs T-UNIFY first
   T3-D   Card type selector on import — deferred
