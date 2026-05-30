@@ -14,8 +14,8 @@ export type Flashcard = {
   suspended_at: string | null
   flag_color:   string | null
   card_type:    string
-  audio_url:    string | null
-  metadata:     Record<string, unknown> | null
+  audio:    string | null
+  metadata: Record<string, unknown> | null
 }
 
 export type FlashcardWithItem = Flashcard & {
@@ -38,7 +38,7 @@ export function cardMeta(card: FlashcardWithItem) {
 
 // Resolve audio — priority: card snapshot (curriculum) › note join
 export function cardAudio(card: FlashcardWithItem): string | null {
-  return card.audio_url ?? card.ind_items?.audio ?? null
+  return card.audio ?? card.ind_items?.audio ?? null
 }
 
 export async function ensureFlashcards(): Promise<void> {
