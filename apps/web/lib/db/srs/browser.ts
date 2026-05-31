@@ -141,6 +141,11 @@ export async function setCardLayout(cardId: string, layout: 'word' | 'sentence',
   await supabase.from('ind_flashcards').update({ metadata: { ...currentMeta, layout } }).eq('id', cardId)
 }
 
+export async function deleteNote(noteId: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_items').delete().eq('id', noteId)
+}
+
 export async function resetCardEase(id: string): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_flashcards').update({

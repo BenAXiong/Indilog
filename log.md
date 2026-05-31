@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 16:57 | FEATURE | M2: delete note from browser — hard delete (cascades to ind_flashcards + ind_reviews); inline confirmation with warning about heatmap/stats impact; suggests Suspend as alternative |
 | 2026-05-31 16:53 | FIX | Browser: split listBrowserCards into 2 parallel queries (captured + collection) to bypass Supabase 1000-row server cap; type dropdown inline; collapsible filter row removed |
 | 2026-05-31 16:48 | REFACTOR | Browser: SRS state pills → dropdown; source/deck dropdown inline next to it; filter icon now handles lang/type/tags only |
 | 2026-05-31 16:40 | FIX | Browser: raise listBrowserCards limit 500→10000 (Amis1k import was pushing captured items out of results); rename "Captures" → "Captured" in browser.ts, study page, DeckRow |

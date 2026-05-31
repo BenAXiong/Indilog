@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
-  listBrowserCards, updateNoteFields, setCardLayout, resetCardEase,
+  listBrowserCards, updateNoteFields, setCardLayout, resetCardEase, deleteNote,
   suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
@@ -67,8 +67,9 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
   const [editNotes,  setEditNotes]  = useState(card.notes ?? '')
   const [editPlace,  setEditPlace]  = useState(card.place_heard ?? '')
   const [editTarget, setEditTarget] = useState(card.target_word ?? '')
-  const [saving,     setSaving]     = useState(false)
-  const [busy,       setBusy]       = useState(false)
+  const [saving,         setSaving]         = useState(false)
+  const [busy,           setBusy]           = useState(false)
+  const [confirmDelete,  setConfirmDelete]  = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
 
@@ -355,6 +356,36 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
                 }}>Reset ease</button>
               )}
             </div>
+
+            {/* Delete */}
+            {!confirmDelete ? (
+              <button onClick={() => setConfirmDelete(true)} style={{
+                height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                border: `1px solid ${T.lineSoft}`, background: 'none',
+                color: T.inkFaint, cursor: 'pointer',
+              }}>Delete note…</button>
+            ) : (
+              <div style={{ padding: '10px 12px', borderRadius: 10, background: T.crimsonBg, border: `1px solid #EFCAB8` }}>
+                <div style={{ fontSize: 12, color: T.crimson, fontWeight: 600, marginBottom: 4 }}>
+                  Permanently delete this note?
+                </div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 10, lineHeight: 1.5 }}>
+                  Card data and full review history will be erased — this affects your heatmap and stats. Use Suspend instead to keep the data.
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={async () => {
+                    setBusy(true)
+                    await deleteNote(card.id)
+                    onRemove()
+                  }} disabled={busy} style={{
+                    height: 32, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                    background: T.crimson, border: 'none', color: '#fff',
+                    cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.7 : 1,
+                  }}>Delete permanently</button>
+                  <button onClick={() => setConfirmDelete(false)} style={ghostBtn}>Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

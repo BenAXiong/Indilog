@@ -84,7 +84,7 @@
 ### Remaining
 
 - [x] Field filters — language, type, source/deck, tags (collapsible row, derived from loaded cards, active-count badge)
-- [ ] Delete note from browser — soft-delete ind_items (deleted_at); hard-delete ind_flashcards; ind_reviews preserved via SET NULL migration
+- [x] Delete note from browser — hard delete cascades ind_flashcards → ind_reviews; inline confirm warns about heatmap/stats impact; suggests Suspend as alternative
 - [ ] Dict lookup button in expanded card — batch lookup ab field, auto-fill empty zh from results
 - [ ] Date range filter (isolated)
 - [ ] Batch select + delete / suspend / flag
@@ -110,7 +110,7 @@ Design a method to keep track of item sources and associate data to them (eg. di
 
 ---
 
-## Milestone 5 — Polish
+## Milestone 5 — UI Polish
 
 
 - [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
@@ -118,9 +118,11 @@ Design a method to keep track of item sources and associate data to them (eg. di
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
 - [ ] Rethink note vs card type architecture — clarify/consolidate distinction between `ind_items.type` (linguistic content type) and `ind_flashcards.card_type` (review presentation mode)
-- [ ] Merge `redesign/srs-overhaul` → main
 
-Phase 9 deferred items:
+---
+
+## Milestone 6 — ?
+
 
 - [ ] Desktop usability pass
 - [ ] Error states (API failures, auth errors)
@@ -153,6 +155,7 @@ Phase 9 deferred items:
 - User contributions — send to pending DB
 - OCR capture
 - AI-formatted json from other formats (txt, csv, pdf) for teachers
+- How to tutorial
 
 ---
 
