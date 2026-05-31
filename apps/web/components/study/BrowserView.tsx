@@ -389,6 +389,12 @@ export default function BrowserView() {
       .then(c => { setCards(c); setLoading(false) })
   }, [filter, sort, flagColorFilter])
 
+  const dropStyle: React.CSSProperties = {
+    height: 30, padding: '0 26px 0 10px', borderRadius: 8, fontSize: 12,
+    background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
+    fontFamily: 'inherit', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+    maxWidth: 160,
+  }
   const fieldSelStyle: React.CSSProperties = {
     height: 28, padding: '0 24px 0 8px', borderRadius: 7, fontSize: 11.5,
     background: T.paper, border: `1px solid ${T.line}`, color: T.inkSoft,
@@ -399,7 +405,7 @@ export default function BrowserView() {
   const availTypes   = useMemo(() => [...new Set(cards.map(c => c.note_type).filter(Boolean))].sort(), [cards])
   const availSources = useMemo(() => [...new Set(cards.map(c => c.source).filter(Boolean))].sort(), [cards])
   const availTags    = useMemo(() => [...new Set(cards.flatMap(c => c.tags ?? []))].sort(), [cards])
-  const activeFieldFilters = [fLang, fType, fSource, ...fTags].filter(Boolean).length
+  const activeFieldFilters = [fLang, fType, ...fTags].filter(Boolean).length
 
   const filtered = useMemo(() => {
     let result = cards
@@ -443,53 +449,55 @@ export default function BrowserView() {
         />
       </div>
 
-      {/* Filter + sort */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', flex: 1 }}>
-          {FILTERS.map(f => (
-            <button key={f.value} onClick={() => setFilter(f.value)} style={{
-              height: 30, padding: '0 10px', borderRadius: 8,
-              background: filter === f.value ? T.crimson : T.paperHi,
-              border: `1px solid ${filter === f.value ? T.crimsonDp : T.line}`,
-              color: filter === f.value ? '#fff' : T.inkSoft,
-              fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-            }}>
-              {f.label}
-            </button>
-          ))}
+      {/* Filter row: SRS state | source | spacer | field-filters | sort */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        {/* SRS state dropdown */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <select value={filter} onChange={e => setFilter(e.target.value as BrowserFilter)} style={dropStyle}>
+            {FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+            <Icon name="chev-d" size={11} strokeWidth={2} />
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
-          {/* Field filter toggle */}
-          <button onClick={() => setShowFieldFilters(v => !v)} style={{
-            position: 'relative', height: 30, width: 30, borderRadius: 8, cursor: 'pointer',
-            background: showFieldFilters || activeFieldFilters > 0 ? T.crimsonBg : T.paperHi,
-            border: `1px solid ${showFieldFilters || activeFieldFilters > 0 ? T.crimson : T.line}`,
-            color: showFieldFilters || activeFieldFilters > 0 ? T.crimson : T.inkSoft,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon name="filter" size={13} strokeWidth={1.8} />
-            {activeFieldFilters > 0 && (
-              <span style={{
-                position: 'absolute', top: -4, right: -4, width: 14, height: 14,
-                borderRadius: 999, background: T.crimson, color: '#fff',
-                fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: '"JetBrains Mono", monospace',
-              }}>{activeFieldFilters}</span>
-            )}
-          </button>
-          {/* Sort */}
-          <div style={{ position: 'relative' }}>
-            <select value={sort} onChange={e => setSort(e.target.value as BrowserSort)} style={{
-              height: 30, padding: '0 26px 0 10px', borderRadius: 8,
-              background: T.paperHi, border: `1px solid ${T.line}`,
-              fontSize: 12, color: T.inkSoft, fontFamily: 'inherit', cursor: 'pointer',
-              appearance: 'none', WebkitAppearance: 'none',
-            }}>
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-              <Icon name="chev-d" size={11} strokeWidth={2} />
-            </div>
+
+        {/* Source/deck dropdown */}
+        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+          <select value={fSource} onChange={e => setFSource(e.target.value)} style={{ ...dropStyle, maxWidth: '100%', width: '100%' }}>
+            <option value="">All sources</option>
+            {availSources.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+            <Icon name="chev-d" size={11} strokeWidth={2} />
+          </div>
+        </div>
+
+        {/* Field filter toggle (lang, type, tags) */}
+        <button onClick={() => setShowFieldFilters(v => !v)} style={{
+          position: 'relative', height: 30, width: 30, borderRadius: 8, cursor: 'pointer', flexShrink: 0,
+          background: showFieldFilters || activeFieldFilters > 0 ? T.crimsonBg : T.paperHi,
+          border: `1px solid ${showFieldFilters || activeFieldFilters > 0 ? T.crimson : T.line}`,
+          color: showFieldFilters || activeFieldFilters > 0 ? T.crimson : T.inkSoft,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon name="filter" size={13} strokeWidth={1.8} />
+          {activeFieldFilters > 0 && (
+            <span style={{
+              position: 'absolute', top: -4, right: -4, width: 14, height: 14,
+              borderRadius: 999, background: T.crimson, color: '#fff',
+              fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: '"JetBrains Mono", monospace',
+            }}>{activeFieldFilters}</span>
+          )}
+        </button>
+
+        {/* Sort */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <select value={sort} onChange={e => setSort(e.target.value as BrowserSort)} style={dropStyle}>
+            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+            <Icon name="chev-d" size={11} strokeWidth={2} />
           </div>
         </div>
       </div>
@@ -510,14 +518,8 @@ export default function BrowserView() {
                 {availTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             )}
-            {availSources.length > 1 && (
-              <select value={fSource} onChange={e => setFSource(e.target.value)} style={fieldSelStyle}>
-                <option value="">All sources</option>
-                {availSources.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            )}
             {activeFieldFilters > 0 && (
-              <button onClick={() => { setFLang(''); setFType(''); setFSource(''); setFTags([]) }} style={{
+              <button onClick={() => { setFLang(''); setFType(''); setFTags([]) }} style={{
                 height: 28, padding: '0 10px', borderRadius: 7, fontSize: 11, cursor: 'pointer',
                 background: 'none', border: `1px solid ${T.lineSoft}`, color: T.inkMute,
               }}>Clear</button>
