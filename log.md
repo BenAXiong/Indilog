@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 14:24 | REFACTOR | listDueFlashcards: remove 20/200 batch limit, replace with 10k safety cap; remove slice(0,20); post-filters now always apply unconditionally |
 | 2026-05-31 13:50 | REFACTOR | Move daily reset stepper from review OptionsSheet → Settings page (general tab, Study section) |
 | 2026-05-31 13:41 | FEATURE | M1-F: daily reset time — getStudyDate() (localStorage srs_reset_hour, default 4am); rateCard/rateCardRelearn/undoRating updated; stepper in OptionsSheet (12am–6am) |
 | 2026-05-31 13:41 | FEATURE | M1-F: GoalSheet linear simulator — now / peak / long-term daily load estimates below existing hint |

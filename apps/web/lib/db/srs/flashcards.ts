@@ -178,15 +178,13 @@ export async function listDueFlashcards(
 ): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  const needsPostFilter = opts.excludeLangs?.length || opts.excludeCollections?.length || opts.excludeCaptures
-  const dbLimit = needsPostFilter ? 200 : 20
   let q = supabase
     .from('ind_flashcards')
     .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, ind_learn_collections(name, language))')
     .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
-    .limit(dbLimit)
+    .limit(10000)
 
   if (opts.flagColor === 'any') q = q.not('flag_color', 'is', null)
   else if (opts.flagColor)      q = q.eq('flag_color', opts.flagColor)
@@ -194,18 +192,15 @@ export async function listDueFlashcards(
   const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
   let results = (data ?? []) as FlashcardWithItem[]
-  if (needsPostFilter) {
-    if (opts.excludeLangs?.length)
-      results = results.filter(c => !opts.excludeLangs!.includes(c.ind_items?.language ?? ''))
-    if (opts.excludeCollections?.length || opts.excludeCaptures)
-      results = results.filter(c => {
-        const note = c.ind_items
-        if (note?.note_source === 'collection' && note.collection_id)
-          return !opts.excludeCollections?.includes(note.collection_id)
-        return !opts.excludeCaptures
-      })
-    results = results.slice(0, 20)
-  }
+  if (opts.excludeLangs?.length)
+    results = results.filter(c => !opts.excludeLangs!.includes(c.ind_items?.language ?? ''))
+  if (opts.excludeCollections?.length || opts.excludeCaptures)
+    results = results.filter(c => {
+      const note = c.ind_items
+      if (note?.note_source === 'collection' && note.collection_id)
+        return !opts.excludeCollections?.includes(note.collection_id)
+      return !opts.excludeCaptures
+    })
   return results
 }
 
