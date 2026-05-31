@@ -58,7 +58,7 @@
 
 ### M1-F — SRS polishing
 
-- [ ] Goal deck cards sorted first in `listDueFlashcards`; on by default; toggleable in session options
+- [x] Goal deck cards sorted first — post-sort in reload() using goal_collection_id from profile; always on when goal deck is set
 - [x] Estimate daily review load in GoalSheet — linear simulator (now / peak / long-term rows)
 - [ ] Composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
 - [ ] Filter session by deck, tags, fields, flags; design pass needed before building
