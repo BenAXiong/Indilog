@@ -211,6 +211,24 @@ ind_flashcards
   LIMIT 20
 ```
 
+### Supabase row cap — pagination pattern
+
+Supabase's PostgREST server enforces a hard max-rows limit (1000 by default). `.limit(N)` in the JS client is capped server-side regardless of N. Any query that may return >1000 rows must use `.range()` pagination:
+
+```typescript
+const PAGE = 1000
+const results = []
+let from = 0
+while (true) {
+  const { data } = await buildQuery().range(from, from + PAGE - 1)
+  if (data?.length) results.push(...data)
+  if (!data?.length || data.length < PAGE) break
+  from += PAGE
+}
+```
+
+Affected functions (all paginated as of 2026-05-31): `listDueFlashcards`, `getDueStats`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (split into two parallel queries by `note_source` instead).
+
 ---
 
 ## Migration status
