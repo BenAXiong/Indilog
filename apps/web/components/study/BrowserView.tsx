@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
@@ -69,8 +69,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
   const [editTarget, setEditTarget] = useState(card.target_word ?? '')
   const [saving,     setSaving]     = useState(false)
   const [busy,       setBusy]       = useState(false)
-  const [audioEl,    setAudioEl]    = useState<HTMLAudioElement | null>(null)
-  const [playing,    setPlaying]    = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
     if (expanded) {
@@ -123,11 +123,13 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
 
   function handleAudio() {
     if (!card.audio) return
-    if (playing && audioEl) { audioEl.pause(); audioEl.currentTime = 0; setPlaying(false); return }
+    if (playing && audioRef.current) {
+      audioRef.current.pause(); audioRef.current.currentTime = 0; setPlaying(false); return
+    }
     const a = new Audio(card.audio)
     a.onended = () => setPlaying(false)
     a.play().catch(() => {})
-    setAudioEl(a)
+    audioRef.current = a
     setPlaying(true)
   }
 
