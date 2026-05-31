@@ -74,6 +74,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   const [saving,         setSaving]         = useState(false)
   const [busy,           setBusy]           = useState(false)
   const [confirmDelete,  setConfirmDelete]  = useState(false)
+  const [lookupResults,  setLookupResults]  = useState<string[] | null>(null)
+  const [lookingUp,      setLookingUp]      = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
 
@@ -159,6 +161,22 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
     setBusy(false)
   }
 
+  async function handleLookup() {
+    const q = editFront.trim()
+    if (!q) return
+    setLookingUp(true)
+    setLookupResults(null)
+    try {
+      const res = await fetch(`/api/dict/search?q=${encodeURIComponent(q)}`)
+      const { words } = await res.json() as { words: { word_ch: string }[] }
+      const unique = [...new Set(words.map(w => w.word_ch).filter(Boolean))]
+      setLookupResults(unique)
+      if (unique.length > 0 && !editBack.trim()) setEditBack(unique[0])
+    } finally {
+      setLookingUp(false)
+    }
+  }
+
   async function handleFlagChange(color: string | null) {
     if (!card.card_id) return
     await setFlagColor(card.card_id, color)
@@ -239,8 +257,32 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
               <textarea value={editFront} onChange={e => setEditFront(e.target.value)} rows={2} style={textareaStyle('serif')} />
             </div>
             <div>
-              <label style={labelStyle}>Back</label>
-              <textarea value={editBack} onChange={e => setEditBack(e.target.value)} rows={2} style={textareaStyle('sans')} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Back</label>
+                {!editBack.trim() && (
+                  <button onClick={handleLookup} disabled={lookingUp} style={{
+                    fontSize: 10.5, fontWeight: 600, color: T.inkMute, background: 'none',
+                    border: `1px solid ${T.lineSoft}`, borderRadius: 5, padding: '2px 7px',
+                    cursor: lookingUp ? 'default' : 'pointer', opacity: lookingUp ? 0.5 : 1,
+                  }}>{lookingUp ? '…' : 'Lookup'}</button>
+                )}
+              </div>
+              <textarea value={editBack} onChange={e => { setEditBack(e.target.value); setLookupResults(null) }} rows={2} style={textareaStyle('sans')} />
+              {lookupResults !== null && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
+                  {lookupResults.length === 0
+                    ? <span style={{ fontSize: 11, color: T.inkFaint }}>No results</span>
+                    : lookupResults.map((r, i) => (
+                        <button key={i} onClick={() => setEditBack(r)} style={{
+                          padding: '3px 9px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+                          background: editBack === r ? T.crimson : T.paperHi,
+                          color: editBack === r ? '#fff' : T.inkSoft,
+                          border: `1px solid ${editBack === r ? T.crimsonDp : T.line}`,
+                        }}>{r}</button>
+                      ))
+                  }
+                </div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Notes</label>

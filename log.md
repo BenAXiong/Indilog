@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 17:23 | FEATURE | M2: dict lookup in expanded card — Lookup button on empty zh field; auto-fills first result; chips for alternatives; "No results" on miss |
 | 2026-05-31 17:21 | REFACTOR | Browser: remove checkmark circle from batch selection — row highlight only |
 | 2026-05-31 17:12 | FEATURE | M2: batch select — Select button in header toggles selection mode; tap row to highlight/select; bottom action bar with All/None, Delete (confirm), Suspend, Flag; batchDeleteNotes/batchSuspendCards/batchSetFlag in browser.ts |
 | 2026-05-31 17:04 | FEATURE | M2: date range filter in browser — from/to date inputs filtering created_at; clear ✕ button when active |
