@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 03:38 | FIX | ensureFlashcards: paginate both ind_flashcards and ind_items queries — 1000-row cap was causing ~23k duplicate cards on every page load, inflating due count and daily stats |
+| 2026-06-01 03:38 | SCHEMA | Add UNIQUE(user_id, note_id) to ind_flashcards; delete existing duplicate rows (kept oldest per pair) |
 | 2026-06-01 03:29 | FEATURE | M5-B: skip review landing from Dashboard — /review?start=1 auto-starts session; autostartedRef prevents re-fire on reload |
 | 2026-06-01 03:29 | FIX | M5-B: spurious increment_reviewed_today — session-end effect re-fired when ReviewPage re-renders (inline onExit ref changes); fix: onExitRef + sessionEndFiredRef one-shot guard |
 | 2026-06-01 03:13 | SCHEMA | Add mode column to ind_reviews — logs review mode (forward/audio/sts) per event for future retention-transfer analysis; scheduling unchanged |

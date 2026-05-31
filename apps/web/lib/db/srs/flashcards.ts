@@ -46,14 +46,29 @@ export async function ensureFlashcards(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const [{ data: existing }, { data: items }] = await Promise.all([
-    supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id),
-    supabase.from('ind_items').select('id, target_word').eq('user_id', user.id),
-  ])
+  const PAGE = 1000
 
-  if (!items?.length) return
-  const existingIds = new Set(existing?.map(r => r.note_id) ?? [])
-  const newItems = items.filter(i => !existingIds.has(i.id))
+  // Paginate both queries — plain .select() is capped at 1000 rows server-side
+  const existingIds = new Set<string>()
+  let from = 0
+  while (true) {
+    const { data } = await supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id).range(from, from + PAGE - 1)
+    if (data?.length) data.forEach(r => existingIds.add(r.note_id))
+    if (!data?.length || data.length < PAGE) break
+    from += PAGE
+  }
+
+  const allItems: { id: string; target_word: string | null }[] = []
+  from = 0
+  while (true) {
+    const { data } = await supabase.from('ind_items').select('id, target_word').eq('user_id', user.id).range(from, from + PAGE - 1)
+    if (data?.length) allItems.push(...(data as { id: string; target_word: string | null }[]))
+    if (!data?.length || data.length < PAGE) break
+    from += PAGE
+  }
+
+  if (!allItems.length) return
+  const newItems = allItems.filter(i => !existingIds.has(i.id))
   if (!newItems.length) return
 
   await supabase.from('ind_flashcards').insert(
