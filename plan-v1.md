@@ -59,10 +59,10 @@
 ### M1-F — SRS polishing
 
 - [ ] Goal deck cards sorted first in `listDueFlashcards`; on by default; toggleable in session options
-- [ ] Estimate daily review load in GoalSheet based on deck size and goal *(simple linear estimate first; SM-2 growth simulation later)*
+- [x] Estimate daily review load in GoalSheet — linear simulator (now / peak / long-term rows)
 - [ ] Composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
 - [ ] Filter session by deck, tags, fields, flags; design pass needed before building
-- [ ] User preference for when the "new day" starts (default midnight); affects all date-keyed stats queries
+- [x] Daily reset time — getStudyDate() reads srs_reset_hour from localStorage (default 4am); stepper in review OptionsSheet (12am–6am)
 
 ---
 
