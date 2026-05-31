@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 13:50 | REFACTOR | Move daily reset stepper from review OptionsSheet → Settings page (general tab, Study section) |
 | 2026-05-31 13:41 | FEATURE | M1-F: daily reset time — getStudyDate() (localStorage srs_reset_hour, default 4am); rateCard/rateCardRelearn/undoRating updated; stepper in OptionsSheet (12am–6am) |
 | 2026-05-31 13:41 | FEATURE | M1-F: GoalSheet linear simulator — now / peak / long-term daily load estimates below existing hint |
 | 2026-05-31 13:28 | CONFIG | plan-v1.md: M1-E undo + defer marked complete |
