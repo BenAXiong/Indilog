@@ -20,9 +20,10 @@ import { createClient } from '@/lib/supabase/client'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SessionContext = {
-  reviewedToday: number
-  dailyGoal: number
-  streak: number
+  reviewedToday:    number
+  dailyGoal:        number
+  streak:           number
+  goalCollectionId: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -34,14 +35,14 @@ function cardSMState(card: FlashcardWithItem): SMState {
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { reviewedToday: 0, dailyGoal: 20, streak: 0 }
+  if (!user) return { reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null }
 
   const today   = new Date().toISOString().slice(0, 10)
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
   const fromStr = from30.toISOString().slice(0, 10)
 
   const [profileRes, todayRes, dailyRes] = await Promise.all([
-    supabase.from('ind_profiles').select('daily_goal').eq('user_id', user.id).maybeSingle(),
+    supabase.from('ind_profiles').select('daily_goal, goal_collection_id').eq('user_id', user.id).maybeSingle(),
     supabase.from('ind_daily_stats').select('reviewed_count').eq('user_id', user.id).eq('date', today).maybeSingle(),
     supabase.from('ind_daily_stats').select('date, reviewed_count').eq('user_id', user.id).gte('date', fromStr).order('date', { ascending: false }),
   ])
@@ -54,9 +55,10 @@ async function loadSessionContext(): Promise<SessionContext> {
   while (reviewSet.has(cur.toISOString().slice(0, 10))) { streak++; cur.setDate(cur.getDate() - 1) }
 
   return {
-    reviewedToday: todayRes.data?.reviewed_count ?? 0,
-    dailyGoal:     profileRes.data?.daily_goal ?? 20,
+    reviewedToday:    todayRes.data?.reviewed_count ?? 0,
+    dailyGoal:        profileRes.data?.daily_goal ?? 20,
     streak,
+    goalCollectionId: profileRes.data?.goal_collection_id ?? null,
   }
 }
 
@@ -1006,7 +1008,7 @@ export default function ReviewPage() {
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0 })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount, setSessionCount] = useState(0)
   const [sessionKey,   setSessionKey]   = useState(0)
@@ -1030,7 +1032,11 @@ export default function ReviewPage() {
       }),
       loadSessionContext(),
     ])
-    setCards(c)
+    const goalId = context.goalCollectionId
+    const sorted = goalId
+      ? [...c.filter(x => x.ind_items?.collection_id === goalId), ...c.filter(x => x.ind_items?.collection_id !== goalId)]
+      : c
+    setCards(sorted)
     setCtx(context)
     setLoading(false)
   }
