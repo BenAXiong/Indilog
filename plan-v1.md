@@ -106,6 +106,8 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 
 
 - [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
+- [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
+- [ ] Merge `redesign/srs-overhaul` → main
 
 Phase 9 deferred items:
 
