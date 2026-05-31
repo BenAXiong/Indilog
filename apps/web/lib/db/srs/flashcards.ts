@@ -137,12 +137,16 @@ export async function listUserLanguages(): Promise<string[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
-  const { data } = await supabase
-    .from('ind_items')
-    .select('language')
-    .eq('user_id', user.id)
-    .limit(10000)
-  return [...new Set((data ?? []).map(r => r.language).filter(Boolean) as string[])].sort()
+  const PAGE = 1000
+  const langs: string[] = []
+  let from = 0
+  while (true) {
+    const { data: page } = await supabase.from('ind_items').select('language').eq('user_id', user.id).range(from, from + PAGE - 1)
+    if (page?.length) langs.push(...(page.map(r => r.language).filter(Boolean) as string[]))
+    if (!page?.length || page.length < PAGE) break
+    from += PAGE
+  }
+  return [...new Set(langs)].sort()
 }
 
 export async function getDueStats(
@@ -153,15 +157,25 @@ export async function getDueStats(
   if (!user) return { total: 0, captures: 0, byCollection: {} }
 
   const now = new Date().toISOString()
-  const { data } = await supabase
-    .from('ind_flashcards')
-    .select('note_id, ind_items(note_source, collection_id, language)')
-    .eq('user_id', user.id)
-    .or(`due_at.is.null,due_at.lte.${now}`)
-    .is('suspended_at', null)
-    .limit(10000)
+  function buildQ() {
+    return supabase.from('ind_flashcards')
+      .select('note_id, ind_items(note_source, collection_id, language)')
+      .eq('user_id', user!.id)
+      .or(`due_at.is.null,due_at.lte.${now}`)
+      .is('suspended_at', null)
+  }
 
-  if (!data) return { total: 0, captures: 0, byCollection: {} }
+  const PAGE = 1000
+  const allRows: { note_id: string; ind_items: unknown }[] = []
+  let from = 0
+  while (true) {
+    const { data: page } = await buildQ().range(from, from + PAGE - 1)
+    if (page?.length) allRows.push(...(page as typeof allRows))
+    if (!page?.length || page.length < PAGE) break
+    from += PAGE
+  }
+  const data = allRows
+  if (!data.length) return { total: 0, captures: 0, byCollection: {} }
 
   let total = 0
   let captures = 0
@@ -322,31 +336,30 @@ export async function resetCollectionSRS(collectionId: string): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-
-  const { data: notes } = await supabase
-    .from('ind_items')
-    .select('id')
-    .eq('collection_id', collectionId)
-    .limit(10000)
-
-  if (!notes?.length) return
-  await wipeReviewsAndReset(supabase, user.id, notes.map(n => n.id))
+  const PAGE = 1000; const ids: string[] = []; let from = 0
+  while (true) {
+    const { data: page } = await supabase.from('ind_items').select('id').eq('collection_id', collectionId).range(from, from + PAGE - 1)
+    if (page?.length) ids.push(...page.map((r: { id: string }) => r.id))
+    if (!page?.length || page.length < PAGE) break
+    from += PAGE
+  }
+  if (!ids.length) return
+  await wipeReviewsAndReset(supabase, user.id, ids)
 }
 
 export async function resetCapturesSRS(): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-
-  const { data: notes } = await supabase
-    .from('ind_items')
-    .select('id')
-    .eq('user_id', user.id)
-    .neq('note_source', 'collection')
-    .limit(10000)
-
-  if (!notes?.length) return
-  await wipeReviewsAndReset(supabase, user.id, notes.map(n => n.id))
+  const PAGE = 1000; const ids: string[] = []; let from = 0
+  while (true) {
+    const { data: page } = await supabase.from('ind_items').select('id').eq('user_id', user.id).neq('note_source', 'collection').range(from, from + PAGE - 1)
+    if (page?.length) ids.push(...page.map((r: { id: string }) => r.id))
+    if (!page?.length || page.length < PAGE) break
+    from += PAGE
+  }
+  if (!ids.length) return
+  await wipeReviewsAndReset(supabase, user.id, ids)
 }
 
 export async function deferCard(cardId: string): Promise<void> {
