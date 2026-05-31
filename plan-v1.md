@@ -61,7 +61,7 @@
 - [x] Goal deck cards sorted first — post-sort in reload() using goal_collection_id from profile; always on when goal deck is set
 - [x] Estimate daily review load in GoalSheet — linear simulator (now / peak / long-term rows)
 - [ ] Composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
-- [ ] Filter session by deck, tags, fields, flags; design pass needed before building
+- [x] Custom review sessions — filter icon next to Review all; CustomSessionSheet (lang, dialect, source, due-only toggle); bypasses global exclusions
 - [x] Daily reset time — getStudyDate() reads srs_reset_hour from localStorage (default 4am); stepper in review OptionsSheet (12am–6am)
 
 ---
@@ -102,7 +102,15 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 
 ---
 
-## Milestone 4 — Polish
+## Milestone 4 — Sources db
+
+Design a method to keep track of item sources and associate data to them (eg. dictionaires or speakers, with their dialect, location, ect)
+
+- [ ] tbd
+
+---
+
+## Milestone 5 — Polish
 
 
 - [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
