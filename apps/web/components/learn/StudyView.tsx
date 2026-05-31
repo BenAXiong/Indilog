@@ -48,6 +48,7 @@ export default function StudyView({ source }: Props) {
   const [dialect, setDialect] = useState('')  // Chinese dialect name for DB queries
 
   // ── UI state ────────────────────────────────────────────────────────────────
+  const [navItems, setNavItems] = useState<Array<{ index: number; title_zh: string }>>([])
   const [results,      setResults]      = useState<CurriculumRow[]>([])
   const [loading,      setLoading]      = useState(false)
   const [sheetOpen,    setSheetOpen]    = useState(false)
@@ -176,8 +177,7 @@ export default function StudyView({ source }: Props) {
   // ── Navigation ──────────────────────────────────────────────────────────────
   // For now: prev/next within lessons/patterns will be handled when geometry is loaded
   // We track navigation via a simple approach: fetch the ordered list lazily
-  const [navOrder,   setNavOrder]   = useState<string[]>([])
-  const [navItems,   setNavItems]   = useState<Array<{ index: number; title_zh: string }>>([])
+  const [navOrder, setNavOrder] = useState<string[]>([])
 
   useEffect(() => {
     if (source === 'twelve') {
