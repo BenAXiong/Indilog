@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 17:29 | FIX | listDueFlashcards: paginate with .range() loop (PAGE=1000) to bypass Supabase server row cap; was silently truncating review queues >1000 cards |
 | 2026-05-31 17:23 | FEATURE | M2: dict lookup in expanded card — Lookup button on empty zh field; auto-fills first result; chips for alternatives; "No results" on miss |
 | 2026-05-31 17:21 | REFACTOR | Browser: remove checkmark circle from batch selection — row highlight only |
 | 2026-05-31 17:12 | FEATURE | M2: batch select — Select button in header toggles selection mode; tap row to highlight/select; bottom action bar with All/None, Delete (confirm), Suspend, Flag; batchDeleteNotes/batchSuspendCards/batchSetFlag in browser.ts |

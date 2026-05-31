@@ -206,21 +206,31 @@ export type ListDueOpts = {
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  let q = supabase
-    .from('ind_flashcards')
-    .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, tags, place_heard, ind_learn_collections(name, language))')
-    .is('suspended_at', null)
-    .order('due_at', { ascending: true, nullsFirst: true })
-    .limit(10000)
+  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, tags, place_heard, ind_learn_collections(name, language))'
 
-  if (opts.dueOnly !== false) q = q.or(`due_at.is.null,due_at.lte.${now}`)
-  if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
-  else if (opts.flagColor === 'none') q = q.is('flag_color', null)
-  else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
+  // Paginate to work around Supabase's server-side 1000-row cap
+  function buildQ() {
+    let q = supabase.from('ind_flashcards').select(SEL)
+      .is('suspended_at', null)
+      .order('due_at', { ascending: true, nullsFirst: true })
+    if (opts.dueOnly !== false) q = q.or(`due_at.is.null,due_at.lte.${now}`)
+    if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
+    else if (opts.flagColor === 'none') q = q.is('flag_color', null)
+    else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
+    return q
+  }
 
-  const { data, error } = await q
-  if (error) { console.error('listDueFlashcards:', error); return [] }
-  let results = (data ?? []) as FlashcardWithItem[]
+  const PAGE = 1000
+  const pages: FlashcardWithItem[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await buildQ().range(from, from + PAGE - 1)
+    if (error) { console.error('listDueFlashcards:', error); break }
+    if (data?.length) pages.push(...(data as FlashcardWithItem[]))
+    if (!data?.length || data.length < PAGE) break
+    from += PAGE
+  }
+  let results = pages
 
   // Global exclusions (Review all)
   if (opts.excludeLangs?.length)
