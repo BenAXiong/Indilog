@@ -85,6 +85,7 @@ function OptionsSheet({
   audioMode, setAudioMode,
   showAllLangs, setShowAllLangs,
   excludedLangs, setExcludedLangs,
+  resetHour, setResetHour,
   onReloadNeeded,
   onClose,
 }: {
@@ -94,6 +95,7 @@ function OptionsSheet({
   audioMode:    boolean; setAudioMode:    (v: boolean) => void
   showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
   excludedLangs: string[]; setExcludedLangs: (v: string[]) => void
+  resetHour: number; setResetHour: (v: number) => void
   onReloadNeeded: () => void
   onClose: () => void
 }) {
@@ -175,6 +177,31 @@ function OptionsSheet({
                 background: T.paperHi, color: T.inkSoft, cursor: learningSteps >= 5 ? 'default' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 18, fontWeight: 300, opacity: learningSteps >= 5 ? 0.35 : 1,
+              }}>+</button>
+            </div>
+          </div>
+
+          {/* Daily reset hour */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>Daily reset</div>
+              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Hour the new study day begins</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <button onClick={() => setResetHour(resetHour - 1)} disabled={resetHour <= 0} style={{
+                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
+                background: T.paperHi, color: T.inkSoft, cursor: resetHour <= 0 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 300, opacity: resetHour <= 0 ? 0.35 : 1,
+              }}>−</button>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 32, textAlign: 'center' }}>
+                {resetHour === 0 ? '12am' : `${resetHour}am`}
+              </span>
+              <button onClick={() => setResetHour(resetHour + 1)} disabled={resetHour >= 6} style={{
+                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
+                background: T.paperHi, color: T.inkSoft, cursor: resetHour >= 6 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 300, opacity: resetHour >= 6 ? 0.35 : 1,
               }}>+</button>
             </div>
           </div>
@@ -299,7 +326,8 @@ function ReviewSession({
   const audioRef     = useRef<HTMLAudioElement | null>(null)
   type LastRated = { cardId: string; prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null } }
   const lastRatedRef = useRef<LastRated | null>(null)
-  const [canUndo,  setCanUndo]  = useState(false)
+  const [canUndo,    setCanUndo]    = useState(false)
+  const [resetHour,  setResetHourRaw] = useState(4)
 
   // Stop audio when card advances
   useEffect(() => { audioRef.current?.pause() }, [qIdx])
@@ -329,6 +357,8 @@ function ReviewSession({
     setAudioModeRaw(localStorage.getItem('srs_audio_mode') === 'true')
     setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
     try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
+    const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+    setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
   }, [])
 
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
@@ -339,6 +369,10 @@ function ReviewSession({
     localStorage.setItem('srs_learning_steps', String(n))
   }
   function setAudioMode(v: boolean) { setAudioModeRaw(v); localStorage.setItem('srs_audio_mode', String(v)) }
+  function setResetHour(v: number) {
+    const n = Math.min(6, Math.max(0, v))
+    setResetHourRaw(n); localStorage.setItem('srs_reset_hour', String(n))
+  }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
@@ -842,6 +876,7 @@ function ReviewSession({
           audioMode={audioMode}             setAudioMode={setAudioMode}
           showAllLangs={showAllLangs}       setShowAllLangs={setShowAllLangs}
           excludedLangs={excludedLangs}     setExcludedLangs={setExcludedLangs}
+          resetHour={resetHour}             setResetHour={setResetHour}
           onReloadNeeded={onReloadNeeded}
           onClose={() => setShowOptions(false)}
         />

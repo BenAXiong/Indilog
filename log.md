@@ -2,7 +2,9 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-05-31 13:05 | CONFIG | plan-v1.md: M1-E undo + defer marked complete |
+| 2026-05-31 13:41 | FEATURE | M1-F: daily reset time — getStudyDate() (localStorage srs_reset_hour, default 4am); rateCard/rateCardRelearn/undoRating updated; stepper in OptionsSheet (12am–6am) |
+| 2026-05-31 13:41 | FEATURE | M1-F: GoalSheet linear simulator — now / peak / long-term daily load estimates below existing hint |
+| 2026-05-31 13:28 | CONFIG | plan-v1.md: M1-E undo + defer marked complete |
 | 2026-05-31 13:00 | FEATURE | M1-E: defer (skip-fwd button top-right of session, sets due_at=tomorrow) + undo (rotate-ccw below progress bar, single-level, DB-write only); deferCard() + undoRating() in flashcards.ts; skip-fwd icon added |
 | 2026-05-31 12:50 | CONFIG | plan-v1.md: all M4 SRS items → M1-F–J sub-milestones; M4 removed; M5 polish → M4 |
 | 2026-05-31 12:45 | CONFIG | plan-v1.md: goal priority → M1-F; curriculum layouts → M5 polish; M5 standalone removed; renumber M6→M5 |

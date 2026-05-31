@@ -89,6 +89,19 @@ export async function setTargetWord(noteId: string, targetWord: string | null): 
 }
 
 
+function getStudyDate(): string {
+  const resetHour = typeof window !== 'undefined'
+    ? parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+    : 4
+  const now = new Date()
+  if (now.getHours() < resetHour) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+  }
+  return now.toISOString().slice(0, 10)
+}
+
 export async function getExcludeFromReview(): Promise<{ collections: string[]; captures: boolean }> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -208,7 +221,7 @@ export async function rateCardRelearn(
   if (!user) return
 
   const { due_at, new_state } = nextRelearn(currentState, rating, lapsedInterval)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getStudyDate()
 
   await Promise.all([
     supabase.from('ind_flashcards').update({
@@ -294,7 +307,7 @@ export async function undoRating(cardId: string, prevState: PrevSMState): Promis
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getStudyDate()
 
   const [, { data: review }] = await Promise.all([
     supabase.from('ind_flashcards').update({
@@ -356,7 +369,7 @@ export async function rateCard(
   if (!user) return
 
   const { due_at, new_state } = nextFormoSRS1(currentState, rating)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getStudyDate()
 
   await Promise.all([
     supabase.from('ind_flashcards').update({

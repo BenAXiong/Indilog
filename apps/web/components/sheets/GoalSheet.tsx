@@ -37,12 +37,17 @@ export default function GoalSheet({ open, onClose, initialGoal, onSaved }: Props
   const remaining = deckStats ? Math.max(0, deckStats.total - deckStats.mastered) : null
 
   let hint = ''
+  let simPeak = 0
+  let simSteady = 0
   if (remaining !== null && daily > 0) {
     const days = Math.ceil(remaining / daily)
     const eta = new Date()
     eta.setDate(eta.getDate() + days)
     const etaStr = eta.toLocaleDateString('en', { month: 'short', day: 'numeric' })
     hint = `${remaining} cards left · ~${days} days at ${daily}/day (by ${etaStr})`
+    // Linear simulator: avg review interval ≈ 7 days while learning, 14 days at steady state
+    simPeak    = daily + Math.round(Math.min(remaining, daily * 28) / 7)  // ~4 weeks in
+    simSteady  = Math.round(remaining / 14)  // after deck complete, long-term load
   }
 
   async function handleSave() {
@@ -185,15 +190,29 @@ export default function GoalSheet({ open, onClose, initialGoal, onSaved }: Props
             />
           </div>
 
-          {/* Hint */}
+          {/* Hint + simulator */}
           {hint && (
             <div style={{
               padding: '10px 12px', borderRadius: 10,
               background: T.amberBg, border: `1px solid #EBD49A`,
-              fontSize: 13, color: T.inkSoft, lineHeight: 1.45,
+              fontSize: 13, color: T.inkSoft, lineHeight: 1.6,
               fontFamily: '"JetBrains Mono", monospace',
+              display: 'flex', flexDirection: 'column', gap: 4,
             }}>
-              {hint}
+              <span>{hint}</span>
+              <div style={{ height: 1, background: '#EBD49A', margin: '2px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: T.inkFaint }}>Now</span>
+                <span>~{daily}/day</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: T.inkFaint }}>Peak (reviews building)</span>
+                <span>~{simPeak}/day</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: T.inkFaint }}>Long-term</span>
+                <span>~{simSteady}/day</span>
+              </div>
             </div>
           )}
 
