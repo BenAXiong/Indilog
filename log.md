@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 03:55 | FEATURE | M5-A: switch /api/learn/curriculum to accept index for essay/dialogue — route looks up geometry by index; StudyView caches navItems to resolve titleZh→index; twelve/grmpts unchanged |
 | 2026-06-01 03:49 | FIX | Review: mid-session close (0 reviews) also navigates to / when autostart=true, not review landing |
 | 2026-06-01 03:44 | FIX | ensureFlashcards: run both pagination loops in parallel (was sequential — ~48 serial requests for 24k cards; now ~24 parallel) |
 | 2026-06-01 03:44 | FIX | Review: Done button navigates to / when autostart=true (dashboard entry) instead of staying on review landing |

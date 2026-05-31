@@ -7,14 +7,23 @@ export const runtime = 'nodejs'
 type AlignedEntry = { index: number; title_zh: string; alignment: Record<string, string> }
 
 export async function GET(req: NextRequest) {
-  const p       = req.nextUrl.searchParams
-  const dialect = p.get('dialect')?.trim() ?? ''
-  const source  = p.get('source')?.trim()  ?? ''
-  const titleZh = p.get('title_zh')?.trim() ?? ''
-  const level   = p.get('level')?.trim()   ?? '1'
+  const p        = req.nextUrl.searchParams
+  const dialect  = p.get('dialect')?.trim() ?? ''
+  const source   = p.get('source')?.trim()  ?? ''
+  const titleZh  = p.get('title_zh')?.trim() ?? ''
+  const level    = p.get('level')?.trim()   ?? '1'
+  const indexRaw = p.get('index')?.trim()   ?? ''
 
-  if (!dialect || !source || !titleZh) {
+  const isEssayLike = source === 'essay' || source === 'dialogue'
+
+  if (!dialect || !source) {
     return NextResponse.json({ error: 'Missing required params', results: [] }, { status: 400 })
+  }
+  if (isEssayLike && !indexRaw) {
+    return NextResponse.json({ error: 'Missing index param', results: [] }, { status: 400 })
+  }
+  if (!isEssayLike && !titleZh) {
+    return NextResponse.json({ error: 'Missing title_zh param', results: [] }, { status: 400 })
   }
 
   try {
@@ -26,9 +35,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ results: queryGrmpts(dialect, titleZh, level) })
     }
 
-    if (source === 'essay' || source === 'dialogue') {
+    if (isEssayLike) {
+      const idx   = Number.parseInt(indexRaw, 10)
       const items = ((geometryData as unknown) as Record<string, AlignedEntry[]>)[source] ?? []
-      const entry = items.find(e => e.title_zh === titleZh)
+      const entry = items.find(e => e.index === idx)
       const category = entry?.alignment?.[dialect]
       if (!category) return NextResponse.json({ results: [] })
       return NextResponse.json({ results: queryEssayOrDialogue(source, dialect, category) })

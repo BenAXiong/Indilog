@@ -119,29 +119,28 @@ export default function StudyView({ source }: Props) {
   // ── Fetch curriculum data ───────────────────────────────────────────────────
   useEffect(() => {
     if (!dialect) return
-    let apiTitleZh = ''
-    let apiLevel = level
+
+    let params: URLSearchParams
+
     if (source === 'twelve') {
-      // DB categories are "Level X Lesson Y" — build directly, no geometry lookup needed
-      apiTitleZh = `Level ${level} Lesson ${lesson}`
+      params = new URLSearchParams({ source, dialect, level, title_zh: `Level ${level} Lesson ${lesson}` })
     } else if (source === 'grmpts') {
-      apiTitleZh = pattern
-      apiLevel = level
+      params = new URLSearchParams({ source, dialect, level, title_zh: pattern })
     } else {
-      if (!titleZh) return
-      apiTitleZh = titleZh
+      // essay / dialogue — route looks up by index; navItems must be loaded
+      if (!titleZh || !navItems.length) return
+      const item = navItems.find(i => i.title_zh === titleZh)
+      if (!item) return
+      params = new URLSearchParams({ source, dialect, index: String(item.index) })
     }
 
     setLoading(true)
-    const params = new URLSearchParams({
-      source, dialect, title_zh: apiTitleZh, level: apiLevel,
-    })
     fetch(`/api/learn/curriculum?${params}`)
       .then(r => r.json())
       .then((d: { results: CurriculumRow[] }) => setResults(d.results ?? []))
       .catch(() => setResults([]))
       .finally(() => setLoading(false))
-  }, [source, dialect, level, lesson, titleZh, pattern])
+  }, [source, dialect, level, lesson, titleZh, pattern, navItems])
 
   // ── Item key for completions ────────────────────────────────────────────────
   const itemKey = source === 'twelve'
@@ -177,7 +176,8 @@ export default function StudyView({ source }: Props) {
   // ── Navigation ──────────────────────────────────────────────────────────────
   // For now: prev/next within lessons/patterns will be handled when geometry is loaded
   // We track navigation via a simple approach: fetch the ordered list lazily
-  const [navOrder, setNavOrder] = useState<string[]>([])
+  const [navOrder,   setNavOrder]   = useState<string[]>([])
+  const [navItems,   setNavItems]   = useState<Array<{ index: number; title_zh: string }>>([])
 
   useEffect(() => {
     if (source === 'twelve') {
@@ -199,7 +199,9 @@ export default function StudyView({ source }: Props) {
       fetch(`/api/learn/geometry?source=${source}&dialect=${encodeURIComponent(dialect || ' ')}`)
         .then(r => r.json())
         .then((d: { items: Array<{ index: number; title_zh: string; available: boolean }> }) => {
-          setNavOrder(d.items.filter(i => i.available).map(i => i.title_zh))
+          const available = d.items.filter(i => i.available)
+          setNavItems(available.map(i => ({ index: i.index, title_zh: i.title_zh })))
+          setNavOrder(available.map(i => i.title_zh))
         })
         .catch(() => {})
     }
