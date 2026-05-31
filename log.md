@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 12:40 | CONFIG | plan-v1.md: add M3 (rescrape), M4 (SRS enhancements), M5 (Learn tab), M6 (polish extended); deferred + longterm sections |
 | 2026-05-31 12:35 | FIX | Browser: cardless notes show neutral "—" badge instead of misleading "NEW" |
 | 2026-05-31 12:30 | FIX | Browser: audioEl useState → useRef; updateNoteContent dead code already removed in rewrite |
 | 2026-05-31 12:20 | REFACTOR | Browser note-centric: base query switches to ind_items with left join to ind_flashcards; BrowserCard.id=noteId, card_id nullable; SRS filters post-filtered client-side |

@@ -83,9 +83,41 @@
 
 ---
 
-## Milestone 3 — Phase 9 deferred polish (v1 cleanup)
+## Milestone 3 — Corpus rescrape *(intercalated — blocks curriculum quality)*
 
-Items explicitly deferred from v0 Phase 9:
+Essays and dialogues need to be rescraped. This is content/corpus work but impacts curriculum usage too strongly to defer — stale or broken curriculum content undermines the core study loop.
+
+- [ ] Identify what needs rescaping (essays, dialogues — scope TBD)
+- [ ] Rescrape and re-import into corpus
+- [ ] Verify curriculum routes return correct data
+- [ ] Smoke-test Learn tab (essays + dialogues sections)
+
+---
+
+## Milestone 4 — SRS Enhancements
+
+- [ ] Goal deck as review content priority — goal-deck cards sorted first in `listDueFlashcards`; on by default; toggleable
+- [ ] Reviews/day simulator in GoalSheet — estimate daily review load based on deck size and goal *(scope: simple linear estimate first; SM-2 growth simulation later)*
+- [ ] Card strength indicator — composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
+- [ ] Custom review sessions — filter session by deck, tags, fields, flags; design pass needed before building
+- [ ] Daily reset time — user preference for when the "new day" starts (default midnight); affects all date-keyed stats queries
+
+---
+
+## Milestone 5 — Learn Tab
+
+- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
+
+---
+
+## Milestone 6 — Polish *(was M3, extended)*
+
+Quick fixes:
+
+- [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
+- [ ] Merge `redesign/srs-overhaul` → main *(prerequisite before any user-visible shipping)*
+
+Phase 9 deferred items:
 
 - [ ] Desktop usability pass
 - [ ] Error states (API failures, auth errors)
@@ -93,14 +125,39 @@ Items explicitly deferred from v0 Phase 9:
 - [ ] README setup flow (clone → env → supabase → run)
 - [ ] Smoke test all 11 flows
 - [ ] Local cache for fast startup (profile + lang on first render, no flash)
-- [ ] Capture-page Translate action (shortcut from Capture to Translate with pre-filled text)
-- [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh` (Indivore-side fix for duplicate-title silent failures — can do anytime)
+- [ ] Capture-page Translate action
+- [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh`
+
+---
+
+## Deferred — needs design before placing
+
+- **Set per-deck card types** — STS auto-generation requires a `target_word` per note which can't be automated without AI; realistically means "mark deck as STS, set targets manually in browser." Under-designed for v1.
+- **Dummy user profile for testing (stats)** — dev tooling, not user-facing; separate dev track.
+
+---
+
+## Not v1
+
+- Video capture — v2 new feature
+- Refactor — ongoing, not a milestone
+
+---
+
+## Longterm
+
+- Vocabulary + frequency analysis: Klokah vs ILRDF 1k
+- Amis1k: add simple example sentences
+- Icons: align with CD design handoff
+- 階層×10 system
+- User contributions — send to pending DB
+- OCR capture
 
 ---
 
 ## Versioning
 
 - **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done.
-- **v1** — M1 (SRS) complete 2026-05-31. M2 (Library) + M3 (polish) pending.
+- **v1** — M1 complete. M2–M6 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M6 extend to `v1.x`.
 
 Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1 + M2 ship.
