@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 17:59 | FIX | Add missing curriculum-progress API route + learn page to git (were untracked, broke Vercel build) |
 | 2026-05-31 17:33 | FIX | Paginate getDueStats, listUserLanguages, resetCollectionSRS, resetCapturesSRS — all had .limit(10000) silently capped at 1000 by PostgREST server |
 | 2026-05-31 17:29 | FIX | listDueFlashcards: paginate with .range() loop (PAGE=1000) to bypass Supabase server row cap; was silently truncating review queues >1000 cards |
 | 2026-05-31 17:23 | FEATURE | M2: dict lookup in expanded card — Lookup button on empty zh field; auto-fills first result; chips for alternatives; "No results" on miss |
