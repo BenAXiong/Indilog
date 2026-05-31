@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 16:40 | FIX | Browser: raise listBrowserCards limit 500→10000 (Amis1k import was pushing captured items out of results); rename "Captures" → "Captured" in browser.ts, study page, DeckRow |
 | 2026-05-31 16:00 | FEATURE | M2: browser field filters — language, type, source, tags; collapsible filter row; active-count badge; derived from loaded cards client-side |
 | 2026-05-31 15:42 | PHASE COMPLETE | M1 — SRS + Review Overhaul complete (M1-A through M1-F) |
 | 2026-05-31 15:40 | FEATURE | M1-F: card strength metric (model B) — computeStrength() in schedule.ts; R×S_norm score (0–100%), R + S components; displayed in BrowserView expanded card panel |

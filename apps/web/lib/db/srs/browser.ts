@@ -48,7 +48,7 @@ export async function listBrowserCards(
     .select('id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color, card_type, metadata), ind_learn_collections(name)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(500)
+    .limit(10000)
 
   if (!data) return []
 
@@ -64,7 +64,7 @@ export async function listBrowserCards(
     const cardArr = row.ind_flashcards as unknown as CardJoin[] | null
     const card    = Array.isArray(cardArr) ? (cardArr[0] ?? null) : null
     const col     = row.ind_learn_collections as unknown as { name: string } | null
-    const source  = col?.name ?? (row.note_source === 'collection' ? '—' : 'Captures')
+    const source  = col?.name ?? (row.note_source === 'collection' ? '—' : 'Captured')
     return {
       id:            row.id,
       card_id:       card?.id ?? null,

@@ -651,7 +651,7 @@ export default function StudyPage() {
           {/* Captures */}
           <div>
             <button onClick={() => toggleSection('captures')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0 4px', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}>
-              <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1, textAlign: 'left' }}>Captures</span>
+              <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1, textAlign: 'left' }}>Captured</span>
               <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.captures ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
             </button>
             {!collapsed.captures && (
@@ -660,13 +660,13 @@ export default function StudyPage() {
                   icon="bookmark"
                   iconColor={T.sage}
                   iconBg={T.sageBg}
-                  name="Captures & lookups"
+                  name="Captured"
                   sub="words saved while reading"
                   due={due.captures}
                   href="/review"
                   kebab
                   onKebab={() => setActionDeck({
-                    id: CAPTURES_DECK_ID, name: 'Captures & lookups',
+                    id: CAPTURES_DECK_ID, name: 'Captured',
                     language: '', created_at: '', card_count: 0, pinned: false,
                     include_in_review: capturesIncluded,
                   })}
