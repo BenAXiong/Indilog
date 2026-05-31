@@ -1099,6 +1099,9 @@ function ReviewPage() {
     setSessionCount(reviewed)
     if (reviewed > 0) {
       setMode('done')
+    } else if (autostart) {
+      router.push('/')
+      return
     } else {
       setMode('landing')
     }
