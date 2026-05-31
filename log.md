@@ -2,8 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-01 00:00 | SCHEMA | Add mode column to ind_reviews — logs review mode (forward/audio/sts) per event for future retention-transfer analysis; scheduling unchanged |
-| 2026-06-01 00:01 | CONFIG | Update DEC-SRS05 — document duplicates problem, hybrid instrument-first approach, mode taxonomy, deferred migration decision |
+| 2026-06-01 03:13 | SCHEMA | Add mode column to ind_reviews — logs review mode (forward/audio/sts) per event for future retention-transfer analysis; scheduling unchanged |
+| 2026-06-01 03:13 | CONFIG | Update DEC-SRS05 — document duplicates problem, hybrid instrument-first approach, mode taxonomy, deferred migration decision |
 | 2026-05-31 18:05 | FIX | Wrap review page in Suspense — useSearchParams() requires Suspense boundary for Next.js 15 static generation |
 | 2026-05-31 18:03 | FIX | Add 'use client' to learn sub-pages (dialogues, essays, lessons, patterns) — RSC bundler failed to include StudyView in client manifest after learn/page.tsx became a redirect |
 | 2026-05-31 17:59 | FIX | Add missing curriculum-progress API route + learn page to git (were untracked, broke Vercel build) |
