@@ -43,14 +43,16 @@ export async function listBrowserCards(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data } = await supabase
-    .from('ind_items')
-    .select('id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color, card_type, metadata), ind_learn_collections(name)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10000)
+  const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color, card_type, metadata), ind_learn_collections(name)'
 
-  if (!data) return []
+  // Two parallel queries so captured items are never crowded out by the server 1000-row cap
+  const [capturedRes, collectionRes] = await Promise.all([
+    supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'captured').order('created_at', { ascending: false }),
+    supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false }),
+  ])
+
+  const data = [...(capturedRes.data ?? []), ...(collectionRes.data ?? [])]
+  if (!data.length) return []
 
   const now = new Date().toISOString()
 
