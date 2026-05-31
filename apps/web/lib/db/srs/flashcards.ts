@@ -173,25 +173,39 @@ export async function getDueStats(
   return { total, captures, byCollection }
 }
 
-export async function listDueFlashcards(
-  opts: { flagColor?: string | 'any'; excludeLangs?: string[]; excludeCollections?: string[]; excludeCaptures?: boolean } = {},
-): Promise<FlashcardWithItem[]> {
+export type ListDueOpts = {
+  flagColor?:          string | 'any'
+  // global exclusions (Review all mode)
+  excludeLangs?:       string[]
+  excludeCollections?: string[]
+  excludeCaptures?:    boolean
+  // custom session inclusions (bypass exclusions)
+  includeLangs?:       string[]
+  includeDialect?:     string
+  includeCollectionId?: string
+  capturesOnly?:       boolean
+  dueOnly?:            boolean   // default true; false = all non-suspended cards
+}
+
+export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
   let q = supabase
     .from('ind_flashcards')
     .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, ind_learn_collections(name, language))')
-    .or(`due_at.is.null,due_at.lte.${now}`)
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
     .limit(10000)
 
+  if (opts.dueOnly !== false) q = q.or(`due_at.is.null,due_at.lte.${now}`)
   if (opts.flagColor === 'any') q = q.not('flag_color', 'is', null)
   else if (opts.flagColor)      q = q.eq('flag_color', opts.flagColor)
 
   const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
   let results = (data ?? []) as FlashcardWithItem[]
+
+  // Global exclusions (Review all)
   if (opts.excludeLangs?.length)
     results = results.filter(c => !opts.excludeLangs!.includes(c.ind_items?.language ?? ''))
   if (opts.excludeCollections?.length || opts.excludeCaptures)
@@ -201,6 +215,17 @@ export async function listDueFlashcards(
         return !opts.excludeCollections?.includes(note.collection_id)
       return !opts.excludeCaptures
     })
+
+  // Custom session inclusions
+  if (opts.includeLangs?.length)
+    results = results.filter(c => opts.includeLangs!.includes(c.ind_items?.language ?? ''))
+  if (opts.includeDialect)
+    results = results.filter(c => c.ind_items?.dialect === opts.includeDialect)
+  if (opts.includeCollectionId)
+    results = results.filter(c => c.ind_items?.collection_id === opts.includeCollectionId)
+  else if (opts.capturesOnly)
+    results = results.filter(c => c.ind_items?.note_source !== 'collection')
+
   return results
 }
 

@@ -16,6 +16,7 @@ import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/a
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
 import BrowserView from '@/components/study/BrowserView'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
+import CustomSessionSheet from '@/components/sheets/CustomSessionSheet'
 
 // ─── Due badge ───────────────────────────────────────────────────────────────
 
@@ -406,6 +407,7 @@ export default function StudyPage() {
   const [actionDeck,        setActionDeck]        = useState<CollectionMeta | null>(null)
   const [capturesIncluded,  setCapturesIncluded]  = useState(true)
   const [settingsOpen, setSettingsOpen]     = useState(false)
+  const [customOpen,   setCustomOpen]       = useState(false)
   const [showAllLangs, setShowAllLangs]     = useState<boolean>(() =>
     typeof window === 'undefined' ? true : localStorage.getItem('srs_show_all_langs') !== 'false'
   )
@@ -592,26 +594,36 @@ export default function StudyPage() {
       {activeTab === 'decks' && (
         <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* Review all CTA */}
-          <Link href="/review" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-            height: 54, borderRadius: 15, textDecoration: 'none',
-            background: due.total > 0 ? T.crimson : T.lineSoft,
-            color: due.total > 0 ? '#fff' : T.inkFaint,
-            boxShadow: due.total > 0
-              ? '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)'
-              : 'none',
-          }}>
-            <Icon name="play" size={14} color={due.total > 0 ? '#fff' : T.inkFaint} />
-            <span style={{ fontSize: 16, fontWeight: 600 }}>
-              {due.total > 0 ? 'Review all' : 'All caught up'}
-            </span>
-            {due.total > 0 && (
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, opacity: 0.85, marginLeft: 2 }}>
-                {due.total} due
+          {/* Review all CTA + Custom session button */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Link href="/review" style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+              height: 54, borderRadius: 15, textDecoration: 'none',
+              background: due.total > 0 ? T.crimson : T.lineSoft,
+              color: due.total > 0 ? '#fff' : T.inkFaint,
+              boxShadow: due.total > 0
+                ? '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)'
+                : 'none',
+            }}>
+              <Icon name="play" size={14} color={due.total > 0 ? '#fff' : T.inkFaint} />
+              <span style={{ fontSize: 16, fontWeight: 600 }}>
+                {due.total > 0 ? 'Review all' : 'All caught up'}
               </span>
-            )}
-          </Link>
+              {due.total > 0 && (
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, opacity: 0.85, marginLeft: 2 }}>
+                  {due.total} due
+                </span>
+              )}
+            </Link>
+            <button onClick={() => setCustomOpen(true)} aria-label="Custom session" style={{
+              width: 54, height: 54, borderRadius: 15, flexShrink: 0,
+              background: T.paperHi, border: `1px solid ${T.line}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: T.inkSoft,
+            }}>
+              <Icon name="filter" size={18} strokeWidth={1.8} />
+            </button>
+          </div>
 
           {/* Curriculum */}
           <div>
@@ -820,6 +832,8 @@ export default function StudyPage() {
           </div>
         </>
       )}
+
+      <CustomSessionSheet open={customOpen} onClose={() => setCustomOpen(false)} />
 
       {actionDeck && (
         <DeckActionSheet

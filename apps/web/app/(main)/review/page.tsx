@@ -1001,10 +1001,16 @@ function ReviewEnd({
 
 export default function ReviewPage() {
   const { lang, dialectLabel } = useLang()
-  const searchParams = useSearchParams()
-  const flagParam    = searchParams.get('flag')    // specific color: 'red' etc
-  const filterParam  = searchParams.get('filter')  // 'flagged' = any color
-  const flagColor    = flagParam ?? (filterParam === 'flagged' ? 'any' : undefined)
+  const searchParams     = useSearchParams()
+  const flagParam        = searchParams.get('flag')
+  const filterParam      = searchParams.get('filter')
+  const flagColor        = flagParam ?? (filterParam === 'flagged' ? 'any' : undefined)
+  const isCustom         = searchParams.get('custom') === '1'
+  const customLang       = searchParams.get('lang') ?? undefined
+  const customDialect    = searchParams.get('dialect') ?? undefined
+  const customCollection = searchParams.get('collectionId') ?? undefined
+  const customCaptures   = searchParams.get('capturesOnly') === 'true'
+  const customDueOnly    = searchParams.get('dueOnly') !== 'false'
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
@@ -1022,17 +1028,27 @@ export default function ReviewPage() {
 
   async function reload() {
     await ensureFlashcards()
-    const exclude = await getExcludeFromReview()
     const [c, context] = await Promise.all([
-      listDueFlashcards({
-        flagColor,
-        excludeLangs:        getExcludeLangs(),
-        excludeCollections:  exclude.collections,
-        excludeCaptures:     exclude.captures,
-      }),
+      isCustom
+        ? listDueFlashcards({
+            includeLangs:        customLang ? [customLang] : undefined,
+            includeDialect:      customDialect,
+            includeCollectionId: customCollection,
+            capturesOnly:        customCaptures,
+            dueOnly:             customDueOnly,
+          })
+        : (async () => {
+            const exclude = await getExcludeFromReview()
+            return listDueFlashcards({
+              flagColor,
+              excludeLangs:       getExcludeLangs(),
+              excludeCollections: exclude.collections,
+              excludeCaptures:    exclude.captures,
+            })
+          })(),
       loadSessionContext(),
     ])
-    const goalId = context.goalCollectionId
+    const goalId = !isCustom ? context.goalCollectionId : null
     const sorted = goalId
       ? [...c.filter(x => x.ind_items?.collection_id === goalId), ...c.filter(x => x.ind_items?.collection_id !== goalId)]
       : c

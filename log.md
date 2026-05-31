@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 14:56 | FEATURE | M1-F: custom review sessions — filter icon button next to Review all; CustomSessionSheet (lang/dialect/source/dueOnly); review page reads custom params, bypasses global exclusions; listDueFlashcards gains inclusion opts + dueOnly |
 | 2026-05-31 14:32 | FEATURE | M1-F: goal deck priority — reload() post-sorts due cards with goal_collection_id cards first; goalCollectionId added to SessionContext |
 | 2026-05-31 14:24 | REFACTOR | listDueFlashcards: remove 20/200 batch limit, replace with 10k safety cap; remove slice(0,20); post-filters now always apply unconditionally |
 | 2026-05-31 13:50 | REFACTOR | Move daily reset stepper from review OptionsSheet → Settings page (general tab, Study section) |
