@@ -179,18 +179,6 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
         display: 'flex', alignItems: 'flex-start', gap: 9,
         background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
       }}>
-        {/* Selection indicator */}
-        {selectionMode && (
-          <div style={{
-            width: 20, height: 20, borderRadius: 999, flexShrink: 0, marginTop: 2,
-            background: isSelected ? T.crimson : 'transparent',
-            border: `1.5px solid ${isSelected ? T.crimson : T.line}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            {isSelected && <Icon name="check" size={10} color="#fff" strokeWidth={3} />}
-          </div>
-        )}
-
         {/* Status badge */}
         <div style={{ paddingTop: 3, flexShrink: 0 }}>
           {!card.card_id ? (
