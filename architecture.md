@@ -227,7 +227,7 @@ while (true) {
 }
 ```
 
-Affected functions (all paginated as of 2026-05-31): `listDueFlashcards`, `getDueStats`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (split into two parallel queries by `note_source` instead).
+Affected functions (all paginated as of 2026-06-01): `ensureFlashcards` (both queries), `listDueFlashcards`, `getDueStats`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (split into two parallel queries by `note_source` instead).
 
 ---
 
