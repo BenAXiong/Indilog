@@ -404,8 +404,10 @@ export default function BrowserView() {
   const [cards,           setCards]           = useState<BrowserCard[]>([])
   const [loading,         setLoading]         = useState(true)
   const [expandedId,      setExpandedId]      = useState<string | null>(null)
-  const [fType,   setFType]   = useState('')
-  const [fSource, setFSource] = useState('')
+  const [fType,     setFType]     = useState('')
+  const [fSource,   setFSource]   = useState('')
+  const [fromDate,  setFromDate]  = useState('')
+  const [toDate,    setToDate]    = useState('')
 
   useEffect(() => {
     if (filter !== 'flagged') setFlagColorFilter(null)
@@ -433,10 +435,12 @@ export default function BrowserView() {
       const q = search.toLowerCase()
       result = result.filter(c => c.ab.toLowerCase().includes(q) || (c.zh ?? '').toLowerCase().includes(q))
     }
-    if (fType)   result = result.filter(c => c.note_type === fType)
-    if (fSource) result = result.filter(c => c.source === fSource)
+    if (fType)    result = result.filter(c => c.note_type === fType)
+    if (fSource)  result = result.filter(c => c.source === fSource)
+    if (fromDate) result = result.filter(c => c.created_at >= fromDate)
+    if (toDate)   result = result.filter(c => c.created_at <= toDate + 'T23:59:59.999Z')
     return result
-  }, [cards, search, fType, fSource])
+  }, [cards, search, fType, fSource, fromDate, toDate])
 
   function updateCard(id: string, patch: Partial<BrowserCard>) {
     setCards(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
@@ -514,6 +518,30 @@ export default function BrowserView() {
         </div>
       </div>
 
+
+      {/* Date range row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>Added</span>
+        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{
+          flex: 1, height: 28, padding: '0 8px', borderRadius: 7, fontSize: 12,
+          background: fromDate ? T.paperHi : T.paper,
+          border: `1px solid ${fromDate ? T.line : T.lineSoft}`,
+          color: fromDate ? T.ink : T.inkFaint, fontFamily: 'inherit', cursor: 'pointer',
+        }} />
+        <span style={{ fontSize: 11, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>→</span>
+        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{
+          flex: 1, height: 28, padding: '0 8px', borderRadius: 7, fontSize: 12,
+          background: toDate ? T.paperHi : T.paper,
+          border: `1px solid ${toDate ? T.line : T.lineSoft}`,
+          color: toDate ? T.ink : T.inkFaint, fontFamily: 'inherit', cursor: 'pointer',
+        }} />
+        {(fromDate || toDate) && (
+          <button onClick={() => { setFromDate(''); setToDate('') }} style={{
+            height: 28, padding: '0 8px', borderRadius: 7, fontSize: 11, cursor: 'pointer',
+            background: 'none', border: `1px solid ${T.lineSoft}`, color: T.inkFaint, flexShrink: 0,
+          }}>✕</button>
+        )}
+      </div>
 
       {/* Flag color sub-filter (when Flagged is selected) */}
       {filter === 'flagged' && (

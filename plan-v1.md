@@ -86,7 +86,7 @@
 - [x] Field filters — language, type, source/deck, tags (collapsible row, derived from loaded cards, active-count badge)
 - [x] Delete note from browser — hard delete cascades ind_flashcards → ind_reviews; inline confirm warns about heatmap/stats impact; suggests Suspend as alternative
 - [ ] Dict lookup button in expanded card — batch lookup ab field, auto-fill empty zh from results
-- [ ] Date range filter (isolated)
+- [x] Date range filter — from/to date inputs below filter row, filter on created_at, ✕ clear button
 - [ ] Batch select + delete / suspend / flag
 
 ---
@@ -110,14 +110,16 @@ Design a method to keep track of item sources and associate data to them (eg. di
 
 ---
 
-## Milestone 5 — UI Polish
+## Milestone 5 — Architecture & UI Polish
 
 
+- [ ] Rethink note vs card type architecture — clarify/consolidate distinction between `ind_items.type` (linguistic content type) and `ind_flashcards.card_type` (review presentation mode)
+- [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh`
 - [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
 - [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
-- [ ] Rethink note vs card type architecture — clarify/consolidate distinction between `ind_items.type` (linguistic content type) and `ind_flashcards.card_type` (review presentation mode)
+- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
 
 ---
 
@@ -131,8 +133,7 @@ Design a method to keep track of item sources and associate data to them (eg. di
 - [ ] Smoke test all 11 flows
 - [ ] Local cache for fast startup (profile + lang on first render, no flash)
 - [ ] Capture-page Translate action
-- [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh`
-- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
+
 
 ---
 
