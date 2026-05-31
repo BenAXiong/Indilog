@@ -6,6 +6,30 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-SRS05 · Note-centric SRS architecture — intervals on notes, modes as session settings
+
+**Context:** Current schema stores SRS metrics (`ease_factor`, `interval_days`, `repetitions`, `due_at`) on `ind_flashcards` (one card pre-created per note). `ind_flashcards.card_type` stores `'default'` or `'sts'` as a permanent property.
+
+**Vision:** SRS metrics belong on `ind_items` (the note), not on a pre-made card. Review "cards" are generated on the fly per session — the note is the unit of knowledge, the session mode is just the presentation lens. This means:
+- One note → one schedule (shared interval across all modes)
+- Session picks the review mode at runtime (audio, production, recognition, STS)
+- No pre-made `ind_flashcards` rows needed for scheduling
+
+**Tradeoff:** Unified interval can't distinguish "this word is easy in audio but hard in STS." Accepted — for vocabulary acquisition, word knowledge is the goal, not mode-specific mastery.
+
+**On card/session mode taxonomy:**
+- `card_type: 'sts'` is genuinely structural — requires `target_word`, different layout — keep as a note property (move to `ind_items`)
+- Audio, production (ab→recall zh), recognition (zh→reveal ab) are **session modes**, not card types — no per-card storage needed, just session-level settings
+- The default/STS distinction may collapse once STS becomes a note property
+
+**Current state:** `ind_flashcards` exists and works. Migration to note-centric SRS requires moving scheduling columns to `ind_items`, dropping or repurposing `ind_flashcards`, and rethinking `ensureFlashcards()`.
+
+**Decision:** Defer migration to a dedicated milestone. Document the target architecture here. Do not add new card_type values to `ind_flashcards` in the meantime.
+
+**Date:** 2026-05-31 · Migration deferred to M5 or later
+
+---
+
 ### DEC-SRS02 · Reset SRS scope — what "reset a deck" erases (2026-05-31) — IMPLEMENTED
 
 **Context:** A deck reset can target three distinct layers:

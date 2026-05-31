@@ -72,7 +72,6 @@
 
 > The Browser subtab (Study → Browser) covers most of M2. No separate `/library` route needed — Browser IS the library. Now note-centric: queries `ind_items` with left-joined flashcard state; notes without cards appear in All view.
 
-### Done (via Browser tab)
 
 - [x] Note-centric list of all saved items — `ind_items` base query, left join to `ind_flashcards`
 - [x] SRS-state filters — All / Due / New / Flagged / Suspended (post-filtered client-side)
@@ -80,9 +79,6 @@
 - [x] Full note detail — expanded row shows all fields: ab, zh, notes, audio, dialect, place, language, type, source, tags, target_word
 - [x] Edit — ab, zh, notes, place_heard, target_word inline in expanded row
 - [x] STS layout toggle per card — word / sentence
-
-### Remaining
-
 - [x] Field filters — language, type, source/deck, tags (collapsible row, derived from loaded cards, active-count badge)
 - [x] Delete note from browser — hard delete cascades ind_flashcards → ind_reviews; inline confirm warns about heatmap/stats impact; suggests Suspend as alternative
 - [x] Dict lookup button in expanded card — Lookup button on empty zh; auto-fills first result; chips for alternatives; "No results" on miss
@@ -112,14 +108,22 @@ Design a method to keep track of item sources and associate data to them (eg. di
 
 ## Milestone 5 — Architecture & UI Polish
 
+### M5-A — Architecture polish
 
-- [ ] Rethink note vs card type architecture — clarify/consolidate distinction between `ind_items.type` (linguistic content type) and `ind_flashcards.card_type` (review presentation mode)
+- [x] Rethink note vs card type architecture — decision recorded in DEC-SRS05; migration deferred; no new card_type values until then
 - [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh`
+
+### M5-B — UI polish
+
 - [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
+- [ ] Fix: ind_reviews / increment_reviewed_today fires spuriously on page navigation — inflates heatmap + daily counter; audit review page useEffect/mount lifecycle
 - [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
 - [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
+
+- [ ] Browser zh lookup: enable multi word
+
 
 ---
 
