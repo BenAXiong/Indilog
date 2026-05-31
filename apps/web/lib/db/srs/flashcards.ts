@@ -286,6 +286,7 @@ export async function rateCardRelearn(
   rating: 'good' | 'easy' | 'again',
   currentState: SMState,
   lapsedInterval: number,
+  mode?: string,
 ): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -301,7 +302,7 @@ export async function rateCardRelearn(
       interval_days: new_state.interval_days,
       repetitions:   new_state.repetitions,
     }).eq('id', flashcardId),
-    supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at }),
+    supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at, mode }),
     supabase.rpc('increment_reviewed_today', { p_user_id: user.id, p_date: today }),
   ])
 }
@@ -433,6 +434,7 @@ export async function rateCard(
   flashcardId: string,
   rating: Rating,
   currentState: SMState,
+  mode?: string,
 ): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -448,7 +450,7 @@ export async function rateCard(
       interval_days: new_state.interval_days,
       repetitions:   new_state.repetitions,
     }).eq('id', flashcardId),
-    supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at }),
+    supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at, mode }),
     supabase.rpc('increment_reviewed_today', { p_user_id: user.id, p_date: today }),
   ])
 }

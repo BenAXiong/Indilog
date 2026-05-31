@@ -405,12 +405,13 @@ function ReviewSession({
     setCanUndo(false)
     const r: Rating = (isLearning && rating === 'hard') ? 'again' : rating
     const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
+    const sessionMode = isSts ? 'sts' : (audioMode && cardAudio(card)) ? 'audio' : 'forward'
 
     if (phase === 'review') {
       if (r === 'again' && card.interval_days >= MATURE_THRESHOLD) {
         setQueue(prev => [...prev, { card, pass: 0, restarts: 0, phase: 'relearn', originalInterval: card.interval_days }])
       } else {
-        await rateCard(card.id, r, state)
+        await rateCard(card.id, r, state, sessionMode)
         completedRef.current.add(card.id)
         lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
       }
@@ -421,7 +422,7 @@ function ReviewSession({
         if (isFinalPass) {
           if (restarts >= MAX_RESTARTS) {
             // Cap reached → force Good graduation
-            await rateCard(card.id, 'good', state)
+            await rateCard(card.id, 'good', state, sessionMode)
             completedRef.current.add(card.id)
             lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
           } else {
@@ -434,7 +435,7 @@ function ReviewSession({
       } else {
         // "Easy" (first attempt, non-final) or "Got it!" (final / after restart)
         const useGood = isFinalPass || restarts >= 1
-        await rateCard(card.id, useGood ? 'good' : 'easy', state)
+        await rateCard(card.id, useGood ? 'good' : 'easy', state, sessionMode)
         completedRef.current.add(card.id)
         lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
       }
@@ -444,7 +445,7 @@ function ReviewSession({
         // "Repeat"
         if (isFinalPass) {
           if (restarts >= MAX_RESTARTS) {
-            await rateCard(card.id, 'again', state)
+            await rateCard(card.id, 'again', state, sessionMode)
             completedRef.current.add(card.id)
             lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
           } else {
@@ -455,7 +456,7 @@ function ReviewSession({
         }
       } else {
         // "Got it!" — 50% recovery
-        await rateCardRelearn(card.id, 'good', state, originalInterval)
+        await rateCardRelearn(card.id, 'good', state, originalInterval, sessionMode)
         completedRef.current.add(card.id)
         lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
       }
