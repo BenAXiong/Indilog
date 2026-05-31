@@ -36,7 +36,6 @@
 - [x] Learn hub shows saved collections; `/learn/collection/[id]` browse page
 - [x] Flashcards generated from collection items via `ensureFlashcards()`
 - [x] Coverage bars in Stats subtab — per-deck known/mastered percentage
-- [ ] Compare Amis1k against existing captured items — dropped; low value, dedup at capture time is sufficient
 
 ### M1-D — Progress View & Stats
 
@@ -44,7 +43,6 @@
 - [x] Per-language stats — Stats subtab: total/due/known/mastered cards + per-deck coverage bars + 14-day pace chart
 - [x] Daily goal progress ring — Dashboard ring (reviewed/goal) + GoalWidget
 - [x] Review session summary screen — ReviewEnd with count, streak, confetti on goal met, share
-- [ ] Retention/forgetting curve — deferred; needs more real review data first
 
 ### M1-E — Review Page Overhaul
 
@@ -60,16 +58,27 @@
 
 ---
 
-## Milestone 2 — Library
+## Milestone 2 — Library / Browser
 
 **Goal:** Browsable, filterable view of everything the user has saved — captured items, dict saves, learn saves — with item detail, edit, and delete.
 
-- [ ] `/library` route with `ind_items` list
-- [ ] Filter by language, type (word/sentence/note), source, date range
-- [ ] Item detail drawer/page (text, notes, meaning, dialect, source, speaker, audio)
-- [ ] Edit and delete from Library
-- [ ] Link from Library item → Review (show flashcard status)
-- [ ] Link from Library item → Dictionary (look up the word)
+> The Browser subtab (Study → Browser) covers most of M2. No separate `/library` route needed — Browser IS the library. Now note-centric: queries `ind_items` with left-joined flashcard state; notes without cards appear in All view.
+
+### Done (via Browser tab)
+
+- [x] Note-centric list of all saved items — `ind_items` base query, left join to `ind_flashcards`
+- [x] SRS-state filters — All / Due / New / Flagged / Suspended (post-filtered client-side)
+- [x] Sort — by due date, ease, added
+- [x] Full note detail — expanded row shows all fields: ab, zh, notes, audio, dialect, place, language, type, source, tags, target_word
+- [x] Edit — ab, zh, notes, place_heard, target_word inline in expanded row
+- [x] STS layout toggle per card — word / sentence
+
+### Remaining
+
+- [ ] Delete note from browser
+- [ ] Additional filters — by language, type, source, deck, tags, date range
+- [ ] Link → Review (start session from a specific card)
+- [ ] Link → Dictionary (look up the word)
 - [ ] Batch select + delete
 
 ---

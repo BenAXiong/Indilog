@@ -93,7 +93,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
     setSaving(true)
     const newTarget = editTarget.trim() || null
     const targetChanged = newTarget !== (card.target_word || null)
-    await updateNoteFields(card.note_id, {
+    await updateNoteFields(card.id, {
       ab: f, zh: b || null,
       notes: editNotes.trim() || null,
       place_heard: editPlace.trim() || null,
@@ -104,7 +104,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
       place_heard: editPlace.trim() || null,
     }
     if (targetChanged) {
-      await setTargetWord(card.note_id, newTarget)
+      await setTargetWord(card.id, newTarget)
       patch.target_word = newTarget
       patch.card_type   = newTarget ? 'sts' : 'default'
       patch.metadata    = newTarget
@@ -116,7 +116,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
   }
 
   async function handleLayoutChange(layout: 'word' | 'sentence') {
-    await setCardLayout(card.id, layout, card.metadata)
+    if (!card.card_id) return
+    await setCardLayout(card.card_id, layout, card.metadata)
     onUpdate({ metadata: { ...card.metadata, layout } })
   }
 
@@ -131,26 +132,29 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
   }
 
   async function handleResetEase() {
+    if (!card.card_id) return
     setBusy(true)
-    await resetCardEase(card.id)
+    await resetCardEase(card.card_id)
     onUpdate({ ease_factor: 2.5, interval_days: 0, repetitions: 0, due_at: null })
     setBusy(false)
   }
 
   async function handleSuspendToggle() {
+    if (!card.card_id) return
     setBusy(true)
     if (isSuspended) {
-      await unsuspendCard(card.id)
+      await unsuspendCard(card.card_id)
       onUpdate({ suspended_at: null })
     } else {
-      await suspendCard(card.id)
+      await suspendCard(card.card_id)
       onRemove()
     }
     setBusy(false)
   }
 
   async function handleFlagChange(color: string | null) {
-    await setFlagColor(card.id, color)
+    if (!card.card_id) return
+    await setFlagColor(card.card_id, color)
     onUpdate({ flag_color: color })
   }
 

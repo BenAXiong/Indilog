@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 12:20 | REFACTOR | Browser note-centric: base query switches to ind_items with left join to ind_flashcards; BrowserCard.id=noteId, card_id nullable; SRS filters post-filtered client-side |
+| 2026-05-31 12:20 | CONFIG | plan-v1.md M2 updated: Browser = Library, done/remaining items listed |
 | 2026-05-31 02:55 | CONFIG | Update plan-v1.md: M1 marked complete with actual implementation notes; M2 + M3 unchanged |
 | 2026-05-31 02:50 | CONFIG | Extract DEC-SRS03 into decisions.md: FormoSRS-1 full spec, ease hell fix rationale, fuzz formula, relearn burst |
 | 2026-05-31 02:45 | CONFIG | Archive plan-srs.md → archive/plan-srs.md; remove from CLAUDE.md session-start read list |
