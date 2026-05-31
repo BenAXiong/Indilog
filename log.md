@@ -2,7 +2,6 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-01 03:16 | CONFIG | Fix M5-A plan — remove two misplaced M5-B items, add mode-logging entry, mark curriculum API deferred |
 | 2026-06-01 03:13 | SCHEMA | Add mode column to ind_reviews — logs review mode (forward/audio/sts) per event for future retention-transfer analysis; scheduling unchanged |
 | 2026-06-01 03:13 | CONFIG | Update DEC-SRS05 — document duplicates problem, hybrid instrument-first approach, mode taxonomy, deferred migration decision |
 | 2026-05-31 18:05 | FIX | Wrap review page in Suspense — useSearchParams() requires Suspense boundary for Next.js 15 static generation |
