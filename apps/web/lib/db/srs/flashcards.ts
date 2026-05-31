@@ -196,8 +196,9 @@ export type ListDueOpts = {
   capturesOnly?:        boolean
   includeNoteTypes?:    string[]   // filter by ind_items.type
   includeCardType?:     string     // 'default' | 'sts'
-  includeTags?:         string[]   // OR logic: any of these tags
-  dueOnly?:             boolean    // default true; false = all non-suspended cards
+  includeTags?:        string[]   // OR logic: any of these tags
+  includeFlagColors?:  string[]   // OR logic: any of these colors (post-filter; flagColor handles single/any/none at DB level)
+  dueOnly?:            boolean    // default true; false = all non-suspended cards
 }
 
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
@@ -245,6 +246,8 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     results = results.filter(c => c.card_type === opts.includeCardType)
   if (opts.includeTags?.length)
     results = results.filter(c => opts.includeTags!.some(t => (c.ind_items?.tags ?? []).includes(t)))
+  if (opts.includeFlagColors?.length)
+    results = results.filter(c => opts.includeFlagColors!.includes(c.flag_color ?? ''))
 
   return results
 }

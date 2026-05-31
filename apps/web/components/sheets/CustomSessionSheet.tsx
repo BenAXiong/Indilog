@@ -32,7 +32,9 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
   const [noteType,     setNoteType]     = useState('')
   const [cardType,     setCardType]     = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [flagColor,    setFlagColor]    = useState('')
+  const [flagColors,   setFlagColors]   = useState<string[]>([])  // empty = all
+  const [flagAny,      setFlagAny]      = useState(false)
+  const [flagNone,     setFlagNone]     = useState(false)
   const [dueOnly,      setDueOnly]      = useState(true)
 
   useEffect(() => {
@@ -58,6 +60,11 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
 
+  function toggleFlagColor(key: string) {
+    setFlagAny(false); setFlagNone(false)
+    setFlagColors(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
+  }
+
   function handleStart() {
     const params = new URLSearchParams({ custom: '1' })
     if (lang)                params.set('lang', lang)
@@ -67,7 +74,9 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
     if (noteType)            params.set('noteType', noteType)
     if (cardType)            params.set('cardType', cardType)
     if (selectedTags.length) params.set('tags', selectedTags.join(','))
-    if (flagColor)           params.set('flag', flagColor)
+    if (flagAny)             params.set('flag', 'any')
+    else if (flagNone)       params.set('flag', 'none')
+    else if (flagColors.length) params.set('flag', flagColors.join(','))
     if (!dueOnly)            params.set('dueOnly', 'false')
     router.push(`/review?${params}`)
     onClose()
@@ -120,6 +129,21 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
 
         {/* Scrollable filters */}
         <div style={{ overflowY: 'auto', padding: '4px 18px 0', flex: 1 }}>
+
+          {/* Due only — top */}
+          <div style={{ ...row, borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div><div style={lbl}>Due only</div><div style={sub}>Off = include all matching cards</div></div>
+            <button onClick={() => setDueOnly(v => !v)} style={{
+              width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
+              background: dueOnly ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', transition: 'background .15s',
+            }}>
+              <span style={{
+                position: 'absolute', top: 3, left: dueOnly ? 21 : 3, width: 20, height: 20,
+                borderRadius: 999, background: '#fff',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
+              }} />
+            </button>
+          </div>
 
           {/* Language */}
           <div style={row}>
@@ -179,15 +203,42 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
             </select>
           </div>
 
-          {/* Flag */}
-          <div style={row}>
-            <div><div style={lbl}>Flag</div></div>
-            <select value={flagColor} onChange={e => setFlagColor(e.target.value)} style={sel}>
-              <option value="">All</option>
-              <option value="any">Any flag</option>
-              <option value="none">No flag</option>
-              {FLAG_COLORS.map(f => <option key={f.key} value={f.key}>{f.key.charAt(0).toUpperCase() + f.key.slice(1)}</option>)}
-            </select>
+          {/* Flag — dot toggles */}
+          <div style={{ padding: '11px 0', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ ...lbl, marginBottom: 10 }}>Flag</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {/* Any / None pills */}
+              {(['any', 'none'] as const).map(opt => {
+                const on = opt === 'any' ? flagAny : flagNone
+                return (
+                  <button key={opt} onClick={() => {
+                    if (opt === 'any') { setFlagAny(v => !v); setFlagNone(false); setFlagColors([]) }
+                    else               { setFlagNone(v => !v); setFlagAny(false); setFlagColors([]) }
+                  }} style={{
+                    padding: '4px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+                    background: on ? T.ink : T.paperHi,
+                    color: on ? T.cream : T.inkSoft,
+                    border: `1px solid ${on ? T.ink : T.line}`,
+                    fontWeight: on ? 600 : 400,
+                  }}>
+                    {opt === 'any' ? 'Any' : 'None'}
+                  </button>
+                )
+              })}
+              {/* Color dots */}
+              {FLAG_COLORS.map(f => {
+                const on = flagColors.includes(f.key)
+                return (
+                  <button key={f.key} onClick={() => toggleFlagColor(f.key)} aria-label={f.key} style={{
+                    width: 28, height: 28, borderRadius: 999, cursor: 'pointer',
+                    background: flagColorHex(f.key) ?? undefined,
+                    border: `3px solid ${on ? T.ink : 'transparent'}`,
+                    boxShadow: on ? `0 0 0 1px ${flagColorHex(f.key)}` : 'none',
+                    flexShrink: 0,
+                  }} />
+                )
+              })}
+            </div>
           </div>
 
           {/* Tags */}
@@ -213,20 +264,6 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
             </div>
           )}
 
-          {/* Due only */}
-          <div style={{ ...row, borderBottom: 'none' }}>
-            <div><div style={lbl}>Due only</div><div style={sub}>Off = include all matching cards</div></div>
-            <button onClick={() => setDueOnly(v => !v)} style={{
-              width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
-              background: dueOnly ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', transition: 'background .15s',
-            }}>
-              <span style={{
-                position: 'absolute', top: 3, left: dueOnly ? 21 : 3, width: 20, height: 20,
-                borderRadius: 999, background: '#fff',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
-              }} />
-            </button>
-          </div>
         </div>
 
         {/* Start button */}

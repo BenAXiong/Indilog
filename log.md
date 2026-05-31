@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 15:11 | REFACTOR | CustomSessionSheet: flag dropdown → dot toggles (Any/None pills + color circles, multi-select); due-only toggle moved to top; multi-flag URL param (red,green); includeFlagColors post-filter in listDueFlashcards |
 | 2026-05-31 15:04 | FEATURE | Custom session filters expanded: note type, card type, tags (chip multi-select), flag; listDueFlashcards gains includeNoteTypes/includeCardType/includeTags opts + flagColor 'none'; FlashcardWithItem adds tags to ind_items join; listCustomSessionMeta() added |
 | 2026-05-31 14:56 | FEATURE | M1-F: custom review sessions — filter icon button next to Review all; CustomSessionSheet (lang/dialect/source/dueOnly); review page reads custom params, bypasses global exclusions; listDueFlashcards gains inclusion opts + dueOnly |
 | 2026-05-31 14:32 | FEATURE | M1-F: goal deck priority — reload() post-sorts due cards with goal_collection_id cards first; goalCollectionId added to SessionContext |

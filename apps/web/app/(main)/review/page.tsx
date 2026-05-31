@@ -10,7 +10,7 @@ import {
   ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
   rateCard, rateCardRelearn, cardMeta, cardAudio,
   suspendCard, setFlagColor, deferCard, undoRating,
-  type FlashcardWithItem, type Rating,
+  type FlashcardWithItem, type Rating, type ListDueOpts,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
@@ -1014,7 +1014,9 @@ export default function ReviewPage() {
   const customCardType   = searchParams.get('cardType') ?? undefined
   const customTagsRaw    = searchParams.get('tags')
   const customTags       = customTagsRaw ? customTagsRaw.split(',').filter(Boolean) : undefined
-  const customFlag       = searchParams.get('flag') ?? undefined
+  const customFlagRaw    = searchParams.get('flag') ?? ''
+  const customFlag       = (['any','none'].includes(customFlagRaw) ? customFlagRaw : undefined) as string | undefined
+  const customFlagColors = !customFlag && customFlagRaw ? customFlagRaw.split(',').filter(Boolean) : undefined
   const customDueOnly    = searchParams.get('dueOnly') !== 'false'
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
@@ -1036,7 +1038,8 @@ export default function ReviewPage() {
     const [c, context] = await Promise.all([
       isCustom
         ? listDueFlashcards({
-            flagColor:           customFlag,
+            flagColor:           customFlag as ListDueOpts['flagColor'],
+            includeFlagColors:   customFlagColors,
             includeLangs:        customLang ? [customLang] : undefined,
             includeDialect:      customDialect,
             includeCollectionId: customCollection,
