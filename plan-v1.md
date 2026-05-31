@@ -60,7 +60,7 @@
 
 - [x] Goal deck cards sorted first — post-sort in reload() using goal_collection_id from profile; always on when goal deck is set
 - [x] Estimate daily review load in GoalSheet — linear simulator (now / peak / long-term rows)
-- [ ] Composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
+- [x] Card strength metric — model B: score = R × S_norm; R = exp(-t/interval_days), S_norm = min(interval/21,1); shown in browser expanded card panel (score % + R% · Sd); computeStrength() in schedule.ts
 - [x] Custom review sessions — filter icon next to Review all; CustomSessionSheet (lang, dialect, source, due-only toggle); bypasses global exclusions
 - [x] Daily reset time — getStudyDate() reads srs_reset_hour from localStorage (default 4am); stepper in review OptionsSheet (12am–6am)
 
