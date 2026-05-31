@@ -23,6 +23,7 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
   const [collections, setCollections] = useState<CollectionMeta[]>([])
   const [noteTypes,   setNoteTypes]   = useState<string[]>([])
   const [allTags,     setAllTags]     = useState<string[]>([])
+  const [allPlaces,   setAllPlaces]   = useState<string[]>([])
 
   // Filters
   const [lang,         setLang]         = useState('')
@@ -33,8 +34,7 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
   const [cardType,     setCardType]     = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [flagColors,   setFlagColors]   = useState<string[]>([])  // empty = all
-  const [flagAny,      setFlagAny]      = useState(false)
-  const [flagNone,     setFlagNone]     = useState(false)
+  const [placeHeard,   setPlaceHeard]   = useState('')
   const [dueOnly,      setDueOnly]      = useState(true)
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
       listCustomSessionMeta(),
     ]).then(([l, c, meta]) => {
       setLangs(l); setCollections(c)
-      setNoteTypes(meta.types); setAllTags(meta.tags)
+      setNoteTypes(meta.types); setAllTags(meta.tags); setAllPlaces(meta.places)
     })
   }, [open])
 
@@ -61,7 +61,6 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
   }
 
   function toggleFlagColor(key: string) {
-    setFlagAny(false); setFlagNone(false)
     setFlagColors(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
   }
 
@@ -74,9 +73,8 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
     if (noteType)            params.set('noteType', noteType)
     if (cardType)            params.set('cardType', cardType)
     if (selectedTags.length) params.set('tags', selectedTags.join(','))
-    if (flagAny)             params.set('flag', 'any')
-    else if (flagNone)       params.set('flag', 'none')
-    else if (flagColors.length) params.set('flag', flagColors.join(','))
+    if (flagColors.length)   params.set('flag', flagColors.join(','))
+    if (placeHeard)          params.set('placeHeard', placeHeard)
     if (!dueOnly)            params.set('dueOnly', 'false')
     router.push(`/review?${params}`)
     onClose()
@@ -87,7 +85,7 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
     border: `1px solid ${T.line}`, fontSize: 13.5, color: T.ink,
     fontFamily: 'inherit', cursor: 'pointer',
     appearance: 'none' as const, WebkitAppearance: 'none' as const,
-    minWidth: 130,
+    width: 168, flexShrink: 0,
   }
   const row: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -145,14 +143,16 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
             </button>
           </div>
 
-          {/* Language */}
-          <div style={row}>
-            <div><div style={lbl}>Language</div></div>
-            <select value={lang} onChange={e => { setLang(e.target.value); setCollectionId('') }} style={sel}>
-              <option value="">All</option>
-              {langs.map(l => <option key={l} value={l}>{getLangName(l)}</option>)}
-            </select>
-          </div>
+          {/* Language — only shown when user has multiple languages */}
+          {langs.length > 1 && (
+            <div style={row}>
+              <div><div style={lbl}>Language</div></div>
+              <select value={lang} onChange={e => { setLang(e.target.value); setCollectionId('') }} style={sel}>
+                <option value="">All</option>
+                {langs.map(l => <option key={l} value={l}>{getLangName(l)}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Dialect */}
           {dialects.length > 1 && (
@@ -182,6 +182,17 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
             </select>
           </div>
 
+          {/* Place heard */}
+          {allPlaces.length > 0 && (
+            <div style={row}>
+              <div><div style={lbl}>Place heard</div></div>
+              <select value={placeHeard} onChange={e => setPlaceHeard(e.target.value)} style={sel}>
+                <option value="">Anywhere</option>
+                {allPlaces.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          )}
+
           {/* Note type */}
           {noteTypes.length > 1 && (
             <div style={row}>
@@ -207,25 +218,6 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
           <div style={{ padding: '11px 0', borderBottom: `1px solid ${T.lineSoft}` }}>
             <div style={{ ...lbl, marginBottom: 10 }}>Flag</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              {/* Any / None pills */}
-              {(['any', 'none'] as const).map(opt => {
-                const on = opt === 'any' ? flagAny : flagNone
-                return (
-                  <button key={opt} onClick={() => {
-                    if (opt === 'any') { setFlagAny(v => !v); setFlagNone(false); setFlagColors([]) }
-                    else               { setFlagNone(v => !v); setFlagAny(false); setFlagColors([]) }
-                  }} style={{
-                    padding: '4px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
-                    background: on ? T.ink : T.paperHi,
-                    color: on ? T.cream : T.inkSoft,
-                    border: `1px solid ${on ? T.ink : T.line}`,
-                    fontWeight: on ? 600 : 400,
-                  }}>
-                    {opt === 'any' ? 'Any' : 'None'}
-                  </button>
-                )
-              })}
-              {/* Color dots */}
               {FLAG_COLORS.map(f => {
                 const on = flagColors.includes(f.key)
                 return (

@@ -22,7 +22,7 @@ export type FlashcardWithItem = Flashcard & {
   ind_items: {
     ab: string; zh: string | null; audio: string | null
     type: string; language: string; dialect: string | null; note_source: string
-    collection_id: string | null; tags: string[] | null
+    collection_id: string | null; tags: string[] | null; place_heard: string | null
     ind_learn_collections: { name: string; language: string } | null
   } | null
 }
@@ -122,14 +122,15 @@ export type DueStats = {
   byCollection: Record<string, number>
 }
 
-export async function listCustomSessionMeta(): Promise<{ types: string[]; tags: string[] }> {
+export async function listCustomSessionMeta(): Promise<{ types: string[]; tags: string[]; places: string[] }> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { types: [], tags: [] }
-  const { data } = await supabase.from('ind_items').select('type, tags').eq('user_id', user.id)
-  const types = [...new Set((data ?? []).map(r => r.type).filter(Boolean) as string[])].sort()
-  const tags  = [...new Set((data ?? []).flatMap(r => (r.tags ?? []) as string[]).filter(Boolean))].sort()
-  return { types, tags }
+  if (!user) return { types: [], tags: [], places: [] }
+  const { data } = await supabase.from('ind_items').select('type, tags, place_heard').eq('user_id', user.id)
+  const types  = [...new Set((data ?? []).map(r => r.type).filter(Boolean) as string[])].sort()
+  const tags   = [...new Set((data ?? []).flatMap(r => (r.tags ?? []) as string[]).filter(Boolean))].sort()
+  const places = [...new Set((data ?? []).map(r => r.place_heard).filter(Boolean) as string[])].sort()
+  return { types, tags, places }
 }
 
 export async function listUserLanguages(): Promise<string[]> {
@@ -198,6 +199,7 @@ export type ListDueOpts = {
   includeCardType?:     string     // 'default' | 'sts'
   includeTags?:        string[]   // OR logic: any of these tags
   includeFlagColors?:  string[]   // OR logic: any of these colors (post-filter; flagColor handles single/any/none at DB level)
+  includePlaceHeard?:  string     // exact match on place_heard
   dueOnly?:            boolean    // default true; false = all non-suspended cards
 }
 
@@ -206,7 +208,7 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
   const now = new Date().toISOString()
   let q = supabase
     .from('ind_flashcards')
-    .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, tags, ind_learn_collections(name, language))')
+    .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, tags, place_heard, ind_learn_collections(name, language))')
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
     .limit(10000)
@@ -248,6 +250,8 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     results = results.filter(c => opts.includeTags!.some(t => (c.ind_items?.tags ?? []).includes(t)))
   if (opts.includeFlagColors?.length)
     results = results.filter(c => opts.includeFlagColors!.includes(c.flag_color ?? ''))
+  if (opts.includePlaceHeard)
+    results = results.filter(c => c.ind_items?.place_heard === opts.includePlaceHeard)
 
   return results
 }
