@@ -117,6 +117,7 @@ Design a method to keep track of item sources and associate data to them (eg. di
 - [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
+- [ ] Rethink note vs card type architecture — clarify/consolidate distinction between `ind_items.type` (linguistic content type) and `ind_flashcards.card_type` (review presentation mode)
 - [ ] Merge `redesign/srs-overhaul` → main
 
 Phase 9 deferred items:
@@ -151,6 +152,7 @@ Phase 9 deferred items:
 - 階層×10 system (tadpole - crab - mangcel - fafoy - bear - kawas?)
 - User contributions — send to pending DB
 - OCR capture
+- AI-formatted json from other formats (txt, csv, pdf) for teachers
 
 ---
 

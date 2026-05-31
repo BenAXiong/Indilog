@@ -214,15 +214,15 @@ export default function CustomSessionSheet({ open, onClose }: Props) {
             </select>
           </div>
 
-          {/* Flag — dot toggles */}
-          <div style={{ padding: '11px 0', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ ...lbl, marginBottom: 10 }}>Flag</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* Flag — dot toggles inline */}
+          <div style={row}>
+            <div style={lbl}>Flag</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {FLAG_COLORS.map(f => {
                 const on = flagColors.includes(f.key)
                 return (
                   <button key={f.key} onClick={() => toggleFlagColor(f.key)} aria-label={f.key} style={{
-                    width: 28, height: 28, borderRadius: 999, cursor: 'pointer',
+                    width: 26, height: 26, borderRadius: 999, cursor: 'pointer',
                     background: flagColorHex(f.key) ?? undefined,
                     border: `3px solid ${on ? T.ink : 'transparent'}`,
                     boxShadow: on ? `0 0 0 1px ${flagColorHex(f.key)}` : 'none',

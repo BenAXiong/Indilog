@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 15:26 | REFACTOR | CustomSessionSheet: flag swatches inline with label; plan-v1 M5: add note/card type architecture task |
 | 2026-05-31 15:20 | REFACTOR | CustomSessionSheet: remove Any/None flag pills; uniform select width (168px); language conditional on >1 lang; add place_heard filter; place_heard + tags in listDueFlashcards join |
 | 2026-05-31 15:11 | REFACTOR | CustomSessionSheet: flag dropdown → dot toggles (Any/None pills + color circles, multi-select); due-only toggle moved to top; multi-flag URL param (red,green); includeFlagColors post-filter in listDueFlashcards |
 | 2026-05-31 15:04 | FEATURE | Custom session filters expanded: note type, card type, tags (chip multi-select), flag; listDueFlashcards gains includeNoteTypes/includeCardType/includeTags opts + flagColor 'none'; FlashcardWithItem adds tags to ind_items join; listCustomSessionMeta() added |
