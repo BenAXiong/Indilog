@@ -7,7 +7,7 @@
 
 ---
 
-## Milestone 1 — SRS + Review Overhaul — COMPLETE (2026-05-31)
+## Milestone 1 — SRS + Review Overhaul — M1-A–E complete; M1-F pending
 
 **Goal:** A smooth, motivating spaced-repetition loop that draws from all content sources — captured items, dict/learn saves, and a custom Amis1k vocabulary collection — with daily goals, progress views, stats, and streaks.
 
@@ -56,6 +56,10 @@
 - [ ] Undo last rating — not implemented; not missed in practice
 - [ ] Skip card (no rating) — not implemented; Again + requeue covers this need
 
+### M1-F — Goal priority
+
+- [ ] Goal deck cards sorted first in `listDueFlashcards`; on by default; toggleable in session options
+
 ---
 
 ## Milestone 2 — Library / Browser
@@ -83,7 +87,7 @@
 
 ---
 
-## Milestone 3 — Corpus rescrape *(intercalated — blocks curriculum quality)*
+## Milestone 3 — Corpus rescrape
 
 Essays and dialogues need to be rescraped. This is content/corpus work but impacts curriculum usage too strongly to defer — stale or broken curriculum content undermines the core study loop.
 
@@ -96,7 +100,6 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 
 ## Milestone 4 — SRS Enhancements
 
-- [ ] Goal deck as review content priority — goal-deck cards sorted first in `listDueFlashcards`; on by default; toggleable
 - [ ] Reviews/day simulator in GoalSheet — estimate daily review load based on deck size and goal *(scope: simple linear estimate first; SM-2 growth simulation later)*
 - [ ] Card strength indicator — composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
 - [ ] Custom review sessions — filter session by deck, tags, fields, flags; design pass needed before building
@@ -104,13 +107,7 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 
 ---
 
-## Milestone 5 — Learn Tab
-
-- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
-
----
-
-## Milestone 6 — Polish *(was M3, extended)*
+## Milestone 5 — Polish
 
 Quick fixes:
 
@@ -127,6 +124,7 @@ Phase 9 deferred items:
 - [ ] Local cache for fast startup (profile + lang on first render, no flash)
 - [ ] Capture-page Translate action
 - [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh`
+- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
 
 ---
 
@@ -135,17 +133,12 @@ Phase 9 deferred items:
 - **Set per-deck card types** — STS auto-generation requires a `target_word` per note which can't be automated without AI; realistically means "mark deck as STS, set targets manually in browser." Under-designed for v1.
 - **Dummy user profile for testing (stats)** — dev tooling, not user-facing; separate dev track.
 
----
-
-## Not v1
-
-- Video capture — v2 new feature
-- Refactor — ongoing, not a milestone
 
 ---
 
 ## Longterm
 
+- Video capture — v2 new feature
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k
 - Amis1k: add simple example sentences
 - Icons: align with CD design handoff
@@ -158,6 +151,6 @@ Phase 9 deferred items:
 ## Versioning
 
 - **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done.
-- **v1** — M1 complete. M2–M6 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M6 extend to `v1.x`.
+- **v1** — M1-A–E complete; M1-F pending. M2–M5 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M5 extend to `v1.x`.
 
 Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1 + M2 ship.
