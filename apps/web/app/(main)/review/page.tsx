@@ -1010,6 +1010,11 @@ export default function ReviewPage() {
   const customDialect    = searchParams.get('dialect') ?? undefined
   const customCollection = searchParams.get('collectionId') ?? undefined
   const customCaptures   = searchParams.get('capturesOnly') === 'true'
+  const customNoteType   = searchParams.get('noteType') ?? undefined
+  const customCardType   = searchParams.get('cardType') ?? undefined
+  const customTagsRaw    = searchParams.get('tags')
+  const customTags       = customTagsRaw ? customTagsRaw.split(',').filter(Boolean) : undefined
+  const customFlag       = searchParams.get('flag') ?? undefined
   const customDueOnly    = searchParams.get('dueOnly') !== 'false'
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
@@ -1031,10 +1036,14 @@ export default function ReviewPage() {
     const [c, context] = await Promise.all([
       isCustom
         ? listDueFlashcards({
+            flagColor:           customFlag,
             includeLangs:        customLang ? [customLang] : undefined,
             includeDialect:      customDialect,
             includeCollectionId: customCollection,
             capturesOnly:        customCaptures,
+            includeNoteTypes:    customNoteType ? [customNoteType] : undefined,
+            includeCardType:     customCardType,
+            includeTags:         customTags,
             dueOnly:             customDueOnly,
           })
         : (async () => {

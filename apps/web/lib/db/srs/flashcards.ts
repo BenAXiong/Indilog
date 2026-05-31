@@ -22,7 +22,7 @@ export type FlashcardWithItem = Flashcard & {
   ind_items: {
     ab: string; zh: string | null; audio: string | null
     type: string; language: string; dialect: string | null; note_source: string
-    collection_id: string | null
+    collection_id: string | null; tags: string[] | null
     ind_learn_collections: { name: string; language: string } | null
   } | null
 }
@@ -122,6 +122,16 @@ export type DueStats = {
   byCollection: Record<string, number>
 }
 
+export async function listCustomSessionMeta(): Promise<{ types: string[]; tags: string[] }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { types: [], tags: [] }
+  const { data } = await supabase.from('ind_items').select('type, tags').eq('user_id', user.id)
+  const types = [...new Set((data ?? []).map(r => r.type).filter(Boolean) as string[])].sort()
+  const tags  = [...new Set((data ?? []).flatMap(r => (r.tags ?? []) as string[]).filter(Boolean))].sort()
+  return { types, tags }
+}
+
 export async function listUserLanguages(): Promise<string[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -174,17 +184,20 @@ export async function getDueStats(
 }
 
 export type ListDueOpts = {
-  flagColor?:          string | 'any'
+  flagColor?:           string | 'any' | 'none'
   // global exclusions (Review all mode)
-  excludeLangs?:       string[]
-  excludeCollections?: string[]
-  excludeCaptures?:    boolean
+  excludeLangs?:        string[]
+  excludeCollections?:  string[]
+  excludeCaptures?:     boolean
   // custom session inclusions (bypass exclusions)
-  includeLangs?:       string[]
-  includeDialect?:     string
+  includeLangs?:        string[]
+  includeDialect?:      string
   includeCollectionId?: string
-  capturesOnly?:       boolean
-  dueOnly?:            boolean   // default true; false = all non-suspended cards
+  capturesOnly?:        boolean
+  includeNoteTypes?:    string[]   // filter by ind_items.type
+  includeCardType?:     string     // 'default' | 'sts'
+  includeTags?:         string[]   // OR logic: any of these tags
+  dueOnly?:             boolean    // default true; false = all non-suspended cards
 }
 
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
@@ -192,14 +205,15 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
   const now = new Date().toISOString()
   let q = supabase
     .from('ind_flashcards')
-    .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, ind_learn_collections(name, language))')
+    .select('*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, tags, ind_learn_collections(name, language))')
     .is('suspended_at', null)
     .order('due_at', { ascending: true, nullsFirst: true })
     .limit(10000)
 
   if (opts.dueOnly !== false) q = q.or(`due_at.is.null,due_at.lte.${now}`)
-  if (opts.flagColor === 'any') q = q.not('flag_color', 'is', null)
-  else if (opts.flagColor)      q = q.eq('flag_color', opts.flagColor)
+  if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
+  else if (opts.flagColor === 'none') q = q.is('flag_color', null)
+  else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
 
   const { data, error } = await q
   if (error) { console.error('listDueFlashcards:', error); return [] }
@@ -225,6 +239,12 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     results = results.filter(c => c.ind_items?.collection_id === opts.includeCollectionId)
   else if (opts.capturesOnly)
     results = results.filter(c => c.ind_items?.note_source !== 'collection')
+  if (opts.includeNoteTypes?.length)
+    results = results.filter(c => opts.includeNoteTypes!.includes(c.ind_items?.type ?? ''))
+  if (opts.includeCardType)
+    results = results.filter(c => c.card_type === opts.includeCardType)
+  if (opts.includeTags?.length)
+    results = results.filter(c => opts.includeTags!.some(t => (c.ind_items?.tags ?? []).includes(t)))
 
   return results
 }

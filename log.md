@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 15:04 | FEATURE | Custom session filters expanded: note type, card type, tags (chip multi-select), flag; listDueFlashcards gains includeNoteTypes/includeCardType/includeTags opts + flagColor 'none'; FlashcardWithItem adds tags to ind_items join; listCustomSessionMeta() added |
 | 2026-05-31 14:56 | FEATURE | M1-F: custom review sessions — filter icon button next to Review all; CustomSessionSheet (lang/dialect/source/dueOnly); review page reads custom params, bypasses global exclusions; listDueFlashcards gains inclusion opts + dueOnly |
 | 2026-05-31 14:32 | FEATURE | M1-F: goal deck priority — reload() post-sorts due cards with goal_collection_id cards first; goalCollectionId added to SessionContext |
 | 2026-05-31 14:24 | REFACTOR | listDueFlashcards: remove 20/200 batch limit, replace with 10k safety cap; remove slice(0,20); post-filters now always apply unconditionally |
