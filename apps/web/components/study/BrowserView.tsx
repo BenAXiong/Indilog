@@ -277,12 +277,19 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               </div>
             )}
 
-            {/* Save / cancel */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
-                {saving ? 'Saving…' : 'Save'}
-              </button>
-              <button onClick={onToggle} style={ghostBtn}>Cancel</button>
+            {/* Save / cancel / delete */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              <button onClick={() => setConfirmDelete(true)} style={{
+                height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                border: `1px solid ${T.lineSoft}`, background: 'none',
+                color: T.inkFaint, cursor: 'pointer',
+              }}>Delete…</button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+                <button onClick={onToggle} style={ghostBtn}>Cancel</button>
+              </div>
             </div>
 
             {/* Info strip */}
@@ -357,14 +364,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               )}
             </div>
 
-            {/* Delete */}
-            {!confirmDelete ? (
-              <button onClick={() => setConfirmDelete(true)} style={{
-                height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-                border: `1px solid ${T.lineSoft}`, background: 'none',
-                color: T.inkFaint, cursor: 'pointer',
-              }}>Delete note…</button>
-            ) : (
+            {/* Delete confirmation */}
+            {confirmDelete && (
               <div style={{ padding: '10px 12px', borderRadius: 10, background: T.crimsonBg, border: `1px solid #EFCAB8` }}>
                 <div style={{ fontSize: 12, color: T.crimson, fontWeight: 600, marginBottom: 4 }}>
                   Permanently delete this note?
