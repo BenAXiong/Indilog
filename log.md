@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 15:42 | PHASE COMPLETE | M1 — SRS + Review Overhaul complete (M1-A through M1-F) |
 | 2026-05-31 15:40 | FEATURE | M1-F: card strength metric (model B) — computeStrength() in schedule.ts; R×S_norm score (0–100%), R + S components; displayed in BrowserView expanded card panel |
 | 2026-05-31 15:26 | REFACTOR | CustomSessionSheet: flag swatches inline with label; plan-v1 M5: add note/card type architecture task |
 | 2026-05-31 15:20 | REFACTOR | CustomSessionSheet: remove Any/None flag pills; uniform select width (168px); language conditional on >1 lang; add place_heard filter; place_heard + tags in listDueFlashcards join |

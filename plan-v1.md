@@ -7,7 +7,7 @@
 
 ---
 
-## Milestone 1 — SRS + Review Overhaul — M1-A–E complete; M1-F pending
+## Milestone 1 — SRS + Review Overhaul — COMPLETE (2026-05-31)
 
 **Goal:** A smooth, motivating spaced-repetition loop that draws from all content sources — captured items, dict/learn saves, and a custom Amis1k vocabulary collection — with daily goals, progress views, stats, and streaks.
 
@@ -159,6 +159,6 @@ Phase 9 deferred items:
 ## Versioning
 
 - **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done.
-- **v1** — M1-A–E complete; M1-F–J pending. M2–M4 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M4 extend to `v1.x`.
+- **v1** — M1 complete. M2–M5 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M5 extend to `v1.x`.
 
 Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1 + M2 ship.
