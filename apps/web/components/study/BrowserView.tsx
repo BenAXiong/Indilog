@@ -372,6 +372,11 @@ export default function BrowserView() {
   const [cards,           setCards]           = useState<BrowserCard[]>([])
   const [loading,         setLoading]         = useState(true)
   const [expandedId,      setExpandedId]      = useState<string | null>(null)
+  const [showFieldFilters, setShowFieldFilters] = useState(false)
+  const [fLang,   setFLang]   = useState('')
+  const [fType,   setFType]   = useState('')
+  const [fSource, setFSource] = useState('')
+  const [fTags,   setFTags]   = useState<string[]>([])
 
   useEffect(() => {
     if (filter !== 'flagged') setFlagColorFilter(null)
@@ -384,13 +389,30 @@ export default function BrowserView() {
       .then(c => { setCards(c); setLoading(false) })
   }, [filter, sort, flagColorFilter])
 
+  const fieldSelStyle: React.CSSProperties = {
+    height: 28, padding: '0 24px 0 8px', borderRadius: 7, fontSize: 11.5,
+    background: T.paper, border: `1px solid ${T.line}`, color: T.inkSoft,
+    fontFamily: 'inherit', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+  }
+
+  const availLangs   = useMemo(() => [...new Set(cards.map(c => c.language).filter(Boolean))].sort(), [cards])
+  const availTypes   = useMemo(() => [...new Set(cards.map(c => c.note_type).filter(Boolean))].sort(), [cards])
+  const availSources = useMemo(() => [...new Set(cards.map(c => c.source).filter(Boolean))].sort(), [cards])
+  const availTags    = useMemo(() => [...new Set(cards.flatMap(c => c.tags ?? []))].sort(), [cards])
+  const activeFieldFilters = [fLang, fType, fSource, ...fTags].filter(Boolean).length
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return cards
-    const q = search.toLowerCase()
-    return cards.filter(c =>
-      c.ab.toLowerCase().includes(q) || (c.zh ?? '').toLowerCase().includes(q)
-    )
-  }, [cards, search])
+    let result = cards
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(c => c.ab.toLowerCase().includes(q) || (c.zh ?? '').toLowerCase().includes(q))
+    }
+    if (fLang)        result = result.filter(c => c.language === fLang)
+    if (fType)        result = result.filter(c => c.note_type === fType)
+    if (fSource)      result = result.filter(c => c.source === fSource)
+    if (fTags.length) result = result.filter(c => fTags.some(t => (c.tags ?? []).includes(t)))
+    return result
+  }, [cards, search, fLang, fType, fSource, fTags])
 
   function updateCard(id: string, patch: Partial<BrowserCard>) {
     setCards(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
@@ -436,20 +458,87 @@ export default function BrowserView() {
             </button>
           ))}
         </div>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <select value={sort} onChange={e => setSort(e.target.value as BrowserSort)} style={{
-            height: 30, padding: '0 26px 0 10px', borderRadius: 8,
-            background: T.paperHi, border: `1px solid ${T.line}`,
-            fontSize: 12, color: T.inkSoft, fontFamily: 'inherit', cursor: 'pointer',
-            appearance: 'none', WebkitAppearance: 'none',
+        <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
+          {/* Field filter toggle */}
+          <button onClick={() => setShowFieldFilters(v => !v)} style={{
+            position: 'relative', height: 30, width: 30, borderRadius: 8, cursor: 'pointer',
+            background: showFieldFilters || activeFieldFilters > 0 ? T.crimsonBg : T.paperHi,
+            border: `1px solid ${showFieldFilters || activeFieldFilters > 0 ? T.crimson : T.line}`,
+            color: showFieldFilters || activeFieldFilters > 0 ? T.crimson : T.inkSoft,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-            <Icon name="chev-d" size={11} strokeWidth={2} />
+            <Icon name="filter" size={13} strokeWidth={1.8} />
+            {activeFieldFilters > 0 && (
+              <span style={{
+                position: 'absolute', top: -4, right: -4, width: 14, height: 14,
+                borderRadius: 999, background: T.crimson, color: '#fff',
+                fontSize: 8, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: '"JetBrains Mono", monospace',
+              }}>{activeFieldFilters}</span>
+            )}
+          </button>
+          {/* Sort */}
+          <div style={{ position: 'relative' }}>
+            <select value={sort} onChange={e => setSort(e.target.value as BrowserSort)} style={{
+              height: 30, padding: '0 26px 0 10px', borderRadius: 8,
+              background: T.paperHi, border: `1px solid ${T.line}`,
+              fontSize: 12, color: T.inkSoft, fontFamily: 'inherit', cursor: 'pointer',
+              appearance: 'none', WebkitAppearance: 'none',
+            }}>
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+              <Icon name="chev-d" size={11} strokeWidth={2} />
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Field filters row */}
+      {showFieldFilters && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px', borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}` }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {availLangs.length > 1 && (
+              <select value={fLang} onChange={e => setFLang(e.target.value)} style={fieldSelStyle}>
+                <option value="">All languages</option>
+                {availLangs.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            )}
+            {availTypes.length > 1 && (
+              <select value={fType} onChange={e => setFType(e.target.value)} style={fieldSelStyle}>
+                <option value="">All types</option>
+                {availTypes.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            )}
+            {availSources.length > 1 && (
+              <select value={fSource} onChange={e => setFSource(e.target.value)} style={fieldSelStyle}>
+                <option value="">All sources</option>
+                {availSources.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+            {activeFieldFilters > 0 && (
+              <button onClick={() => { setFLang(''); setFType(''); setFSource(''); setFTags([]) }} style={{
+                height: 28, padding: '0 10px', borderRadius: 7, fontSize: 11, cursor: 'pointer',
+                background: 'none', border: `1px solid ${T.lineSoft}`, color: T.inkMute,
+              }}>Clear</button>
+            )}
+          </div>
+          {availTags.length > 0 && (
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              {availTags.map(tag => {
+                const on = fTags.includes(tag)
+                return (
+                  <button key={tag} onClick={() => setFTags(prev => on ? prev.filter(t => t !== tag) : [...prev, tag])} style={{
+                    height: 24, padding: '0 8px', borderRadius: 999, fontSize: 11, cursor: 'pointer',
+                    background: on ? T.crimson : T.paper, color: on ? '#fff' : T.inkSoft,
+                    border: `1px solid ${on ? T.crimsonDp : T.lineSoft}`, fontWeight: on ? 600 : 400,
+                  }}>{tag}</button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Flag color sub-filter (when Flagged is selected) */}
       {filter === 'flagged' && (

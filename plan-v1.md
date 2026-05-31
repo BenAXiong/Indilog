@@ -83,11 +83,11 @@
 
 ### Remaining
 
-- [ ] Delete note from browser
-- [ ] Additional filters — by language, type, source, deck, tags, date range
-- [ ] Link → Review (start session from a specific card)
-- [ ] Link → Dictionary (look up the word)
-- [ ] Batch select + delete
+- [x] Field filters — language, type, source/deck, tags (collapsible row, derived from loaded cards, active-count badge)
+- [ ] Delete note from browser — soft-delete ind_items (deleted_at); hard-delete ind_flashcards; ind_reviews preserved via SET NULL migration
+- [ ] Dict lookup button in expanded card — batch lookup ab field, auto-fill empty zh from results
+- [ ] Date range filter (isolated)
+- [ ] Batch select + delete / suspend / flag
 
 ---
 
