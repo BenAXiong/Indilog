@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -999,7 +1000,7 @@ function ReviewEnd({
 
 // ─── Landing ──────────────────────────────────────────────────────────────────
 
-export default function ReviewPage() {
+function ReviewPage() {
   const { lang, dialectLabel } = useLang()
   const searchParams     = useSearchParams()
   const flagParam        = searchParams.get('flag')
@@ -1156,4 +1157,8 @@ export default function ReviewPage() {
       )}
     </div>
   )
+}
+
+export default function ReviewPageWithSuspense() {
+  return <Suspense><ReviewPage /></Suspense>
 }

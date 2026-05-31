@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 18:05 | FIX | Wrap review page in Suspense — useSearchParams() requires Suspense boundary for Next.js 15 static generation |
 | 2026-05-31 18:03 | FIX | Add 'use client' to learn sub-pages (dialogues, essays, lessons, patterns) — RSC bundler failed to include StudyView in client manifest after learn/page.tsx became a redirect |
 | 2026-05-31 17:59 | FIX | Add missing curriculum-progress API route + learn page to git (were untracked, broke Vercel build) |
 | 2026-05-31 17:33 | FIX | Paginate getDueStats, listUserLanguages, resetCollectionSRS, resetCapturesSRS — all had .limit(10000) silently capped at 1000 by PostgREST server |
