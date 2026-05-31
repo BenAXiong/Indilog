@@ -13,7 +13,7 @@ type Props = {
   lookupOn: boolean
   onLookup?: (word: string, rect: DOMRect) => void
   onPlay: (url: string) => void
-  onSave: (ab: string, zh: string) => Promise<void>
+  onSave: (ab: string, zh: string, audioUrl?: string | null) => Promise<void>
 }
 
 export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPlay, onSave }: Readonly<Props>) {
@@ -34,7 +34,7 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
   }
 
   const handleSave = async () => {
-    await onSave(row.ab, row.zh)
+    await onSave(row.ab, row.zh, row.audio_url)
     setSaved(true)
   }
 

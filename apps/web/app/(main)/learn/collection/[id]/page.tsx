@@ -10,7 +10,7 @@ import {
   renameCollection, deleteCollection,
   type CollectionCard,
 } from '@/lib/db/progress/collections'
-import { generateFlashcardsFromCollection } from '@/lib/db/srs/flashcards'
+import { ensureFlashcards } from '@/lib/db/srs/flashcards'
 
 type LessonGroup = { lesson: number; cards: CollectionCard[] }
 type LevelGroup  = { level: number; lessons: LessonGroup[] }
@@ -32,8 +32,7 @@ export default function CollectionPage() {
   const [renaming,   setRenaming]   = useState(false)
   const [nameEdit,   setNameEdit]   = useState('')
   const [confirmDel, setConfirmDel] = useState(false)
-  const [queueing,   setQueueing]   = useState(false)
-  const [queued,     setQueued]     = useState<number | null>(null)
+  const [queueing, setQueueing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -82,15 +81,13 @@ export default function CollectionPage() {
 
   async function handleStartReview() {
     setQueueing(true)
-    const added = await generateFlashcardsFromCollection(id)
+    await ensureFlashcards()
     setQueueing(false)
-    setQueued(added)
-    if (added > 0) router.push('/review')
+    router.push('/review')
   }
 
   const totalCards   = levels.reduce((s, lv) => s + lv.lessons.reduce((ss, ls) => ss + ls.cards.length, 0), 0)
   const totalLessons = levels.reduce((s, lv) => s + lv.lessons.length, 0)
-  const reviewBtnLabel = reviewLabel(queueing, queued)
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -174,7 +171,7 @@ export default function CollectionPage() {
         }}
       >
         <Icon name="review" size={18} strokeWidth={1.8} color={queueing ? T.inkFaint : '#fff'} />
-        {reviewBtnLabel}
+        {queueing ? 'Preparing…' : 'Study this collection'}
       </button>
 
       {/* Level / lesson groups */}
@@ -236,10 +233,4 @@ export default function CollectionPage() {
       ))}
     </div>
   )
-}
-
-function reviewLabel(queueing: boolean, queued: number | null): string {
-  if (queueing) return 'Adding to queue…'
-  if (queued === 0) return 'Already in review queue'
-  return 'Start reviewing'
 }

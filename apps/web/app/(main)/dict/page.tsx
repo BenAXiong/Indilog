@@ -353,7 +353,7 @@ export default function DictionaryPage() {
   }
 
   async function handleSaveMerged(ab: string, dialect: string, def: string) {
-    await createItem({ text: ab, type: 'word', language: dialect, notes: def })
+    await createItem({ ab, zh: def, type: 'word', language: dialect, note_source: 'dict' })
     setSaveMsg(`Saved "${ab}"`)
     setTimeout(() => setSaveMsg(null), 2000)
   }
@@ -365,10 +365,8 @@ export default function DictionaryPage() {
 
   async function handleSave(word: WordResult) {
     await createItem({
-      text: word.word_ab,
-      type: 'word',
-      language: word.dialect_name,
-      notes: word.word_ch,
+      ab: word.word_ab, zh: word.word_ch,
+      type: 'word', language: word.dialect_name, note_source: 'dict',
     })
     setSaveMsg(`Saved "${word.word_ab}"`)
     setTimeout(() => setSaveMsg(null), 2000)
@@ -380,7 +378,7 @@ export default function DictionaryPage() {
   }
 
   async function handleSaveSentence(s: SentenceResult) {
-    await createItem({ text: s.ab, type: 'sentence', language: s.dialect_name, notes: s.zh })
+    await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: s.dialect_name, note_source: 'dict' })
     setSaveMsg('Sentence saved')
     setTimeout(() => setSaveMsg(null), 2000)
   }

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Indivore — SRS screens</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; }
+    body { font-family: Manrope, system-ui, sans-serif; }
+    #root { width: 100%; height: 100%; }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <script type="text/babel" src="indivore-tokens.jsx"></script>
+  <script type="text/babel" src="indivore-ui-v2.jsx"></script>
+  <script type="text/babel" src="indivore-srs-screens.jsx"></script>
+  <script type="text/babel" src="indivore-srs-review.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+    (() => {
+    const {
+      DesignCanvas, DCSection, DCArtboard,
+      TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakSlider,
+      TOKENS: T, Icon, IvStatusBar,
+      SrsDashboard, SrsStudy, SrsReview, SrsEnd,
+    } = window;
+
+    const LANG = { name: 'Amis', letter: 'A', color: T.crimson, dialect: 'Sakizaya' };
+
+    // ─── 4-tab SRS bottom nav (Home / Study / Capture / Profile) ───
+    function SrsNav({ active }) {
+      const items = [
+        { id: 'home',    label: 'Home',    icon: 'home' },
+        { id: 'study',   label: 'Study',   icon: 'review' },
+        { id: 'capture', label: 'Capture', icon: 'capture' },
+        { id: 'profile', label: 'Profile', icon: 'user' },
+      ];
+      return (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30,
+          paddingBottom: 26, paddingTop: 8,
+          background: `linear-gradient(to top, ${T.cream} 72%, rgba(245,238,223,0))`,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-around', padding: '0 18px' }}>
+            {items.map((it) => {
+              const on = it.id === active;
+              return (
+                <div key={it.id} style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  color: on ? T.crimson : T.inkMute, padding: '4px 8px',
+                }}>
+                  <Icon name={it.icon} size={22} strokeWidth={on ? 2 : 1.6} />
+                  <span style={{ fontSize: 10.5, fontWeight: on ? 600 : 500, letterSpacing: '-0.005em' }}>{it.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── iPhone frame (375pt content) ───
+    function Frame({ children, nav, navActive, dark }) {
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="iv" style={{
+            width: 375, height: 812, borderRadius: 46, overflow: 'hidden', position: 'relative',
+            background: T.cream, fontFamily: T.fSans, WebkitFontSmoothing: 'antialiased',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 30px 70px rgba(60,40,20,0.18), 0 0 0 1px rgba(40,30,20,0.1)',
+          }}>
+            {/* dynamic island */}
+            <div style={{
+              position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+              width: 118, height: 33, borderRadius: 22, background: '#1a1410', zIndex: 50,
+            }} />
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <IvStatusBar />
+              <div className="iv-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                {children}
+                {nav && <div style={{ height: 76 }} />}
+              </div>
+            </div>
+            {nav && <SrsNav active={navActive} />}
+            {/* home indicator */}
+            <div style={{
+              position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+              width: 130, height: 5, borderRadius: 100, background: 'rgba(40,30,20,0.28)', zIndex: 60, pointerEvents: 'none',
+            }} />
+          </div>
+        </div>
+      );
+    }
+
+    const AB = { w: 431, h: 876 };
+
+    function SrsCanvas() {
+      return (
+        <DesignCanvas>
+          <DCSection id="hub" title="SRS · Dashboard & Study" subtitle="Motivational hub + deck management">
+            <DCArtboard id="dashboard" label="01 · Dashboard" width={AB.w} height={AB.h}>
+              <Frame nav navActive="home"><SrsDashboard lang={LANG} /></Frame>
+            </DCArtboard>
+            <DCArtboard id="study-decks" label="02 · Study · Decks" width={AB.w} height={AB.h}>
+              <Frame nav navActive="study"><SrsStudy lang={LANG} activeTab="decks" /></Frame>
+            </DCArtboard>
+            <DCArtboard id="study-browser" label="02b · Study · Browser (empty)" width={AB.w} height={AB.h}>
+              <Frame nav navActive="study"><SrsStudy lang={LANG} activeTab="browser" /></Frame>
+            </DCArtboard>
+            <DCArtboard id="study-stats" label="02c · Study · Stats (empty)" width={AB.w} height={AB.h}>
+              <Frame nav navActive="study"><SrsStudy lang={LANG} activeTab="stats" /></Frame>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="session" title="SRS · Review session" subtitle="Full screen · nav hidden · card states">
+            <DCArtboard id="rev-front" label="03a · Card front (swipe affordance)" width={AB.w} height={AB.h}>
+              <Frame><SrsReview state="front" /></Frame>
+            </DCArtboard>
+            <DCArtboard id="rev-four" label="03b · Revealed · 4 buttons" width={AB.w} height={AB.h}>
+              <Frame><SrsReview state="four" /></Frame>
+            </DCArtboard>
+            <DCArtboard id="rev-two" label="03c · Revealed · 2 buttons" width={AB.w} height={AB.h}>
+              <Frame><SrsReview state="two" /></Frame>
+            </DCArtboard>
+            <DCArtboard id="rev-options" label="03d · Options sheet" width={AB.w} height={AB.h}>
+              <Frame><SrsReview state="options" /></Frame>
+            </DCArtboard>
+          </DCSection>
+
+          <DCSection id="end" title="SRS · Review end" subtitle="Goal-met vs. low-due states">
+            <DCArtboard id="end-met" label="04a · Goal met (confetti)" width={AB.w} height={AB.h}>
+              <Frame><SrsEnd variant="met" /></Frame>
+            </DCArtboard>
+            <DCArtboard id="end-low" label="04b · Few due (nudge)" width={AB.w} height={AB.h}>
+              <Frame><SrsEnd variant="low" /></Frame>
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    function App() {
+      const [t, setTweak] = useTweaks(/*EDITMODE-BEGIN*/{
+        "displayFont": "Newsreader",
+        "uiFont": "Manrope",
+        "warmth": 0
+      }/*EDITMODE-END*/);
+
+      React.useEffect(() => {
+        let s = document.getElementById('srs-font-override');
+        if (!s) { s = document.createElement('style'); s.id = 'srs-font-override'; document.head.appendChild(s); }
+        s.textContent = `
+          .iv, .iv input, .iv textarea, .iv button { font-family: ${t.uiFont}, "Helvetica Neue", system-ui, sans-serif !important; }
+          .iv .serif, .iv h1, .iv h2, .iv h3 { font-family: ${t.displayFont}, "Source Serif Pro", Georgia, serif !important; }
+        `;
+      }, [t.displayFont, t.uiFont]);
+
+      const filter = `sepia(${Math.abs(t.warmth) * 0.6}) hue-rotate(${t.warmth < 0 ? '-' : ''}${Math.abs(t.warmth) * 12}deg) saturate(${1 + t.warmth * 0.15})`;
+
+      return (
+        <React.Fragment>
+          <div style={{ width: '100%', height: '100%', filter: t.warmth !== 0 ? filter : 'none' }}>
+            <SrsCanvas />
+          </div>
+          <TweaksPanel title="Tweaks">
+            <TweakSection label="Typography">
+              <TweakSelect label="Display" value={t.displayFont} onChange={(v) => setTweak('displayFont', v)}
+                options={[
+                  { value: 'Newsreader', label: 'Newsreader (default)' },
+                  { value: 'Source Serif 4', label: 'Source Serif 4' },
+                  { value: 'Lora', label: 'Lora' },
+                  { value: 'Cormorant Garamond', label: 'Cormorant Garamond' },
+                ]} />
+              <TweakSelect label="UI" value={t.uiFont} onChange={(v) => setTweak('uiFont', v)}
+                options={[
+                  { value: 'Manrope', label: 'Manrope (default)' },
+                  { value: 'Public Sans', label: 'Public Sans' },
+                  { value: 'DM Sans', label: 'DM Sans' },
+                  { value: 'Inter Tight', label: 'Inter Tight' },
+                ]} />
+            </TweakSection>
+            <TweakSection label="Paper">
+              <TweakSlider label="Warmth" value={t.warmth} onChange={(v) => setTweak('warmth', v)} min={-1} max={1} step={0.1} />
+            </TweakSection>
+          </TweaksPanel>
+        </React.Fragment>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    })();
+  </script>
+</body>
+</html>

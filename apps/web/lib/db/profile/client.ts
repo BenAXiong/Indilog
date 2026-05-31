@@ -12,6 +12,13 @@ export async function getProfile() {
   return data
 }
 
+export async function setCapturesIncludeInReview(include: boolean): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('ind_profiles').upsert({ user_id: user.id, include_in_review: include })
+}
+
 export async function updateDefaultDialect(dialect: string): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

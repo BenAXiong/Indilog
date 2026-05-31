@@ -19,6 +19,7 @@ Build in layers. Complete each phase before moving to the next. Do not half-wire
 | `decisions.md` | Open questions and resolved architectural/product decisions | When a new ambiguity is discovered or resolved |
 | `agents.md` (this file) | Workflow rules for agents | When a new pattern or rule is established |
 | `CLAUDE.md` | Project-level setup notes for Claude Code | When env vars, commands, or tooling change |
+| `architecture.md` | Canonical data model — Note/Card schema, session modes, audio resolution, migration status | When schema or model decisions change |
 
 **Rule:** Do not end a session without updating `log.md` and checking that `plan.md` reflects completed work.
 
@@ -88,6 +89,8 @@ Do not silently make any decision — minor or major — without logging it and 
 ---
 
 ## Architecture rules
+
+**Data model:** Before touching `ind_items`, `ind_flashcards`, or any file in `lib/db/srs/` or `lib/db/notebook/`, read `architecture.md`. It is the canonical reference for the Note/Card model, field names, session modes, and migration status. Do not add `front`/`back` fields to notes or cards under any circumstances.
 
 Before creating any new file in `apps/web/lib/` or `apps/web/components/`, check the directory contract in **DEC-ARCH01** (`decisions.md`) and place it in the right folder:
 

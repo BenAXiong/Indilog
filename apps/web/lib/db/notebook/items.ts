@@ -3,17 +3,20 @@ import { createClient } from '@/lib/supabase/client'
 export type ItemType = 'word' | 'sentence' | 'note'
 
 export type CreateItemInput = {
-  text: string
+  ab: string
   type: ItemType
   language: string
   dialect?: string
   place_heard?: string
   notes?: string
-  meaning?: string
-  audio_url?: string
+  zh?: string
+  audio?: string
+  note_source?: string
+  collection_id?: string
   source_id?: string
   speaker_id?: string
   tags?: string[]
+  target_word?: string | null
 }
 
 export type Item = CreateItemInput & {

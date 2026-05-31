@@ -65,6 +65,7 @@ function CapturePageInner() {
   const [lookupLoading,  setLookupLoading]  = useState(false)
   const [lookupResults,  setLookupResults]  = useState<LookupResult[]>([])
   const [expandedTokens, setExpandedTokens] = useState<Set<string>>(new Set())
+  const [stsTarget,      setStsTarget]      = useState<string | null>(null)
 
   // Audio recording
   const [recording,    setRecording]    = useState(false)
@@ -280,8 +281,8 @@ function CapturePageInner() {
   function loadItem(item: Item) {
     setEditingId(item.id)
     setEditingType(item.type as ItemType)
-    setText(item.text)
-    setMeaning(item.meaning ?? '')
+    setText(item.ab)
+    setMeaning(item.zh ?? '')
     setDialect(item.dialect ?? '')
     setPlace(item.place_heard ?? '')
     setNotes(item.notes ?? '')
@@ -295,13 +296,13 @@ function CapturePageInner() {
   function handleClear() {
     setEditingId(null); setText(''); setMeaning(''); setDialect(''); setPlace(''); setNotes('')
     setSelectedSource(null); setSelectedSpeaker(null); setSelectedTags([])
-    setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
+    setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()); setStsTarget(null)
     discardRecording()
   }
 
   function softClear() {
     setEditingId(null); setText(''); setMeaning(''); setNotes(''); setSelectedTags([])
-    setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
+    setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()); setStsTarget(null)
     discardRecording()
   }
 
@@ -343,8 +344,8 @@ function CapturePageInner() {
     }
 
     const payload = {
-      text:        text.trim(),
-      meaning:     meaning.trim() || undefined,
+      ab:          text.trim(),
+      zh:          meaning.trim() || undefined,
       type:        editingId ? editingType : 'sentence' as ItemType,
       language:    lang.code,
       dialect:     dialect.trim() || undefined,
@@ -352,8 +353,9 @@ function CapturePageInner() {
       notes:       notes.trim() || undefined,
       source_id:   selectedSource?.id,
       speaker_id:  selectedSpeaker?.id,
-      audio_url:   audioUrl,
+      audio:       audioUrl,
       tags:        selectedTags.length ? selectedTags : undefined,
+      target_word: stsTarget ? displayToken(stsTarget) : undefined,
     }
 
     let ok = false
@@ -578,13 +580,14 @@ function CapturePageInner() {
                     return n
                   })
 
+                  const isTarget = stsTarget === token
                   return (
                     <div
                       key={token}
                       onClick={rows.length > 1 ? toggle : undefined}
                       style={{
                         padding: '10px 14px', background: T.paperHi,
-                        border: `1px solid ${T.lineSoft}`, borderRadius: 12,
+                        border: `1px solid ${isTarget ? T.amber : T.lineSoft}`, borderRadius: 12,
                         cursor: rows.length > 1 ? 'pointer' : 'default',
                       }}
                     >
@@ -599,7 +602,7 @@ function CapturePageInner() {
                               {i === 0 && (
                                 <span style={{
                                   fontFamily: 'Newsreader, Georgia, serif',
-                                  fontSize: 15, fontWeight: 500, color: T.ink, flexShrink: 0,
+                                  fontSize: 15, fontWeight: 500, color: isTarget ? T.amber : T.ink, flexShrink: 0,
                                 }}>
                                   {disp}
                                 </span>
@@ -611,13 +614,25 @@ function CapturePageInner() {
                               }}>
                                 {r.word_ch}
                               </span>
-                              {/* Dialect — right-anchored */}
-                              <span style={{
-                                marginLeft: 'auto', fontSize: 10, color: T.inkFaint,
-                                fontFamily: '"JetBrains Mono", monospace', flexShrink: 0,
-                              }}>
-                                {r.dialect_name}
-                              </span>
+                              {/* Right side: dialect + target dot (row 0) or dialect only */}
+                              {i === 0 ? (
+                                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                                  <span style={{ fontSize: 10, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>
+                                    {r.dialect_name}
+                                  </span>
+                                  <button
+                                    onClick={e => { e.stopPropagation(); setStsTarget(p => p === token ? null : token) }}
+                                    aria-label={isTarget ? 'Remove STS target' : 'Set as STS target'}
+                                    style={{ width: 20, height: 20, borderRadius: 999, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
+                                  >
+                                    <div style={{ width: 9, height: 9, borderRadius: 999, border: `1.5px solid ${isTarget ? T.amber : T.lineSoft}`, background: isTarget ? T.amber : 'transparent', transition: 'all 0.15s' }} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ marginLeft: 'auto', fontSize: 10, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>
+                                  {r.dialect_name}
+                                </span>
+                              )}
                             </div>
                           ))}
                           {/* Bottom-center expand/collapse indicator */}
@@ -941,15 +956,15 @@ function CapturePageInner() {
                       fontSize: 14, fontWeight: 500, color: T.ink,
                       display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {item.text}
+                      {item.ab}
                     </span>
-                    {item.meaning && (
+                    {item.zh && (
                       <span style={{
                         fontSize: 12, color: T.inkFaint, display: 'block',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         marginTop: 2,
                       }}>
-                        {item.meaning}
+                        {item.zh}
                       </span>
                     )}
                   </div>

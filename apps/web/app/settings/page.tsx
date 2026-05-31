@@ -32,6 +32,7 @@ function SettingsContent() {
 
   const [autoLookup,  setAutoLookup]  = useState(true)
   const [dictSources, setDictSources] = useState<string[]>(['klokah'])
+  const [resetHour,   setResetHourRaw] = useState<number>(4)
 
   useEffect(() => {
     const stored = localStorage.getItem('ind_auto_lookup')
@@ -40,6 +41,8 @@ function SettingsContent() {
     if (storedSources) {
       try { setDictSources(JSON.parse(storedSources)) } catch {}
     }
+    const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+    setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
   }, [])
 
   // Fetch user identity and locale only — lang/dialect come from LangDialectProvider
@@ -218,6 +221,30 @@ function SettingsContent() {
               </div>
               <Icon name="review" size={18} color={T.inkSoft} strokeWidth={1.8} />
             </button>
+          </div>
+
+          {/* Study */}
+          <div style={{ padding: '0 18px' }}>
+            <SectionHead title="Study" />
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 14px' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Daily reset</div>
+                  <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Hour the new study day begins</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <button onClick={() => { const n = Math.max(0, resetHour - 1); setResetHourRaw(n); localStorage.setItem('srs_reset_hour', String(n)) }}
+                    disabled={resetHour <= 0}
+                    style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: resetHour <= 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 300, opacity: resetHour <= 0 ? 0.35 : 1 }}>−</button>
+                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 32, textAlign: 'center' }}>
+                    {resetHour === 0 ? '12am' : `${resetHour}am`}
+                  </span>
+                  <button onClick={() => { const n = Math.min(6, resetHour + 1); setResetHourRaw(n); localStorage.setItem('srs_reset_hour', String(n)) }}
+                    disabled={resetHour >= 6}
+                    style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: resetHour >= 6 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 300, opacity: resetHour >= 6 ? 0.35 : 1 }}>+</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Preferences */}

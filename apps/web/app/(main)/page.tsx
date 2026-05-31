@@ -1,133 +1,166 @@
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
-import { Card, Stat, SectionHead, LangAvatar, Icon, Wordmark } from '@/components/ui'
+import { Stat, SectionHead, LangAvatar, Icon, Wordmark, Card } from '@/components/ui'
 import { getDashboardStats } from '@/lib/db/progress/stats-server'
 import { getActiveLangServer } from '@/lib/db/profile/server'
-
-function QuickAction({ dueCount, capturedTotal }: { dueCount: number; capturedTotal: number }) {
-  const hasCards = dueCount > 0
-  const hasCaptures = capturedTotal > 0
-  const href = hasCards ? '/review' : '/capture'
-  const icon = hasCards ? 'review' : 'capture'
-  const label = hasCards
-    ? `Review — ${dueCount} card${dueCount === 1 ? '' : 's'} due`
-    : hasCaptures ? 'Review up to date · Capture more' : 'Start capturing to build your notebook'
-  const accent = hasCards ? T.crimson : T.sage
-
-  return (
-    <Link href={href} style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '13px 16px', borderRadius: 16,
-      background: hasCards
-        ? `linear-gradient(135deg, ${T.crimsonBg}, ${T.paper})`
-        : `linear-gradient(135deg, ${T.sageBg}, ${T.paper})`,
-      border: `1.5px solid ${hasCards ? '#EFCAB8' : '#D2D8AE'}`,
-      textDecoration: 'none',
-      boxShadow: '0 1px 0 rgba(255,255,255,0.7) inset',
-    }}>
-      <div style={{
-        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-        background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: `0 3px 8px ${accent}55`,
-      }}>
-        <Icon name={icon} size={19} color="#fff" strokeWidth={1.8} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>
-          {label}
-        </div>
-        <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
-          {hasCards ? 'Tap to start your review session' : 'Tap to open Capture'}
-        </div>
-      </div>
-      <Icon name="chevron" size={16} color={T.inkFaint} strokeWidth={2} />
-    </Link>
-  )
-}
-
-// Deterministic heatmap — same algorithm as design handoff
-function buildHeatmap(weeks: number) {
-  let seed = 9
-  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280 }
-  const data: number[][] = []
-  for (let w = 0; w < weeks; w++) {
-    const week: number[] = []
-    const recency = w / (weeks - 1)
-    for (let d = 0; d < 7; d++) {
-      const r = rand()
-      let level = 0
-      if (r < 0.55 + recency * 0.25) level = 1
-      if (r < 0.38 + recency * 0.30) level = 2
-      if (r < 0.20 + recency * 0.25) level = 3
-      if (r < 0.08 + recency * 0.15) level = 4
-      week.push(level)
-    }
-    data.push(week)
-  }
-  // Force today empty (drives streak prompt)
-  data[weeks - 1][6] = 0
-  // Force previous 16 days active for the streak narrative
-  let back = 16
-  outer: for (let w = weeks - 1; w >= 0 && back >= 0; w--) {
-    for (let d = 6; d >= 0 && back >= 0; d--) {
-      if (w === weeks - 1 && d === 6) continue
-      if (data[w][d] === 0) data[w][d] = 1
-      back--
-    }
-  }
-  return data
-}
+import GoalWidget from '@/components/widgets/GoalWidget'
 
 const INTENSITY = [T.lineSoft, '#F1D8C6', '#E5A88E', '#C66848', T.crimsonDp]
 
-function ActivityHeatmap() {
-  const weeks = 18
-  const data = buildHeatmap(weeks)
-  const activeDays = data.flat().filter(v => v > 0).length
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May']
+// ─── Streak + goal row ───────────────────────────────────────────────────────
 
+function StreakCard({ streak, chain }: { streak: number; chain: boolean[] }) {
   return (
     <div style={{
-      background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16,
-      padding: '14px 14px 12px',
+      flex: 1, padding: '13px 14px', borderRadius: 16,
+      background: `linear-gradient(150deg, ${T.crimson}, ${T.crimsonDp})`,
+      color: '#fff', overflow: 'hidden',
+      boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 6px 16px rgba(120,30,15,0.2)',
     }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Icon name="flame" size={17} color="#fff" strokeWidth={1.9} />
+        <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1 }}>
+          {streak}
+        </span>
+        <span style={{ fontSize: 12, opacity: 0.85 }}>days</span>
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginTop: 11 }}>
+        {chain.map((active, i) => (
+          <span key={i} style={{
+            flex: 1, height: 5, borderRadius: 999,
+            background: active ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.28)',
+          }} />
+        ))}
+      </div>
+      <div style={{ fontSize: 10.5, opacity: 0.78, marginTop: 7, fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.02em' }}>
+        last 7 days
+      </div>
+    </div>
+  )
+}
+
+
+// ─── Progress ring + CTA ─────────────────────────────────────────────────────
+
+function RingCard({ reviewed, goal, due }: { reviewed: number; goal: number; due: number }) {
+  const pct = goal > 0 ? Math.min(reviewed / goal, 1) : 0
+  const R = 52, C = 2 * Math.PI * R
+
+  return (
+    <Card raised pad={18}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        {/* Ring */}
+        <div style={{ position: 'relative', width: 124, height: 124, flexShrink: 0 }}>
+          <svg width="124" height="124" viewBox="0 0 124 124">
+            <circle cx="62" cy="62" r={R} fill="none" stroke={T.lineSoft} strokeWidth="11" />
+            <circle cx="62" cy="62" r={R} fill="none" stroke={T.crimson} strokeWidth="11"
+              strokeLinecap="round"
+              strokeDasharray={C}
+              strokeDashoffset={C * (1 - pct)}
+              transform="rotate(-90 62 62)"
+            />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 34, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
+              {reviewed}
+            </span>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, marginTop: 2, letterSpacing: '0.03em' }}>
+              / {goal} today
+            </span>
+          </div>
+        </div>
+
+        {/* Due count */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+            Due now
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 3 }}>
+            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 40, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
+              {due}
+            </span>
+            <span style={{ fontSize: 13, color: T.inkSoft }}>cards</span>
+          </div>
+          {due > 0 && (
+            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
+              ~{Math.ceil(due * 0.5)} min
+            </div>
+          )}
+        </div>
+      </div>
+
+      {due > 0 ? (
+        <Link href="/review" style={{
+          marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          height: 56, borderRadius: 15,
+          background: T.crimson, color: '#fff', textDecoration: 'none',
+          boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)',
+        }}>
+          <Icon name="play" size={15} color="#fff" />
+          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review {due} due</span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 500, opacity: 0.82, marginLeft: 2 }}>
+            ~{Math.ceil(due * 0.5)} min
+          </span>
+        </Link>
+      ) : (
+        <div style={{
+          marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          height: 56, borderRadius: 15,
+          background: T.sageBg, border: `1px solid #D2D8AE`,
+        }}>
+          <Icon name="check" size={17} color={T.sageDp} strokeWidth={2.2} />
+          <span style={{ fontSize: 15, fontWeight: 600, color: T.sageDp, marginLeft: 8 }}>All caught up!</span>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+// ─── Heatmap ─────────────────────────────────────────────────────────────────
+
+function Heatmap({ heatmap, monthLabels }: { heatmap: number[][]; monthLabels: (string | null)[] }) {
+  const weeks = heatmap.length
+  const activeDays = heatmap.flat().filter(v => v > 0).length
+
+  return (
+    <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, padding: '14px 14px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
         <div>
-          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 600, color: T.ink, letterSpacing: '-0.025em' }}>
+          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.025em' }}>
             {activeDays}
           </span>
-          <span style={{ fontSize: 12, color: T.inkSoft, marginLeft: 6 }}>active days</span>
+          <span style={{ fontSize: 12, color: T.inkSoft, marginLeft: 5 }}>review days</span>
         </div>
         <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          of {weeks * 7}
+          16 weeks
         </span>
       </div>
 
-      {/* Month markers */}
-      <div style={{ display: 'flex', gap: 3, marginBottom: 6, height: 12 }}>
-        {data.map((_, wi) => {
-          const label = wi % 4 === 1 ? months[Math.floor(wi / 4)] : null
-          return (
-            <div key={wi} style={{
-              width: 13, fontSize: 9.5, color: T.inkMute,
-              fontFamily: '"JetBrains Mono", monospace',
-              letterSpacing: '0.05em', textTransform: 'uppercase',
-            }}>
-              {label}
-            </div>
-          )
-        })}
+      {/* Month labels */}
+      <div style={{ display: 'flex', gap: 3, marginBottom: 5, paddingLeft: 0 }}>
+        {monthLabels.map((label, wi) => (
+          <div key={wi} style={{
+            width: 14, fontSize: 9.5, color: T.inkMute,
+            fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.04em',
+            textTransform: 'uppercase', flexShrink: 0,
+          }}>
+            {label ?? ''}
+          </div>
+        ))}
       </div>
 
       {/* Grid */}
       <div style={{ display: 'flex', gap: 3 }}>
-        {data.map((week, wi) => (
+        {heatmap.map((week, wi) => (
           <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {week.map((lvl, di) => {
               const isToday = wi === weeks - 1 && di === 6
               return (
                 <div key={di} style={{
-                  width: 13, height: 13, borderRadius: 3,
+                  width: 14, height: 14, borderRadius: 3.5,
                   background: INTENSITY[lvl],
                   border: lvl === 0 ? `1px solid ${T.line}` : 'none',
                   boxShadow: isToday ? `0 0 0 1.5px ${T.crimson}` : 'none',
@@ -140,35 +173,29 @@ function ActivityHeatmap() {
 
       {/* Legend */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginTop: 12, fontSize: 10.5, color: T.inkMute,
-        fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.05em',
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+        gap: 4, marginTop: 12, fontSize: 10, color: T.inkMute,
+        fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.04em',
       }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 8, height: 8, borderRadius: 2, background: 'transparent', border: `1.5px solid ${T.crimson}`, display: 'inline-block' }} />
-          today
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span>less</span>
-          {INTENSITY.map((c, i) => (
-            <div key={i} style={{
-              width: 10, height: 10, borderRadius: 2.5, background: c,
-              border: i === 0 ? `1px solid ${T.line}` : 'none',
-            }} />
-          ))}
-          <span>more</span>
-        </div>
+        <span>less</span>
+        {INTENSITY.map((c, i) => (
+          <div key={i} style={{ width: 11, height: 11, borderRadius: 3, background: c, border: i === 0 ? `1px solid ${T.line}` : 'none' }} />
+        ))}
+        <span>more</span>
       </div>
     </div>
   )
 }
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
   const { lang, dialectLabel } = await getActiveLangServer()
   const stats = await getDashboardStats(lang.code)
 
   return (
-    <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
         <Wordmark size={22} />
@@ -181,7 +208,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* Active language card */}
+      {/* Language card */}
       <Card raised pad={14} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <LangAvatar letter={lang.letter} color={lang.color} size={42} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -192,71 +219,43 @@ export default async function DashboardPage() {
             <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 19, fontWeight: 600, color: T.ink }}>
               {lang.name}
             </span>
-            {dialectLabel && (
-              <span style={{ fontSize: 12, color: T.inkSoft }}>· {dialectLabel}</span>
-            )}
+            {dialectLabel && <span style={{ fontSize: 12, color: T.inkSoft }}>· {dialectLabel}</span>}
           </div>
         </div>
         <Link href="/settings" style={{
           fontSize: 12, color: T.inkSoft, padding: '6px 10px', borderRadius: 8,
-          background: T.paper, border: `1px solid ${T.lineSoft}`, fontWeight: 500,
-          textDecoration: 'none',
-        }}>
-          Change
-        </Link>
+          background: T.paper, border: `1px solid ${T.lineSoft}`, fontWeight: 500, textDecoration: 'none',
+        }}>Change</Link>
       </Card>
 
-      {/* Streak banner */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        padding: '14px 16px', borderRadius: 16,
-        background: `linear-gradient(135deg, ${T.crimson}, ${T.crimsonDp})`,
-        color: '#fff', position: 'relative', overflow: 'hidden',
-        boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 8px 22px rgba(120,30,15,0.22)',
-      }}>
-        <div style={{ position: 'absolute', right: -20, top: -10, opacity: 0.18 }}>
-          <Icon name="flame" size={120} strokeWidth={1} color="#fff" />
-        </div>
-        <div style={{
-          width: 44, height: 44, borderRadius: 999, background: 'rgba(255,255,255,0.18)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Icon name="share" size={20} color="#fff" strokeWidth={1.9} />
-        </div>
-        <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 32, fontWeight: 600, letterSpacing: '-0.03em' }}>
-              {stats.streak}
-            </span>
-            <span style={{ fontSize: 13, opacity: 0.85 }}>day streak</span>
-          </div>
-          <div style={{ fontSize: 11.5, opacity: 0.75, marginTop: 1 }}>
-            Capture today to keep it going
-          </div>
-        </div>
+      {/* Streak + goal row */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <StreakCard streak={stats.streak} chain={stats.chain} />
+        <GoalWidget initialGoal={{
+          daily_goal:         stats.dailyGoal,
+          goal_collection_id: stats.goalCollectionId,
+          goal_due_date:      stats.goalDueDate,
+        }} />
       </div>
 
-      {/* Quick resume */}
-      <QuickAction dueCount={stats.dueCount} capturedTotal={stats.capturedTotal} />
+      {/* Ring + CTA */}
+      <RingCard reviewed={stats.reviewedToday} goal={stats.dailyGoal} due={stats.dueCount} />
 
-      {/* Stats grid */}
+      {/* Heatmap */}
+      <div>
+        <SectionHead title="Review history" />
+        <Heatmap heatmap={stats.heatmap} monthLabels={stats.monthLabels} />
+      </div>
+
+      {/* Quick stats */}
       <div>
         <SectionHead title="Overview" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Stat value={stats.capturedTotal} label="Captures"  icon="capture" accent={T.crimson} />
-          <Stat value={stats.reviewedToday} label="Reviewed"  icon="card"    accent={T.sage} />
-          <Stat value={stats.dueCount}      label="Due today" icon="review"  accent={T.amber} />
-          <Stat value={stats.capturedToday} label="Today"     icon="learn"   accent={T.terra} />
+          <Stat value={stats.mastered}    label="Mastered"      icon="check"   accent={T.sage}   />
+          <Stat value={stats.active}      label="Active cards"  icon="card"    accent={T.crimson} />
+          <Stat value={stats.thisWeek}    label="This week"     icon="review"  accent={T.terra}  />
+          <Stat value={stats.dueTomorrow} label="Due tomorrow"  icon="layers"  accent={T.amber}  />
         </div>
-        <div style={{ marginTop: 8, opacity: stats.lessonsCompleted > 0 ? 1 : 0.5 }}>
-          <Stat value={stats.lessonsCompleted > 0 ? stats.lessonsCompleted : '—'} label="Lessons" icon="learn" accent={T.terra} />
-        </div>
-      </div>
-
-      {/* Activity heatmap */}
-      <div>
-        <SectionHead title="Activity" action="Last 18 weeks" />
-        <ActivityHeatmap />
       </div>
 
       {/* Recent captures */}
@@ -272,9 +271,11 @@ export default async function DashboardPage() {
               <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>Tap Capture to start your notebook.</div>
             </div>
           ) : stats.recentItems.map((item) => {
-            const typeColor  = item.type === 'word' ? T.crimson : item.type === 'sentence' ? T.sage : T.amber
-            const typeBg     = item.type === 'word' ? T.crimsonBg : item.type === 'sentence' ? T.sageBg : T.amberBg
-            const typeBorder = item.type === 'word' ? '#EFCAB8' : item.type === 'sentence' ? '#D2D8AE' : '#EBD49A'
+            const tc = item.type === 'word'
+              ? { color: T.crimson, bg: T.crimsonBg, border: '#EFCAB8' }
+              : item.type === 'sentence'
+              ? { color: T.sage, bg: T.sageBg, border: '#D2D8AE' }
+              : { color: T.amber, bg: T.amberBg, border: '#EBD49A' }
             const when = new Date(item.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
             return (
               <div key={item.id} style={{
@@ -285,35 +286,26 @@ export default async function DashboardPage() {
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{
-                    fontFamily: 'Newsreader, Georgia, serif',
-                    fontSize: 15, fontWeight: 500, color: T.ink,
+                    fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 500, color: T.ink,
                     display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {item.text}
-                  </span>
+                  }}>{item.ab}</span>
                   <span style={{ fontSize: 12, color: T.inkSoft, display: 'block', marginTop: 2 }}>
                     {item.language}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                   <span style={{
-                    display: 'inline-flex', alignItems: 'center',
-                    padding: '2px 7px', borderRadius: 999,
-                    background: typeBg, color: typeColor,
-                    border: `1px solid ${typeBorder}`,
-                    fontSize: 10.5, fontWeight: 500,
-                  }}>
-                    {item.type}
-                  </span>
-                  <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>
-                    {when}
-                  </span>
+                    display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: 999,
+                    background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`, fontSize: 10.5, fontWeight: 500,
+                  }}>{item.type}</span>
+                  <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>{when}</span>
                 </div>
               </div>
             )
           })}
         </div>
       </div>
+
     </div>
   )
 }

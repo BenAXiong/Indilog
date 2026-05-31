@@ -1,4 +1,4 @@
-import { GLID_FAMILIES, GLID_NAMES } from './dialects'
+import { GLID_FAMILIES, GLID_NAMES, GLID_NAMES_EN } from './dialects'
 
 // Maps Indivore language codes (lib/languages.ts) to YCM numeric GLIDs (ycm_master.db)
 export const INDIVORE_TO_GLID: Record<string, string> = {
@@ -42,4 +42,9 @@ export function getGrmptsDialect(indivoreCode: string): string | null {
   const glid = getGlid(indivoreCode)
   if (!glid) return null
   return GLID_NAMES[glid]?.replace('族', '語') ?? null
+}
+
+export function getLangName(indivoreCode: string): string {
+  const glid = INDIVORE_TO_GLID[indivoreCode]
+  return glid ? (GLID_NAMES_EN[glid] ?? indivoreCode) : indivoreCode
 }

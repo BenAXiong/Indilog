@@ -8,8 +8,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', href: '/',          icon: 'home'      as const },
-  { id: 'learn',     label: 'Learn',     href: '/learn',     icon: 'learn'     as const },
-  { id: 'review',    label: 'Review',    href: '/review',    icon: 'review'    as const, badge: 12 },
+  { id: 'study',     label: 'Study',     href: '/study',     icon: 'learn'     as const },
   { id: 'dict',      label: 'Dictionary',href: '/dict',      icon: 'dict'      as const },
   { id: 'translate', label: 'Translate', href: '/translate', icon: 'translate' as const },
 ]
@@ -18,8 +17,9 @@ export default function DesktopSidebar() {
   const pathname = usePathname()
   const { lang } = useLang()
 
-  const activeId = pathname === '/' ? 'dashboard'
-    : NAV_ITEMS.find(it => it.href !== '/' && pathname.startsWith(it.href))?.id ?? ''
+  const activeId = NAV_ITEMS.find(it =>
+    it.href === '/' ? pathname === '/' : pathname.startsWith(it.href)
+  )?.id ?? ''
 
   return (
     <aside style={{
@@ -95,15 +95,6 @@ export default function DesktopSidebar() {
             >
               <Icon name={item.icon} size={17} strokeWidth={active ? 2 : 1.6} color="currentColor" />
               <span style={{ flex: 1 }}>{item.label}</span>
-              {'badge' in item && item.badge && (
-                <span style={{
-                  fontSize: 10.5, fontWeight: 600, padding: '1px 7px', borderRadius: 999,
-                  background: active ? T.crimson : T.line,
-                  color: active ? '#fff' : T.inkSoft,
-                }}>
-                  {item.badge}
-                </span>
-              )}
             </Link>
           )
         })}

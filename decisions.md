@@ -6,6 +6,137 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-SRS05 · Note-centric SRS architecture — intervals on notes, modes as session settings
+
+**Context:** Current schema stores SRS metrics (`ease_factor`, `interval_days`, `repetitions`, `due_at`) on `ind_flashcards` (one card pre-created per note). `ind_flashcards.card_type` stores `'default'` or `'sts'` as a permanent property.
+
+**Vision:** SRS metrics belong on `ind_items` (the note), not on a pre-made card. Review "cards" are generated on the fly per session — the note is the unit of knowledge, the session mode is just the presentation lens. This means:
+- One note → one schedule (shared interval across all modes)
+- Session picks the review mode at runtime (audio, production, recognition, STS)
+- No pre-made `ind_flashcards` rows needed for scheduling
+
+**Tradeoff:** Unified interval can't distinguish "this word is easy in audio but hard in STS." Accepted — for vocabulary acquisition, word knowledge is the goal, not mode-specific mastery.
+
+**On card/session mode taxonomy:**
+- `card_type: 'sts'` is genuinely structural — requires `target_word`, different layout — keep as a note property (move to `ind_items`)
+- Audio, production (ab→recall zh), recognition (zh→reveal ab) are **session modes**, not card types — no per-card storage needed, just session-level settings
+- The default/STS distinction may collapse once STS becomes a note property
+
+**Current state:** `ind_flashcards` exists and works. Migration to note-centric SRS requires moving scheduling columns to `ind_items`, dropping or repurposing `ind_flashcards`, and rethinking `ensureFlashcards()`.
+
+**Decision:** Defer migration to a dedicated milestone. Document the target architecture here. Do not add new card_type values to `ind_flashcards` in the meantime.
+
+**Date:** 2026-05-31 · Migration deferred to M5 or later
+
+---
+
+### DEC-SRS02 · Reset SRS scope — what "reset a deck" erases (2026-05-31) — IMPLEMENTED
+
+**Context:** A deck reset can target three distinct layers:
+
+| Layer | Table | Effect if wiped |
+|---|---|---|
+| SRS scheduling state | `ind_flashcards` cols (`ease_factor`, `interval_days`, `repetitions`, `due_at`) | Cards go back to "New" — re-study from scratch |
+| Review history | `ind_reviews` rows (one per rating event) | Raw rating log gone; heatmap unchanged (reads `ind_daily_stats`) |
+| Daily stats | `ind_daily_stats` rows (daily aggregate counts) | Heatmap goes blank, streak affected |
+
+**Decision:** Reset = SRS scheduling state + `ind_reviews` for those cards. Leave `ind_daily_stats` alone.
+
+**Why:** The user's intent is "pretend I've never reviewed these cards." That means cards re-enter as New and the per-card rating log is gone. But `ind_daily_stats` tracks "did I show up and study today" — a motivational/habit record. That effort happened; resetting a deck shouldn't wipe the streak or heatmap. Subtracting exact per-deck counts from `ind_daily_stats` retroactively would also require non-trivial work for limited gain.
+
+**Alternatives considered:**
+- SRS state only: cards go back to New but history remains — useful if you want to "re-study" but keep the habit log and also keep per-card history for analysis. Rejected: user wants a clean slate.
+- Full wipe (SRS + reviews + daily stats): complete as-if-never-used. Rejected: destroys streak/heatmap which are motivational, and `ind_daily_stats` is shared across all decks so subtracting one deck's contribution is fragile.
+- Confirmation tiers (soft reset vs. hard reset in a two-step dialog): over-engineered for the current use case. Can revisit if users want SRS-only reset as a separate option.
+
+**Date:** 2026-05-31 · Implemented: `wipeReviewsAndReset()` in `flashcards.ts`, called from `resetCollectionSRS()` and `resetCapturesSRS()`
+
+---
+
+### DEC-SRS04 · Supabase PostgREST row cap — use `.range()` pagination
+
+**Context:** Supabase's PostgREST server enforces a hard max-rows limit (default 1000). `.limit(N)` in the JS client is silently capped server-side regardless of N. Discovered when the Amis1k import (1063 cards, all due simultaneously) caused `getDueStats` to show 1000 due, `listDueFlashcards` to return 1000 cards, and `listBrowserCards` to omit captured items entirely.
+
+**Decision:** Any query that may return >1000 rows uses `.range(from, from + PAGE - 1)` in a loop (PAGE = 1000). Never use `.limit()` for large fetches. See `architecture.md` § *Supabase row cap* for the standard pattern.
+
+**Exception:** `listBrowserCards` instead splits into two parallel queries (one per `note_source` value) — semantically cleaner since the two data types are always fetched separately anyway.
+
+**Affected functions (as of 2026-05-31):** `listDueFlashcards`, `getDueStats`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards`.
+
+**Date:** 2026-05-31
+
+---
+
+### DEC-ARCH02 · Unified Note/Card model — final decisions (2026-05-30)
+
+**Canonical reference:** `architecture.md`
+
+Key decisions settled:
+
+1. **`ind_items` is the universal Note table.** `ind_learn_cards` is deprecated and will be merged into `ind_items` (T-UNIFY migration). After migration, all notes — captured, collection, dict, curriculum — live in `ind_items` distinguished by `note_source`.
+
+2. **`front`/`back` are banned from the data model.** They are view-layer concepts computed at render time from `note.ab` + `note.zh` + session mode. Never re-add them to `ind_items` or `ind_flashcards`.
+
+3. **Note fields:** `ab` (target-language text), `zh` (translation/definition), `notes` (personal annotation), `audio` (null | URL | storage path). Renamed from legacy `text`, `meaning`, `audio_url`.
+
+4. **One Card per Note.** `forward`/`reverse`/`audio` are session modes (localStorage), not stored card rows. `generateReverseCardsForCollection()` is deleted. Existing `card_type='reverse'` rows removed in T-UNIFY.
+
+5. **`card_type` values:** `default | sts` only. `sts` is the only template that requires stored metadata.
+
+6. **`audio` field:** Accepts null, full URL, or Supabase Storage path. Resolved at render via `cardAudio()` which checks `card.audio` → `note.audio` in priority order.
+
+7. **`note_source` values:** `captured | collection | dict | curriculum | text | video | podcast`. Future values (`text`, `video`, `podcast`) reserved for upcoming content sources.
+
+8. **`ensureFlashcards()`** is the single Card generation function. No separate `generateFlashcardsFromCollection()`. Called on Study mount and immediately after collection import.
+
+**Date:** 2026-05-30
+
+---
+
+### DEC-NOTE01 · Note / Card / Note Type / Card Template — canonical terminology
+**Decision:** Adopt standard SRS terminology throughout all docs and code going forward.
+
+| Term | Meaning | Current Indivore equivalent |
+|---|---|---|
+| **Note** | The underlying knowledge unit — a word, sentence, or fact | `ind_items` row, `ind_learn_cards` row, corpus item |
+| **Card** | One review question derived from a Note; has its own SRS schedule | `ind_flashcards` row |
+| **Note Type** | Schema defining a Note's fields (e.g., text+meaning+audio) | implicit — not yet modeled |
+| **Card Template** | How a Note's fields map to a Card's front/back/prompt | `card_type` column on `ind_flashcards` |
+
+Current Card Templates: `default` (text → meaning; was `forward`, renamed in T-UNIFY), `sts` (Single Target Sentence — target word + sentence, two layouts; implemented 2026-05-31).
+`audio` is a session mode (on-the-fly, not a stored card_type). `reverse` removed in T-UNIFY (was a card row, now session mode).
+
+**Date:** 2026-05-30
+
+---
+
+### DEC-NOTE02 · Note unification deferred — trigger condition defined
+**Decision:** `ind_items` and `ind_learn_cards` remain separate tables for now. Merging them into a unified `ind_notes` table is deferred.
+
+**Why not now:** `ind_items` has 10+ dependent files (capture UI, notebook, `lib/db/notebook/`, all flashcard joins). Migrating everything before knowing the final schema risks a second migration. Audio cards work fine via join without unification.
+
+**Trigger condition:** Implement STS Card Template. STS needs `target_word` on a Note and makes the field-mismatch between `ind_items` and `ind_learn_cards` genuinely blocking. At that point the schema requirements are concrete and the migration has clear payoff.
+
+**Status:** T-UNIFY completed 2026-05-30 (M1–M4). STS card template implemented 2026-05-31. This decision is now resolved — moving to Resolved section for history.
+
+**Date:** 2026-05-30
+
+---
+
+### DEC-NOTE03 · `metadata jsonb` on `ind_flashcards` for extensible Card Templates
+**Decision:** Add `metadata jsonb` column to `ind_flashcards`. Card Templates that need fields beyond `front`/`back` store them here. The review session reads `card.card_type` + `card.metadata` together.
+
+**Why jsonb, not typed columns:** New templates don't require schema migrations — only a new `card_type` value and a metadata shape definition.
+
+**Implemented metadata shapes:**
+- `default` (was `forward`): no metadata
+- `audio` (session mode, not stored card_type): no metadata
+- `sts`: `{ target_word: string; layout: 'word' | 'sentence' }` — sentence comes from `ind_items.ab`, not duplicated in metadata
+
+**Date:** 2026-05-30
+
+---
+
 ### DEC-L01 · Learn available for all 16 languages
 **Decision:** Learn is enabled for all 16 officially recognized Formosan languages, not only the 6 FormoBank translation-supported ones. The `ycm_master.db` corpus covers all 16 via GLID families.
 **Date:** 2026-05-26
@@ -143,6 +274,47 @@ Stripping only spaces immediately adjacent to apostrophes (`replace(/' /g, "'")`
 2. `apps/web/app/(main)/dict/page.tsx` `normKey()` — same space-stripping added as a safety net for the Merged tab grouping, so residual duplicates (e.g. from different GLIDs that escaped route dedup) still collapse into one card.
 
 **Trade-off acknowledged:** If a future corpus update introduces two genuinely distinct words that are identical after this normalisation, they would be silently merged. The mitigation is that `normWordKey` is only used for dedup/grouping — the display always shows the preserved (spaced, correct) form.
+
+---
+
+### DEC-SRS03 · FormoSRS-1 algorithm — exact spec and rationale
+
+**Decision:** Use FormoSRS-1 (SM-2 base + Anki Hard behavior + fuzz + ease recovery on Good) rather than vanilla SM-2 or FSRS. Implemented in `lib/db/srs/schedule.ts`.
+
+**Date:** 2026-05-30
+
+**Rating → algorithm mapping:**
+
+| Rating | Interval | Ease delta | Reps |
+|---|---|---|---|
+| Again | 1 day | −0.20 | reset to 0 |
+| Hard  | max(1, prev × 1.2) | −0.15 | unchanged |
+| Good  | prev × ease (min 1 day on rep 0) | **+0.02** | +1 |
+| Easy  | prev × ease × 1.3 | +0.15 | +1 |
+
+Min ease factor: 1.3. Initial ease: 2.5.
+
+**Good +0.02 (ease hell fix):** Vanilla SM-2 has zero ease delta on Good, so ease only moves down (Again/Hard) or up (Easy). After ~6 total Again ratings a card hits the 1.3 floor and stays there permanently even if the user answers correctly every time after. +0.02 on Good means 10 consecutive Goods = +0.2 ease recovery. This avoids ease hell without the complexity of FSRS mean-reversion.
+
+**Fuzz ±5%:** `interval = Math.round(interval * (0.95 + Math.random() * 0.1))` applied to all intervals ≥ 2 days. Prevents cards reviewed on the same day from clustering into the same future review date.
+
+**Anki Hard behavior:** Hard uses `prev × 1.2` rather than Anki's full SM-2 Hard (which resets interval). Keeps progress while penalizing ease. Hard is not shown by default (toggle in OptionsSheet) because it confuses new users.
+
+**Relearn burst (mature lapse):** Cards with `interval_days ≥ 7` that get Again enter a relearn burst (same learning-steps depth). "Got it!" = 50% interval recovery via `nextRelearn()` + `rateCardRelearn()`. Cap: 3 full restarts, then forced `rateCard('again')` full reset.
+
+**Why not FSRS:** Better scheduling quality via Bayesian optimization of forgetting curve. Deferred because it requires meaningful production data (weeks of real reviews) to tune parameters. Revisit after 4+ weeks on prod.
+
+---
+
+### DEC-SRS01 · Five-color flag system (not boolean)
+
+**Decision:** Flashcard flags are stored as `flag_color text` (null = no flag; values: `red`, `orange`, `yellow`, `green`, `blue`) rather than a `flagged boolean`. No meaning is assigned to specific colors by the app — the user decides. Five colors cover all practical tagging needs without imposing structure.
+
+**Date:** 2026-05-30
+
+**Why:** A single boolean flag has one dimension of meaning. A 5-color system acts as a lightweight tag set: e.g. red = "confused", green = "interesting", blue = "needs audio". The app should not assign semantics — that's the user's call. Five is the Anki convention and a reasonable upper bound before it becomes unwieldy.
+
+**How it surfaces:** Review session bookmark icon opens an inline color picker (5 dots + clear). Browser Flagged filter adds a color sub-filter row. `/review?filter=flagged` or `/review?flag=red` targets sessions by flag. `setFlagColor(id, color | null)` is the single write path.
 
 ---
 
