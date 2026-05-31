@@ -60,6 +60,22 @@
 
 - [ ] Goal deck cards sorted first in `listDueFlashcards`; on by default; toggleable in session options
 
+### M1-G — Reviews/day simulator
+
+- [ ] Estimate daily review load in GoalSheet based on deck size and goal *(simple linear estimate first; SM-2 growth simulation later)*
+
+### M1-H — Card strength indicator
+
+- [ ] Composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
+
+### M1-I — Custom review sessions
+
+- [ ] Filter session by deck, tags, fields, flags; design pass needed before building
+
+### M1-J — Daily reset time
+
+- [ ] User preference for when the "new day" starts (default midnight); affects all date-keyed stats queries
+
 ---
 
 ## Milestone 2 — Library / Browser
@@ -98,16 +114,7 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 
 ---
 
-## Milestone 4 — SRS Enhancements
-
-- [ ] Reviews/day simulator in GoalSheet — estimate daily review load based on deck size and goal *(scope: simple linear estimate first; SM-2 growth simulation later)*
-- [ ] Card strength indicator — composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
-- [ ] Custom review sessions — filter session by deck, tags, fields, flags; design pass needed before building
-- [ ] Daily reset time — user preference for when the "new day" starts (default midnight); affects all date-keyed stats queries
-
----
-
-## Milestone 5 — Polish
+## Milestone 4 — Polish
 
 Quick fixes:
 
@@ -151,6 +158,6 @@ Phase 9 deferred items:
 ## Versioning
 
 - **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done.
-- **v1** — M1-A–E complete; M1-F pending. M2–M5 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M5 extend to `v1.x`.
+- **v1** — M1-A–E complete; M1-F–J pending. M2–M4 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M4 extend to `v1.x`.
 
 Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1 + M2 ship.

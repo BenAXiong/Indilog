@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 12:50 | CONFIG | plan-v1.md: all M4 SRS items → M1-F–J sub-milestones; M4 removed; M5 polish → M4 |
 | 2026-05-31 12:45 | CONFIG | plan-v1.md: goal priority → M1-F; curriculum layouts → M5 polish; M5 standalone removed; renumber M6→M5 |
 | 2026-05-31 12:40 | CONFIG | plan-v1.md: add M3 (rescrape), M4 (SRS enhancements), M5 (Learn tab), M6 (polish extended); deferred + longterm sections |
 | 2026-05-31 12:35 | FIX | Browser: cardless notes show neutral "—" badge instead of misleading "NEW" |
