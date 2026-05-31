@@ -2,7 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-05-31 17:00 | REFACTOR | Browser: delete button inline with Save/Cancel (left-aligned); Save+Cancel right-aligned |
+| 2026-05-31 17:02 | REFACTOR | Browser: delete button inline with Suspend/Reset row (right-aligned); Save/Cancel restored to own row |
 | 2026-05-31 16:57 | FEATURE | M2: delete note from browser — hard delete (cascades to ind_flashcards + ind_reviews); inline confirmation with warning about heatmap/stats impact; suggests Suspend as alternative |
 | 2026-05-31 16:53 | FIX | Browser: split listBrowserCards into 2 parallel queries (captured + collection) to bypass Supabase 1000-row server cap; type dropdown inline; collapsible filter row removed |
 | 2026-05-31 16:48 | REFACTOR | Browser: SRS state pills → dropdown; source/deck dropdown inline next to it; filter icon now handles lang/type/tags only |

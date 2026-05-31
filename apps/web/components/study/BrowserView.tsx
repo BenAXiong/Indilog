@@ -277,19 +277,12 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               </div>
             )}
 
-            {/* Save / cancel / delete */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-              <button onClick={() => setConfirmDelete(true)} style={{
-                height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-                border: `1px solid ${T.lineSoft}`, background: 'none',
-                color: T.inkFaint, cursor: 'pointer',
-              }}>Delete…</button>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button onClick={onToggle} style={ghostBtn}>Cancel</button>
-              </div>
+            {/* Save / cancel */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+              <button onClick={onToggle} style={ghostBtn}>Cancel</button>
             </div>
 
             {/* Info strip */}
@@ -349,19 +342,26 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
               <FlagPicker current={card.flag_color} onChange={handleFlagChange} />
             </div>
 
-            {/* Suspend + ease reset */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={handleSuspendToggle} disabled={busy} style={ghostBtn}>
-                {isSuspended ? 'Unsuspend' : 'Suspend'}
-              </button>
-              {!isSuspended && (
-                <button onClick={handleResetEase} disabled={busy} style={{
-                  height: 34, padding: '0 12px', borderRadius: 8,
-                  border: `1px solid #EFCAB8`, background: T.crimsonBg,
-                  color: T.crimson, fontSize: 12, fontWeight: 500,
-                  cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
-                }}>Reset ease</button>
-              )}
+            {/* Suspend + ease reset + delete */}
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={handleSuspendToggle} disabled={busy} style={ghostBtn}>
+                  {isSuspended ? 'Unsuspend' : 'Suspend'}
+                </button>
+                {!isSuspended && (
+                  <button onClick={handleResetEase} disabled={busy} style={{
+                    height: 34, padding: '0 12px', borderRadius: 8,
+                    border: `1px solid #EFCAB8`, background: T.crimsonBg,
+                    color: T.crimson, fontSize: 12, fontWeight: 500,
+                    cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+                  }}>Reset ease</button>
+                )}
+              </div>
+              <button onClick={() => setConfirmDelete(true)} style={{
+                height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                border: `1px solid ${T.lineSoft}`, background: 'none',
+                color: T.inkFaint, cursor: 'pointer',
+              }}>Delete…</button>
             </div>
 
             {/* Delete confirmation */}
