@@ -176,7 +176,9 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
       }}>
         {/* Status badge */}
         <div style={{ paddingTop: 3, flexShrink: 0 }}>
-          {isSuspended ? (
+          {!card.card_id ? (
+            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint, padding: '2px 5px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>—</span>
+          ) : isSuspended ? (
             <span style={{ fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 5px', borderRadius: 4, background: T.paper, border: `1px solid ${T.line}` }}>SUSP</span>
           ) : isNew ? (
             <span style={{ fontSize: 9, fontWeight: 700, fontFamily: '"JetBrains Mono", monospace', color: T.amber, padding: '2px 5px', borderRadius: 4, background: T.amberBg, border: `1px solid #EBD49A` }}>NEW</span>
