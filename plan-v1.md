@@ -111,12 +111,14 @@ Design a method to keep track of item sources and associate data to them (eg. di
 ### M5-A — Architecture polish
 
 - [x] Rethink note vs card type architecture — decision recorded in DEC-SRS05; migration deferred; no new card_type values until then
+- [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
+- [ ] Fix: ind_reviews / increment_reviewed_today fires spuriously on page navigation — inflates heatmap + daily counter; audit review page useEffect/mount lifecycle
 - [ ] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh`
 
 ### M5-B — UI polish
 
-- [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
-- [ ] Fix: ind_reviews / increment_reviewed_today fires spuriously on page navigation — inflates heatmap + daily counter; audit review page useEffect/mount lifecycle
+- [x] Remove transitional review landing when entering from Dashboard — /review?start=1 auto-starts session
+- [x] Fix: ind_reviews / increment_reviewed_today fires spuriously — onExit ref + sessionEndFiredRef one-shot guard
 - [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
