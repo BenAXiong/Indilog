@@ -7,55 +7,56 @@
 
 ---
 
-## Milestone 1 — SRS + Review Overhaul
+## Milestone 1 — SRS + Review Overhaul — COMPLETE (2026-05-31)
 
 **Goal:** A smooth, motivating spaced-repetition loop that draws from all content sources — captured items, dict/learn saves, and a custom Amis1k vocabulary collection — with daily goals, progress views, stats, and streaks.
 
-### M1-A — SRS Engine (`lib/db/srs/`)
+> Full spec and decisions archived in `archive/plan-srs.md`. Algorithm spec in `decisions.md` DEC-SRS03.
 
-- [ ] Replace fixed-interval scheduling with SM-2 (or FSRS) algorithm — `lib/db/srs/schedule.ts`
-- [ ] `ind_reviews` query helpers — fetch review history per card, compute ease factor
-- [ ] Card types: `word` (ab → zh), `sentence` (ab → zh), `reverse` (zh → ab)
-- [ ] Store `card_type` on `ind_flashcards`
-- [ ] Daily goal: configurable in Settings, stored in `ind_profiles.daily_goal` (already in schema)
-- [ ] Daily session counter — stop presenting new cards once goal is reached
+### M1-A — SRS Engine
+
+- [x] FormoSRS-1 scheduling (SM-2 + ease recovery + fuzz) — `lib/db/srs/schedule.ts`; see DEC-SRS03
+- [x] `ind_reviews` table — one row per rating event; wiped on deck reset alongside scheduling state
+- [x] `card_type` on `ind_flashcards`: `default` | `sts` (reverse removed — session mode; audio = session mode)
+- [x] Daily goal — `ind_profiles.daily_goal`, GoalSheet, GoalWidget
+- [x] Daily session counter — `ind_daily_stats` + `increment_reviewed_today` RPC
 
 ### M1-B — Content Sources
 
-- [ ] Cards generated from `ind_items` (captures, dict saves, learn saves) — already partially done
-- [ ] Cards generated from custom Amis1k collection (`ind_learn_collections`) — new source
-- [ ] Source filter in Review tab (All / Captures / Amis1k / etc.)
-- [ ] `ind_vocab_progress` table (or tag on `ind_flashcards`) to track Amis1k coverage
+- [x] Cards from `ind_items` (captures, dict saves, learn saves) — `ensureFlashcards()` called on Study + Review mount
+- [x] Cards from `ind_learn_collections` — `saveCollection()` calls `ensureFlashcards()`
+- [x] Language filter — `excludeLangs` on `getDueStats`/`listDueFlashcards`; per-deck `include_in_review` toggle
+- [x] Coverage tracking — via `ind_flashcards` stats (ease/interval thresholds); no separate `ind_vocab_progress` table needed
 
 ### M1-C — Amis1k Collection
 
-- [x] Amis1k word list as importable JSON (`packages/amis1k/amis1k.json`) — 1063 cards, 4 difficulty lessons (初級/中級/中高級/高級), drag-drop into `/learn/new`
-- [x] Collections saved to `ind_learn_collections` + `ind_learn_cards` via chunked insert (200/batch)
-- [x] `lesson_title` column on `ind_learn_cards` — titles shown in browse page
-- [x] Learn hub shows saved collections (amber card, card count, links to browse page)
-- [x] `/learn/collection/[id]` browse page — collapsible lessons, rename inline, delete with confirm
-- [ ] Generate flashcards from collection cards → SRS queue (M1-B dependency)
-- [ ] Track which Amis1k words have been seen / learned / mastered
-- [ ] Compare Amis1k against existing captured items (avoid duplicates)
+- [x] Amis1k word list importable JSON — 1063 cards, 4 difficulty lessons
+- [x] Collections saved to `ind_learn_collections` + `ind_items` (T-UNIFY migrated from `ind_learn_cards`)
+- [x] `lesson_title` on items — shown in collection browse page
+- [x] Learn hub shows saved collections; `/learn/collection/[id]` browse page
+- [x] Flashcards generated from collection items via `ensureFlashcards()`
+- [x] Coverage bars in Stats subtab — per-deck known/mastered percentage
+- [ ] Compare Amis1k against existing captured items — dropped; low value, dedup at capture time is sufficient
 
 ### M1-D — Progress View & Stats
 
-- [ ] Streak calendar — heatmap of daily review activity (replace current seed-based mock)
-- [ ] Per-language stats: total cards, cards due, mastered (ease factor above threshold)
-- [ ] Daily goal progress ring or bar on Dashboard and Review landing
-- [ ] Review session summary screen (cards reviewed, accuracy %, time)
-- [ ] Retention curve / forgetting curve visualization (later — deferred if complex)
+- [x] Streak heatmap — `ind_daily_stats` real data (~16 weeks), intensity = reviewed count
+- [x] Per-language stats — Stats subtab: total/due/known/mastered cards + per-deck coverage bars + 14-day pace chart
+- [x] Daily goal progress ring — Dashboard ring (reviewed/goal) + GoalWidget
+- [x] Review session summary screen — ReviewEnd with count, streak, confetti on goal met, share
+- [ ] Retention/forgetting curve — deferred; needs more real review data first
 
 ### M1-E — Review Page Overhaul
 
-- [ ] Replace current simple reveal/rate loop with full session UX:
-  - Session start: show today's due count + daily goal progress
-  - Card flip animation (already exists — `animate-iv-flip`)
-  - Again/Hard/Good/Easy with keyboard shortcuts (1/2/3/4)
-  - Session end: summary screen
-- [ ] Undo last rating (within session)
-- [ ] Skip card (defer to end of session)
-- [ ] Card type rendering: word card vs sentence card vs reverse
+- [x] Full-screen session with session header, progress bar, card area
+- [x] Tap to reveal (no flip animation — design change); 4-dir swipe gestures
+- [x] Rating buttons: Again/Hard/Good/Easy with interval estimates; Hard/Easy toggleable; full immersion mode
+- [x] Keyboard shortcuts: Space/Enter reveal, 1–4 ratings, arrow keys, ↓ suspend
+- [x] Session end screen — ReviewEnd
+- [x] Learn phase + relearn burst — queue-based, Repeat/Easy/Got it!, pass dots, 3-restart cap
+- [x] Card type rendering — default, STS (word/sentence layouts), audio session mode
+- [ ] Undo last rating — not implemented; not missed in practice
+- [ ] Skip card (no rating) — not implemented; Again + requeue covers this need
 
 ---
 
@@ -90,7 +91,7 @@ Items explicitly deferred from v0 Phase 9:
 
 ## Versioning
 
-- **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done. Current state.
-- **v1** — Milestone 1 (SRS) + Milestone 2 (Library) complete.
+- **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done.
+- **v1** — M1 (SRS) complete 2026-05-31. M2 (Library) + M3 (polish) pending.
 
 Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1 + M2 ship.

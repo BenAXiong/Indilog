@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 02:55 | CONFIG | Update plan-v1.md: M1 marked complete with actual implementation notes; M2 + M3 unchanged |
 | 2026-05-31 02:50 | CONFIG | Extract DEC-SRS03 into decisions.md: FormoSRS-1 full spec, ease hell fix rationale, fuzz formula, relearn burst |
 | 2026-05-31 02:45 | CONFIG | Archive plan-srs.md → archive/plan-srs.md; remove from CLAUDE.md session-start read list |
 | 2026-05-31 02:40 | FEATURE | Browser overhaul: BrowserCard gains all note fields (notes, audio, note_type, language, dialect, place_heard, tags, target_word, metadata); expanded row shows editable notes/place/target_word, STS layout toggle, info badges, audio playback |
