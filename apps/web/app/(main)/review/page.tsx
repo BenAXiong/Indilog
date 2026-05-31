@@ -303,6 +303,9 @@ function ReviewSession({
   type LastRated = { cardId: string; prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null } }
   const lastRatedRef = useRef<LastRated | null>(null)
   const [canUndo, setCanUndo] = useState(false)
+  const onExitRef = useRef(onExit)
+  useEffect(() => { onExitRef.current = onExit })
+  const sessionEndFiredRef = useRef(false)
 
   // Stop audio when card advances
   useEffect(() => { audioRef.current?.pause() }, [qIdx])
@@ -345,10 +348,15 @@ function ReviewSession({
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
-  // Session end: fires when queue is exhausted
+  // Session end: fires once when queue is exhausted.
+  // onExit is kept in a ref so this effect doesn't re-run when ReviewPage re-renders
+  // (which would cause onExit to fire multiple times as reload() triggers state updates).
   useEffect(() => {
-    if (queue.length > 0 && qIdx >= queue.length) onExit(completedRef.current.size)
-  }, [qIdx, queue.length, onExit])
+    if (queue.length > 0 && qIdx >= queue.length && !sessionEndFiredRef.current) {
+      sessionEndFiredRef.current = true
+      onExitRef.current(completedRef.current.size)
+    }
+  }, [qIdx, queue.length])
 
   const entry = queue[qIdx]
   if (!entry) return null  // transitioning to done state
@@ -1021,12 +1029,15 @@ function ReviewPage() {
   const customPlaceHeard = searchParams.get('placeHeard') ?? undefined
   const customDueOnly    = searchParams.get('dueOnly') !== 'false'
 
+  const autostart = searchParams.get('start') === '1' && !isCustom
+
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
   const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount, setSessionCount] = useState(0)
   const [sessionKey,   setSessionKey]   = useState(0)
+  const autostartedRef = useRef(false)
 
   function getExcludeLangs(): string[] {
     if (localStorage.getItem('srs_show_all_langs') === 'false') {
@@ -1069,6 +1080,10 @@ function ReviewPage() {
     setCards(sorted)
     setCtx(context)
     setLoading(false)
+    if (autostart && !autostartedRef.current && sorted.length > 0) {
+      autostartedRef.current = true
+      setMode('reviewing')
+    }
   }
 
   async function handleReloadNeeded() {

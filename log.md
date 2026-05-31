@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 03:29 | FEATURE | M5-B: skip review landing from Dashboard — /review?start=1 auto-starts session; autostartedRef prevents re-fire on reload |
+| 2026-06-01 03:29 | FIX | M5-B: spurious increment_reviewed_today — session-end effect re-fired when ReviewPage re-renders (inline onExit ref changes); fix: onExitRef + sessionEndFiredRef one-shot guard |
 | 2026-06-01 03:13 | SCHEMA | Add mode column to ind_reviews — logs review mode (forward/audio/sts) per event for future retention-transfer analysis; scheduling unchanged |
 | 2026-06-01 03:13 | CONFIG | Update DEC-SRS05 — document duplicates problem, hybrid instrument-first approach, mode taxonomy, deferred migration decision |
 | 2026-05-31 18:05 | FIX | Wrap review page in Suspense — useSearchParams() requires Suspense boundary for Next.js 15 static generation |

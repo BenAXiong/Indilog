@@ -93,7 +93,7 @@ function RingCard({ reviewed, goal, due }: { reviewed: number; goal: number; due
       </div>
 
       {due > 0 ? (
-        <Link href="/review" style={{
+        <Link href="/review?start=1" style={{
           marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
           height: 56, borderRadius: 15,
           background: T.crimson, color: '#fff', textDecoration: 'none',
