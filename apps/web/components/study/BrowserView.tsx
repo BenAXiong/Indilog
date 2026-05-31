@@ -10,7 +10,7 @@ import {
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
 import { setTargetWord } from '@/lib/db/srs/flashcards'
-import { formatDays } from '@/lib/db/srs/schedule'
+import { formatDays, computeStrength } from '@/lib/db/srs/schedule'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 
 const FILTERS: { value: BrowserFilter; label: string }[] = [
@@ -307,6 +307,33 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
             )}
 
             <div style={{ height: 1, background: T.lineSoft }} />
+
+            {/* Card strength */}
+            {(() => {
+              const st = computeStrength(card)
+              if (!st) return null
+              const pct = Math.round(st.score * 100)
+              const color = pct >= 85 ? '#7B8C46'   // sage — mature
+                          : pct >= 60 ? '#7B8C46'   // sage — strong
+                          : pct >= 30 ? '#D2773A'   // amber — learning
+                          :             T.crimson    // fragile
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={labelStyle}>Strength</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint }}>
+                      R {Math.round(st.R * 100)}% · S {st.S}d
+                    </span>
+                    <span style={{
+                      fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700,
+                      color,
+                    }}>
+                      {pct}%
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Flag row */}
             <div>
