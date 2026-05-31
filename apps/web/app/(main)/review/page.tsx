@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react'
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { T } from '@/lib/tokens'
@@ -1011,6 +1012,7 @@ function ReviewEnd({
 
 function ReviewPage() {
   const { lang, dialectLabel } = useLang()
+  const router           = useRouter()
   const searchParams     = useSearchParams()
   const flagParam        = searchParams.get('flag')
   const filterParam      = searchParams.get('filter')
@@ -1115,7 +1117,7 @@ function ReviewPage() {
   }
 
   if (mode === 'done') {
-    return <ReviewEnd sessionCount={sessionCount} goalMet={goalMet} streak={ctx.streak} onReviewMore={handleReviewMore} onDone={() => setMode('landing')} />
+    return <ReviewEnd sessionCount={sessionCount} goalMet={goalMet} streak={ctx.streak} onReviewMore={handleReviewMore} onDone={autostart ? () => router.push('/') : () => setMode('landing')} />
   }
 
   // Landing

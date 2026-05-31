@@ -48,24 +48,31 @@ export async function ensureFlashcards(): Promise<void> {
 
   const PAGE = 1000
 
-  // Paginate both queries — plain .select() is capped at 1000 rows server-side
-  const existingIds = new Set<string>()
-  let from = 0
-  while (true) {
-    const { data } = await supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id).range(from, from + PAGE - 1)
-    if (data?.length) data.forEach(r => existingIds.add(r.note_id))
-    if (!data?.length || data.length < PAGE) break
-    from += PAGE
-  }
-
-  const allItems: { id: string; target_word: string | null }[] = []
-  from = 0
-  while (true) {
-    const { data } = await supabase.from('ind_items').select('id, target_word').eq('user_id', user.id).range(from, from + PAGE - 1)
-    if (data?.length) allItems.push(...(data as { id: string; target_word: string | null }[]))
-    if (!data?.length || data.length < PAGE) break
-    from += PAGE
-  }
+  // Paginate both queries in parallel — plain .select() is capped at 1000 rows server-side
+  const [existingIds, allItems] = await Promise.all([
+    (async () => {
+      const ids = new Set<string>()
+      let from = 0
+      while (true) {
+        const { data } = await supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id).range(from, from + PAGE - 1)
+        if (data?.length) data.forEach(r => ids.add(r.note_id))
+        if (!data?.length || data.length < PAGE) break
+        from += PAGE
+      }
+      return ids
+    })(),
+    (async () => {
+      const items: { id: string; target_word: string | null }[] = []
+      let from = 0
+      while (true) {
+        const { data } = await supabase.from('ind_items').select('id, target_word').eq('user_id', user.id).range(from, from + PAGE - 1)
+        if (data?.length) items.push(...(data as { id: string; target_word: string | null }[]))
+        if (!data?.length || data.length < PAGE) break
+        from += PAGE
+      }
+      return items
+    })(),
+  ])
 
   if (!allItems.length) return
   const newItems = allItems.filter(i => !existingIds.has(i.id))
