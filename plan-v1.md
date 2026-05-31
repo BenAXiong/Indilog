@@ -53,27 +53,15 @@
 - [x] Session end screen — ReviewEnd
 - [x] Learn phase + relearn burst — queue-based, Repeat/Easy/Got it!, pass dots, 3-restart cap
 - [x] Card type rendering — default, STS (word/sentence layouts), audio session mode
-- [ ] Undo last rating — not implemented; not missed in practice
-- [ ] Skip card (no rating) — not implemented; Again + requeue covers this need
+- [x] Undo last rating — single-level, DB-write only (not requeues); reverts ind_flashcards + deletes ind_reviews row + decrements daily stat; includes graduation
+- [x] Defer card — skip-fwd button top-right of header; sets due_at=tomorrow, no rating written; clears undo state
 
-### M1-F — Goal priority
+### M1-F — SRS polishing
 
 - [ ] Goal deck cards sorted first in `listDueFlashcards`; on by default; toggleable in session options
-
-### M1-G — Reviews/day simulator
-
 - [ ] Estimate daily review load in GoalSheet based on deck size and goal *(simple linear estimate first; SM-2 growth simulation later)*
-
-### M1-H — Card strength indicator
-
 - [ ] Composite score (ease × interval × recency); visible in browser rows and optionally on deck cards
-
-### M1-I — Custom review sessions
-
 - [ ] Filter session by deck, tags, fields, flags; design pass needed before building
-
-### M1-J — Daily reset time
-
 - [ ] User preference for when the "new day" starts (default midnight); affects all date-keyed stats queries
 
 ---
@@ -116,10 +104,8 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 
 ## Milestone 4 — Polish
 
-Quick fixes:
 
 - [ ] Remove transitional review landing when entering from Dashboard — navigate directly into session
-- [ ] Merge `redesign/srs-overhaul` → main *(prerequisite before any user-visible shipping)*
 
 Phase 9 deferred items:
 
@@ -139,6 +125,7 @@ Phase 9 deferred items:
 
 - **Set per-deck card types** — STS auto-generation requires a `target_word` per note which can't be automated without AI; realistically means "mark deck as STS, set targets manually in browser." Under-designed for v1.
 - **Dummy user profile for testing (stats)** — dev tooling, not user-facing; separate dev track.
+- consider tab split for curriculum & collections (captures + custom)
 
 
 ---
@@ -149,7 +136,7 @@ Phase 9 deferred items:
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k
 - Amis1k: add simple example sentences
 - Icons: align with CD design handoff
-- 階層×10 system
+- 階層×10 system (tadpole - crab - mangcel - fafoy - bear - kawas?)
 - User contributions — send to pending DB
 - OCR capture
 

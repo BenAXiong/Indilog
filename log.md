@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 13:05 | CONFIG | plan-v1.md: M1-E undo + defer marked complete |
 | 2026-05-31 13:00 | FEATURE | M1-E: defer (skip-fwd button top-right of session, sets due_at=tomorrow) + undo (rotate-ccw below progress bar, single-level, DB-write only); deferCard() + undoRating() in flashcards.ts; skip-fwd icon added |
 | 2026-05-31 12:50 | CONFIG | plan-v1.md: all M4 SRS items → M1-F–J sub-milestones; M4 removed; M5 polish → M4 |
 | 2026-05-31 12:45 | CONFIG | plan-v1.md: goal priority → M1-F; curriculum layouts → M5 polish; M5 standalone removed; renumber M6→M5 |
