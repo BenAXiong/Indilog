@@ -87,7 +87,7 @@
 - [x] Delete note from browser — hard delete cascades ind_flashcards → ind_reviews; inline confirm warns about heatmap/stats impact; suggests Suspend as alternative
 - [ ] Dict lookup button in expanded card — batch lookup ab field, auto-fill empty zh from results
 - [x] Date range filter — from/to date inputs below filter row, filter on created_at, ✕ clear button
-- [ ] Batch select + delete / suspend / flag
+- [x] Batch select + delete / suspend / flag — Select button in header; tap rows to highlight; bottom action bar with All/None, Delete (confirm), Suspend, Flag (color picker)
 
 ---
 

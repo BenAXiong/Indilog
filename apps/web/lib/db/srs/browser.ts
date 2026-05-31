@@ -141,6 +141,23 @@ export async function setCardLayout(cardId: string, layout: 'word' | 'sentence',
   await supabase.from('ind_flashcards').update({ metadata: { ...currentMeta, layout } }).eq('id', cardId)
 }
 
+export async function batchDeleteNotes(noteIds: string[]): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_items').delete().in('id', noteIds)
+}
+
+export async function batchSuspendCards(noteIds: string[]): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards')
+    .update({ suspended_at: new Date().toISOString() })
+    .in('note_id', noteIds)
+}
+
+export async function batchSetFlag(noteIds: string[], flagColor: string | null): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ flag_color: flagColor }).in('note_id', noteIds)
+}
+
 export async function deleteNote(noteId: string): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_items').delete().eq('id', noteId)

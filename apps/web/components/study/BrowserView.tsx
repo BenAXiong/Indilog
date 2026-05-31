@@ -6,6 +6,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
   listBrowserCards, updateNoteFields, setCardLayout, resetCardEase, deleteNote,
+  batchDeleteNotes, batchSuspendCards, batchSetFlag,
   suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
@@ -54,14 +55,17 @@ function FlagPicker({ current, onChange }: { current: string | null; onChange: (
 // ─── Card row ─────────────────────────────────────────────────────────────────
 
 type CardRowProps = {
-  card:     BrowserCard
-  expanded: boolean
-  onToggle: () => void
-  onUpdate: (patch: Partial<BrowserCard>) => void
-  onRemove: () => void
+  card:          BrowserCard
+  expanded:      boolean
+  onToggle:      () => void
+  onUpdate:      (patch: Partial<BrowserCard>) => void
+  onRemove:      () => void
+  selectionMode: boolean
+  isSelected:    boolean
+  onSelect:      () => void
 }
 
-function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps) {
+function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, isSelected, onSelect }: CardRowProps) {
   const [editFront,  setEditFront]  = useState(card.ab)
   const [editBack,   setEditBack]   = useState(card.zh ?? '')
   const [editNotes,  setEditNotes]  = useState(card.notes ?? '')
@@ -163,18 +167,30 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
 
   return (
     <div style={{
-      background: isSuspended ? T.paper : T.paperHi,
-      border: `1px solid ${flagHex ? flagHex + '55' : isSuspended ? T.line : T.lineSoft}`,
+      background: isSelected ? T.crimsonBg : isSuspended ? T.paper : T.paperHi,
+      border: `1px solid ${isSelected ? '#EFCAB8' : flagHex ? flagHex + '55' : isSuspended ? T.line : T.lineSoft}`,
       borderRadius: 12, overflow: 'hidden',
       boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
       opacity: isSuspended ? 0.72 : 1,
     }}>
       {/* Collapsed row */}
-      <button onClick={onToggle} style={{
+      <button onClick={selectionMode ? onSelect : onToggle} style={{
         width: '100%', padding: '11px 12px',
         display: 'flex', alignItems: 'flex-start', gap: 9,
         background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
       }}>
+        {/* Selection indicator */}
+        {selectionMode && (
+          <div style={{
+            width: 20, height: 20, borderRadius: 999, flexShrink: 0, marginTop: 2,
+            background: isSelected ? T.crimson : 'transparent',
+            border: `1.5px solid ${isSelected ? T.crimson : T.line}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {isSelected && <Icon name="check" size={10} color="#fff" strokeWidth={3} />}
+          </div>
+        )}
+
         {/* Status badge */}
         <div style={{ paddingTop: 3, flexShrink: 0 }}>
           {!card.card_id ? (
@@ -225,7 +241,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove }: CardRowProps)
       </button>
 
       {/* Edit panel */}
-      {expanded && (
+      {expanded && !selectionMode && (
         <div style={{ padding: '0 12px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
           <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 9 }}>
 
@@ -404,10 +420,14 @@ export default function BrowserView() {
   const [cards,           setCards]           = useState<BrowserCard[]>([])
   const [loading,         setLoading]         = useState(true)
   const [expandedId,      setExpandedId]      = useState<string | null>(null)
-  const [fType,     setFType]     = useState('')
-  const [fSource,   setFSource]   = useState('')
-  const [fromDate,  setFromDate]  = useState('')
-  const [toDate,    setToDate]    = useState('')
+  const [fType,          setFType]          = useState('')
+  const [fSource,        setFSource]        = useState('')
+  const [fromDate,       setFromDate]       = useState('')
+  const [toDate,         setToDate]         = useState('')
+  const [selectionMode,  setSelectionMode]  = useState(false)
+  const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
+  const [batchConfirm,   setBatchConfirm]   = useState(false)
+  const [showBatchFlag,  setShowBatchFlag]  = useState(false)
 
   useEffect(() => {
     if (filter !== 'flagged') setFlagColorFilter(null)
@@ -451,24 +471,72 @@ export default function BrowserView() {
     setExpandedId(null)
   }
 
+  function exitSelectionMode() {
+    setSelectionMode(false); setSelectedIds(new Set())
+    setBatchConfirm(false);  setShowBatchFlag(false)
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const allSelected = selectedIds.size > 0 && selectedIds.size === filtered.length
+
+  async function handleBatchDelete() {
+    const ids = [...selectedIds]
+    await batchDeleteNotes(ids)
+    setCards(prev => prev.filter(c => !selectedIds.has(c.id)))
+    exitSelectionMode()
+  }
+
+  async function handleBatchSuspend() {
+    const ids = [...selectedIds]
+    await batchSuspendCards(ids)
+    const now = new Date().toISOString()
+    setCards(prev => prev.map(c => selectedIds.has(c.id) ? { ...c, suspended_at: now } : c))
+    exitSelectionMode()
+  }
+
+  async function handleBatchFlag(color: string | null) {
+    const ids = [...selectedIds]
+    await batchSetFlag(ids, color)
+    setCards(prev => prev.map(c => selectedIds.has(c.id) ? { ...c, flag_color: color } : c))
+    exitSelectionMode()
+  }
+
   return (
     <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-      {/* Search */}
-      <div style={{ position: 'relative' }}>
-        <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-          <Icon name="search" size={15} color={T.inkMute} />
+      {/* Search + Select */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+            <Icon name="search" size={15} color={T.inkMute} />
+          </div>
+          <input
+            placeholder="Search cards…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%', padding: '10px 12px 10px 36px',
+              borderRadius: 10, background: T.paperHi, border: `1px solid ${T.line}`,
+              fontSize: 14, color: T.ink, fontFamily: 'inherit', boxSizing: 'border-box',
+            }}
+          />
         </div>
-        <input
-          placeholder="Search cards…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%', padding: '10px 12px 10px 36px',
-            borderRadius: 10, background: T.paperHi, border: `1px solid ${T.line}`,
-            fontSize: 14, color: T.ink, fontFamily: 'inherit', boxSizing: 'border-box',
-          }}
-        />
+        <button onClick={() => { setSelectionMode(v => !v); setSelectedIds(new Set()); setExpandedId(null) }} style={{
+          height: 40, padding: '0 12px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+          background: selectionMode ? T.ink : T.paperHi,
+          border: `1px solid ${selectionMode ? T.ink : T.line}`,
+          color: selectionMode ? T.cream : T.inkSoft,
+          cursor: 'pointer', flexShrink: 0,
+        }}>
+          {selectionMode ? 'Cancel' : 'Select'}
+        </button>
       </div>
 
       {/* Filter row: SRS state | source | spacer | field-filters | sort */}
@@ -596,8 +664,80 @@ export default function BrowserView() {
               onToggle={() => setExpandedId(prev => prev === card.id ? null : card.id)}
               onUpdate={patch => updateCard(card.id, patch)}
               onRemove={() => removeCard(card.id)}
+              selectionMode={selectionMode}
+              isSelected={selectedIds.has(card.id)}
+              onSelect={() => toggleSelect(card.id)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Bottom padding when action bar is visible */}
+      {selectionMode && <div style={{ height: 80 }} />}
+
+      {/* Batch action bar */}
+      {selectionMode && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60,
+          background: T.paper, borderTop: `1px solid ${T.line}`,
+          boxShadow: '0 -4px 16px rgba(40,20,10,0.1)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}>
+          {/* Flag picker row */}
+          {showBatchFlag && (
+            <div style={{ padding: '10px 18px 0', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace' }}>Flag:</span>
+              <FlagPicker current={null} onChange={color => { handleBatchFlag(color); setShowBatchFlag(false) }} />
+            </div>
+          )}
+          {/* Confirm delete row */}
+          {batchConfirm && (
+            <div style={{ padding: '10px 18px 0', fontSize: 12, color: T.crimson, fontWeight: 500 }}>
+              Delete {selectedIds.size} note{selectedIds.size !== 1 ? 's' : ''} and all their review history?
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px' }}>
+            {/* Select all / count */}
+            <button onClick={() => setSelectedIds(allSelected ? new Set() : new Set(filtered.map(c => c.id)))} style={{
+              fontSize: 12, fontWeight: 600, color: T.crimson, background: 'none', border: 'none',
+              cursor: 'pointer', padding: 0, flexShrink: 0,
+            }}>
+              {allSelected ? 'None' : 'All'}
+            </button>
+            <span style={{ fontSize: 12, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', flex: 1 }}>
+              {selectedIds.size} selected
+            </span>
+            {!batchConfirm ? (
+              <>
+                <button onClick={() => { setBatchConfirm(true); setShowBatchFlag(false) }} disabled={selectedIds.size === 0} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                  background: T.crimsonBg, border: `1px solid #EFCAB8`, color: T.crimson,
+                  cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
+                }}>Delete</button>
+                <button onClick={() => { handleBatchSuspend() }} disabled={selectedIds.size === 0} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                  background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
+                  cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
+                }}>Suspend</button>
+                <button onClick={() => { setShowBatchFlag(v => !v); setBatchConfirm(false) }} disabled={selectedIds.size === 0} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                  background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
+                  cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
+                }}>Flag</button>
+              </>
+            ) : (
+              <>
+                <button onClick={handleBatchDelete} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  background: T.crimson, border: 'none', color: '#fff', cursor: 'pointer',
+                }}>Confirm</button>
+                <button onClick={() => setBatchConfirm(false)} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12,
+                  background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft, cursor: 'pointer',
+                }}>Cancel</button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
