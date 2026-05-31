@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-05-31 18:03 | FIX | Add 'use client' to learn sub-pages (dialogues, essays, lessons, patterns) — RSC bundler failed to include StudyView in client manifest after learn/page.tsx became a redirect |
 | 2026-05-31 17:59 | FIX | Add missing curriculum-progress API route + learn page to git (were untracked, broke Vercel build) |
 | 2026-05-31 17:33 | FIX | Paginate getDueStats, listUserLanguages, resetCollectionSRS, resetCapturesSRS — all had .limit(10000) silently capped at 1000 by PostgREST server |
 | 2026-05-31 17:29 | FIX | listDueFlashcards: paginate with .range() loop (PAGE=1000) to bypass Supabase server row cap; was silently truncating review queues >1000 cards |
