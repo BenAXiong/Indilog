@@ -8,7 +8,7 @@ export type IconName =
   | 'sparkle' | 'tree' | 'leaf' | 'mountain' | 'wave' | 'filter'
   | 'play' | 'stop' | 'card' | 'note' | 'word' | 'logout' | 'library'
   | 'layers' | 'globe' | 'archive' | 'share' | 'download' | 'trash' | 'tag' | 'more-v'
-  | 'rotate-ccw'
+  | 'rotate-ccw' | 'skip-fwd'
 
 type IconProps = {
   name: IconName
@@ -79,6 +79,7 @@ const ICONS: Record<IconName, (p: SVGProps) => ReactNode> = {
   'tag':       p => S(p, <><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><path d="M7 7h.01"/></>),
   'more-v':    p => S(p, <path d="M12 5h.01M12 12h.01M12 19h.01"/>),
   'rotate-ccw': p => S(p, <><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 101.85-5.53"/></>),
+  'skip-fwd':   p => S(p, <><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/><path d="M21 6v12"/></>),
 }
 
 export default function Icon({ name, size = 22, color = 'currentColor', strokeWidth = 1.6, style, className }: IconProps) {

@@ -9,7 +9,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
   rateCard, rateCardRelearn, cardMeta, cardAudio,
-  suspendCard, setFlagColor,
+  suspendCard, setFlagColor, deferCard, undoRating,
   type FlashcardWithItem, type Rating,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
@@ -295,8 +295,11 @@ function ReviewSession({
   const [audioMode,      setAudioModeRaw]  = useState(false)
   const [showAllLangs,   setShowAllLangsRaw] = useState(true)
   const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
-  const swipeStart = useRef({ x: 0, y: 0 })
-  const audioRef   = useRef<HTMLAudioElement | null>(null)
+  const swipeStart   = useRef({ x: 0, y: 0 })
+  const audioRef     = useRef<HTMLAudioElement | null>(null)
+  type LastRated = { cardId: string; prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null } }
+  const lastRatedRef = useRef<LastRated | null>(null)
+  const [canUndo,  setCanUndo]  = useState(false)
 
   // Stop audio when card advances
   useEffect(() => { audioRef.current?.pause() }, [qIdx])
@@ -395,7 +398,10 @@ function ReviewSession({
   }, [revealed, showHardEasy, showOptions, isLearning]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit(rating: Rating) {
+    lastRatedRef.current = null
+    setCanUndo(false)
     const r: Rating = (isLearning && rating === 'hard') ? 'again' : rating
+    const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
 
     if (phase === 'review') {
       if (r === 'again' && card.interval_days >= MATURE_THRESHOLD) {
@@ -403,6 +409,7 @@ function ReviewSession({
       } else {
         await rateCard(card.id, r, state)
         completedRef.current.add(card.id)
+        lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
       }
 
     } else if (phase === 'new') {
@@ -413,6 +420,7 @@ function ReviewSession({
             // Cap reached → force Good graduation
             await rateCard(card.id, 'good', state)
             completedRef.current.add(card.id)
+            lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
           } else {
             // Reset to pass 0
             setQueue(prev => [...prev, { ...entry, pass: 0, restarts: restarts + 1 }])
@@ -425,6 +433,7 @@ function ReviewSession({
         const useGood = isFinalPass || restarts >= 1
         await rateCard(card.id, useGood ? 'good' : 'easy', state)
         completedRef.current.add(card.id)
+        lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
       }
 
     } else { // relearn
@@ -434,6 +443,7 @@ function ReviewSession({
           if (restarts >= MAX_RESTARTS) {
             await rateCard(card.id, 'again', state)
             completedRef.current.add(card.id)
+            lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
           } else {
             setQueue(prev => [...prev, { ...entry, pass: 0, restarts: restarts + 1 }])
           }
@@ -444,12 +454,33 @@ function ReviewSession({
         // "Got it!" — 50% recovery
         await rateCardRelearn(card.id, 'good', state, originalInterval)
         completedRef.current.add(card.id)
+        lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
       }
     }
 
     setRevealed(false)
     setShowFlagPicker(false)
     setQIdx(qi => qi + 1)
+  }
+
+  async function handleDefer() {
+    await deferCard(card.id)
+    lastRatedRef.current = null
+    setCanUndo(false)
+    setRevealed(false)
+    setShowFlagPicker(false)
+    setQIdx(qi => qi + 1)
+  }
+
+  async function handleUndo() {
+    const last = lastRatedRef.current
+    if (!last) return
+    await undoRating(last.cardId, last.prevState)
+    completedRef.current.delete(last.cardId)
+    lastRatedRef.current = null
+    setCanUndo(false)
+    setRevealed(false)
+    setQIdx(qi => qi - 1)
   }
 
   function skipCurrent() {
@@ -555,6 +586,14 @@ function ReviewSession({
           {qIdx + 1} / {queue.length}
         </span>
 
+        <button onClick={handleDefer} aria-label="Defer to tomorrow" style={{
+          width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
+        }}>
+          <Icon name="skip-fwd" size={15} strokeWidth={1.8} />
+        </button>
+
         <button onClick={() => setShowOptions(true)} aria-label="Session options" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -569,11 +608,23 @@ function ReviewSession({
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
           <div style={{ width: `${(qIdx / Math.max(queue.length, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
         </div>
-        {pendingRequeue > 0 && (
-          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, marginTop: 5, textAlign: 'right', letterSpacing: '0.03em' }}>
-            ↩ {pendingRequeue} returning
-          </div>
-        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5, minHeight: 16 }}>
+          {canUndo ? (
+            <button onClick={handleUndo} style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, letterSpacing: '0.03em',
+            }}>
+              <Icon name="rotate-ccw" size={10} strokeWidth={2} color={T.inkFaint} />
+              undo
+            </button>
+          ) : <span />}
+          {pendingRequeue > 0 && (
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, letterSpacing: '0.03em' }}>
+              ↩ {pendingRequeue} returning
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Card area */}

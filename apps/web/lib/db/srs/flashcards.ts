@@ -279,6 +279,56 @@ export async function resetCapturesSRS(): Promise<void> {
   await wipeReviewsAndReset(supabase, user.id, notes.map(n => n.id))
 }
 
+export async function deferCard(cardId: string): Promise<void> {
+  const supabase = createClient()
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+  await supabase.from('ind_flashcards').update({ due_at: tomorrow.toISOString() }).eq('id', cardId)
+}
+
+type PrevSMState = { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null }
+
+export async function undoRating(cardId: string, prevState: PrevSMState): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  const [, { data: review }] = await Promise.all([
+    supabase.from('ind_flashcards').update({
+      ease_factor:   prevState.ease_factor,
+      interval_days: prevState.interval_days,
+      repetitions:   prevState.repetitions,
+      due_at:        prevState.due_at,
+    }).eq('id', cardId),
+    supabase.from('ind_reviews')
+      .select('id')
+      .eq('flashcard_id', cardId)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const { data: stats } = await supabase
+    .from('ind_daily_stats')
+    .select('reviewed_count')
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .maybeSingle()
+
+  await Promise.all([
+    review ? supabase.from('ind_reviews').delete().eq('id', review.id) : Promise.resolve(),
+    stats && stats.reviewed_count > 0
+      ? supabase.from('ind_daily_stats')
+          .update({ reviewed_count: stats.reviewed_count - 1 })
+          .eq('user_id', user.id).eq('date', today)
+      : Promise.resolve(),
+  ])
+}
+
 export async function suspendCard(id: string): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_flashcards').update({ suspended_at: new Date().toISOString() }).eq('id', id)
