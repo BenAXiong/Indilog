@@ -60,7 +60,7 @@ type Props = {
 )
 
 const SOURCE_LABELS: Record<Source, string> = {
-  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogs', con_practice: 'Conversations',
+  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogues', con_practice: 'Conversations',
 }
 
 const numSort = (a: string, b: string) => Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1))

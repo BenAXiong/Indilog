@@ -26,7 +26,7 @@ import SettingsPanel, { type ZhMode } from './SettingsPanel'
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
 
 const SOURCE_NAMES: Record<Source, string> = {
-  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogs', con_practice: 'Conversations',
+  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogues', con_practice: 'Conversations',
 }
 
 const SOURCE_STORAGE_KEY: Partial<Record<Source, string>> = {
