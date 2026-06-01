@@ -42,9 +42,13 @@ function StreakCard({ streak, chain }: { streak: number; chain: boolean[] }) {
 
 // ─── Progress ring + CTA ─────────────────────────────────────────────────────
 
+const DAILY_CAP = 100
+
 function RingCard({ reviewed, goal, due }: { reviewed: number; goal: number; due: number }) {
   const pct = goal > 0 ? Math.min(reviewed / goal, 1) : 0
   const R = 52, C = 2 * Math.PI * R
+  // How many cards this session will load
+  const sessionSize = Math.min(due, reviewed < DAILY_CAP ? DAILY_CAP - reviewed : DAILY_CAP)
 
   return (
     <Card raised pad={18}>
@@ -80,36 +84,36 @@ function RingCard({ reviewed, goal, due }: { reviewed: number; goal: number; due
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 3 }}>
             <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 40, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-              {due}
+              {sessionSize}
             </span>
             <span style={{ fontSize: 13, color: T.inkSoft }}>cards</span>
           </div>
-          {due > 0 && (
+          {sessionSize > 0 && (
             <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
-              ~{Math.ceil(due * 0.5)} min
+              ~{Math.ceil(sessionSize * 0.5)} min
             </div>
           )}
         </div>
       </div>
 
-      {due > 0 ? (
+      {sessionSize > 0 ? (
         <Link href="/review?start=1" style={{
           marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
           height: 56, borderRadius: 15, textDecoration: 'none',
-          background: reviewed >= 100 ? T.amber : T.crimson,
+          background: reviewed >= DAILY_CAP ? T.amber : T.crimson,
           color: '#fff',
-          boxShadow: reviewed >= 100
+          boxShadow: reviewed >= DAILY_CAP
             ? '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(160,100,10,0.2), 0 8px 18px rgba(160,100,10,0.15)'
             : '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)',
         }}>
           <Icon name="play" size={15} color="#fff" />
-          {reviewed >= 100 ? (
+          {reviewed >= DAILY_CAP ? (
             <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review more?</span>
           ) : (
             <>
-              <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review {due} due</span>
+              <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review {sessionSize} due</span>
               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 500, opacity: 0.82, marginLeft: 2 }}>
-                ~{Math.ceil(due * 0.5)} min
+                ~{Math.ceil(sessionSize * 0.5)} min
               </span>
             </>
           )}

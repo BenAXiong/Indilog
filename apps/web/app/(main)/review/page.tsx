@@ -1080,7 +1080,8 @@ function ReviewPage() {
     const sorted = goalId
       ? [...c.filter(x => x.ind_items?.collection_id === goalId), ...c.filter(x => x.ind_items?.collection_id !== goalId)]
       : c
-    setCards(sorted.slice(0, 100))
+    const sessionCap = Math.min(100, Math.max(0, 100 - context.reviewedToday) || 100)
+    setCards(sorted.slice(0, sessionCap))
     setCtx(context)
     setLoading(false)
     if (autostart && !autostartedRef.current && sorted.length > 0) {
