@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   if (!word) return NextResponse.json({ results: [] })
 
   try {
-    return NextResponse.json({ results: lookupWord(word) })
+    return NextResponse.json({ results: await lookupWord(word) })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'lookup error'
     return NextResponse.json({ error: msg, results: [] }, { status: 500 })

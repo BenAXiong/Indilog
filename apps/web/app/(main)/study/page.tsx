@@ -378,7 +378,7 @@ const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] =
   { id: 'lessons',  name: 'Lessons',  icon: 'learn',  href: '/learn/lessons'   },
   { id: 'patterns', name: 'Patterns', icon: 'layers', href: '/learn/patterns'  },
   { id: 'essays',         name: 'Essays',         icon: 'pen',    href: '/learn/essays'         },
-  { id: 'dialogs',        name: 'Dialogs',        icon: 'wave',   href: '/learn/dialogues'      },
+  { id: 'dialogues',      name: 'Dialogues',      icon: 'wave',   href: '/learn/dialogues'      },
   { id: 'conversations',  name: 'Conversations',  icon: 'mic',    href: '/learn/conversations'  },
 ]
 

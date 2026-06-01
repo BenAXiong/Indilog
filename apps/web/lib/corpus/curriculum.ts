@@ -1,8 +1,8 @@
-import { getDb } from './db'
+import { getCorpusClient } from './db'
 
 export type CurriculumRow = {
   ab: string
-  zh: string
+  zh: string | null
   audio_url: string | null
   original_uuid: string
   category: string
@@ -15,15 +15,21 @@ export type LookupRow = {
   vocab_source: string
 }
 
+// essay, dialogue, and grmpts audio is at web.klokah.tw/text/sound/{tid}/{audioId}.mp3
+// The TID is the second-to-last segment of the original_uuid (e.g. essay_ES11201_34045_0 → 34045)
+const TEXT_SOUND_SOURCES = new Set(['essay', 'dialogue', 'grmpts'])
+
 function repairAudioUrl(url: string | null, source: string, uuid: string): string | null {
-  if (!url || !url.includes('klokah.tw')) return url
-  let fixed = url
-    .replace('file.klokah.tw', 'web.klokah.tw')
-    .replace('http://', 'https://')
-  if ((source === 'essay' || source === 'dialogue') && !fixed.includes('/text/')) {
+  if (!url) return null
+  let fixed = url.replace('http://', 'https://')
+  if (!fixed.includes('klokah.tw')) return fixed
+
+  fixed = fixed.replace('file.klokah.tw', 'web.klokah.tw')
+
+  if (TEXT_SOUND_SOURCES.has(source) && !fixed.includes('/text/')) {
     const parts = uuid.split('_')
-    const contextId = parts.length >= 3 ? parts[parts.length - 2] : null
-    const soundMatch = fixed.match(/\/sound\/(\d+)\.mp3/)
+    const contextId = parts.length >= 3 ? parts.at(-2) ?? null : null
+    const soundMatch = /\/sound\/(\d+)\.mp3/.exec(fixed)
     if (contextId && /^\d+$/.test(contextId) && soundMatch?.[1]) {
       return `https://web.klokah.tw/text/sound/${contextId}/${soundMatch[1]}.mp3`
     }
@@ -31,56 +37,84 @@ function repairAudioUrl(url: string | null, source: string, uuid: string): strin
   return fixed
 }
 
-function repair(rows: CurriculumRow[], source: string): CurriculumRow[] {
-  return rows.map(r => ({ ...r, audio_url: repairAudioUrl(r.audio_url, source, r.original_uuid) }))
+async function queryBySourceDialectCategory(
+  source: string,
+  dialect: string,
+  category: string,
+): Promise<CurriculumRow[]> {
+  const db = getCorpusClient()
+
+  const { data, error } = await db
+    .from('corpus_occurrences')
+    .select('audio_url, original_uuid, category, position, corpus_sentences!inner(ab, zh)')
+    .eq('source', source)
+    .eq('dialect_name', dialect)
+    .eq('category', category)
+    .order('position', { ascending: true })
+    .limit(500)
+
+  if (error || !data) return []
+
+  return (data as any[]).map(row => ({
+    ab:            row.corpus_sentences.ab,
+    zh:            row.corpus_sentences.zh ?? null,
+    audio_url:     repairAudioUrl(row.audio_url, source, row.original_uuid),
+    original_uuid: row.original_uuid,
+    category:      row.category,
+  }))
 }
 
-export function queryTwelve(dialect: string, category: string): CurriculumRow[] {
-  const rows = getDb().prepare(`
-    SELECT s.ab, s.zh, o.audio_url, o.original_uuid, o.category
-    FROM sentences s
-    JOIN occurrences o ON s.id = o.sentence_id
-    WHERE o.dialect_name = ? AND o.source = 'twelve' AND o.category = ?
-    ORDER BY o.original_uuid ASC
-  `).all(dialect, category) as CurriculumRow[]
-  return repair(rows, 'twelve')
+export async function queryTwelve(dialect: string, category: string): Promise<CurriculumRow[]> {
+  return queryBySourceDialectCategory('twelve', dialect, category)
 }
 
-export function queryGrmpts(dialect: string, patternId: string, level: string): CurriculumRow[] {
-  const rows = getDb().prepare(`
-    SELECT s.ab, s.zh, o.audio_url, o.original_uuid, o.category
-    FROM sentences s
-    JOIN occurrences o ON s.id = o.sentence_id
-    WHERE o.dialect_name = ? AND o.source = 'grmpts' AND o.category = ? AND o.level = ?
-    ORDER BY o.original_uuid ASC
-  `).all(dialect, patternId, level) as CurriculumRow[]
-  return repair(rows, 'grmpts')
+export async function queryGrmpts(dialect: string, patternId: string, level: string): Promise<CurriculumRow[]> {
+  const db = getCorpusClient()
+
+  const { data, error } = await db
+    .from('corpus_occurrences')
+    .select('audio_url, original_uuid, category, position, corpus_sentences!inner(ab, zh)')
+    .eq('source', 'grmpts')
+    .eq('dialect_name', dialect)
+    .eq('category', patternId)
+    .eq('level', level)
+    .order('position', { ascending: true })
+    .limit(500)
+
+  if (error || !data) return []
+
+  return (data as any[]).map(row => ({
+    ab:            row.corpus_sentences.ab,
+    zh:            row.corpus_sentences.zh ?? null,
+    audio_url:     repairAudioUrl(row.audio_url, 'grmpts', row.original_uuid),
+    original_uuid: row.original_uuid,
+    category:      row.category,
+  }))
 }
 
-export function queryEssayOrDialogue(
+export async function queryEssayOrDialogue(
   source: 'essay' | 'dialogue' | 'con_practice',
   dialect: string,
   category: string,
-): CurriculumRow[] {
-  const rows = getDb().prepare(`
-    SELECT s.ab, s.zh, o.audio_url, o.original_uuid, o.category
-    FROM sentences s
-    JOIN occurrences o ON s.id = o.sentence_id
-    WHERE o.dialect_name = ? AND o.source = ? AND o.category = ?
-    ORDER BY CASE
-      WHEN o.source = 'con_practice'
-        THEN CAST(SUBSTR(o.original_uuid, INSTR(o.original_uuid, '_s') + 2) AS INTEGER)
-      ELSE CAST(SUBSTR(o.original_uuid, INSTR(o.original_uuid, '_') + 1) AS INTEGER)
-    END ASC
-  `).all(dialect, source, category) as CurriculumRow[]
-  return repair(rows, source)
+): Promise<CurriculumRow[]> {
+  return queryBySourceDialectCategory(source, dialect, category)
 }
 
-export function lookupWord(cleanedToken: string): LookupRow[] {
-  return getDb().prepare(`
-    SELECT word_ab, word_ch, dialect_name, source AS vocab_source
-    FROM ilrdf_vocabulary
-    WHERE LOWER(word_ab) = ?
-    LIMIT 6
-  `).all(cleanedToken) as LookupRow[]
+export async function lookupWord(cleanedToken: string): Promise<LookupRow[]> {
+  const db = getCorpusClient()
+
+  const { data, error } = await db
+    .from('corpus_vocabulary')
+    .select('word_ab, word_ch, dialect_name, source')
+    .ilike('word_ab', cleanedToken)
+    .limit(6)
+
+  if (error || !data) return []
+
+  return (data as any[]).map(row => ({
+    word_ab:      row.word_ab,
+    word_ch:      row.word_ch ?? '',
+    dialect_name: row.dialect_name ?? '',
+    vocab_source: row.source ?? '',
+  }))
 }

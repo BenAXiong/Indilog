@@ -1,48 +1,39 @@
-// TEMPORARY — remove after Vercel db issue is confirmed fixed
-import fs from 'node:fs'
-import path from 'node:path'
+// TEMPORARY — corpus connectivity diagnostic
+import { getCorpusClient } from '@/lib/corpus/db'
 
 export const runtime = 'nodejs'
 
 export async function GET() {
-  const cwd = process.cwd()
-  const candidates = [
-    path.join(cwd, 'packages/dictionary/ycm_master.db'),
-    path.join(cwd, '../../packages/dictionary/ycm_master.db'),
-  ]
+  const db = getCorpusClient()
 
-  const fileChecks = candidates.map(p => {
-    try {
-      const stat = fs.statSync(p)
-      const fd = fs.openSync(p, 'r')
-      const buf = Buffer.alloc(16)
-      fs.readSync(fd, buf, 0, 16, 0)
-      fs.closeSync(fd)
-      return {
-        path: p,
-        exists: true,
-        sizeBytes: stat.size,
-        isSQLite: buf.subarray(0, 15).toString('ascii') === 'SQLite format 3',
-      }
-    } catch (e) {
-      return { path: p, exists: false, error: String(e) }
-    }
-  })
+  const checks: Record<string, unknown> = {}
 
-  // Test better-sqlite3 can actually open and query the db
-  let sqliteTest: Record<string, unknown> = { skipped: true }
-  const dbPath = fileChecks.find(c => c.exists && c.isSQLite)?.path
-  if (dbPath) {
-    try {
-      const Database = (await import('better-sqlite3')).default
-      const db = new Database(dbPath, { readonly: true })
-      const row = db.prepare('SELECT count(*) as n FROM ilrdf_vocabulary').get() as { n: number }
-      db.close()
-      sqliteTest = { ok: true, rowCount: row.n }
-    } catch (e) {
-      sqliteTest = { ok: false, error: String(e) }
-    }
+  try {
+    const { count: sentCount } = await db
+      .from('corpus_sentences')
+      .select('*', { count: 'exact', head: true })
+    checks.corpus_sentences = { ok: true, count: sentCount }
+  } catch (e) {
+    checks.corpus_sentences = { ok: false, error: String(e) }
   }
 
-  return Response.json({ cwd, fileChecks, sqliteTest })
+  try {
+    const { count: occCount } = await db
+      .from('corpus_occurrences')
+      .select('*', { count: 'exact', head: true })
+    checks.corpus_occurrences = { ok: true, count: occCount }
+  } catch (e) {
+    checks.corpus_occurrences = { ok: false, error: String(e) }
+  }
+
+  try {
+    const { count: vocabCount } = await db
+      .from('corpus_vocabulary')
+      .select('*', { count: 'exact', head: true })
+    checks.corpus_vocabulary = { ok: true, count: vocabCount }
+  } catch (e) {
+    checks.corpus_vocabulary = { ok: false, error: String(e) }
+  }
+
+  return Response.json(checks)
 }
