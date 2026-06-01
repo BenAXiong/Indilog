@@ -108,9 +108,11 @@ export default function StudyView({ source }: Props) {
     fetchCompletions(langCode, source).then(setCompletions)
   }, [langCode, source])
 
-  // ── Fetch first title_zh for essay/dialogue when titleZh is empty ───────────
+  // ── Auto-select first item for indexed sources when titleZh is empty or stale ─
   useEffect(() => {
-    if ((source === 'essay' || source === 'dialogue') && !titleZh && dialect) {
+    const isIndexed = source === 'essay' || source === 'dialogue' || source === 'con_practice'
+    const isStale = navItems.length > 0 && titleZh !== '' && !navItems.find(i => i.title_zh === titleZh)
+    if (isIndexed && dialect && (!titleZh || isStale)) {
       fetch(`/api/learn/geometry?source=${source}&dialect=${encodeURIComponent(dialect)}`)
         .then(r => r.json())
         .then((d: { items: Array<{ index: number; title_zh: string; available: boolean }> }) => {
@@ -119,7 +121,7 @@ export default function StudyView({ source }: Props) {
         })
         .catch(() => {})
     }
-  }, [source, dialect, titleZh])
+  }, [source, dialect, titleZh, navItems])
 
   // ── Fetch curriculum data ───────────────────────────────────────────────────
   useEffect(() => {
