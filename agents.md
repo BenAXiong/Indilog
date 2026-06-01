@@ -127,6 +127,19 @@ Before adding any feature, check the explicit out-of-scope list in the workflow 
 
 ---
 
+## After every push to main
+
+After every `git push origin main`, proactively check the Vercel build status — do not wait for the user to report a failure:
+
+```bash
+npx vercel ls                                      # get latest deployment URL + status
+npx vercel logs <deployment-url> --output raw      # get build output if status is not Ready
+```
+
+If the build fails, read the error, fix it, and push again before reporting back to the user.
+
+---
+
 ## Commit cadence
 
 **Commit after every meaningful unit of work — not at the end of a session.**
