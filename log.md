@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 11:45 | SCHEMA | M3: update corpus_geometry.json with official essay titles — unit names from klokah.tw, structural format (上課用語·學習一 etc.), S2 補充 suffix; dialogue unchanged |
 | 2026-06-01 04:33 | SCHEMA | M3: update corpus_geometry.json — 73→72 essays, 61→60 dialogues, 0 duplicate titles, 0 orphan slots; fixed from Citadel branch fix/essay-dialogue-geometry |
 | 2026-06-01 03:58 | FIX | StudyView: move navItems declaration above curriculum useEffect — was causing TDZ ReferenceError |
 | 2026-06-01 03:55 | FEATURE | M5-A: switch /api/learn/curriculum to accept index for essay/dialogue — route looks up geometry by index; StudyView caches navItems to resolve titleZh→index; twelve/grmpts unchanged |
