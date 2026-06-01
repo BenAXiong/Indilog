@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
   }
 
   if (source === 'essay' || source === 'dialogue' || source === 'con_practice') {
-    const items = (geo[source] ?? []).map(e => ({
+    type Entry = { index: number; title_zh: string; alignment: Record<string, string> }
+    const items = ((geo[source] ?? []) as Entry[]).map(e => ({
       index:    e.index,
       title_zh: e.title_zh,
       available: dialect ? dialect in e.alignment : true,
