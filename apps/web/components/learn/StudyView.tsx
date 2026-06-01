@@ -14,6 +14,7 @@ const PATTERN_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(rawPatternLabels as Record<string, string>).map(([k, v]) => [k, v.replace(/^\d+\s*-\s*/, '')])
 )
 import { createItem, type Item } from '@/lib/db/notebook/items'
+import { createClient } from '@/lib/supabase/client'
 import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/progress/completions'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import Icon from '@/components/ui/Icon'
@@ -54,6 +55,7 @@ export default function StudyView({ source }: Props) {
   // ── UI state ────────────────────────────────────────────────────────────────
   const [navItems, setNavItems] = useState<Array<{ index: number; title_zh: string }>>([])
   const [results,      setResults]      = useState<CurriculumRow[]>([])
+  const [savedItemMap, setSavedItemMap] = useState<Map<string, string>>(new Map())
   const [loading,      setLoading]      = useState(false)
   const [sheetOpen,    setSheetOpen]    = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -148,6 +150,23 @@ export default function StudyView({ source }: Props) {
       .catch(() => setResults([]))
       .finally(() => setLoading(false))
   }, [source, dialect, level, lesson, titleZh, pattern, navItems])
+
+  // ── Pre-load saved status for current lesson's sentences ───────────────────
+  useEffect(() => {
+    if (!results.length || !langCode) { setSavedItemMap(new Map()); return }
+    const abs = results.map(r => r.ab)
+    createClient()
+      .from('ind_items')
+      .select('id, ab')
+      .eq('language', langCode)
+      .eq('note_source', 'curriculum')
+      .in('ab', abs)
+      .then(({ data }) => {
+        const m = new Map<string, string>()
+        for (const row of data ?? []) m.set(row.ab, row.id)
+        setSavedItemMap(m)
+      })
+  }, [results, langCode])
 
   // ── Item key for completions ────────────────────────────────────────────────
   const itemKey = source === 'twelve'
@@ -269,11 +288,12 @@ export default function StudyView({ source }: Props) {
   }
 
   // ── Save to ind_items ───────────────────────────────────────────────────────
-  const handleSave = async (ab: string, zh: string, audioUrl?: string | null): Promise<Item | null> => {
+  const handleSave = async (ab: string, zh: string, audioUrl?: string | null, sourceId?: string): Promise<Item | null> => {
     return createItem({
       ab, zh: zh || undefined, type: 'sentence', language: langCode,
       dialect, note_source: 'curriculum',
       audio: audioUrl || undefined,
+      source_id: sourceId,
     })
   }
 
@@ -377,11 +397,12 @@ export default function StudyView({ source }: Props) {
         ) : (
           results.map((row, i) => (
             <StudyCard
-              key={i}
+              key={row.original_uuid}
               row={row}
               index={i + 1}
               zhMode={zhMode}
               lookupOn={lookupOn}
+              initialSavedId={savedItemMap.get(row.ab) ?? null}
               onLookup={(word, rect) => setLookup({ word, rect })}
               onPlay={handlePlay}
               onSave={handleSave}

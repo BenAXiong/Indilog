@@ -12,15 +12,16 @@ type Props = {
   index: number
   zhMode: ZhMode
   lookupOn: boolean
+  initialSavedId?: string | null
   onLookup?: (word: string, rect: DOMRect) => void
   onPlay: (url: string) => void
-  onSave: (ab: string, zh: string, audioUrl?: string | null) => Promise<Item | null>
+  onSave: (ab: string, zh: string, audioUrl?: string | null, sourceId?: string) => Promise<Item | null>
 }
 
-export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPlay, onSave }: Readonly<Props>) {
+export default function StudyCard({ row, index, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
-  const [savedId,    setSavedId]    = useState<string | null>(null)
+  const [savedId,    setSavedId]    = useState<string | null>(initialSavedId ?? null)
 
   const tokens = row.ab.split(/\s+/).filter(Boolean)
 
@@ -39,7 +40,7 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
       await deleteItem(savedId)
       setSavedId(null)
     } else {
-      const item = await onSave(row.ab, row.zh ?? '', row.audio_url)
+      const item = await onSave(row.ab, row.zh ?? '', row.audio_url, row.original_uuid)
       if (item) setSavedId(item.id)
     }
   }
