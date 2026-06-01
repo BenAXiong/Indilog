@@ -2,6 +2,12 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-02 03:18 | FIX | Curriculum bookmark persists across navigation — batch pre-load saved status, key cards by original_uuid, save source_id on new saves |
+| 2026-06-02 03:09 | FIX | Curriculum bookmark now toggles — second click calls deleteItem(savedId) to unsave |
+| 2026-06-02 01:47 | FIX | Essay slot order corrected 原版→一→二 (re-crystallized from Citadel); Dialogs→Dialogues in ContentSheet + StudyView |
+| 2026-06-01 20:28 | FIX | Dashboard 'Due now' + review button counters reflect 100-card session cap; review session cap = 100 - reviewedToday (||100 fallback for 'Review more?') |
+| 2026-06-01 20:21 | FEATURE | Goal deck Active/Paused pill (localStorage srs_goal_paused); 100-card session cap; 'Review more?' button (amber) after 100 reviewed |
+| 2026-06-01 20:15 | FIX | Essay/dialogue selector group starts corrected (essays [0,8,16], dialogues [0,10,20]); labels 高級→中高級; titles shortened 上課用語·學習一→上課用語·一 |
 | 2026-06-01 19:33 | FIX | M3-arch: grmpts audio repair (extend /text/sound/{tid}/ path fix to grmpts); normalize dialogs→dialogues in CURRICULUM + curriculum-progress API |
 | 2026-06-01 18:49 | FEATURE | M3-arch: migrate corpus to Supabase — corpus_sentences/occurrences/vocabulary (681k rows); unit/lesson/role/position enrichment; drop SQLite LFS + better-sqlite3; async API layer |
 | 2026-06-01 18:04 | FIX | M3: curriculum-progress API — add con_practice; conversations key in response; Study tab now shows correct progress + next |
