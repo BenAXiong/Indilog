@@ -95,15 +95,24 @@ function RingCard({ reviewed, goal, due }: { reviewed: number; goal: number; due
       {due > 0 ? (
         <Link href="/review?start=1" style={{
           marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          height: 56, borderRadius: 15,
-          background: T.crimson, color: '#fff', textDecoration: 'none',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)',
+          height: 56, borderRadius: 15, textDecoration: 'none',
+          background: reviewed >= 100 ? T.amber : T.crimson,
+          color: '#fff',
+          boxShadow: reviewed >= 100
+            ? '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(160,100,10,0.2), 0 8px 18px rgba(160,100,10,0.15)'
+            : '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)',
         }}>
           <Icon name="play" size={15} color="#fff" />
-          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review {due} due</span>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 500, opacity: 0.82, marginLeft: 2 }}>
-            ~{Math.ceil(due * 0.5)} min
-          </span>
+          {reviewed >= 100 ? (
+            <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review more?</span>
+          ) : (
+            <>
+              <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review {due} due</span>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 500, opacity: 0.82, marginLeft: 2 }}>
+                ~{Math.ceil(due * 0.5)} min
+              </span>
+            </>
+          )}
         </Link>
       ) : (
         <div style={{

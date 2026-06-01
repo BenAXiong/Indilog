@@ -11,11 +11,23 @@ type Props = {
   initialGoal: GoalData
 }
 
+const PAUSE_KEY = 'srs_goal_paused'
+
 export default function GoalWidget({ initialGoal }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [goal, setGoal]           = useState<GoalData>(initialGoal)
   const [deckName, setDeckName]   = useState<string | null>(null)
   const [deckStats, setDeckStats] = useState<{ total: number; mastered: number } | null>(null)
+  const [paused, setPaused]       = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem(PAUSE_KEY) === '1'
+  )
+
+  function togglePause(e: React.MouseEvent) {
+    e.stopPropagation()
+    const next = !paused
+    setPaused(next)
+    localStorage.setItem(PAUSE_KEY, next ? '1' : '0')
+  }
 
   useEffect(() => {
     if (!goal.goal_collection_id) { setDeckName(null); setDeckStats(null); return }
@@ -49,11 +61,25 @@ export default function GoalWidget({ initialGoal }: Props) {
           display: 'flex', flexDirection: 'column', textAlign: 'left',
         }}
       >
-        <div style={{
-          fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute,
-          textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
-        }}>
-          Goal
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute,
+            textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
+          }}>Goal</span>
+          {isActive && (
+            <button
+              onClick={togglePause}
+              style={{
+                padding: '2px 7px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+                letterSpacing: '0.05em', textTransform: 'uppercase',
+                background: paused ? T.amberBg : T.sageBg,
+                color: paused ? T.amber : T.sageDp,
+              }}
+            >
+              {paused ? 'Paused' : 'Active'}
+            </button>
+          )}
         </div>
 
         {isActive ? (

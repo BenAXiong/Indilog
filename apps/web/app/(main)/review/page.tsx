@@ -1075,11 +1075,12 @@ function ReviewPage() {
           })(),
       loadSessionContext(),
     ])
-    const goalId = !isCustom ? context.goalCollectionId : null
+    const goalPaused = localStorage.getItem('srs_goal_paused') === '1'
+    const goalId = (!isCustom && !goalPaused) ? context.goalCollectionId : null
     const sorted = goalId
       ? [...c.filter(x => x.ind_items?.collection_id === goalId), ...c.filter(x => x.ind_items?.collection_id !== goalId)]
       : c
-    setCards(sorted)
+    setCards(sorted.slice(0, 100))
     setCtx(context)
     setLoading(false)
     if (autostart && !autostartedRef.current && sorted.length > 0) {
