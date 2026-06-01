@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 17:45 | FIX | M3: curriculum API — add con_practice to indexed sources (was falling through to Unknown source) |
 | 2026-06-01 17:30 | SCHEMA | M3: rescrape essays+dialogues (fresh June 2026), dedup JSONL, rebuild DB — 202,568 occurrences, 185,999 unique souls |
 | 2026-06-01 15:24 | SCHEMA | M3: update ycm_master.db — 194k→203k occurrences; con_practice (dialogue+vocab) distilled in |
 | 2026-06-01 14:00 | FEATURE | M3: scrape + add 生活會話篇 (con_practice) — 30 lessons × 42 dialects, XML source, official bilingual titles, speaker attribution, scene context, sentence/word audio |

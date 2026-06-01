@@ -14,15 +14,15 @@ export async function GET(req: NextRequest) {
   const level    = p.get('level')?.trim()   ?? '1'
   const indexRaw = p.get('index')?.trim()   ?? ''
 
-  const isEssayLike = source === 'essay' || source === 'dialogue'
+  const isIndexed = source === 'essay' || source === 'dialogue' || source === 'con_practice'
 
   if (!dialect || !source) {
     return NextResponse.json({ error: 'Missing required params', results: [] }, { status: 400 })
   }
-  if (isEssayLike && !indexRaw) {
+  if (isIndexed && !indexRaw) {
     return NextResponse.json({ error: 'Missing index param', results: [] }, { status: 400 })
   }
-  if (!isEssayLike && !titleZh) {
+  if (!isIndexed && !titleZh) {
     return NextResponse.json({ error: 'Missing title_zh param', results: [] }, { status: 400 })
   }
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ results: queryGrmpts(dialect, titleZh, level) })
     }
 
-    if (isEssayLike) {
+    if (isIndexed) {
       const idx   = Number.parseInt(indexRaw, 10)
       const items = ((geometryData as unknown) as Record<string, AlignedEntry[]>)[source] ?? []
       const entry = items.find(e => e.index === idx)
