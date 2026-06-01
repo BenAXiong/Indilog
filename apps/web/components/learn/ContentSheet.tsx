@@ -101,7 +101,7 @@ export default function ContentSheet(props: Props) {
 
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        height: '62dvh', background: T.paper,
+        height: '77dvh', background: T.paper,
         borderRadius: '20px 20px 0 0',
         border: `1px solid ${T.line}`,
         zIndex: 71, display: 'flex', flexDirection: 'column',
@@ -156,6 +156,7 @@ export default function ContentSheet(props: Props) {
           )}
           {(props.source === 'essay' || props.source === 'dialogue' || props.source === 'con_practice') && (
             <EssayContent
+              source={props.source}
               geo={essayGeo}
               currentTitleZh={props.currentTitleZh}
               activeGroup={activeGroup}
@@ -323,8 +324,12 @@ function GrmptsContent(p: {
   )
 }
 
-// ── Essays / Dialogs ──────────────────────────────────────────────────────────
+const CP_GROUP_LABELS = ['1–10', '11–20', '21–30']
+const CP_GROUP_START  = [0, 10, 20]
+
+// ── Essays / Dialogs / Conversations ─────────────────────────────────────────
 function EssayContent(p: {
+  source: 'essay' | 'dialogue' | 'con_practice'
   geo: EssayGeo | null
   currentTitleZh: string
   activeGroup: number; setActiveGroup: (g: number) => void
@@ -333,14 +338,16 @@ function EssayContent(p: {
 }) {
   if (!p.geo) return <div style={loadingStyle}>Loading…</div>
 
-  const groupStart = ESSAY_GROUP_START[p.activeGroup]
-  const groupEnd   = ESSAY_GROUP_START[p.activeGroup + 1] ?? Infinity
+  const groupLabels = p.source === 'con_practice' ? CP_GROUP_LABELS : ESSAY_GROUP_LABELS
+  const groupStarts = p.source === 'con_practice' ? CP_GROUP_START  : ESSAY_GROUP_START
+  const groupStart  = groupStarts[p.activeGroup]
+  const groupEnd    = groupStarts[p.activeGroup + 1] ?? Infinity
   const itemsInGroup = p.geo.items.filter(i => i.index >= groupStart && i.index < groupEnd)
 
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
-        {ESSAY_GROUP_LABELS.map((lbl, i) => (
+        {groupLabels.map((lbl, i) => (
           <button key={lbl} onClick={() => p.setActiveGroup(i)} style={tabStyle(p.activeGroup === i)}>
             {lbl}
           </button>

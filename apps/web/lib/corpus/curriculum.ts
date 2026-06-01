@@ -67,7 +67,11 @@ export function queryEssayOrDialogue(
     FROM sentences s
     JOIN occurrences o ON s.id = o.sentence_id
     WHERE o.dialect_name = ? AND o.source = ? AND o.category = ?
-    ORDER BY CAST(SUBSTR(o.original_uuid, INSTR(o.original_uuid, '_') + 1) AS INTEGER) ASC
+    ORDER BY CASE
+      WHEN o.source = 'con_practice'
+        THEN CAST(SUBSTR(o.original_uuid, INSTR(o.original_uuid, '_s') + 2) AS INTEGER)
+      ELSE CAST(SUBSTR(o.original_uuid, INSTR(o.original_uuid, '_') + 1) AS INTEGER)
+    END ASC
   `).all(dialect, source, category) as CurriculumRow[]
   return repair(rows, source)
 }
