@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 15:24 | SCHEMA | M3: update ycm_master.db — 194k→203k occurrences; con_practice (dialogue+vocab) distilled in |
 | 2026-06-01 14:00 | FEATURE | M3: scrape + add 生活會話篇 (con_practice) — 30 lessons × 42 dialects, XML source, official bilingual titles, speaker attribution, scene context, sentence/word audio |
 | 2026-06-01 13:15 | SCHEMA | M3: rebuild dialogue geometry to 30 slots — S1=對話一(12), S2=對話二(12), S3=對話三(6); index-JSON-derived, all 42 dialects |
 | 2026-06-01 12:30 | SCHEMA | M3: rebuild essay geometry to 24 slots — 6×3 (S2 units: 學習一/學習二/原版) + 6×1 (S1-only: 學習一); TID role detection from master JSON raw list; logic in DEC-M3-01 |
