@@ -2,6 +2,11 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 18:04 | FIX | M3: curriculum-progress API — add con_practice; conversations key in response; Study tab now shows correct progress + next |
+| 2026-06-01 17:51 | FIX | M3: con_practice card turn order (CASE WHEN ORDER BY), ContentSheet height 62→77dvh, conversation tabs 1-10/11-20/21-30 |
+| 2026-06-01 17:41 | FIX | M3: ContentSheet + StudyView — extend to con_practice (sheet, storage key, source prop); fix essay handleEssaySelect key |
+| 2026-06-01 17:30 | FIX | M3: geometry route — cast geo[source] to common Entry type to resolve TS union error |
+| 2026-06-01 17:27 | FIX | M3: geometry API handles con_practice source; StudyView auto-select extended to con_practice + handles stale localStorage titleZh |
 | 2026-06-01 17:50 | FEATURE | M3: Learn UI — add Conversations tab (/learn/conversations), wire StudyView + curriculum + geometry APIs |
 | 2026-06-01 17:45 | FIX | M3: curriculum API — add con_practice to indexed sources (was falling through to Unknown source) |
 | 2026-06-01 17:30 | SCHEMA | M3: rescrape essays+dialogues (fresh June 2026), dedup JSONL, rebuild DB — 202,568 occurrences, 185,999 unique souls |
