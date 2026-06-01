@@ -5,7 +5,7 @@ export const runtime = 'nodejs'
 
 export async function GET() {
   try {
-    const dialects = listDialects()
+    const dialects = await listDialects()
     return NextResponse.json({ dialects })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'dict error'

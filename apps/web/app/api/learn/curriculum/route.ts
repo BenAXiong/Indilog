@@ -28,11 +28,11 @@ export async function GET(req: NextRequest) {
 
   try {
     if (source === 'twelve') {
-      return NextResponse.json({ results: queryTwelve(dialect, titleZh) })
+      return NextResponse.json({ results: await queryTwelve(dialect, titleZh) })
     }
 
     if (source === 'grmpts') {
-      return NextResponse.json({ results: queryGrmpts(dialect, titleZh, level) })
+      return NextResponse.json({ results: await queryGrmpts(dialect, titleZh, level) })
     }
 
     if (isIndexed) {
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       const entry = items.find(e => e.index === idx)
       const category = entry?.alignment?.[dialect]
       if (!category) return NextResponse.json({ results: [] })
-      return NextResponse.json({ results: queryEssayOrDialogue(source, dialect, category) })
+      return NextResponse.json({ results: await queryEssayOrDialogue(source, dialect, category) })
     }
 
     return NextResponse.json({ error: 'Unknown source', results: [] }, { status: 400 })

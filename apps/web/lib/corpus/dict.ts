@@ -1,7 +1,7 @@
-import { getDb } from './db'
+import { getCorpusClient } from './db'
 
 export type WordRow = {
-  id: number
+  id: string
   word_ab: string
   word_ch: string
   dialect_name: string
@@ -10,7 +10,7 @@ export type WordRow = {
 }
 
 export type SentenceRow = {
-  id: number
+  id: string
   ab: string
   zh: string
   dialect_name: string
@@ -24,80 +24,123 @@ export type DialectRow = {
   sub_dialects: string
 }
 
-export function searchWords(q: string, glid?: string, dialect?: string, fuzzy = false): WordRow[] {
-  const db = getDb()
+export async function searchWords(
+  q: string,
+  glid?: string,
+  dialect?: string,
+  fuzzy = false,
+): Promise<WordRow[]> {
+  const db = getCorpusClient()
+
+  let query = db
+    .from('corpus_vocabulary')
+    .select('id, word_ab, word_ch, dialect_name, glid')
+    .limit(200)
 
   if (fuzzy) {
-    const like = `%${q}%`
-    const base = `
-      SELECT v.id, v.word_ab, v.word_ch, v.dialect_name, v.glid,
-             (LOWER(v.word_ab) = LOWER(?)) as exact
-      FROM ilrdf_vocabulary v
-      WHERE LOWER(v.word_ab) LIKE LOWER(?)
-      ${glid    ? 'AND v.glid = ?'         : ''}
-      ${dialect ? 'AND v.dialect_name = ?' : ''}
-      ORDER BY exact DESC, LENGTH(v.word_ab) ASC
-    `
-    const params: (string | number)[] = [q, like]
-    if (glid)    params.push(glid)
-    if (dialect) params.push(dialect)
-    return db.prepare(base).all(...params) as WordRow[]
+    query = query.ilike('word_ab', `%${q}%`)
+  } else {
+    query = query.ilike('word_ab', `${q}%`)
   }
 
-  const pattern = `"${q.replaceAll('"', '""')}"*`
-  const base = `
-    SELECT v.id, v.word_ab, v.word_ch, v.dialect_name, v.glid,
-           (LOWER(v.word_ab) = LOWER(?)) as exact
-    FROM ilrdf_vocabulary_fts f
-    JOIN ilrdf_vocabulary v ON v.id = f.rowid
-    WHERE f.ab MATCH ?
-    ${glid    ? 'AND v.glid = ?'         : ''}
-    ${dialect ? 'AND v.dialect_name = ?' : ''}
-    ORDER BY exact DESC, LENGTH(v.word_ab) ASC
-  `
-  const params: (string | number)[] = [q, pattern]
-  if (glid)    params.push(glid)
-  if (dialect) params.push(dialect)
-  return db.prepare(base).all(...params) as WordRow[]
+  if (glid)    query = query.eq('glid', glid)
+  if (dialect) query = query.eq('dialect_name', dialect)
+
+  const { data, error } = await query
+  if (error || !data) return []
+
+  const qLower = q.toLowerCase()
+  return (data as any[]).map(row => ({
+    id:           row.id,
+    word_ab:      row.word_ab,
+    word_ch:      row.word_ch ?? '',
+    dialect_name: row.dialect_name ?? '',
+    glid:         row.glid ?? '',
+    exact:        row.word_ab.toLowerCase() === qLower,
+  })).sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
 }
 
-export function searchSentences(q: string, glid?: string, dialect?: string, fuzzy = false): SentenceRow[] {
-  const db = getDb()
+export async function searchSentences(
+  q: string,
+  glid?: string,
+  dialect?: string,
+  fuzzy = false,
+): Promise<SentenceRow[]> {
+  const db = getCorpusClient()
 
-  if (fuzzy) {
-    const like = `%${q}%`
-    const base = `
-      SELECT s.id, s.ab, s.zh, o.dialect_name, o.source, o.audio_url
-      FROM sentences s
-      JOIN occurrences o ON o.sentence_id = s.id
-      WHERE LOWER(s.ab) LIKE LOWER(?)
-      ${glid    ? 'AND s.glid = ?'         : ''}
-      ${dialect ? 'AND o.dialect_name = ?' : ''}
-      ORDER BY o.source
-    `
-    const params: (string | number)[] = [like]
-    if (glid)    params.push(glid)
-    if (dialect) params.push(dialect)
-    return db.prepare(base).all(...params) as SentenceRow[]
+  // Step 1: find matching sentences by ab text
+  let sentQuery = db
+    .from('corpus_sentences')
+    .select('id, ab, zh, glid')
+    .limit(300)
+
+  sentQuery = fuzzy
+    ? sentQuery.ilike('ab', `%${q}%`)
+    : sentQuery.ilike('ab', `${q}%`)
+
+  if (glid) sentQuery = sentQuery.eq('glid', glid)
+
+  const { data: sents, error: sErr } = await sentQuery
+  if (sErr || !sents || sents.length === 0) return []
+
+  const sentIds = (sents as any[]).map(s => s.id)
+  const sentMap = new Map((sents as any[]).map(s => [s.id, s]))
+
+  // Step 2: fetch one occurrence per sentence (prefer entry with audio_url)
+  let occQuery = db
+    .from('corpus_occurrences')
+    .select('sentence_id, dialect_name, source, audio_url')
+    .in('sentence_id', sentIds)
+    .order('source', { ascending: true })
+    .limit(500)
+
+  if (dialect) occQuery = occQuery.eq('dialect_name', dialect)
+
+  const { data: occs, error: oErr } = await occQuery
+  if (oErr || !occs) return []
+
+  // Deduplicate by sentence_id, prefer entry with audio_url
+  const seen = new Map<string, SentenceRow>()
+  for (const occ of occs as any[]) {
+    const sent = sentMap.get(occ.sentence_id)
+    if (!sent) continue
+    const existing = seen.get(occ.sentence_id)
+    if (!existing || (!existing.audio_url && occ.audio_url)) {
+      seen.set(occ.sentence_id, {
+        id:           occ.sentence_id,
+        ab:           sent.ab,
+        zh:           sent.zh ?? '',
+        dialect_name: occ.dialect_name ?? '',
+        source:       occ.source ?? '',
+        audio_url:    occ.audio_url ?? null,
+      })
+    }
   }
 
-  const pattern = `"${q.replaceAll('"', '""')}"*`
-  const base = `
-    SELECT s.id, s.ab, s.zh, o.dialect_name, o.source, o.audio_url
-    FROM sentences_fts f
-    JOIN sentences s ON s.id = f.rowid
-    JOIN occurrences o ON o.sentence_id = s.id
-    WHERE f.ab MATCH ?
-    ${glid    ? 'AND s.glid = ?'         : ''}
-    ${dialect ? 'AND o.dialect_name = ?' : ''}
-    ORDER BY o.source
-  `
-  const params: (string | number)[] = [pattern]
-  if (glid)    params.push(glid)
-  if (dialect) params.push(dialect)
-  return db.prepare(base).all(...params) as SentenceRow[]
+  return Array.from(seen.values())
 }
 
-export function listDialects(): DialectRow[] {
-  return getDb().prepare('SELECT glid, group_name, sub_dialects FROM dialects ORDER BY glid').all() as DialectRow[]
+export async function listDialects(): Promise<DialectRow[]> {
+  const db = getCorpusClient()
+  const { data } = await db
+    .from('corpus_vocabulary')
+    .select('glid, dialect_name')
+    .not('glid', 'is', null)
+    .order('glid')
+    .limit(1000)
+
+  if (!data) return []
+
+  const groups = new Map<string, string[]>()
+  for (const row of data as any[]) {
+    if (!groups.has(row.glid)) groups.set(row.glid, [])
+    const arr = groups.get(row.glid)!
+    if (!arr.includes(row.dialect_name)) arr.push(row.dialect_name)
+  }
+
+  return Array.from(groups.entries()).map(([glid, dialects]) => ({
+    glid,
+    group_name:   glid,
+    sub_dialects: dialects.join(', '),
+  }))
 }

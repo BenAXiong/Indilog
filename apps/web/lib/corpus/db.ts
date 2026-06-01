@@ -1,18 +1,15 @@
-import Database from 'better-sqlite3'
-import fs from 'node:fs'
-import path from 'node:path'
+import { createClient } from '@supabase/supabase-js'
 
-let _db: Database.Database | null = null
+// Read-only corpus client — uses anon key, corpus tables have public-read RLS.
+// Module-level singleton so the client is reused across requests.
+let _client: ReturnType<typeof createClient> | null = null
 
-function resolveDbPath(): string {
-  const fromRoot = path.join(process.cwd(), 'packages/dictionary/ycm_master.db')
-  const fromWeb  = path.join(process.cwd(), '../../packages/dictionary/ycm_master.db')
-  if (fs.existsSync(fromRoot)) return fromRoot
-  if (fs.existsSync(fromWeb))  return fromWeb
-  throw new Error('ycm_master.db not found — place it at packages/dictionary/ycm_master.db')
-}
-
-export function getDb(): Database.Database {
-  if (!_db) _db = new Database(resolveDbPath(), { readonly: true })
-  return _db
+export function getCorpusClient() {
+  if (!_client) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) throw new Error('Supabase env vars not set')
+    _client = createClient(url, key, { auth: { persistSession: false } })
+  }
+  return _client
 }

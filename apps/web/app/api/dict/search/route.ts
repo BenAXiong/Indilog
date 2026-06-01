@@ -15,14 +15,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const rawWords = searchWords(q, glid, dialect, fuzzy)
+    const rawWords = await searchWords(q, glid, dialect, fuzzy)
 
     // Dedup words by (space-collapsed ab, dialect_name).
-    // ILRDF corpus contains both "mafana'to" and "mafana' to" as separate entries
-    // (and similar spacing inconsistencies elsewhere). Keep the longest word_ab among
-    // duplicates — the spaced form is always longer and is the correct romanisation.
+    // ILRDF corpus contains both "mafana'to" and "mafana' to" as separate entries;
+    // keep the longest among duplicates — the spaced form is the correct romanisation.
     function normWordKey(ab: string): string {
-      return ab.toLowerCase().normalize('NFC').replace(/['\u2018\u2019\u02BC\uA78C]/g, "'").replace(/\s+/g, '')
+      return ab.toLowerCase().normalize('NFC').replace(/['‘’ʼꞌ]/g, "'").replace(/\s+/g, '')
     }
     const wordMap = new Map<string, typeof rawWords[number]>()
     for (const w of rawWords) {
@@ -33,11 +32,10 @@ export async function GET(req: NextRequest) {
     const words = Array.from(wordMap.values())
       .sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
 
-    const rawSentences = searchSentences(q, glid, dialect, fuzzy)
+    const rawSentences = await searchSentences(q, glid, dialect, fuzzy)
 
-    // Deduplicate by sentence id — one sentence can have multiple occurrences
-    // (different dialect recordings). Prefer entries with audio_url.
-    const sentenceMap = new Map<number, SentenceRow>()
+    // Deduplicate by sentence id — prefer entries with audio_url
+    const sentenceMap = new Map<string, SentenceRow>()
     for (const s of rawSentences) {
       if (!sentenceMap.has(s.id) || (!sentenceMap.get(s.id)!.audio_url && s.audio_url)) {
         sentenceMap.set(s.id, s)
