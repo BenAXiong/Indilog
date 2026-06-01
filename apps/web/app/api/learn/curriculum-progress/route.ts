@@ -14,8 +14,9 @@ type GeoType = {
     levels: string[]
     counts: Record<string, Record<string, Record<string, number>>>
   }
-  essay:    Array<{ index: number; title_zh: string; alignment: Record<string, string> }>
-  dialogue: Array<{ index: number; title_zh: string; alignment: Record<string, string> }>
+  essay:        Array<{ index: number; title_zh: string; alignment: Record<string, string> }>
+  dialogue:     Array<{ index: number; title_zh: string; alignment: Record<string, string> }>
+  con_practice: Array<{ index: number; title_zh: string; alignment: Record<string, string> }>
 }
 
 const geo = geoRaw as unknown as GeoType
@@ -37,10 +38,11 @@ export type CurriculumProgressItem = {
 }
 
 export type CurriculumProgressResponse = {
-  lessons:  CurriculumProgressItem
-  patterns: CurriculumProgressItem
-  essays:   CurriculumProgressItem
-  dialogs:  CurriculumProgressItem
+  lessons:       CurriculumProgressItem
+  patterns:      CurriculumProgressItem
+  essays:        CurriculumProgressItem
+  dialogs:       CurriculumProgressItem
+  conversations: CurriculumProgressItem
 }
 
 const EMPTY: CurriculumProgressItem = { completed: 0, total: 0, nextLabel: '' }
@@ -61,10 +63,10 @@ export async function GET(req: NextRequest) {
     .select('source, item_key')
     .eq('user_id', user.id)
     .eq('language', lang)
-    .in('source', ['twelve', 'grmpts', 'essay', 'dialogue'])
+    .in('source', ['twelve', 'grmpts', 'essay', 'dialogue', 'con_practice'])
 
   const bySource: Record<string, Set<string>> = {
-    twelve: new Set(), grmpts: new Set(), essay: new Set(), dialogue: new Set(),
+    twelve: new Set(), grmpts: new Set(), essay: new Set(), dialogue: new Set(), con_practice: new Set(),
   }
   for (const row of rows ?? []) {
     bySource[row.source]?.add(row.item_key)
@@ -109,9 +111,9 @@ export async function GET(req: NextRequest) {
       : '',
   }
 
-  // ── Text sources (Essays / Dialogs) ─────────────────────────────────────────
+  // ── Text sources (Essays / Dialogs / Conversations) ─────────────────────────
   function textProgress(
-    source: 'essay' | 'dialogue',
+    source: 'essay' | 'dialogue' | 'con_practice',
     done: Set<string>,
   ): CurriculumProgressItem {
     const items = geo[source]
@@ -132,8 +134,9 @@ export async function GET(req: NextRequest) {
   const result: CurriculumProgressResponse = {
     lessons,
     patterns,
-    essays:  textProgress('essay',    bySource.essay),
-    dialogs: textProgress('dialogue', bySource.dialogue),
+    essays:        textProgress('essay',        bySource.essay),
+    dialogs:       textProgress('dialogue',     bySource.dialogue),
+    conversations: textProgress('con_practice', bySource.con_practice),
   }
 
   return NextResponse.json(result)
