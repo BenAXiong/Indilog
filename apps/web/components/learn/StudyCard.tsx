@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
+import { deleteItem, type Item } from '@/lib/db/notebook/items'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import type { ZhMode } from './SettingsPanel'
 
@@ -13,13 +14,13 @@ type Props = {
   lookupOn: boolean
   onLookup?: (word: string, rect: DOMRect) => void
   onPlay: (url: string) => void
-  onSave: (ab: string, zh: string, audioUrl?: string | null) => Promise<void>
+  onSave: (ab: string, zh: string, audioUrl?: string | null) => Promise<Item | null>
 }
 
 export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPlay, onSave }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
-  const [saved,      setSaved]      = useState(false)
+  const [savedId,    setSavedId]    = useState<string | null>(null)
 
   const tokens = row.ab.split(/\s+/).filter(Boolean)
 
@@ -34,8 +35,13 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
   }
 
   const handleSave = async () => {
-    await onSave(row.ab, row.zh ?? '', row.audio_url)
-    setSaved(true)
+    if (savedId) {
+      await deleteItem(savedId)
+      setSavedId(null)
+    } else {
+      const item = await onSave(row.ab, row.zh ?? '', row.audio_url)
+      if (item) setSavedId(item.id)
+    }
   }
 
   return (
@@ -113,10 +119,10 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
           </button>
           <button
             onClick={handleSave}
-            style={{ ...btnStyle, color: saved ? T.crimson : T.inkMute }}
+            style={{ ...btnStyle, color: savedId ? T.crimson : T.inkMute }}
           >
-            <Icon name={saved ? 'bookmarkF' : 'bookmark'} size={16} strokeWidth={1.8}
-              color={saved ? T.crimson : T.inkMute} />
+            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={16} strokeWidth={1.8}
+              color={savedId ? T.crimson : T.inkMute} />
           </button>
         </div>
 

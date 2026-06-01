@@ -13,7 +13,7 @@ import rawPatternLabels from '@/lib/learn/grmpts_type_labels.json'
 const PATTERN_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(rawPatternLabels as Record<string, string>).map(([k, v]) => [k, v.replace(/^\d+\s*-\s*/, '')])
 )
-import { createItem } from '@/lib/db/notebook/items'
+import { createItem, type Item } from '@/lib/db/notebook/items'
 import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/progress/completions'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import Icon from '@/components/ui/Icon'
@@ -269,8 +269,8 @@ export default function StudyView({ source }: Props) {
   }
 
   // ── Save to ind_items ───────────────────────────────────────────────────────
-  const handleSave = async (ab: string, zh: string, audioUrl?: string | null) => {
-    await createItem({
+  const handleSave = async (ab: string, zh: string, audioUrl?: string | null): Promise<Item | null> => {
+    return createItem({
       ab, zh: zh || undefined, type: 'sentence', language: langCode,
       dialect, note_source: 'curriculum',
       audio: audioUrl || undefined,
