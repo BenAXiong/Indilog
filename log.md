@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 19:33 | FIX | M3-arch: grmpts audio repair (extend /text/sound/{tid}/ path fix to grmpts); normalize dialogs→dialogues in CURRICULUM + curriculum-progress API |
+| 2026-06-01 18:49 | FEATURE | M3-arch: migrate corpus to Supabase — corpus_sentences/occurrences/vocabulary (681k rows); unit/lesson/role/position enrichment; drop SQLite LFS + better-sqlite3; async API layer |
 | 2026-06-01 18:04 | FIX | M3: curriculum-progress API — add con_practice; conversations key in response; Study tab now shows correct progress + next |
 | 2026-06-01 17:51 | FIX | M3: con_practice card turn order (CASE WHEN ORDER BY), ContentSheet height 62→77dvh, conversation tabs 1-10/11-20/21-30 |
 | 2026-06-01 17:41 | FIX | M3: ContentSheet + StudyView — extend to con_practice (sheet, storage key, source prop); fix essay handleEssaySelect key |

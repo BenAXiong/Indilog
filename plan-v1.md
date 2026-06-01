@@ -102,9 +102,11 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 - [x] Learn UI: Conversations tab (/learn/conversations) wired to StudyView; geometry + ContentSheet + curriculum-progress APIs extended
 - [x] Smoke-test + fix: con_practice card turn order, ContentSheet height/tabs, stale localStorage auto-select, curriculum-progress API
 
-- [ ] Add `unit`, `lesson`, `role` columns to `occurrences`; enrich scrapers to tag JSONL records (→ DEC-M3-02)
-- [ ] Migrate corpus DB from SQLite LFS to Supabase; drop `packages/dictionary/ycm_master.db` (→ DEC-M3-03)
-- [ ] Update curriculum API: swap `better-sqlite3` for `supabase.from()` calls
+- [x] DB homogenisation — `unit`, `lesson`, `role`, `position` columns added to corpus_occurrences; enriched by Supabase distiller from geometry JSON (→ DEC-M3-02)
+- [x] Corpus migrated to Supabase — corpus_sentences (185k) + corpus_occurrences (201k) + corpus_vocabulary (293k); packages/dictionary/ycm_master.db removed from git; better-sqlite3 uninstalled (→ DEC-M3-03)
+- [x] Curriculum + dict APIs updated — async Supabase queries; audio repair extended to grmpts; dialogs → dialogues normalized
+- [ ] FIX(post-merge): grmpts audio still not playing — pre-existing, investigate correct URL pattern
+- [ ] FIX(post-merge): sentences cannot be unbookmarked — investigate handleSave / saved state reset
 
 ---
 
