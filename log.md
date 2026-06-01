@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-01 13:15 | SCHEMA | M3: rebuild dialogue geometry to 30 slots — S1=對話一(12), S2=對話二(12), S3=對話三(6); index-JSON-derived, all 42 dialects |
 | 2026-06-01 12:30 | SCHEMA | M3: rebuild essay geometry to 24 slots — 6×3 (S2 units: 學習一/學習二/原版) + 6×1 (S1-only: 學習一); TID role detection from master JSON raw list; logic in DEC-M3-01 |
 | 2026-06-01 11:45 | SCHEMA | M3: update corpus_geometry.json with official essay titles — unit names from klokah.tw, structural format (上課用語·學習一 etc.), S2 補充 suffix; dialogue unchanged |
 | 2026-06-01 04:33 | SCHEMA | M3: update corpus_geometry.json — 73→72 essays, 61→60 dialogues, 0 duplicate titles, 0 orphan slots; fixed from Citadel branch fix/essay-dialogue-geometry |
