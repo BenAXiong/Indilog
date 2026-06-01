@@ -86,7 +86,7 @@ export async function queryGrmpts(dialect: string, patternId: string, level: str
   return (data as any[]).map(row => ({
     ab:            row.corpus_sentences.ab,
     zh:            row.corpus_sentences.zh ?? null,
-    audio_url:     repairAudioUrl(row.audio_url),
+    audio_url:     repairAudioUrl(row.audio_url, 'grmpts', row.original_uuid),
     original_uuid: row.original_uuid,
     category:      row.category,
   }))
