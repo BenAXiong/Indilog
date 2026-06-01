@@ -34,7 +34,7 @@ export default function StudyCard({ row, index, zhMode, lookupOn, onLookup, onPl
   }
 
   const handleSave = async () => {
-    await onSave(row.ab, row.zh, row.audio_url)
+    await onSave(row.ab, row.zh ?? '', row.audio_url)
     setSaved(true)
   }
 
