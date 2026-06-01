@@ -257,8 +257,7 @@ export default function StudyView({ source }: Props) {
 
   const handleEssaySelect = (tz: string) => {
     setTitleZh(tz)
-    const key = source === 'essay' ? `iv_learn_sel_essays_${glid}` : `iv_learn_sel_dialogues_${glid}`
-    localStorage.setItem(key, tz)
+    localStorage.setItem(`iv_learn_sel_${SOURCE_STORAGE_KEY[source] ?? source}_${glid}`, tz)
   }
 
   // ── Audio ───────────────────────────────────────────────────────────────────
@@ -432,7 +431,7 @@ export default function StudyView({ source }: Props) {
               onSelect={handleGrmptsSelect}
             />
           )}
-          {(source === 'essay' || source === 'dialogue') && (
+          {(source === 'essay' || source === 'dialogue' || source === 'con_practice') && (
             <ContentSheet
               source={source}
               open={sheetOpen}

@@ -7,7 +7,7 @@ import {
   GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, ESSAY_GROUP_LABELS, ESSAY_GROUP_START,
 } from '@/lib/lang/dialects'
 
-type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
+type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
 
 type TwelveGeo = {
   levels: string[]
@@ -44,7 +44,7 @@ type Props = {
       onSelect: (level: string, pattern: string) => void
     }
   | {
-      source: 'essay' | 'dialogue'
+      source: 'essay' | 'dialogue' | 'con_practice'
       dialect: string
       currentTitleZh: string
       onSelect: (titleZh: string) => void
@@ -52,7 +52,7 @@ type Props = {
 )
 
 const SOURCE_LABELS: Record<Source, string> = {
-  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogs',
+  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogs', con_practice: 'Conversations',
 }
 
 const numSort = (a: string, b: string) => Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1))
@@ -80,8 +80,8 @@ export default function ContentSheet(props: Props) {
       fetch(`/api/learn/geometry?source=grmpts&glid=${props.glid}`)
         .then(r => r.json()).then(setGrmptsGeo).catch(() => {})
     }
-    if ((props.source === 'essay' || props.source === 'dialogue') && !essayGeo) {
-      const d = (props as { source: 'essay' | 'dialogue'; dialect: string }).dialect
+    if ((props.source === 'essay' || props.source === 'dialogue' || props.source === 'con_practice') && !essayGeo) {
+      const d = (props as { source: 'essay' | 'dialogue' | 'con_practice'; dialect: string }).dialect
       fetch(`/api/learn/geometry?source=${props.source}&dialect=${encodeURIComponent(d)}`)
         .then(r => r.json()).then(setEssayGeo).catch(() => {})
     }
@@ -154,7 +154,7 @@ export default function ContentSheet(props: Props) {
               onSelect={(l, p) => { props.onSelect(l, p); onClose() }}
             />
           )}
-          {(props.source === 'essay' || props.source === 'dialogue') && (
+          {(props.source === 'essay' || props.source === 'dialogue' || props.source === 'con_practice') && (
             <EssayContent
               geo={essayGeo}
               currentTitleZh={props.currentTitleZh}
