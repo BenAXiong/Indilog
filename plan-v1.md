@@ -91,10 +91,29 @@
 
 Essays and dialogues need to be rescraped. This is content/corpus work but impacts curriculum usage too strongly to defer — stale or broken curriculum content undermines the core study loop.
 
-- [ ] Identify what needs rescaping (essays, dialogues — scope TBD)
-- [ ] Rescrape and re-import into corpus
+- [x] Identify scope: essays (24-slot geometry, S1/S2 structure) + dialogues (60-slot, majority-vote titles)
+- [x] Essay corpus geometry rebuilt — 24 slots from master JSON role detection (DEC-M3-01); crystallizer fixed; pushed to Indivore main
+- [x] Dialogue corpus geometry rebuilt — 60 slots, clean counts, 0 duplicates, 0 orphans
+- [ ] Rescrape essays + dialogues from klokah.tw into Citadel DB (scraper work, Citadel repo)
+- [ ] Re-run distiller + crystallizer after rescrape; verify geometry stays consistent
 - [ ] Verify curriculum routes return correct data
 - [ ] Smoke-test Learn tab (essays + dialogues sections)
+
+### M3-arch — DB homogenisation (deferred, do after rescrape is stable)
+
+Current state: `twelve`/`nine_year`/`grmpts` carry structural metadata in `occurrences.level` + `occurrences.category`; essays/dialogues carry none — navigation relies on `corpus_geometry.json` as an external routing file. This is heterogeneous and limits cross-cutting DB queries (e.g. "all 學習一 texts across all dialects").
+
+**Target:** add `unit`, `lesson`, `role` columns to `occurrences`; populate during scrape/distill from master JSONs; deprecate geometry JSON for essays; update curriculum API to query DB directly.
+
+**Approach:** enrich scraper output — scraper already reads master JSONs, so it can tag each JSONL record with `unit_idx`, `lesson_key`, `role` before writing to the distill file. Distiller passes fields through. Crystallizer role-detection logic moves into scraper. Geometry JSON is then only needed for dialogue (structure still TBD) and as a fallback.
+
+**Risks:**
+- Dialogue structure not fully analysed — `role` column will be null for dialogue until that work is done
+- Requires re-distilling ~194k rows or writing a targeted migration for existing data
+- Indivore curriculum API needs updating (small, isolated change)
+- Structure changes on klokah.tw require re-distillation rather than just crystallizer re-run
+
+**Defer until:** rescrape is complete and geometry is stable for at least one release cycle.
 
 ---
 
@@ -120,7 +139,9 @@ Design a method to keep track of item sources and associate data to them (eg. di
 - [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
+- [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, etc)
 - [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
+- [ ] Deck sections collapsible
 - [ ] Swipe to switch tabs
 
 - [ ] Separate learn from reviews? dash and study
