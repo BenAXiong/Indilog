@@ -34,8 +34,14 @@ export function lessonDifficultyIdxOf(level: string): number {
   return 3
 }
 
-export const ESSAY_GROUP_LABELS = ['初級', '中級', '高級']
-export const ESSAY_GROUP_START  = [0, 20, 40]
+export const ESSAY_GROUP_LABELS = ['初級', '中級', '中高級']
+
+/** Strip 學習/對話 prefix from the role part: 上課用語 · 學習一 → 上課用語 · 一 */
+export function shortCurriculumTitle(title: string): string {
+  const sep = title.indexOf(' · ')
+  if (sep < 0) return title
+  return `${title.slice(0, sep)} · ${title.slice(sep + 3).replace(/^(學習|對話)/, '')}`
+}
 
 // GLID-keyed dialect data — adapted from YCM Portal (temp_learn/portal/lib/dialects.ts)
 // GLIDs are 2-digit strings matching occurrences.dialect_name groupings in ycm_master.db

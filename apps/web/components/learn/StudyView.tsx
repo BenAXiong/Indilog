@@ -7,7 +7,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   getGlid, getDefaultDialect, getGrmptsDialect
 } from '@/lib/lang/lang-bridge'
-import { GRMPTS_LEVEL_NAMES } from '@/lib/lang/dialects'
+import { GRMPTS_LEVEL_NAMES, shortCurriculumTitle } from '@/lib/lang/dialects'
 import rawPatternLabels from '@/lib/learn/grmpts_type_labels.json'
 
 const PATTERN_LABELS: Record<string, string> = Object.fromEntries(
@@ -283,7 +283,7 @@ export default function StudyView({ source }: Props) {
     : source === 'grmpts'
       ? `${GRMPTS_LEVEL_NAMES[level] ?? `L${level}`} · ${PATTERN_LABELS[pattern] ?? pattern}`
       : titleZh
-        ? (titleZh.length > 14 ? titleZh.slice(0, 13) + '…' : titleZh)
+        ? (() => { const s = shortCurriculumTitle(titleZh); return s.length > 14 ? s.slice(0, 13) + '…' : s })()
         : '—'
 
   return (

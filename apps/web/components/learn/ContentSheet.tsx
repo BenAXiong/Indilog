@@ -4,8 +4,16 @@ import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 import {
-  GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, ESSAY_GROUP_LABELS, ESSAY_GROUP_START,
+  GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, ESSAY_GROUP_LABELS, shortCurriculumTitle,
 } from '@/lib/lang/dialects'
+
+// Slots per difficulty level differ by source:
+//   essays:    8 slots/level (L1-L4 → 3+3+1+1, same for L5-L8 and L9-L12)
+//   dialogues: 10 slots/level (L1-L4 → 3+3+2+2, same for L5-L8 and L9-L12)
+const ESSAY_GROUP_STARTS:    Record<'essay' | 'dialogue', number[]> = {
+  essay:    [0,  8, 16],
+  dialogue: [0, 10, 20],
+}
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
 
@@ -339,7 +347,8 @@ function EssayContent(p: {
   if (!p.geo) return <div style={loadingStyle}>Loading…</div>
 
   const groupLabels = p.source === 'con_practice' ? CP_GROUP_LABELS : ESSAY_GROUP_LABELS
-  const groupStarts = p.source === 'con_practice' ? CP_GROUP_START  : ESSAY_GROUP_START
+  const groupStarts = p.source === 'con_practice' ? CP_GROUP_START
+    : ESSAY_GROUP_STARTS[p.source as 'essay' | 'dialogue'] ?? [0, 8, 16]
   const groupStart  = groupStarts[p.activeGroup]
   const groupEnd    = groupStarts[p.activeGroup + 1] ?? Infinity
   const itemsInGroup = p.geo.items.filter(i => i.index >= groupStart && i.index < groupEnd)
@@ -373,7 +382,7 @@ function EssayContent(p: {
                 fontSize: 14, flex: 1, textAlign: 'left',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 color: !item.available ? T.inkFaint : isCurrent ? T.crimson : done ? T.inkSoft : T.ink,
-              }}>{item.title_zh}</span>
+              }}>{shortCurriculumTitle(item.title_zh)}</span>
               {done && (
                 <Icon name="check" size={13} strokeWidth={2}
                   color={T.sage} style={{ flexShrink: 0 }} />
