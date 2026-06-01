@@ -15,9 +15,26 @@ export type LookupRow = {
   vocab_source: string
 }
 
-function repairAudioUrl(url: string | null): string | null {
+// essay, dialogue, and grmpts audio is at web.klokah.tw/text/sound/{tid}/{audioId}.mp3
+// The TID is the second-to-last segment of the original_uuid (e.g. essay_ES11201_34045_0 → 34045)
+const TEXT_SOUND_SOURCES = new Set(['essay', 'dialogue', 'grmpts'])
+
+function repairAudioUrl(url: string | null, source: string, uuid: string): string | null {
   if (!url) return null
-  return url.replace('file.klokah.tw', 'web.klokah.tw').replace('http://', 'https://')
+  let fixed = url.replace('http://', 'https://')
+  if (!fixed.includes('klokah.tw')) return fixed
+
+  fixed = fixed.replace('file.klokah.tw', 'web.klokah.tw')
+
+  if (TEXT_SOUND_SOURCES.has(source) && !fixed.includes('/text/')) {
+    const parts = uuid.split('_')
+    const contextId = parts.length >= 3 ? parts.at(-2) ?? null : null
+    const soundMatch = /\/sound\/(\d+)\.mp3/.exec(fixed)
+    if (contextId && /^\d+$/.test(contextId) && soundMatch?.[1]) {
+      return `https://web.klokah.tw/text/sound/${contextId}/${soundMatch[1]}.mp3`
+    }
+  }
+  return fixed
 }
 
 async function queryBySourceDialectCategory(
@@ -41,7 +58,7 @@ async function queryBySourceDialectCategory(
   return (data as any[]).map(row => ({
     ab:            row.corpus_sentences.ab,
     zh:            row.corpus_sentences.zh ?? null,
-    audio_url:     repairAudioUrl(row.audio_url),
+    audio_url:     repairAudioUrl(row.audio_url, source, row.original_uuid),
     original_uuid: row.original_uuid,
     category:      row.category,
   }))

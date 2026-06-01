@@ -41,7 +41,7 @@ export type CurriculumProgressResponse = {
   lessons:       CurriculumProgressItem
   patterns:      CurriculumProgressItem
   essays:        CurriculumProgressItem
-  dialogs:       CurriculumProgressItem
+  dialogues:     CurriculumProgressItem
   conversations: CurriculumProgressItem
 }
 
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
     lessons,
     patterns,
     essays:        textProgress('essay',        bySource.essay),
-    dialogs:       textProgress('dialogue',     bySource.dialogue),
+    dialogues:     textProgress('dialogue',     bySource.dialogue),
     conversations: textProgress('con_practice', bySource.con_practice),
   }
 
