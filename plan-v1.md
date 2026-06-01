@@ -87,7 +87,7 @@
 
 ---
 
-## Milestone 3 — Corpus rescrape
+## Milestone 3 — Corpus rescrape + DB homogenisation + Supabase migration
 
 Essays and dialogues need to be rescraped. This is content/corpus work but impacts curriculum usage too strongly to defer — stale or broken curriculum content undermines the core study loop.
 
@@ -95,13 +95,11 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 - [x] Essay geometry rebuilt — 24 slots, master JSON role detection (→ DEC-M3-01)
 - [x] Dialogue geometry rebuilt — 30 slots, index JSON S1/S2/S3 structure
 - [x] 生活會話篇 scraped + added — 30 slots × 42 dialects, official bilingual titles, sentence/word audio
-- [x] DB updated — 203k occurrences, con_practice distilled in; copied to Indivore packages/dictionary
-- [ ] Rescrape essays + dialogues from klokah.tw (Citadel repo)
-- [ ] Re-run distiller + crystallizer; verify geometry stays consistent
-- [ ] Verify curriculum API routes return correct data
+- [x] DB updated — 202k occurrences (fresh June 2026 rescrape); copied to Indivore packages/dictionary
+- [x] Rescrape essays + dialogues (June 2026); JSONL deduped + distiller rebuilt
+- [x] Curriculum API: add con_practice to indexed sources
+- [x] Verify curriculum API routes — all three sources return correct rows + audio URLs
 - [ ] Smoke-test Learn tab (essays, dialogues, con_practice)
-
-### M3-arch — DB homogenisation + Supabase migration (deferred, after rescrape stable)
 
 - [ ] Add `unit`, `lesson`, `role` columns to `occurrences`; enrich scrapers to tag JSONL records (→ DEC-M3-02)
 - [ ] Migrate corpus DB from SQLite LFS to Supabase; drop `packages/dictionary/ycm_master.db` (→ DEC-M3-03)
