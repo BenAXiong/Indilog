@@ -97,9 +97,10 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 - [x] 生活會話篇 scraped + added — 30 slots × 42 dialects, official bilingual titles, sentence/word audio
 - [x] DB updated — 202k occurrences (fresh June 2026 rescrape); copied to Indivore packages/dictionary
 - [x] Rescrape essays + dialogues (June 2026); JSONL deduped + distiller rebuilt
-- [x] Curriculum API: add con_practice to indexed sources
+- [x] Curriculum API: add con_practice to indexed sources; fix geometry API union type error
 - [x] Verify curriculum API routes — all three sources return correct rows + audio URLs
-- [ ] Smoke-test Learn tab (essays, dialogues, con_practice)
+- [x] Learn UI: Conversations tab (/learn/conversations) wired to StudyView; geometry + ContentSheet + curriculum-progress APIs extended
+- [x] Smoke-test + fix: con_practice card turn order, ContentSheet height/tabs, stale localStorage auto-select, curriculum-progress API
 
 - [ ] Add `unit`, `lesson`, `role` columns to `occurrences`; enrich scrapers to tag JSONL records (→ DEC-M3-02)
 - [ ] Migrate corpus DB from SQLite LFS to Supabase; drop `packages/dictionary/ycm_master.db` (→ DEC-M3-03)
