@@ -38,6 +38,7 @@ CREATE TABLE corpus_occurrences (
   position      SMALLINT
 );
 
+CREATE UNIQUE INDEX uq_co_original_uuid ON corpus_occurrences(original_uuid);
 CREATE INDEX idx_co_lookup   ON corpus_occurrences(source, dialect_name, category);
 CREATE INDEX idx_co_sentence ON corpus_occurrences(sentence_id);
 CREATE INDEX idx_co_source   ON corpus_occurrences(source);
