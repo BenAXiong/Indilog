@@ -123,6 +123,49 @@ Key decisions settled:
 
 ---
 
+### DEC-M3-02 · DB homogenisation — add structural metadata to occurrences
+
+**Context:** `twelve`/`nine_year`/`grmpts` store structural metadata in `occurrences.level` + `occurrences.category` and can be navigated by direct DB query. Essays, dialogues, and con_practice carry no structural metadata — navigation relies on `corpus_geometry.json` as an external routing file rebuilt from master JSONs. This is heterogeneous.
+
+**Decision:** Add `unit` (int), `lesson` (text), `role` (text) columns to `occurrences`. Populate during scraping — the scraper already reads master JSONs and can tag each JSONL record before it reaches the distiller. Distiller passes fields through unchanged. Role-detection logic currently in the crystallizer moves into each scraper.
+
+| Column | Essay | Dialogue | Con-practice | Twelve/Grmpts |
+|--------|-------|----------|--------------|---------------|
+| `unit` | 0–11 (unit index) | 0–11 | 0–29 (lesson index) | grade level |
+| `lesson` | L1–L12 | L1–L12 | L1–L30 | lesson number |
+| `role` | 學習一/學習二/原版/詞彙/練習 | 對話一/二/三 | dialogue/word | null |
+
+After migration, `corpus_geometry.json` is reduced to a lightweight nav index (titles, ordering) rather than a routing table — or removed entirely for sources that have structural columns.
+
+**Risks:** dialogue role is currently derived from S1/S2/S3 set, which maps cleanly; con_practice is already clean (L1–L30 + dialogue/word role); essay role-detection logic is proven in crystallizer and can be ported directly. Main risk is re-distillation effort (~200k rows).
+
+**Sequence:** do after rescrape is stable; combine with Supabase migration (DEC-M3-03) so the schema lands once in Postgres rather than being migrated twice.
+
+**Date:** 2026-06-01
+
+---
+
+### DEC-M3-03 · Corpus DB migration — SQLite LFS → Supabase
+
+**Context:** `ycm_master.db` is a 215MB SQLite file git-tracked via LFS and bundled with every Vercel deployment. The file is read-only at runtime. Every corpus update requires: distill → copy → git commit → push → Vercel redeploys. Indivore already has a Supabase project for app data.
+
+**Decision:** After DB homogenisation (DEC-M3-02), migrate `sentences` + `occurrences` (and optionally `ilrdf_vocabulary`) to the existing Supabase project.
+
+**Why this works:**
+- ~380k rows (sentences + occurrences) ≈ 100–150MB in Postgres — fits Supabase free tier (500MB) alongside app data
+- Corpus queries are small (10–30 rows per request), so PostgREST 1000-row cap is not an issue
+- Content updates become: distill → upsert — no git commit, no redeploy
+- Eliminates the SQLite-in-serverless architectural awkwardness
+- Curriculum API swaps `better-sqlite3` queries for `supabase.from()` calls — isolated change
+
+**Migration path:** Re-run distiller targeting Supabase (write a Supabase distiller variant) with the enriched schema from DEC-M3-02. Update curriculum API. Drop `packages/dictionary/ycm_master.db` from git. Done in one step alongside homogenisation.
+
+**Defer until:** DEC-M3-02 is ready; check Supabase project storage headroom before migrating ILRDF (293k rows, potentially large).
+
+**Date:** 2026-06-01
+
+---
+
 ### DEC-NOTE01 · Note / Card / Note Type / Card Template — canonical terminology
 **Decision:** Adopt standard SRS terminology throughout all docs and code going forward.
 

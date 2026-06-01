@@ -91,29 +91,21 @@
 
 Essays and dialogues need to be rescraped. This is content/corpus work but impacts curriculum usage too strongly to defer — stale or broken curriculum content undermines the core study loop.
 
-- [x] Identify scope: essays (24-slot geometry, S1/S2 structure) + dialogues (60-slot, majority-vote titles)
-- [x] Essay corpus geometry rebuilt — 24 slots from master JSON role detection (DEC-M3-01); crystallizer fixed; pushed to Indivore main
-- [x] Dialogue corpus geometry rebuilt — 60 slots, clean counts, 0 duplicates, 0 orphans
-- [ ] Rescrape essays + dialogues from klokah.tw into Citadel DB (scraper work, Citadel repo)
-- [ ] Re-run distiller + crystallizer after rescrape; verify geometry stays consistent
-- [ ] Verify curriculum routes return correct data
-- [ ] Smoke-test Learn tab (essays + dialogues sections)
+- [x] Identify scope: essays (24-slot geometry, S1/S2/原版 structure) + dialogues (30-slot, S1/S2/S3) + con_practice (30-slot, XML)
+- [x] Essay geometry rebuilt — 24 slots, master JSON role detection (→ DEC-M3-01)
+- [x] Dialogue geometry rebuilt — 30 slots, index JSON S1/S2/S3 structure
+- [x] 生活會話篇 scraped + added — 30 slots × 42 dialects, official bilingual titles, sentence/word audio
+- [x] DB updated — 203k occurrences, con_practice distilled in; copied to Indivore packages/dictionary
+- [ ] Rescrape essays + dialogues from klokah.tw (Citadel repo)
+- [ ] Re-run distiller + crystallizer; verify geometry stays consistent
+- [ ] Verify curriculum API routes return correct data
+- [ ] Smoke-test Learn tab (essays, dialogues, con_practice)
 
-### M3-arch — DB homogenisation (deferred, do after rescrape is stable)
+### M3-arch — DB homogenisation + Supabase migration (deferred, after rescrape stable)
 
-Current state: `twelve`/`nine_year`/`grmpts` carry structural metadata in `occurrences.level` + `occurrences.category`; essays/dialogues carry none — navigation relies on `corpus_geometry.json` as an external routing file. This is heterogeneous and limits cross-cutting DB queries (e.g. "all 學習一 texts across all dialects").
-
-**Target:** add `unit`, `lesson`, `role` columns to `occurrences`; populate during scrape/distill from master JSONs; deprecate geometry JSON for essays; update curriculum API to query DB directly.
-
-**Approach:** enrich scraper output — scraper already reads master JSONs, so it can tag each JSONL record with `unit_idx`, `lesson_key`, `role` before writing to the distill file. Distiller passes fields through. Crystallizer role-detection logic moves into scraper. Geometry JSON is then only needed for dialogue (structure still TBD) and as a fallback.
-
-**Risks:**
-- Dialogue structure not fully analysed — `role` column will be null for dialogue until that work is done
-- Requires re-distilling ~194k rows or writing a targeted migration for existing data
-- Indivore curriculum API needs updating (small, isolated change)
-- Structure changes on klokah.tw require re-distillation rather than just crystallizer re-run
-
-**Defer until:** rescrape is complete and geometry is stable for at least one release cycle.
+- [ ] Add `unit`, `lesson`, `role` columns to `occurrences`; enrich scrapers to tag JSONL records (→ DEC-M3-02)
+- [ ] Migrate corpus DB from SQLite LFS to Supabase; drop `packages/dictionary/ycm_master.db` (→ DEC-M3-03)
+- [ ] Update curriculum API: swap `better-sqlite3` for `supabase.from()` calls
 
 ---
 
