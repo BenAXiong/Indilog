@@ -23,10 +23,14 @@ import ContentSheet from './ContentSheet'
 import LookupInline from '@/components/lookup/LookupInline'
 import SettingsPanel, { type ZhMode } from './SettingsPanel'
 
-type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue'
+type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
 
 const SOURCE_NAMES: Record<Source, string> = {
-  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogs',
+  twelve: 'Lessons', grmpts: 'Patterns', essay: 'Essays', dialogue: 'Dialogs', con_practice: 'Conversations',
+}
+
+const SOURCE_STORAGE_KEY: Partial<Record<Source, string>> = {
+  essay: 'essays', dialogue: 'dialogues', con_practice: 'conversations',
 }
 
 type Props = { source: Source }
@@ -83,7 +87,7 @@ export default function StudyView({ source }: Props) {
       const savedLv = localStorage.getItem(`iv_learn_level_${glid}`)
       if (savedLv) setLevel(savedLv)
     } else {
-      const key = source === 'essay' ? `iv_learn_sel_essays_${glid}` : `iv_learn_sel_dialogues_${glid}`
+      const key = `iv_learn_sel_${SOURCE_STORAGE_KEY[source] ?? source}_${glid}`
       const saved = localStorage.getItem(key)
       if (saved) setTitleZh(saved)
     }
@@ -230,8 +234,7 @@ export default function StudyView({ source }: Props) {
       localStorage.setItem(`iv_learn_level_${glid}`, lv)
     } else {
       setTitleZh(key)
-      const storageKey = source === 'essay' ? `iv_learn_sel_essays_${glid}` : `iv_learn_sel_dialogues_${glid}`
-      localStorage.setItem(storageKey, key)
+      localStorage.setItem(`iv_learn_sel_${SOURCE_STORAGE_KEY[source] ?? source}_${glid}`, key)
     }
   }, [source, glid])
 

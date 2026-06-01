@@ -17,6 +17,7 @@ type Geo = typeof rawGeo & {
   }
   essay: Array<{ index: number; title_zh: string; alignment: Record<string, string> }>
   dialogue: Array<{ index: number; title_zh: string; alignment: Record<string, string> }>
+  con_practice: Array<{ index: number; title_zh: string; title_ab: string; alignment: Record<string, string> }>
 }
 
 const geo = rawGeo as unknown as Geo

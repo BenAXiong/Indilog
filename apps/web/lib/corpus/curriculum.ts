@@ -58,7 +58,7 @@ export function queryGrmpts(dialect: string, patternId: string, level: string): 
 }
 
 export function queryEssayOrDialogue(
-  source: 'essay' | 'dialogue',
+  source: 'essay' | 'dialogue' | 'con_practice',
   dialect: string,
   category: string,
 ): CurriculumRow[] {
