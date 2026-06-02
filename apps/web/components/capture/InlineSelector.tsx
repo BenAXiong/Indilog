@@ -104,6 +104,10 @@ export default function InlineSelector({ icon, label, options, selected, onSelec
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && showCreate) handleCreate() }}
               placeholder={`Search or create ${label.toLowerCase()}…`}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               style={{
                 width: '100%', border: 0, background: 'transparent', outline: 'none',
                 fontSize: 13, color: T.ink, fontFamily: 'inherit',
