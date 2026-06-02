@@ -89,7 +89,7 @@ function OptionsSheet({
   showHardEasy, setShowHardEasy,
   showButtons, setShowButtons,
   learningSteps, setLearningSteps,
-  audioMode, setAudioMode,
+  reviewMode, setReviewMode,
   shuffleNew, setShuffleNew,
   showAllLangs, setShowAllLangs,
   excludedLangs, setExcludedLangs,
@@ -99,7 +99,7 @@ function OptionsSheet({
   showHardEasy: boolean; setShowHardEasy: (v: boolean) => void
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
   learningSteps: number; setLearningSteps: (v: number) => void
-  audioMode:    boolean; setAudioMode:    (v: boolean) => void
+  reviewMode:   string;  setReviewMode:   (v: string) => void
   shuffleNew:   boolean; setShuffleNew:   (v: boolean) => void
   showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
   excludedLangs: string[]; setExcludedLangs: (v: string[]) => void
@@ -159,7 +159,24 @@ function OptionsSheet({
           Session options
         </div>
         <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
-          <Toggle label="Audio mode" sub="Play button as front — falls back to text when no audio" on={audioMode} onToggle={() => setAudioMode(!audioMode)} />
+          {/* Review mode selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>Review mode</div>
+              <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 1 }}>How cards are presented</div>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(['forward', 'reverse', 'audio', 'sts'] as const).map(m => (
+                <button key={m} onClick={() => setReviewMode(m)} style={{
+                  padding: '4px 9px', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.04em',
+                  background: reviewMode === m ? T.crimsonBg : T.paper,
+                  border: `1.5px solid ${reviewMode === m ? T.crimson : T.lineSoft}`,
+                  color: reviewMode === m ? T.crimson : T.inkMute,
+                }}>{m}</button>
+              ))}
+            </div>
+          </div>
           <Toggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
           <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
           <Toggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
@@ -301,7 +318,7 @@ function ReviewSession({
   const [learningSteps,  setLearningStepsRaw] = useState(3)
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
-  const [audioMode,      setAudioModeRaw]  = useState(false)
+  const [reviewMode,     setReviewModeRaw]  = useState('forward')
   const [shuffleNew,     setShuffleNewRaw]  = useState(false)
   const [showAllLangs,   setShowAllLangsRaw] = useState(true)
   const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
@@ -319,13 +336,13 @@ function ReviewSession({
 
   // Autoplay in audio mode when card changes
   useEffect(() => {
-    if (!audioMode) return
+    if (reviewMode !== 'audio') return
     const e = queue[qIdx]
     if (!e) return
     const url = cardAudio(e.card)
     if (url) playAudio(url)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qIdx, audioMode])
+  }, [qIdx, reviewMode])
 
   function playAudio(url: string) {
     if (audioRef.current) audioRef.current.pause()
@@ -339,7 +356,7 @@ function ReviewSession({
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
     const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
     setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
-    setAudioModeRaw(localStorage.getItem('srs_audio_mode') === 'true')
+    setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
     setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
     try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
@@ -353,7 +370,7 @@ function ReviewSession({
     setLearningStepsRaw(n)
     localStorage.setItem('srs_learning_steps', String(n))
   }
-  function setAudioMode(v: boolean) { setAudioModeRaw(v); localStorage.setItem('srs_audio_mode', String(v)) }
+  function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v) }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
@@ -386,7 +403,20 @@ function ReviewSession({
     phase === 'relearn' ? T.amber : phase === 'new' ? T.sage : T.inkFaint
 
   const targetWord  = (card.ind_items as any)?.target_word as string | null ?? null
-  const isSts       = !!targetWord
+  const hasZh       = !!(card.ind_items?.zh)
+  const hasAudio    = !!cardAudio(card)
+  // Resolve effective mode with fallback chain (DEC-SRS06)
+  const effectiveMode =
+    reviewMode === 'sts'     && targetWord  ? 'sts'
+    : reviewMode === 'sts'   && !targetWord  ? 'reverse'
+    : reviewMode === 'audio' && hasAudio     ? 'audio'
+    : reviewMode === 'audio' && !hasAudio    ? 'reverse'
+    : reviewMode === 'reverse' && hasZh      ? 'reverse'
+    : reviewMode === 'reverse' && !hasZh     ? 'forward'
+    : 'forward'
+  const isSts       = effectiveMode === 'sts'
+  const isAudio     = effectiveMode === 'audio'
+  const isReverse   = effectiveMode === 'reverse'
   const stsWord     = targetWord ?? ''
   const stsSentence = card.ind_items?.ab ?? ''
 
@@ -424,7 +454,7 @@ function ReviewSession({
     setCanUndo(false)
     const r: Rating = (isLearning && rating === 'hard') ? 'again' : rating
     const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
-    const sessionMode = isSts ? 'sts' : (audioMode && cardAudio(card)) ? 'audio' : 'forward'
+    const sessionMode = effectiveMode
 
     if (phase === 'review') {
       if (r === 'again' && card.interval_days >= MATURE_THRESHOLD) {
@@ -756,7 +786,7 @@ function ReviewSession({
 
           {/* Front */}
           <div style={{ flex: revealed ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 24px' }}>
-            {audioMode && cardAudio(card) ? (
+            {isAudio ? (
               /* Audio mode — large play button as prompt */
               <button
                 onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
@@ -776,18 +806,23 @@ function ReviewSession({
               <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
                 {renderHighlighted(stsSentence, stsWord)}
               </div>
+            ) : isReverse ? (
+              /* Reverse — zh as prompt */
+              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
+                {card.ind_items?.zh ?? '—'}
+              </div>
             ) : (
-              /* Default layout */
+              /* Forward — ab as prompt */
               <>
                 <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
                   {card.ind_items?.ab}
                 </div>
-                {audioMode && (
+                {isAudio && (
                   <span style={{ marginTop: 10, fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
                     ♪ no audio
                   </span>
                 )}
-                {!audioMode && cardAudio(card) && (
+                {!isAudio && cardAudio(card) && (
                   <button
                     onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
                     aria-label="Play audio"
@@ -810,14 +845,22 @@ function ReviewSession({
             <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ height: 1, background: T.lineSoft }} />
               <div style={{ textAlign: 'center' }}>
-                {audioMode && !isSts && (
+                {/* Audio back: show ab text */}
+                {isAudio && (
                   <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
                     {card.ind_items?.ab}
                   </div>
                 )}
-                <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-                  {card.ind_items?.zh ?? '—'}
-                </div>
+                {/* Reverse back: reveal ab (Amis) */}
+                {isReverse ? (
+                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
+                    {card.ind_items?.ab}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
+                    {card.ind_items?.zh ?? '—'}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -884,7 +927,7 @@ function ReviewSession({
           showHardEasy={showHardEasy}       setShowHardEasy={setShowHardEasy}
           showButtons={showButtons}         setShowButtons={setShowButtons}
           learningSteps={learningSteps}     setLearningSteps={setLearningSteps}
-          audioMode={audioMode}             setAudioMode={setAudioMode}
+          reviewMode={reviewMode}           setReviewMode={setReviewMode}
           shuffleNew={shuffleNew}           setShuffleNew={setShuffleNew}
           showAllLangs={showAllLangs}       setShowAllLangs={setShowAllLangs}
           excludedLangs={excludedLangs}     setExcludedLangs={setExcludedLangs}

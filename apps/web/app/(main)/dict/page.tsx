@@ -376,6 +376,7 @@ export default function DictionaryPage() {
     await createItem({
       ab: word.word_ab, zh: word.word_ch,
       type: 'word', language: word.dialect_name, note_source: 'dict',
+      target_word: word.word_ab,
     })
     setSaveMsg(`Saved "${word.word_ab}"`)
     setTimeout(() => setSaveMsg(null), 2000)

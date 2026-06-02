@@ -78,9 +78,9 @@
 - [ ] Supabase: `DROP COLUMN card_type, DROP COLUMN metadata` from `ind_flashcards`
 - [ ] `ensureFlashcards()` + `setTargetWord()`: remove card_type/metadata writes
 - [ ] `browser.ts`: remove `setCardLayout()`; drop card_type/metadata from BrowserCard type + SEL
-- [ ] Review render: replace `isSts`/`audioMode` flags with mode preference + `ind_items?.target_word` + fallback chain
-- [ ] Mode selector: dashboard review options (persistent `srs_review_mode`) + OptionsSheet toggle (per-session)
-- [ ] Dict word save: auto-set `target_word = word_ab`
+- [x] Review render: effectiveMode computed with fallback chain; isAudio/isReverse/isSts locals; reverse mode rendering added
+- [x] Mode selector: OptionsSheet 4-button segmented control (forward/reverse/audio/sts), persists to srs_review_mode
+- [x] Dict word save: auto-set `target_word = word_ab`
 
 ---
 
