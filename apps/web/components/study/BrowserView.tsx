@@ -159,9 +159,13 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
     setLookingUp(true)
     setLookupResults(null)
     try {
-      const res = await fetch(`/api/dict/search?q=${encodeURIComponent(q)}`)
-      const { words } = await res.json() as { words: { word_ch: string }[] }
-      const unique = [...new Set(words.map(w => w.word_ch).filter(Boolean))]
+      const params = new URLSearchParams({ q, fuzzy: '1' })
+      const res = await fetch(`/api/dict/search?${params}`)
+      const { words, sentences } = await res.json() as { words: { word_ch: string }[]; sentences: { zh: string }[] }
+      const unique = [...new Set([
+        ...words.map(w => w.word_ch),
+        ...sentences.map(s => s.zh),
+      ].filter(Boolean))]
       setLookupResults(unique)
       if (unique.length > 0 && !editBack.trim()) setEditBack(unique[0])
     } finally {

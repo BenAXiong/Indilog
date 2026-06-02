@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useRef } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 
@@ -15,10 +16,41 @@ const TABS = [
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const router   = useRouter()
+  const swipeRef = useRef<{ x: number; y: number; edge: boolean } | null>(null)
 
   const activeId = TABS.find(t =>
     t.href === '/' ? pathname === '/' : pathname.startsWith(t.href)
   )?.id ?? ''
+
+  // Edge swipe to navigate between tabs
+  useEffect(() => {
+    const EDGE_PX = 28   // swipe must START within this many px of screen edge
+    const THRESH  = 72   // minimum horizontal travel
+
+    function onStart(e: TouchEvent) {
+      const t = e.touches[0]
+      const edge = t.clientX < EDGE_PX || t.clientX > window.innerWidth - EDGE_PX
+      swipeRef.current = { x: t.clientX, y: t.clientY, edge }
+    }
+
+    function onEnd(e: TouchEvent) {
+      if (!swipeRef.current?.edge) return
+      const dx = e.changedTouches[0].clientX - swipeRef.current.x
+      const dy = e.changedTouches[0].clientY - swipeRef.current.y
+      if (Math.abs(dx) < THRESH || Math.abs(dy) > Math.abs(dx)) return
+      const idx = TABS.findIndex(t => t.id === activeId)
+      const next = dx < 0 ? TABS[idx + 1] : TABS[idx - 1]
+      if (next) router.push(next.href)
+    }
+
+    document.addEventListener('touchstart', onStart, { passive: true })
+    document.addEventListener('touchend',   onEnd,   { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', onStart)
+      document.removeEventListener('touchend',   onEnd)
+    }
+  }, [activeId, router])
 
   return (
     <div

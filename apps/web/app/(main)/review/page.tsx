@@ -89,6 +89,7 @@ function OptionsSheet({
   showHardEasy, setShowHardEasy,
   showButtons, setShowButtons,
   learningSteps, setLearningSteps,
+  dailyCap, setDailyCap,
   reviewMode, setReviewMode,
   shuffleNew, setShuffleNew,
   showAllLangs, setShowAllLangs,
@@ -99,6 +100,7 @@ function OptionsSheet({
   showHardEasy: boolean; setShowHardEasy: (v: boolean) => void
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
   learningSteps: number; setLearningSteps: (v: number) => void
+  dailyCap:     number;  setDailyCap:     (v: number) => void
   reviewMode:   string;  setReviewMode:   (v: string) => void
   shuffleNew:   boolean; setShuffleNew:   (v: boolean) => void
   showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
@@ -202,6 +204,31 @@ function OptionsSheet({
                 background: T.paperHi, color: T.inkSoft, cursor: learningSteps >= 5 ? 'default' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 18, fontWeight: 300, opacity: learningSteps >= 5 ? 0.35 : 1,
+              }}>+</button>
+            </div>
+          </div>
+
+          {/* Daily cap stepper */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>Daily cap</div>
+              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Max cards reviewed per day</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <button onClick={() => setDailyCap(dailyCap - 10)} disabled={dailyCap <= 10} style={{
+                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
+                background: T.paperHi, color: T.inkSoft, cursor: dailyCap <= 10 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 300, opacity: dailyCap <= 10 ? 0.35 : 1,
+              }}>−</button>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>
+                {dailyCap}
+              </span>
+              <button onClick={() => setDailyCap(dailyCap + 10)} disabled={dailyCap >= 300} style={{
+                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
+                background: T.paperHi, color: T.inkSoft, cursor: dailyCap >= 300 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 300, opacity: dailyCap >= 300 ? 0.35 : 1,
               }}>+</button>
             </div>
           </div>
@@ -318,6 +345,7 @@ function ReviewSession({
   const [learningSteps,  setLearningStepsRaw] = useState(3)
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
+  const [dailyCap,       setDailyCapRaw]    = useState(100)
   const [reviewMode,     setReviewModeRaw]  = useState('forward')
   const [shuffleNew,     setShuffleNewRaw]  = useState(false)
   const [showAllLangs,   setShowAllLangsRaw] = useState(true)
@@ -356,6 +384,8 @@ function ReviewSession({
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
     const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
     setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
+    const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100')
+    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(10, cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
     setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
@@ -369,6 +399,10 @@ function ReviewSession({
     const n = Math.min(5, Math.max(1, v))
     setLearningStepsRaw(n)
     localStorage.setItem('srs_learning_steps', String(n))
+  }
+  function setDailyCap(v: number) {
+    const n = Math.min(300, Math.max(10, v))
+    setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n))
   }
   function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v) }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
@@ -927,6 +961,7 @@ function ReviewSession({
           showHardEasy={showHardEasy}       setShowHardEasy={setShowHardEasy}
           showButtons={showButtons}         setShowButtons={setShowButtons}
           learningSteps={learningSteps}     setLearningSteps={setLearningSteps}
+          dailyCap={dailyCap}               setDailyCap={setDailyCap}
           reviewMode={reviewMode}           setReviewMode={setReviewMode}
           shuffleNew={shuffleNew}           setShuffleNew={setShuffleNew}
           showAllLangs={showAllLangs}       setShowAllLangs={setShowAllLangs}
@@ -1244,7 +1279,8 @@ function ReviewPage() {
       })
     }
     const sorted = [...orderedNew, ...otherCards]
-    const sessionCap = Math.min(100, Math.max(0, 100 - context.reviewedToday) || 100)
+    const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100') || 100
+    const sessionCap = Math.min(cap, Math.max(0, cap - context.reviewedToday) || cap)
     setCards(sorted.slice(0, sessionCap))
     setCtx(context)
     setLoading(false)
