@@ -272,9 +272,17 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent captures */}
-      <div>
-        <SectionHead title="Recent captures" />
+      {/* Recent captures — collapsible, closed by default */}
+      <details>
+        <summary style={{
+          listStyle: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', padding: '2px 0 10px', userSelect: 'none',
+        }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Recent captures
+          </span>
+          <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transition: 'transform .15s' }} />
+        </summary>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {stats.recentItems.length === 0 ? (
             <div style={{
@@ -318,7 +326,7 @@ export default async function DashboardPage() {
             )
           })}
         </div>
-      </div>
+      </details>
 
     </div>
   )

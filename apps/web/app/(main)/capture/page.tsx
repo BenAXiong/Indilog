@@ -103,7 +103,8 @@ function CapturePageInner() {
   const [savedMsg, setSavedMsg] = useState('')
   const [error,    setError]    = useState(false)
 
-  const [recentItems, setRecentItems] = useState<Item[]>([])
+  const [recentItems,  setRecentItems]  = useState<Item[]>([])
+  const [recentOpen,   setRecentOpen]   = useState(false)
 
   // Auto-lookup + tags
   const [autoLookup,    setAutoLookup]    = useState(true)
@@ -888,11 +889,17 @@ function CapturePageInner() {
         </Button>
       </div>
 
-      {/* Recent captures */}
+      {/* Recent captures — collapsible, collapsed by default */}
       {recentItems.length > 0 && (
         <div style={{ marginTop: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <SectionHead title="Recent" />
+            <button
+              onClick={() => setRecentOpen(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 10px' }}
+            >
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Recent</span>
+              <Icon name="chev-d" size={12} color={T.inkFaint} strokeWidth={2} style={{ transform: recentOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+            </button>
 
             {/* Language filter */}
             <div ref={filterRef} style={{ position: 'relative', paddingBottom: 12 }}>
@@ -937,7 +944,7 @@ function CapturePageInner() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {recentOpen && <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recentItems.map(item => {
               const isEditing = editingId === item.id
               return (
@@ -974,7 +981,7 @@ function CapturePageInner() {
                 </button>
               )
             })}
-          </div>
+          </div>}
         </div>
       )}
 
