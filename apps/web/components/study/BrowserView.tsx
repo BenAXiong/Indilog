@@ -11,6 +11,7 @@ import {
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
 import { setTargetWord } from '@/lib/db/srs/flashcards'
+import { listSources } from '@/lib/db/sources/sources'
 import { formatDays, computeStrength } from '@/lib/db/srs/schedule'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 
@@ -63,9 +64,10 @@ type CardRowProps = {
   selectionMode: boolean
   isSelected:    boolean
   onSelect:      () => void
+  sourceName?:   string
 }
 
-function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, isSelected, onSelect }: CardRowProps) {
+function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, isSelected, onSelect, sourceName }: CardRowProps) {
   const [editFront,  setEditFront]  = useState(card.ab)
   const [editBack,   setEditBack]   = useState(card.zh ?? '')
   const [editNotes,  setEditNotes]  = useState(card.notes ?? '')
@@ -338,6 +340,11 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
                   {v}
                 </span>
               ))}
+              {sourceName && (
+                <span style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', padding: '2px 6px', borderRadius: 4, background: T.amberBg, color: T.amber, border: `1px solid ${T.amber}40` }}>
+                  {sourceName}
+                </span>
+              )}
               {card.tags?.map(t => (
                 <span key={t} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 6px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
                   {t}
@@ -450,6 +457,7 @@ export default function BrowserView() {
   const [cards,           setCards]           = useState<BrowserCard[]>([])
   const [loading,         setLoading]         = useState(true)
   const [expandedId,      setExpandedId]      = useState<string | null>(null)
+  const [sourceNames,    setSourceNames]    = useState<Map<string, string>>(new Map())
   const [fType,          setFType]          = useState('')
   const [fSource,        setFSource]        = useState('')
   const [fromDate,       setFromDate]       = useState('')
@@ -469,6 +477,12 @@ export default function BrowserView() {
     listBrowserCards(filter, sort, filter === 'flagged' ? flagColorFilter : undefined)
       .then(c => { setCards(c); setLoading(false) })
   }, [filter, sort, flagColorFilter])
+
+  useEffect(() => {
+    listSources().then(ss => {
+      setSourceNames(new Map(ss.map(s => [s.id, s.name])))
+    })
+  }, [])
 
   const dropStyle: React.CSSProperties = {
     height: 30, padding: '0 26px 0 10px', borderRadius: 8, fontSize: 12,
@@ -697,6 +711,7 @@ export default function BrowserView() {
               selectionMode={selectionMode}
               isSelected={selectedIds.has(card.id)}
               onSelect={() => toggleSelect(card.id)}
+              sourceName={card.source_id ? sourceNames.get(card.source_id) : undefined}
             />
           ))}
         </div>

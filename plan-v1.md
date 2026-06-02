@@ -123,7 +123,7 @@ Personal library of sources (people, media, references) linked to captured items
 
 - [x] Source selector in Capture form — searchable pill; on select: pre-fills dialect + language
 - [x] Selected `source_id` saved on `ind_items` when item is created from capture
-- [ ] Browser expanded card: show source name (resolve from `source_id`) — pending BrowserCard query update
+- [x] Browser expanded card: show source name as amber pill (BrowserCard + listBrowserCards query updated)
 
 ---
 

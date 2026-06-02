@@ -29,6 +29,7 @@ export type BrowserCard = {
   place_heard:   string | null
   tags:          string[] | null
   target_word:   string | null
+  source_id:     string | null
 }
 
 export type BrowserFilter = 'all' | 'due' | 'new' | 'flagged' | 'suspended'
@@ -43,7 +44,7 @@ export async function listBrowserCards(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color, card_type, metadata), ind_learn_collections(name)'
+  const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color, card_type, metadata), ind_learn_collections(name)'
 
   // Two parallel queries so captured items are never crowded out by the server 1000-row cap
   const [capturedRes, collectionRes] = await Promise.all([
@@ -91,6 +92,7 @@ export async function listBrowserCards(
       place_heard:   row.place_heard ?? null,
       tags:          Array.isArray(row.tags) ? (row.tags as string[]) : null,
       target_word:   row.target_word ?? null,
+      source_id:     row.source_id ?? null,
     }
   })
 
