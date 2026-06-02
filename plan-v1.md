@@ -139,8 +139,8 @@ Personal library of sources (people, media, references) linked to captured items
 
 ### M4-C — Capture field consolidation
 
-- [ ] Merge source + speaker fields — drop `ind_speakers` / `speaker_id`; source type=person covers speakers (aligns with DEC-M4-01)
-- [ ] Place field — replace text input with tag-style input; user can create new places inline, select from previously used
+- [x] Merge source + speaker fields — Speaker InlineSelector removed; source type=person covers speakers; speaker_id no longer written
+- [x] Place field — replaced text input with InlineSelector; loads past places from ind_items on mount; create new inline
 - [ ] Multi-language capture — language selector in capture form (select, defaults to profile language)
 
 ---

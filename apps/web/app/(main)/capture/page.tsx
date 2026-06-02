@@ -11,7 +11,6 @@ import { createItem, updateItem, listItems, type Item, type ItemType } from '@/l
 import { createClient } from '@/lib/supabase/client'
 import { incrementCapturedToday } from '@/lib/db/progress/stats'
 import { listSources, createSource, type Source, type CreateSourceInput } from '@/lib/db/sources/sources'
-import { listSpeakers, createSpeaker, type Speaker } from '@/lib/db/notebook/speakers'
 import { LANGUAGES } from '@/lib/languages'
 import { GLID_FAMILIES, shortDialectLabel } from '@/lib/lang/dialects'
 import { getGlid } from '@/lib/lang/lang-bridge'
@@ -83,9 +82,8 @@ function CapturePageInner() {
 
   // Selectors
   const [sources,         setSources]         = useState<Source[]>([])
-  const [speakers,        setSpeakers]        = useState<Speaker[]>([])
   const [selectedSource,  setSelectedSource]  = useState<Source | null>(null)
-  const [selectedSpeaker, setSelectedSpeaker] = useState<Speaker | null>(null)
+  const [usedPlaces,      setUsedPlaces]      = useState<string[]>([])
 
   // Dialect dropdown
   const [dialectOpen, setDialectOpen] = useState(false)
@@ -133,7 +131,12 @@ function CapturePageInner() {
       if (user) setUserId(user.id)
     })
     listSources().then(setSources)
-    listSpeakers().then(setSpeakers)
+    createClient().auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data } = await createClient().from('ind_items').select('place_heard').eq('user_id', user.id).not('place_heard', 'is', null)
+      const places = [...new Set((data ?? []).map((r: { place_heard: string }) => r.place_heard).filter(Boolean))].sort() as string[]
+      setUsedPlaces(places)
+    })
   }, [])
 
   // Default dialect to profile value once loaded (one-time init)
@@ -287,7 +290,6 @@ function CapturePageInner() {
     setPlace(item.place_heard ?? '')
     setNotes(item.notes ?? '')
     setSelectedSource(sources.find(s => s.id === item.source_id) ?? null)
-    setSelectedSpeaker(speakers.find(s => s.id === item.speaker_id) ?? null)
     setSelectedTags((item.tags as string[] | undefined) ?? [])
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set())
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -295,7 +297,7 @@ function CapturePageInner() {
 
   function handleClear() {
     setEditingId(null); setText(''); setMeaning(''); setDialect(''); setPlace(''); setNotes('')
-    setSelectedSource(null); setSelectedSpeaker(null); setSelectedTags([])
+    setSelectedSource(null); setSelectedTags([])
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()); setStsTarget(null)
     discardRecording()
   }
@@ -352,7 +354,6 @@ function CapturePageInner() {
       place_heard: place.trim() || undefined,
       notes:       notes.trim() || undefined,
       source_id:   selectedSource?.id,
-      speaker_id:  selectedSpeaker?.id,
       audio:       audioUrl,
       tags:        selectedTags.length ? selectedTags : undefined,
       target_word: stsTarget ? displayToken(stsTarget) : undefined,
@@ -690,19 +691,6 @@ function CapturePageInner() {
               }}
             />
           </div>
-          <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
-            <InlineSelector
-              icon="user" label="Speaker"
-              options={speakers} selected={selectedSpeaker}
-              onSelect={opt => setSelectedSpeaker(opt as Speaker | null)}
-              onCreate={async name => {
-                const s = await createSpeaker(name)
-                if (s) setSpeakers(p => [...p, s])
-                return s
-              }}
-            />
-          </div>
-
           {/* Dialect — custom themed dropdown */}
           <div
             ref={dialectRef}
@@ -789,16 +777,19 @@ function CapturePageInner() {
             )}
           </div>
 
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}`,
-          }}>
-            <Icon name="pin" size={16} color={T.inkSoft} strokeWidth={1.8} />
-            <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60 }}>Place</span>
-            <input
-              value={place} onChange={e => setPlace(e.target.value)}
+          <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+            <InlineSelector
+              icon="pin" label="Place"
+              options={usedPlaces.map(p => ({ id: p, name: p }))}
+              selected={place ? { id: place, name: place } : null}
+              onSelect={opt => setPlace(opt?.name ?? '')}
+              onCreate={async name => {
+                const trimmed = name.trim()
+                if (!trimmed) return null
+                setUsedPlaces(p => [...new Set([...p, trimmed])].sort())
+                return { id: trimmed, name: trimmed }
+              }}
               placeholder="Where heard / seen"
-              style={{ flex: 1, border: 0, background: 'transparent', fontSize: 14, fontWeight: 500, color: T.ink, padding: 0, outline: 'none' }}
             />
           </div>
           {/* Tags — always visible with inline add */}
@@ -949,7 +940,6 @@ function CapturePageInner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {recentItems.map(item => {
               const isEditing = editingId === item.id
-              const speakerName = speakers.find(s => s.id === item.speaker_id)?.name
               return (
                 <button
                   key={item.id}
@@ -980,16 +970,6 @@ function CapturePageInner() {
                       </span>
                     )}
                   </div>
-                  {speakerName && (
-                    <span style={{
-                      fontSize: 11, color: T.inkSoft, fontWeight: 500,
-                      background: T.paper, borderRadius: 6,
-                      padding: '2px 7px', border: `1px solid ${T.lineSoft}`,
-                      whiteSpace: 'nowrap', flexShrink: 0,
-                    }}>
-                      {speakerName}
-                    </span>
-                  )}
                   <Icon name="pen" size={13} color={T.inkFaint} strokeWidth={1.8} />
                 </button>
               )

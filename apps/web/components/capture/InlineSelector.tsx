@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui'
 type Option = { id: string; name: string }
 
 type Props = {
-  icon: 'bookmark' | 'user'
+  icon: 'bookmark' | 'user' | 'pin'
   label: string
   options: Option[]
   selected: Option | null
