@@ -391,6 +391,9 @@ function CapturePageInner() {
         langDialect={dialectLabel}
         right={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Link href="/sources" aria-label="Sources" style={headerBtnStyle}>
+              <Icon name="library" size={17} strokeWidth={1.6} />
+            </Link>
             <button onClick={() => setBatchOpen(true)} aria-label="Batch import" style={headerBtnStyle}>
               <Icon name="download" size={17} strokeWidth={1.6} />
             </button>

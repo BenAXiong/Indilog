@@ -115,9 +115,9 @@ Personal library of sources (people, media, references) linked to captured items
 
 ### M4-A — Schema + CRUD
 
-- [ ] Supabase migration: `ind_sources` (id, user_id, name, type, dialect_name, language, location, url, notes, avatar_color)
-- [ ] `/sources` page — card grid, add/edit/delete; accessible via discrete icon button in Capture header
-- [ ] `lib/db/sources/` — CRUD helpers (createSource, listSources, updateSource, deleteSource)
+- [x] Supabase migration: `ind_sources` (id, user_id, name, type, dialect_name, language, location, url, notes, avatar_color)
+- [x] `/sources` page — card grid, add/edit/delete; accessible via library icon button in Capture header
+- [x] `lib/db/sources/` — CRUD helpers (createSource, listSources, updateSource, deleteSource)
 
 ### M4-B — Capture integration
 

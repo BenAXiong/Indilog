@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-02 04:30 | FEATURE | M4-A: ind_sources table (person/media/reference); /sources page with card grid + add/edit/delete sheet; library button in Capture header |
 | 2026-06-02 03:18 | FIX | Curriculum bookmark persists across navigation — batch pre-load saved status, key cards by original_uuid, save source_id on new saves |
 | 2026-06-02 03:09 | FIX | Curriculum bookmark now toggles — second click calls deleteItem(savedId) to unsave |
 | 2026-06-02 01:47 | FIX | Essay slot order corrected 原版→一→二 (re-crystallized from Citadel); Dialogs→Dialogues in ContentSheet + StudyView |
