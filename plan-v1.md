@@ -111,9 +111,19 @@ Essays and dialogues need to be rescraped. This is content/corpus work but impac
 
 ## Milestone 4 — Sources db
 
-Design a method to keep track of item sources and associate data to them (eg. dictionaires or speakers, with their dialect, location, ect)
+Personal library of sources (people, media, references) linked to captured items, with dialect pre-fill on capture. Schema + decisions in DEC-M4-01.
 
-- [ ] tbd
+### M4-A — Schema + CRUD
+
+- [ ] Supabase migration: `ind_sources` (id, user_id, name, type, dialect_name, language, location, url, notes, avatar_color)
+- [ ] `/sources` page — card grid, add/edit/delete; accessible via discrete icon button in Capture header
+- [ ] `lib/db/sources/` — CRUD helpers (createSource, listSources, updateSource, deleteSource)
+
+### M4-B — Capture integration
+
+- [ ] Source selector in Capture form — searchable pill; on select: pre-fills dialect + language
+- [ ] Selected `source_id` saved on `ind_items` when item is created from capture
+- [ ] Browser expanded card: show source name (resolve from `source_id`)
 
 ---
 
@@ -145,8 +155,8 @@ Design a method to keep track of item sources and associate data to them (eg. di
 
 ## Milestone 6 — Tests and fixes
 
-- [ ] FIX: grmpts audio still not playing — pre-existing, investigate correct URL pattern
-- [ ] FIX: sentences cannot be unbookmarked — investigate handleSave / saved state reset
+- [x] FIX: grmpts audio still not playing — pre-existing, investigate correct URL pattern
+- [x] FIX: sentences cannot be unbookmarked — investigate handleSave / saved state reset
 
 - [ ] Desktop usability pass
 - [ ] Error states (API failures, auth errors)

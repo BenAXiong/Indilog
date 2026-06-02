@@ -196,6 +196,47 @@ Current Card Templates: `default` (text → meaning; was `forward`, renamed in T
 
 ---
 
+### DEC-M4-01 · Sources db — schema, type taxonomy, FK consolidation
+
+**Context:** Users capture vocabulary from various sources (people, media, references). `ind_items` already has `source_id` and `speaker_id` columns but no backing table. The goal is to let users maintain a personal source library and pre-fill capture fields from it.
+
+**Decision — Schema:**
+```sql
+CREATE TABLE ind_sources (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,
+  type         TEXT NOT NULL CHECK (type IN ('person', 'media', 'reference')),
+  dialect_name TEXT,           -- primary dialect (pre-fills capture)
+  language     TEXT,           -- language code (pre-fills capture)
+  location     TEXT,           -- for persons: hometown / region
+  url          TEXT,           -- for media/reference: link
+  notes        TEXT,
+  avatar_color TEXT,           -- UI: deterministic color for the card avatar
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**Decision — Type taxonomy:**
+| Type | Covers | Pre-fills |
+|------|--------|-----------|
+| `person` | speakers, teachers, elders, friends | dialect + language |
+| `media` | movies, TV shows, music, podcasts, story books, YouTube | dialect + language |
+| `reference` | dictionaries, textbooks, grammar books, websites | dialect + language |
+
+The distinctions are cosmetic (icon) — all three share the same core fields and capture workflow.
+
+**Decision — FK consolidation:**
+- `ind_items.source_id` is the single FK to `ind_sources.id`
+- `ind_items.speaker_id` is deprecated — ignored in all new code; will not be migrated or removed (low-risk orphan column)
+- No shared sources between users in v1 — each user maintains their own library
+
+**Sequence:** M4-A (schema + CRUD) → M4-B (capture integration + browser display)
+
+**Date:** 2026-06-02
+
+---
+
 ### DEC-NOTE03 · `metadata jsonb` on `ind_flashcards` for extensible Card Templates
 **Decision:** Add `metadata jsonb` column to `ind_flashcards`. Card Templates that need fields beyond `front`/`back` store them here. The review session reads `card.card_type` + `card.metadata` together.
 
