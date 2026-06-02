@@ -536,9 +536,12 @@ function ReviewSession({
     { id: 'good',  label: 'Good',  color: T.sage    },
     { id: 'easy',  label: 'Easy',  color: T.amber   },
   ]
-  // Learning/relearn: 2 buttons only (Repeat + Easy/Got it!)
+  // Learning: before reveal → Easy only; after reveal → Repeat + Got it!
+  // Review: after reveal → Again/Good (or all four if showHardEasy)
   const visibleRatings = isLearning
-    ? RATINGS.filter(r => r.id === 'again' || r.id === 'easy')
+    ? (!revealed
+        ? RATINGS.filter(r => r.id === 'easy')
+        : RATINGS.filter(r => r.id === 'again' || r.id === 'easy'))
     : showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
 
   const intervals = useMemo(() =>
@@ -581,7 +584,14 @@ function ReviewSession({
 
       {/* Session header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 0', flexShrink: 0 }}>
-        <button onClick={() => onExit(completedRef.current.size)} aria-label="Exit session" style={{
+        <button onClick={() => {
+          const learningInProgress = queue.slice(qIdx).filter(e => e.phase === 'new' && e.pass > 0)
+          if (learningInProgress.length > 0) {
+            const count = learningInProgress.length
+            if (!window.confirm(`${count} learning card${count > 1 ? 's' : ''} will reset to 0/${learningSteps} if you exit now. Continue?`)) return
+          }
+          onExit(completedRef.current.size)
+        }} aria-label="Exit session" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
@@ -699,8 +709,13 @@ function ReviewSession({
             )}
           </div>
 
-          {/* Swipe affordances */}
-          {!revealed && (
+          {/* Swipe affordances — before reveal: tap hint; after reveal (buttons hidden): grade hints */}
+          {!revealed ? (
+            <div style={{ position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 5, color: T.inkFaint, opacity: 0.5 }}>
+              <Icon name="chev-d" size={13} strokeWidth={2} />
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>tap to reveal</span>
+            </div>
+          ) : !showButtons ? (
             <>
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.5 }}>
                 <Icon name="arrow-l" size={17} strokeWidth={2} />
@@ -711,7 +726,7 @@ function ReviewSession({
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>good</span>
               </div>
             </>
-          )}
+          ) : null}
 
           {/* Front */}
           <div style={{ flex: revealed ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 24px' }}>

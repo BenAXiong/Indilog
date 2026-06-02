@@ -64,6 +64,15 @@
 - [x] Custom review sessions — filter icon next to Review all; CustomSessionSheet (lang, dialect, source, due-only toggle); bypasses global exclusions
 - [x] Daily reset time — getStudyDate() reads srs_reset_hour from localStorage (default 4am); stepper in review OptionsSheet (12am–6am)
 
+### M1-G — SRS UX fixes
+
+- [ ] Learning logic: Easy-only before flip; Again + Got it! after reveal (currently allows Again before seeing answer)
+- [ ] Exit warning when learning cards are in progress (e.g. "2/3 cards will reset")
+- [ ] Gesture hints shown after reveal when rating buttons are hidden (currently only shown before flip)
+- [ ] Deck ordering: collection cards sorted by level → lesson → position (data already on ind_items)
+- [ ] Session end: expandable reviewed-items list + goal progress ("x% closer · N days to go")
+- [ ] Review mode DEC — document forward/reverse/audio/STS selection model before building (→ DEC-SRS06)
+
 ---
 
 ## Milestone 2 — Library / Browser
@@ -84,6 +93,9 @@
 - [x] Dict lookup button in expanded card — Lookup button on empty zh; auto-fills first result; chips for alternatives; "No results" on miss
 - [x] Date range filter — from/to date inputs below filter row, filter on created_at, ✕ clear button
 - [x] Batch select + delete / suspend / flag — Select button in header; tap rows to highlight; bottom action bar with All/None, Delete (confirm), Suspend, Flag (color picker)
+- [ ] Post-add audio to saved items — Browser "Find audio" button: query corpus_occurrences by ab+language, patch ind_items.audio if match found
+- [ ] Dict sentence search — typing a full sentence in the dict page returns matching corpus sentences (searchSentences() already exists in backend)
+- [ ] Fix dict search placeholder showing raw glid ("01") instead of language name ("Amis")
 
 ---
 
@@ -125,6 +137,12 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Selected `source_id` saved on `ind_items` when item is created from capture
 - [x] Browser expanded card: show source name as amber pill (BrowserCard + listBrowserCards query updated)
 
+### M4-C — Capture field consolidation
+
+- [ ] Merge source + speaker fields — drop `ind_speakers` / `speaker_id`; source type=person covers speakers (aligns with DEC-M4-01)
+- [ ] Place field — replace text input with tag-style input; user can create new places inline, select from previously used
+- [ ] Multi-language capture — language selector in capture form (select, defaults to profile language)
+
 ---
 
 ## Milestone 5 — Architecture & UI Polish
@@ -136,12 +154,12 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Fix: ind_reviews / increment_reviewed_today fires spuriously — onExit ref + sessionEndFiredRef one-shot guard
 - [x] Corpus: switch `/api/learn/curriculum` to accept `index` instead of `title_zh` — essay/dialogue use index; twelve/grmpts use constructed keys (unchanged)
 
-### M5-B — UI polish
+### M5-B — UI refinement
 
 - [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
-- [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, etc)
+- [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, info, etc)
 - [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
 - [ ] Deck sections collapsible
 - [ ] Swipe to switch tabs
@@ -153,7 +171,18 @@ Personal library of sources (people, media, references) linked to captured items
 
 ---
 
-## Milestone 6 — Tests and fixes
+## Milestone 6 — Translate (ILRDF AI)
+
+Switch translate tab from FormosanBank to ILRDF AI Labs (https://ai-labs.ilrdf.org.tw/). Add TTS. Enable save-to-items from translate output.
+
+- [ ] DEC-M6-01 — document ILRDF API endpoints (MT + TTS), auth, language codes, rate limits
+- [ ] Swap `/api/translate` route to ILRDF MT endpoint
+- [ ] Add TTS: ILRDF TTS endpoint → playable audio in translate UI
+- [ ] Save translation output to ind_items (ab = source, zh = translation, audio = TTS URL)
+
+---
+
+## Milestone 7 — Tests and fixes
 
 - [x] FIX: grmpts audio still not playing — pre-existing, investigate correct URL pattern
 - [x] FIX: sentences cannot be unbookmarked — investigate handleSave / saved state reset
@@ -180,8 +209,10 @@ Personal library of sources (people, media, references) linked to captured items
 
 ## Longterm
 
+- Add ex sentences to word cards (?) esp Amis 1k - lookup from browser?
 - Video capture — v2 new feature
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k
+- history buttons in capture and other tabs
 - Amis1k: add simple example sentences
 - Icons: align with CD design handoff
 - 階層×10 system (tadpole - crab - mangcel - fafoy - bear - kawas?)

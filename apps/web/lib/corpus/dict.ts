@@ -1,4 +1,5 @@
 import { getCorpusClient } from './db'
+import { GLID_NAMES_EN } from '@/lib/lang/dialects'
 
 export type WordRow = {
   id: string
@@ -140,7 +141,7 @@ export async function listDialects(): Promise<DialectRow[]> {
 
   return Array.from(groups.entries()).map(([glid, dialects]) => ({
     glid,
-    group_name:   glid,
+    group_name:   GLID_NAMES_EN[glid] ?? glid,
     sub_dialects: dialects.join(', '),
   }))
 }
