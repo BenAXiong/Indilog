@@ -17,6 +17,7 @@ CREATE TABLE corpus_sentences (
 
 CREATE INDEX idx_cs_glid     ON corpus_sentences(glid);
 CREATE INDEX idx_cs_ab_trgm  ON corpus_sentences USING gin(ab gin_trgm_ops);
+CREATE INDEX idx_cs_zh_trgm  ON corpus_sentences USING gin(zh gin_trgm_ops);
 
 ALTER TABLE corpus_sentences ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "corpus_sentences: public read"
@@ -60,6 +61,7 @@ CREATE TABLE corpus_vocabulary (
 
 CREATE INDEX idx_cv_glid     ON corpus_vocabulary(glid);
 CREATE INDEX idx_cv_ab_trgm  ON corpus_vocabulary USING gin(word_ab gin_trgm_ops);
+CREATE INDEX idx_cv_ch_trgm  ON corpus_vocabulary USING gin(word_ch gin_trgm_ops);
 CREATE INDEX idx_cv_ab_lower ON corpus_vocabulary(lower(word_ab));
 
 ALTER TABLE corpus_vocabulary ENABLE ROW LEVEL SECURITY;
