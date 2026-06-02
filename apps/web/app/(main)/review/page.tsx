@@ -87,6 +87,7 @@ function OptionsSheet({
   showButtons, setShowButtons,
   learningSteps, setLearningSteps,
   audioMode, setAudioMode,
+  shuffleNew, setShuffleNew,
   showAllLangs, setShowAllLangs,
   excludedLangs, setExcludedLangs,
   onReloadNeeded,
@@ -96,6 +97,7 @@ function OptionsSheet({
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
   learningSteps: number; setLearningSteps: (v: number) => void
   audioMode:    boolean; setAudioMode:    (v: boolean) => void
+  shuffleNew:   boolean; setShuffleNew:   (v: boolean) => void
   showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
   excludedLangs: string[]; setExcludedLangs: (v: string[]) => void
   onReloadNeeded: () => void
@@ -157,6 +159,7 @@ function OptionsSheet({
           <Toggle label="Audio mode" sub="Play button as front — falls back to text when no audio" on={audioMode} onToggle={() => setAudioMode(!audioMode)} />
           <Toggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
           <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
+          <Toggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
 
           {/* Learning passes stepper */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
@@ -297,6 +300,7 @@ function ReviewSession({
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
   const [audioMode,      setAudioModeRaw]  = useState(false)
+  const [shuffleNew,     setShuffleNewRaw]  = useState(false)
   const [showAllLangs,   setShowAllLangsRaw] = useState(true)
   const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
   const swipeStart   = useRef({ x: 0, y: 0 })
@@ -334,10 +338,12 @@ function ReviewSession({
     const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
     setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
     setAudioModeRaw(localStorage.getItem('srs_audio_mode') === 'true')
+    setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
     setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
     try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
 
+  function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new', String(v)) }
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
   function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v)) }
   function setLearningSteps(v: number) {
@@ -879,6 +885,7 @@ function ReviewSession({
           showButtons={showButtons}         setShowButtons={setShowButtons}
           learningSteps={learningSteps}     setLearningSteps={setLearningSteps}
           audioMode={audioMode}             setAudioMode={setAudioMode}
+          shuffleNew={shuffleNew}           setShuffleNew={setShuffleNew}
           showAllLangs={showAllLangs}       setShowAllLangs={setShowAllLangs}
           excludedLangs={excludedLangs}     setExcludedLangs={setExcludedLangs}
           onReloadNeeded={onReloadNeeded}
@@ -1107,17 +1114,34 @@ function ReviewPage() {
       ? [...c.filter(x => x.ind_items?.collection_id === goalId), ...c.filter(x => x.ind_items?.collection_id !== goalId)]
       : c
 
-    // Sort new collection cards by level → lesson → position; keep due cards by due_at
-    const sorted = [...goalSorted].sort((a, b) => {
-      const ia = a.ind_items as any
-      const ib = b.ind_items as any
-      const isNewCollA = !a.due_at && ia?.note_source === 'collection'
-      const isNewCollB = !b.due_at && ib?.note_source === 'collection'
-      if (!isNewCollA || !isNewCollB) return 0 // preserve existing order for everything else
-      return (ia.level ?? 0) - (ib.level ?? 0)
-          || (ia.lesson ?? 0) - (ib.lesson ?? 0)
-          || (ia.position ?? 0) - (ib.position ?? 0)
-    })
+    // Sort/shuffle new collection cards; keep due cards by due_at
+    const isNewColl = (x: typeof goalSorted[0]) =>
+      !x.due_at && (x.ind_items as any)?.note_source === 'collection'
+    const newCollCards = goalSorted.filter(isNewColl)
+    const otherCards   = goalSorted.filter(x => !isNewColl(x))
+
+    const shuffleNewCards = localStorage.getItem('srs_shuffle_new') === 'true'
+    let orderedNew: typeof newCollCards
+    if (shuffleNewCards) {
+      // Shuffle within each level (keep levels in order)
+      const byLevel = new Map<number, typeof newCollCards>()
+      for (const c of newCollCards) {
+        const lv = (c.ind_items as any)?.level ?? 0
+        if (!byLevel.has(lv)) byLevel.set(lv, [])
+        byLevel.get(lv)!.push(c)
+      }
+      orderedNew = [...byLevel.entries()]
+        .sort(([a], [b]) => a - b)
+        .flatMap(([, cards]) => cards.sort(() => Math.random() - 0.5))
+    } else {
+      orderedNew = [...newCollCards].sort((a, b) => {
+        const ia = a.ind_items as any, ib = b.ind_items as any
+        return (ia.level ?? 0) - (ib.level ?? 0)
+            || (ia.lesson ?? 0) - (ib.lesson ?? 0)
+            || (ia.position ?? 0) - (ib.position ?? 0)
+      })
+    }
+    const sorted = [...orderedNew, ...otherCards]
     const sessionCap = Math.min(100, Math.max(0, 100 - context.reviewedToday) || 100)
     setCards(sorted.slice(0, sessionCap))
     setCtx(context)
