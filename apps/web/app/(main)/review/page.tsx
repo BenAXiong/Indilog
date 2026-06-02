@@ -406,8 +406,8 @@ function ReviewSession({
       if (showOptions) return
       if (!revealed) {
         if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
-        else if (e.key === 'ArrowRight') submit('easy')
-        else if (e.key === 'ArrowDown')  handleSuspend()
+        else if (e.key === 'ArrowUp')   submit('easy')
+        else if (e.key === 'ArrowDown') handleSuspend()
       } else {
         if      (e.key === '1' || e.key === 'ArrowLeft')                    submit('again')
         else if (e.key === '2' && showHardEasy && !isLearning)             submit('hard')
@@ -537,11 +537,13 @@ function ReviewSession({
     const THRESH = 70
     if (!revealed) {
       if (absX < 10 && absY < 10) { setRevealed(true); return }
-      if (absX > absY && absX > THRESH && dx > 0) { submit('easy'); return }   // right only = easy
-      if (absY > absX && absY > THRESH && dy > 0) { handleSuspend(); return }  // down = suspend
-      return
+      if (absY > absX && absY > THRESH) {
+        if (dy < 0) { submit('easy'); return }   // up = easy
+        else        { handleSuspend(); return }  // down = suspend
+      }
+      return  // horizontal swipes before flip do nothing
     }
-    // After flip: left = again, right = easy (learning) or good (review)
+    // After flip: ← again, → good/got it, ↑ easy, ↓ suspend
     if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : isLearning ? 'easy' : 'good')
     else if (absY > absX && absY > THRESH) { if (dy < 0) submit('easy'); else handleSuspend() }
   }
@@ -667,8 +669,19 @@ function ReviewSession({
         </div>
       </div>
 
-      {/* Card area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px 16px 0', overflow: 'hidden' }}>
+      {/* Card area — flex column so hints sit naturally above/below card */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 16px 0' }}>
+
+        {/* ↑ easy hint — outside card, above */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.42 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: !revealed ? T.amber : T.sage }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {!revealed ? 'easy' : isLearning ? 'got it' : 'easy'}
+            </span>
+            <Icon name="chevron" size={13} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
+          </div>
+        </div>
+
         <div
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
@@ -726,27 +739,21 @@ function ReviewSession({
             )}
           </div>
 
-          {/* Swipe affordances:
-                before flip → right only (→ easy)
-                after flip  → left (← again) + right (→ got it / good) */}
-          <>
-            {revealed && (
+          {/* Left/right swipe hints — inside card, visible only after flip */}
+          {revealed && (
+            <>
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
                 <Icon name="arrow-l" size={17} strokeWidth={2} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
               </div>
-            )}
-            <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: !revealed ? T.amber : T.sage, opacity: 0.5 }}>
-              <Icon name="arrow-r" size={17} strokeWidth={2} />
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>
-                {!revealed ? 'easy' : isLearning ? 'got it' : 'good'}
-              </span>
-            </div>
-            <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: T.inkFaint, opacity: 0.4 }}>
-              <Icon name="chev-d" size={13} strokeWidth={2} />
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>suspend</span>
-            </div>
-          </>
+              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.5 }}>
+                <Icon name="arrow-r" size={17} strokeWidth={2} />
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>
+                  {isLearning ? 'got it' : 'good'}
+                </span>
+              </div>
+            </>
+          )}
 
           {/* Front */}
           <div style={{ flex: revealed ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 24px' }}>
@@ -838,6 +845,14 @@ function ReviewSession({
               </span>
             </div>
           )}
+        </div>
+
+        {/* ↓ suspend hint — outside card, below */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.38 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.inkFaint }}>
+            <Icon name="chev-d" size={13} strokeWidth={2} />
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>suspend</span>
+          </div>
         </div>
       </div>
 
