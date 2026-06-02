@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
   const dialect = searchParams.get('dialect') ?? undefined
   const fuzzy   = searchParams.get('fuzzy') === '1'
 
-  if (!q || q.length < 3) {
+  const minLen = /[㐀-鿿]/.test(q) ? 1 : 3
+  if (!q || q.length < minLen) {
     return NextResponse.json({ words: [], sentences: [] })
   }
 

@@ -265,7 +265,8 @@ export default function DictionaryPage() {
 
   const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean) => {
     const trimmed = term.trim()
-    if (trimmed.length < 3) { setWords([]); setSentences([]); setSearched(false); return }
+    const minLen = /[㐀-鿿]/.test(trimmed) ? 1 : 3
+    if (trimmed.length < minLen) { setWords([]); setSentences([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)
     const params = new URLSearchParams({ q: trimmed })
