@@ -69,7 +69,7 @@
 - [ ] Learning logic: Easy-only before flip; Again + Got it! after reveal (currently allows Again before seeing answer)
 - [ ] Exit warning when learning cards are in progress (e.g. "2/3 cards will reset")
 - [ ] Gesture hints shown after reveal when rating buttons are hidden (currently only shown before flip)
-- [ ] Deck ordering: collection cards sorted by level → lesson → position (data already on ind_items)
+- [x] Deck ordering: collection cards sorted by level → lesson → position (data already on ind_items)
 - [ ] Session end: expandable reviewed-items list + goal progress ("x% closer · N days to go")
 - [ ] Review mode DEC — document forward/reverse/audio/STS selection model before building (→ DEC-SRS06)
 

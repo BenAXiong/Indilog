@@ -242,7 +242,7 @@ export type ListDueOpts = {
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, tags, place_heard, ind_learn_collections(name, language))'
+  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, ind_learn_collections(name, language))'
 
   // Paginate to work around Supabase's server-side 1000-row cap
   function buildQ() {

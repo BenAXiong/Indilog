@@ -2,6 +2,9 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-02 | FIX | Review: gesture/button full alignment (again/easy pre-flip, again/good post-flip, suspend ↓ all states) |
+| 2026-06-02 | FIX | Dict placeholder: group_name now uses GLID_NAMES_EN (was raw glid) |
+| 2026-06-02 | FEATURE | M1-G: deck ordering — new collection cards sorted level→lesson→position in reload(); due cards keep due_at order |
 | 2026-06-02 13:26 | FIX | Purge language codes from all display sites — Browser info strip, dashboard recent captures, sources card + language field now a dropdown |
 | 2026-06-02 05:00 | FEATURE | M4-B complete: BrowserCard includes source_id; Browser expanded card shows source name as amber pill |
 | 2026-06-02 04:45 | FEATURE | M4-B: source selector in Capture form with dialect auto-fill; onCreate auto-sets dialect to current; source_id saved on ind_items |

@@ -1103,9 +1103,21 @@ function ReviewPage() {
     ])
     const goalPaused = localStorage.getItem('srs_goal_paused') === '1'
     const goalId = (!isCustom && !goalPaused) ? context.goalCollectionId : null
-    const sorted = goalId
+    const goalSorted = goalId
       ? [...c.filter(x => x.ind_items?.collection_id === goalId), ...c.filter(x => x.ind_items?.collection_id !== goalId)]
       : c
+
+    // Sort new collection cards by level → lesson → position; keep due cards by due_at
+    const sorted = [...goalSorted].sort((a, b) => {
+      const ia = a.ind_items as any
+      const ib = b.ind_items as any
+      const isNewCollA = !a.due_at && ia?.note_source === 'collection'
+      const isNewCollB = !b.due_at && ib?.note_source === 'collection'
+      if (!isNewCollA || !isNewCollB) return 0 // preserve existing order for everything else
+      return (ia.level ?? 0) - (ib.level ?? 0)
+          || (ia.lesson ?? 0) - (ib.lesson ?? 0)
+          || (ia.position ?? 0) - (ib.position ?? 0)
+    })
     const sessionCap = Math.min(100, Math.max(0, 100 - context.reviewedToday) || 100)
     setCards(sorted.slice(0, sessionCap))
     setCtx(context)
