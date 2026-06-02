@@ -820,7 +820,6 @@ export default function StudyPage() {
                           {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
                         </div>
                         <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
-                        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, marginLeft: 2 }}>{code}</span>
                       </button>
                     )
                   })}
