@@ -280,11 +280,18 @@ export default function DictionaryPage() {
     setLoading(false)
   }, [])
 
+  const isPhrase = q.trim().includes(' ')
+
+  useEffect(() => {
+    if (isPhrase) setActiveTab('sentences')
+  }, [isPhrase])
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, fuzzy), 320)
+    // phrases always use fuzzy so they match mid-sentence
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || fuzzy), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, dialectFilter, fuzzy, runSearch])
+  }, [q, glid, dialectFilter, fuzzy, isPhrase, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
@@ -399,8 +406,8 @@ export default function DictionaryPage() {
       ? dialectFilter
       : `${selectedLangOption?.group_name ?? ''} (all dialects)`
   const searchPlaceholder = selectedLangOption
-    ? `Search in ${selectedLangOption.group_name}${dialectFilter ? ` · ${dialectFilter}` : ''}, Chinese or English`
-    : 'Search in all languages, Chinese or English'
+    ? `Word or phrase in ${selectedLangOption.group_name}${dialectFilter ? ` · ${dialectFilter}` : ''}, Chinese or English`
+    : 'Word or phrase in all languages, Chinese or English'
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 14 }}>
