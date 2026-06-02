@@ -18,6 +18,7 @@ import { getLangName } from '@/lib/lang/lang-bridge'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { estimateInterval, formatDays, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
+import { getDeckGoalStats } from '@/lib/db/profile/goal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ type SessionContext = {
   dailyGoal:        number
   streak:           number
   goalCollectionId: string | null
+  goalDueDate:      string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -37,14 +39,14 @@ function cardSMState(card: FlashcardWithItem): SMState {
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null }
+  if (!user) return { reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null, goalDueDate: null }
 
   const today   = new Date().toISOString().slice(0, 10)
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
   const fromStr = from30.toISOString().slice(0, 10)
 
   const [profileRes, todayRes, dailyRes] = await Promise.all([
-    supabase.from('ind_profiles').select('daily_goal, goal_collection_id').eq('user_id', user.id).maybeSingle(),
+    supabase.from('ind_profiles').select('daily_goal, goal_collection_id, goal_due_date').eq('user_id', user.id).maybeSingle(),
     supabase.from('ind_daily_stats').select('reviewed_count').eq('user_id', user.id).eq('date', today).maybeSingle(),
     supabase.from('ind_daily_stats').select('date, reviewed_count').eq('user_id', user.id).gte('date', fromStr).order('date', { ascending: false }),
   ])
@@ -61,6 +63,7 @@ async function loadSessionContext(): Promise<SessionContext> {
     dailyGoal:        profileRes.data?.daily_goal ?? 20,
     streak,
     goalCollectionId: profileRes.data?.goal_collection_id ?? null,
+    goalDueDate:      profileRes.data?.goal_due_date ?? null,
   }
 }
 
@@ -280,7 +283,7 @@ function ReviewSession({
 }: {
   cards: FlashcardWithItem[]
   ctx: SessionContext
-  onExit: (reviewed: number) => void
+  onExit: (reviewed: number, reviewedCards: FlashcardWithItem[]) => void
   onReloadNeeded: () => void
 }) {
   const [queue, setQueue] = useState<QueueEntry[]>(() =>
@@ -361,7 +364,7 @@ function ReviewSession({
   useEffect(() => {
     if (queue.length > 0 && qIdx >= queue.length && !sessionEndFiredRef.current) {
       sessionEndFiredRef.current = true
-      onExitRef.current(completedRef.current.size)
+      onExitRef.current(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)))
     }
   }, [qIdx, queue.length])
 
@@ -604,7 +607,7 @@ function ReviewSession({
             const count = learningInProgress.length
             if (!window.confirm(`${count} learning card${count > 1 ? 's' : ''} will reset to 0/${learningSteps} if you exit now. Continue?`)) return
           }
-          onExit(completedRef.current.size)
+          onExit(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)))
         }} aria-label="Exit session" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -904,20 +907,29 @@ function ReviewEnd({
   sessionCount,
   goalMet,
   streak,
+  reviewedCards,
+  goalCollectionId,
+  goalDueDate,
   onReviewMore,
   onDone,
 }: {
   sessionCount: number
   goalMet: boolean
   streak: number
+  reviewedCards: FlashcardWithItem[]
+  goalCollectionId: string | null
+  goalDueDate: string | null
   onReviewMore: () => void
   onDone: () => void
 }) {
-  const [dueTomorrow, setDueTomorrow] = useState<number | null>(null)
+  const [dueTomorrow,  setDueTomorrow]  = useState<number | null>(null)
+  const [goalStats,    setGoalStats]    = useState<{ total: number; mastered: number } | null>(null)
+  const [listExpanded, setListExpanded] = useState(false)
 
   useEffect(() => {
     countDueTomorrow().then(setDueTomorrow)
-  }, [])
+    if (goalCollectionId) getDeckGoalStats(goalCollectionId).then(setGoalStats)
+  }, [goalCollectionId])
 
   const confetti = useMemo(() => {
     let s = 11
@@ -967,44 +979,95 @@ function ReviewEnd({
         </button>
       </div>
 
-      {/* Hero */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 28px', position: 'relative', zIndex: 2 }}>
-        {goalMet && (
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.12em',
-            color: '#4A7320', background: T.sageBg, border: '1px solid #D2D8AE',
-            padding: '6px 13px', borderRadius: 999, marginBottom: 22,
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-          }}>
-            <Icon name="check" size={13} color="#4A7320" strokeWidth={2.6} /> Daily goal met
-          </span>
-        )}
+      {/* Main scrollable area */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 2 }}>
 
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 92, fontWeight: 600, color: T.ink, letterSpacing: '-0.04em', lineHeight: 0.9 }}>
-          {sessionCount}
-        </div>
-        <div style={{ fontSize: 17, color: T.inkSoft, marginTop: 8, fontWeight: 500 }}>
-          cards reviewed
-        </div>
-
-        {dueTomorrow !== null && (
-          <div style={{
-            marginTop: 26, display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '11px 16px', borderRadius: 14, background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-          }}>
-            <Icon name="card" size={16} color={T.amber} strokeWidth={1.8} />
-            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.02em' }}>
-              {dueTomorrow}
+        {/* Hero */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '24px 28px 20px' }}>
+          {goalMet && (
+            <span style={{
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.12em',
+              color: '#4A7320', background: T.sageBg, border: '1px solid #D2D8AE',
+              padding: '6px 13px', borderRadius: 999, marginBottom: 18,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              <Icon name="check" size={13} color="#4A7320" strokeWidth={2.6} /> Daily goal met
             </span>
-            <span style={{ fontSize: 13, color: T.inkSoft }}>due tomorrow</span>
+          )}
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 88, fontWeight: 600, color: T.ink, letterSpacing: '-0.04em', lineHeight: 0.9 }}>
+            {sessionCount}
           </div>
-        )}
+          <div style={{ fontSize: 17, color: T.inkSoft, marginTop: 8, fontWeight: 500 }}>cards reviewed</div>
 
-        {!goalMet && dueTomorrow !== null && dueTomorrow < 5 && (
-          <div style={{ marginTop: 18, display: 'flex', alignItems: 'flex-start', gap: 7, maxWidth: 280, fontSize: 12, color: T.inkMute, lineHeight: 1.5, textAlign: 'left' }}>
-            <Icon name="capture" size={14} color={T.sage} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span>Capture more words today to keep your streak growing tomorrow.</span>
+          {/* Goal progress */}
+          {goalStats && (() => {
+            const pct = goalStats.total > 0 ? Math.round(goalStats.mastered / goalStats.total * 100) : 0
+            const daysLeft = goalDueDate
+              ? Math.max(0, Math.ceil((new Date(goalDueDate).getTime() - Date.now()) / 86400000))
+              : null
+            return (
+              <div style={{ marginTop: 20, padding: '12px 18px', borderRadius: 14, background: T.amberBg, border: `1px solid ${T.amber}40`, maxWidth: 300, width: '100%' }}>
+                <div style={{ fontSize: 13, color: T.amber, fontWeight: 700 }}>
+                  {goalStats.mastered} / {goalStats.total} mastered · {pct}%
+                </div>
+                {daysLeft !== null && (
+                  <div style={{ fontSize: 13, color: T.ink, fontWeight: 700, marginTop: 4 }}>
+                    {daysLeft} day{daysLeft !== 1 ? 's' : ''} to go
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {dueTomorrow !== null && (
+            <div style={{
+              marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '10px 16px', borderRadius: 14, background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+            }}>
+              <Icon name="card" size={16} color={T.amber} strokeWidth={1.8} />
+              <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.02em' }}>{dueTomorrow}</span>
+              <span style={{ fontSize: 13, color: T.inkSoft }}>due tomorrow</span>
+            </div>
+          )}
+
+          {!goalMet && dueTomorrow !== null && dueTomorrow < 5 && (
+            <div style={{ marginTop: 14, display: 'flex', alignItems: 'flex-start', gap: 7, maxWidth: 280, fontSize: 12, color: T.inkMute, lineHeight: 1.5, textAlign: 'left' }}>
+              <Icon name="capture" size={14} color={T.sage} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
+              <span>Capture more words today to keep your streak growing tomorrow.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Reviewed items list */}
+        {reviewedCards.length > 0 && (
+          <div style={{ padding: '0 16px 16px' }}>
+            <button
+              onClick={() => setListExpanded(v => !v)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                fontSize: 13, fontWeight: 600, color: T.inkSoft,
+              }}
+            >
+              <span>{reviewedCards.length} card{reviewedCards.length !== 1 ? 's' : ''} this session</span>
+              <Icon name="chev-d" size={14} strokeWidth={2} style={{ transform: listExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+            </button>
+            {listExpanded && (
+              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {reviewedCards.map(c => (
+                  <div key={c.id} style={{
+                    padding: '8px 14px', borderRadius: 10,
+                    background: T.paper, border: `1px solid ${T.lineSoft}`,
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                  }}>
+                    <span style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{c.ind_items?.ab}</span>
+                    {c.ind_items?.zh && <span style={{ fontSize: 12, color: T.inkSoft }}>{c.ind_items.zh}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1068,10 +1131,11 @@ function ReviewPage() {
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null, goalDueDate: null })
   const [loading, setLoading] = useState(true)
-  const [sessionCount, setSessionCount] = useState(0)
-  const [sessionKey,   setSessionKey]   = useState(0)
+  const [sessionCount,    setSessionCount]    = useState(0)
+  const [sessionKey,      setSessionKey]      = useState(0)
+  const [reviewedCards,   setReviewedCards]   = useState<FlashcardWithItem[]>([])
   const autostartedRef = useRef(false)
 
   function getExcludeLangs(): string[] {
@@ -1159,8 +1223,9 @@ function ReviewPage() {
 
   useEffect(() => { reload() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleSessionExit(reviewed: number) {
+  function handleSessionExit(reviewed: number, rc: FlashcardWithItem[] = []) {
     setSessionCount(reviewed)
+    setReviewedCards(rc)
     if (reviewed > 0) {
       setMode('done')
     } else if (autostart) {
@@ -1184,7 +1249,16 @@ function ReviewPage() {
   }
 
   if (mode === 'done') {
-    return <ReviewEnd sessionCount={sessionCount} goalMet={goalMet} streak={ctx.streak} onReviewMore={handleReviewMore} onDone={autostart ? () => router.push('/') : () => setMode('landing')} />
+    return <ReviewEnd
+      sessionCount={sessionCount}
+      goalMet={goalMet}
+      streak={ctx.streak}
+      reviewedCards={reviewedCards}
+      goalCollectionId={ctx.goalCollectionId}
+      goalDueDate={ctx.goalDueDate}
+      onReviewMore={handleReviewMore}
+      onDone={autostart ? () => router.push('/') : () => setMode('landing')}
+    />
   }
 
   // Landing
