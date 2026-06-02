@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-02 13:26 | FIX | Purge language codes from all display sites — Browser info strip, dashboard recent captures, sources card + language field now a dropdown |
 | 2026-06-02 05:00 | FEATURE | M4-B complete: BrowserCard includes source_id; Browser expanded card shows source name as amber pill |
 | 2026-06-02 04:45 | FEATURE | M4-B: source selector in Capture form with dialect auto-fill; onCreate auto-sets dialect to current; source_id saved on ind_items |
 | 2026-06-02 04:30 | FEATURE | M4-A: ind_sources table (person/media/reference); /sources page with card grid + add/edit/delete sheet; library button in Capture header |
