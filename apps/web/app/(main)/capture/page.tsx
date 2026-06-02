@@ -54,6 +54,7 @@ function CapturePageInner() {
   const [editingType, setEditingType] = useState<ItemType>('sentence')
   const [text,    setText]    = useState(searchParams.get('text')  ?? '')
   const [meaning, setMeaning] = useState('')
+  const [captureLanguage, setCaptureLanguage] = useState('')
   const [dialect, setDialect] = useState('')
   const [place,   setPlace]   = useState('')
   const [notes,   setNotes]   = useState(searchParams.get('notes') ?? '')
@@ -115,7 +116,7 @@ function CapturePageInner() {
 
   // Dialect options for current language
   const dialectInitRef = useRef(false)
-  const glid = getGlid(lang.code) ?? '01'
+  const glid = getGlid(captureLanguage || lang.code) ?? '01'
   const langDialects = GLID_FAMILIES[glid] ?? []
 
   useEffect(() => {
@@ -140,7 +141,11 @@ function CapturePageInner() {
     })
   }, [])
 
-  // Default dialect to profile value once loaded (one-time init)
+  // Default language + dialect to profile values once loaded (one-time init)
+  useEffect(() => {
+    if (lang.code && !captureLanguage) setCaptureLanguage(lang.code)
+  }, [lang.code]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (profileDialect && !dialectInitRef.current) {
       dialectInitRef.current = true
@@ -287,6 +292,7 @@ function CapturePageInner() {
     setEditingType(item.type as ItemType)
     setText(item.ab)
     setMeaning(item.zh ?? '')
+    setCaptureLanguage(item.language ?? lang.code)
     setDialect(item.dialect ?? '')
     setPlace(item.place_heard ?? '')
     setNotes(item.notes ?? '')
@@ -297,7 +303,7 @@ function CapturePageInner() {
   }
 
   function handleClear() {
-    setEditingId(null); setText(''); setMeaning(''); setDialect(''); setPlace(''); setNotes('')
+    setEditingId(null); setText(''); setMeaning(''); setCaptureLanguage(lang.code); setDialect(''); setPlace(''); setNotes('')
     setSelectedSource(null); setSelectedTags([])
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()); setStsTarget(null)
     discardRecording()
@@ -350,7 +356,7 @@ function CapturePageInner() {
       ab:          text.trim(),
       zh:          meaning.trim() || undefined,
       type:        editingId ? editingType : 'sentence' as ItemType,
-      language:    lang.code,
+      language:    captureLanguage || lang.code,
       dialect:     dialect.trim() || undefined,
       place_heard: place.trim() || undefined,
       notes:       notes.trim() || undefined,
@@ -671,6 +677,33 @@ function CapturePageInner() {
         <div style={{
           background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14,
         }}>
+          {/* Language selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <Icon name="globe" size={16} color={T.inkSoft} strokeWidth={1.8} />
+            <span style={{ fontSize: 12.5, color: T.inkMute, fontWeight: 500, width: 60 }}>Language</span>
+            <select
+              value={captureLanguage}
+              onChange={e => { setCaptureLanguage(e.target.value); setDialect('') }}
+              style={{
+                flex: 1, border: 0, background: 'transparent', fontSize: 14, fontWeight: 500,
+                color: T.ink, padding: 0, outline: 'none', cursor: 'pointer',
+                appearance: 'none', WebkitAppearance: 'none',
+              }}
+            >
+              {LANGUAGES.map(l => (
+                <option key={l.code} value={l.code}>{l.name}</option>
+              ))}
+            </select>
+            {captureLanguage !== lang.code && (
+              <button
+                onClick={() => { setCaptureLanguage(lang.code); setDialect('') }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.inkFaint, padding: 2, display: 'flex' }}
+                title="Reset to profile language"
+              >
+                <Icon name="x" size={13} strokeWidth={2} />
+              </button>
+            )}
+          </div>
           <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
             <InlineSelector
               icon="bookmark" label="Source"
@@ -678,6 +711,7 @@ function CapturePageInner() {
               onSelect={opt => {
                 const s = opt as Source | null
                 setSelectedSource(s)
+                if (s?.language)     setCaptureLanguage(s.language)
                 if (s?.dialect_name) setDialect(s.dialect_name)
               }}
               onCreate={async name => {
