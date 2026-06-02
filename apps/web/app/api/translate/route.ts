@@ -3,6 +3,11 @@ import { z } from 'zod'
 
 export const runtime = 'nodejs'
 
+// ── ILRDF Gradio endpoint (Phase 0/1 experimental) ───────────────────────────
+// Set ILRDF_MT_URL in .env.local to enable. Falls back to inference server.
+const ILRDF_MT_BASE = process.env.ILRDF_MT_URL ?? ''
+
+// ── FormosanBank fallback ─────────────────────────────────────────────────────
 const MODEL_ID = 'FormosanBank/nllb200-formosan-zh'
 const FORMOSAN_TO_ZH_MODEL_ID = 'FormosanBank/nllb200-formosan-zh-spm8k'
 const ZH_TO_FORMOSAN_MODEL_ID = 'FormosanBank/nllb200-zh-formosan-spm8k'
@@ -71,6 +76,38 @@ function createMockTranslation(payload: TranslateRequest, latencyMs: number): Tr
   }
 }
 
+// Phase 1: attempt ILRDF Gradio predict call
+// Call signature is best-guess; run /api/translate/probe to verify/adjust
+async function requestIlrdf(payload: TranslateRequest): Promise<TranslateResponse | null> {
+  if (!ILRDF_MT_BASE) return null
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), INFERENCE_TIMEOUT_MS)
+  try {
+    const res = await fetch(`${ILRDF_MT_BASE}/api/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [payload.text, payload.sourceLang, payload.targetLang], fn_index: 0 }),
+      signal: controller.signal,
+    })
+    if (!res.ok) return null
+    const json = await res.json()
+    const translation = typeof json?.data?.[0] === 'string' ? json.data[0] : null
+    if (!translation) return null
+    return {
+      translation,
+      sourceLang: payload.sourceLang,
+      targetLang: payload.targetLang,
+      modelId: 'ilrdf/formosan-mt',
+      modelVersion: null,
+      latencyMs: 0,
+    }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 async function requestInference(payload: TranslateRequest): Promise<TranslateResponse> {
   const inferenceApiUrl = process.env.INFERENCE_API_URL
   if (!inferenceApiUrl) throw new Error('Inference API is not configured.')
@@ -109,6 +146,16 @@ export async function POST(request: Request) {
   const parsed = translateRequestSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid translation request.' }, { status: 400 })
+  }
+
+  // Phase 1: try ILRDF Gradio first (experimental)
+  if (ILRDF_MT_BASE) {
+    const ilrdfResult = await requestIlrdf(parsed.data)
+    if (ilrdfResult) {
+      ilrdfResult.latencyMs = Date.now() - startedAt
+      return NextResponse.json(ilrdfResult)
+    }
+    console.warn('ILRDF MT unavailable — falling back to inference server')
   }
 
   if (!process.env.INFERENCE_API_URL) {
