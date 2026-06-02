@@ -397,6 +397,8 @@ function ReviewSession({
       if (showOptions) return
       if (!revealed) {
         if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
+        else if (e.key === 'ArrowLeft')  submit('again')
+        else if (e.key === 'ArrowRight') submit('easy')
       } else {
         if      (e.key === '1' || e.key === 'ArrowLeft')               submit('again')
         else if (e.key === '2' && showHardEasy && !isLearning)         submit('hard')
@@ -523,8 +525,12 @@ function ReviewSession({
     const dx = e.changedTouches[0].clientX - swipeStart.current.x
     const dy = e.changedTouches[0].clientY - swipeStart.current.y
     const absX = Math.abs(dx), absY = Math.abs(dy)
-    if (!revealed) { if (absX < 10 && absY < 10) setRevealed(true); return }
     const THRESH = 70
+    if (!revealed) {
+      if (absX < 10 && absY < 10) { setRevealed(true); return }
+      if (absX > absY && absX > THRESH) { submit(dx < 0 ? 'again' : 'easy'); return }
+      return
+    }
     if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : 'good')
     else if (absY > absX && absY > THRESH) { if (dy < 0) submit('easy'); else handleSuspend() }
   }
@@ -709,24 +715,17 @@ function ReviewSession({
             )}
           </div>
 
-          {/* Swipe affordances — before reveal: tap hint; after reveal (buttons hidden): grade hints */}
-          {!revealed ? (
-            <div style={{ position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 5, color: T.inkFaint, opacity: 0.5 }}>
-              <Icon name="chev-d" size={13} strokeWidth={2} />
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>tap to reveal</span>
+          {/* Swipe affordances — always visible: before flip = again/easy, after flip = again/good */}
+          <>
+            <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
+              <Icon name="arrow-l" size={17} strokeWidth={2} />
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
             </div>
-          ) : !showButtons ? (
-            <>
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.5 }}>
-                <Icon name="arrow-l" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
-              </div>
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.55 }}>
-                <Icon name="arrow-r" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>good</span>
-              </div>
-            </>
-          ) : null}
+            <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: !revealed ? T.amber : T.sage, opacity: 0.5 }}>
+              <Icon name="arrow-r" size={17} strokeWidth={2} />
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>{!revealed ? 'easy' : 'good'}</span>
+            </div>
+          </>
 
           {/* Front */}
           <div style={{ flex: revealed ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 24px' }}>
@@ -837,7 +836,7 @@ function ReviewSession({
 
       {/* Rating row */}
       <div style={{ padding: '16px 16px 32px', flexShrink: 0 }}>
-        {revealed && showButtons ? (
+        {showButtons && (revealed || isLearning) ? (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${visibleRatings.length}, 1fr)`, gap: 7 }}>
             {visibleRatings.map(r => (
               <button
