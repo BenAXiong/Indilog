@@ -397,14 +397,14 @@ function ReviewSession({
       if (showOptions) return
       if (!revealed) {
         if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
-        else if (e.key === 'ArrowLeft')  submit('again')
         else if (e.key === 'ArrowRight') submit('easy')
+        else if (e.key === 'ArrowDown')  handleSuspend()
       } else {
-        if      (e.key === '1' || e.key === 'ArrowLeft')               submit('again')
-        else if (e.key === '2' && showHardEasy && !isLearning)         submit('hard')
-        else if (e.key === '3' || e.key === 'ArrowRight')              submit('good')
-        else if ((e.key === '4' && showHardEasy) || e.key === 'ArrowUp') submit('easy')
-        else if (e.key === 'ArrowDown')                                 handleSuspend()
+        if      (e.key === '1' || e.key === 'ArrowLeft')                    submit('again')
+        else if (e.key === '2' && showHardEasy && !isLearning)             submit('hard')
+        else if (e.key === '3' || e.key === 'ArrowRight')                  submit(isLearning ? 'easy' : 'good')
+        else if ((e.key === '4' && showHardEasy) || e.key === 'ArrowUp')   submit('easy')
+        else if (e.key === 'ArrowDown')                                     handleSuspend()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -528,10 +528,12 @@ function ReviewSession({
     const THRESH = 70
     if (!revealed) {
       if (absX < 10 && absY < 10) { setRevealed(true); return }
-      if (absX > absY && absX > THRESH) { submit(dx < 0 ? 'again' : 'easy'); return }
+      if (absX > absY && absX > THRESH && dx > 0) { submit('easy'); return }   // right only = easy
+      if (absY > absX && absY > THRESH && dy > 0) { handleSuspend(); return }  // down = suspend
       return
     }
-    if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : 'good')
+    // After flip: left = again, right = easy (learning) or good (review)
+    if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : isLearning ? 'easy' : 'good')
     else if (absY > absX && absY > THRESH) { if (dy < 0) submit('easy'); else handleSuspend() }
   }
 
@@ -715,15 +717,21 @@ function ReviewSession({
             )}
           </div>
 
-          {/* Swipe affordances — always visible: before flip = again/easy, after flip = again/good */}
+          {/* Swipe affordances:
+                before flip → right only (→ easy)
+                after flip  → left (← again) + right (→ got it / good) */}
           <>
-            <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
-              <Icon name="arrow-l" size={17} strokeWidth={2} />
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
-            </div>
+            {revealed && (
+              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
+                <Icon name="arrow-l" size={17} strokeWidth={2} />
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
+              </div>
+            )}
             <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: !revealed ? T.amber : T.sage, opacity: 0.5 }}>
               <Icon name="arrow-r" size={17} strokeWidth={2} />
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>{!revealed ? 'easy' : 'good'}</span>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>
+                {!revealed ? 'easy' : isLearning ? 'got it' : 'good'}
+              </span>
             </div>
           </>
 
