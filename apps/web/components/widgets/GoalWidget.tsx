@@ -52,8 +52,11 @@ export default function GoalWidget({ initialGoal }: Props) {
 
   return (
     <>
-      <button
+      <div
         onClick={() => setSheetOpen(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setSheetOpen(true) }}
         style={{
           flex: 1, padding: '13px 14px', borderRadius: 16, cursor: 'pointer',
           background: T.paperHi, border: `1px solid ${T.lineSoft}`,
@@ -117,7 +120,7 @@ export default function GoalWidget({ initialGoal }: Props) {
             <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 10 }} />
           </>
         )}
-      </button>
+      </div>
 
       <GoalSheet
         open={sheetOpen}
