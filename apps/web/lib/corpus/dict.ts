@@ -38,9 +38,12 @@ export async function searchWords(
     .select('id, word_ab, word_ch, dialect_name, glid')
     .limit(200)
 
-  // Search both ab and zh columns; zh always fuzzy (Chinese keywords match mid-definition)
-  const abPattern = fuzzy ? `%${q}%` : `${q}%`
-  query = query.or(`word_ab.ilike.${abPattern},word_ch.ilike.%${q}%`)
+  const hasCJK = /[㐀-鿿]/.test(q)
+  if (hasCJK) {
+    query = query.ilike('word_ch', `%${q}%`)
+  } else {
+    query = query.ilike('word_ab', fuzzy ? `%${q}%` : `${q}%`)
+  }
 
   if (glid)    query = query.eq('glid', glid)
   if (dialect) query = query.eq('dialect_name', dialect)
@@ -55,7 +58,7 @@ export async function searchWords(
     word_ch:      row.word_ch ?? '',
     dialect_name: row.dialect_name ?? '',
     glid:         row.glid ?? '',
-    exact:        row.word_ab.toLowerCase() === qLower || (row.word_ch ?? '').includes(q),
+    exact:        hasCJK ? (row.word_ch ?? '') === q : row.word_ab.toLowerCase() === qLower,
   })).sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
 }
 
@@ -73,9 +76,12 @@ export async function searchSentences(
     .select('id, ab, zh, glid')
     .limit(300)
 
-  // Search both ab and zh; zh always fuzzy
-  const abPattern = fuzzy ? `%${q}%` : `${q}%`
-  sentQuery = sentQuery.or(`ab.ilike.${abPattern},zh.ilike.%${q}%`)
+  const hasCJK = /[㐀-鿿]/.test(q)
+  if (hasCJK) {
+    sentQuery = sentQuery.ilike('zh', `%${q}%`)
+  } else {
+    sentQuery = sentQuery.ilike('ab', fuzzy ? `%${q}%` : `${q}%`)
+  }
 
   if (glid) sentQuery = sentQuery.eq('glid', glid)
 

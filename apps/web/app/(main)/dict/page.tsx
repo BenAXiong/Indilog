@@ -281,17 +281,18 @@ export default function DictionaryPage() {
   }, [])
 
   const isPhrase = q.trim().includes(' ')
+  const isCJK    = /[㐀-鿿]/.test(q)
 
   useEffect(() => {
-    if (isPhrase) setActiveTab('sentences')
-  }, [isPhrase])
+    if (isPhrase || isCJK) setActiveTab('sentences')
+  }, [isPhrase, isCJK])
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    // phrases always use fuzzy so they match mid-sentence
-    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || fuzzy), 320)
+    // phrases + CJK: always fuzzy so they match mid-sentence / mid-definition
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, dialectFilter, fuzzy, isPhrase, runSearch])
+  }, [q, glid, dialectFilter, fuzzy, isPhrase, isCJK, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
