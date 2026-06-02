@@ -10,7 +10,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import { createItem, updateItem, listItems, type Item, type ItemType } from '@/lib/db/notebook/items'
 import { createClient } from '@/lib/supabase/client'
 import { incrementCapturedToday } from '@/lib/db/progress/stats'
-import { listSources, createSource, type Source } from '@/lib/db/notebook/sources'
+import { listSources, createSource, type Source, type CreateSourceInput } from '@/lib/db/sources/sources'
 import { listSpeakers, createSpeaker, type Speaker } from '@/lib/db/notebook/speakers'
 import { LANGUAGES } from '@/lib/languages'
 import { GLID_FAMILIES, shortDialectLabel } from '@/lib/lang/dialects'
@@ -673,10 +673,19 @@ function CapturePageInner() {
             <InlineSelector
               icon="bookmark" label="Source"
               options={sources} selected={selectedSource}
-              onSelect={opt => setSelectedSource(opt as Source | null)}
+              onSelect={opt => {
+                const s = opt as Source | null
+                setSelectedSource(s)
+                if (s?.dialect_name) setDialect(s.dialect_name)
+              }}
               onCreate={async name => {
-                const s = await createSource(name, lang.code)
-                if (s) setSources(p => [...p, s])
+                const color = Math.random().toString(16).substring(2, 8)
+                const s = await createSource({
+                  name, type: 'person', language: lang.code,
+                  dialect_name: dialect || null, location: null, url: null,
+                  notes: null, avatar_color: `#${color}`,
+                })
+                if (s) setSources(p => [...p, s].sort((a, b) => a.name.localeCompare(b.name)))
                 return s
               }}
             />

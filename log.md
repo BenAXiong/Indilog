@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-02 04:45 | FEATURE | M4-B: source selector in Capture form with dialect auto-fill; onCreate auto-sets dialect to current; source_id saved on ind_items |
 | 2026-06-02 04:30 | FEATURE | M4-A: ind_sources table (person/media/reference); /sources page with card grid + add/edit/delete sheet; library button in Capture header |
 | 2026-06-02 03:18 | FIX | Curriculum bookmark persists across navigation — batch pre-load saved status, key cards by original_uuid, save source_id on new saves |
 | 2026-06-02 03:09 | FIX | Curriculum bookmark now toggles — second click calls deleteItem(savedId) to unsave |

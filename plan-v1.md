@@ -121,9 +121,9 @@ Personal library of sources (people, media, references) linked to captured items
 
 ### M4-B — Capture integration
 
-- [ ] Source selector in Capture form — searchable pill; on select: pre-fills dialect + language
-- [ ] Selected `source_id` saved on `ind_items` when item is created from capture
-- [ ] Browser expanded card: show source name (resolve from `source_id`)
+- [x] Source selector in Capture form — searchable pill; on select: pre-fills dialect + language
+- [x] Selected `source_id` saved on `ind_items` when item is created from capture
+- [ ] Browser expanded card: show source name (resolve from `source_id`) — pending BrowserCard query update
 
 ---
 
@@ -186,6 +186,7 @@ Personal library of sources (people, media, references) linked to captured items
 - Icons: align with CD design handoff
 - 階層×10 system (tadpole - crab - mangcel - fafoy - bear - kawas?)
 - User contributions — send to pending DB
+- Trilingual
 - OCR capture
 - AI-formatted json from other formats (txt, csv, pdf) for teachers
 - How to tutorial
