@@ -8,6 +8,7 @@ import {
   listSources, createSource, updateSource, deleteSource,
   type Source, type SourceType, type CreateSourceInput,
 } from '@/lib/db/sources/sources'
+import { LANGUAGES, getLanguage } from '@/lib/languages'
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 const AVATAR_PALETTE = ['#C97B3A', '#5C7A3E', '#4A6FA8', '#8B5CA8', '#A84A4A', '#3A8B8B']
@@ -131,8 +132,16 @@ function SourceSheet({
           </div>
           <div>
             <label style={labelStyle}>Language</label>
-            <input style={inputStyle} value={form.language ?? ''} placeholder="e.g. amis"
-              onChange={e => set('language', e.target.value)} />
+            <select
+              style={{ ...inputStyle, appearance: 'none', WebkitAppearance: 'none' }}
+              value={form.language ?? ''}
+              onChange={e => setForm(f => ({ ...f, language: e.target.value || null }))}
+            >
+              <option value="">— none —</option>
+              {LANGUAGES.map(l => (
+                <option key={l.code} value={l.code}>{l.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -229,6 +238,13 @@ function SourceCard({ source, onClick }: { source: Source; onClick: () => void }
           padding: '2px 7px', borderRadius: 999, letterSpacing: '0.05em',
           background: T.lineSoft, color: T.inkMute, textTransform: 'uppercase',
         }}>{TYPE_LABELS[source.type]}</span>
+        {source.language && (
+          <span style={{
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, fontWeight: 600,
+            padding: '2px 7px', borderRadius: 999,
+            background: T.paperHi, color: T.inkSoft, border: `1px solid ${T.lineSoft}`,
+          }}>{getLanguage(source.language)?.name ?? source.language}</span>
+        )}
         {source.dialect_name && (
           <span style={{
             fontSize: 11, padding: '2px 7px', borderRadius: 999,

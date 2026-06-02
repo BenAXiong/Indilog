@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/srs/browser'
 import { setTargetWord } from '@/lib/db/srs/flashcards'
 import { listSources } from '@/lib/db/sources/sources'
+import { getLanguage } from '@/lib/languages'
 import { formatDays, computeStrength } from '@/lib/db/srs/schedule'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 
@@ -335,7 +336,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
 
             {/* Info strip */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>
-              {[card.language, card.dialect, card.note_type, card.note_source].filter(Boolean).map((v, i) => (
+              {[getLanguage(card.language)?.name ?? card.language, card.dialect, card.note_type, card.note_source].filter(Boolean).map((v, i) => (
                 <span key={i} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 6px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
                   {v}
                 </span>

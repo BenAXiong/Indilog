@@ -4,6 +4,7 @@ import { Stat, SectionHead, LangAvatar, Icon, Wordmark, Card } from '@/component
 import { getDashboardStats } from '@/lib/db/progress/stats-server'
 import { getActiveLangServer } from '@/lib/db/profile/server'
 import GoalWidget from '@/components/widgets/GoalWidget'
+import { getLanguage } from '@/lib/languages'
 
 const INTENSITY = [T.lineSoft, '#F1D8C6', '#E5A88E', '#C66848', T.crimsonDp]
 
@@ -303,7 +304,7 @@ export default async function DashboardPage() {
                     display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{item.ab}</span>
                   <span style={{ fontSize: 12, color: T.inkSoft, display: 'block', marginTop: 2 }}>
-                    {item.language}
+                    {getLanguage(item.language)?.name ?? item.language}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
