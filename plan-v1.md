@@ -75,9 +75,9 @@
 
 ### M1-H — Review mode implementation
 
-- [ ] Supabase: `DROP COLUMN card_type, DROP COLUMN metadata` from `ind_flashcards`
-- [ ] `ensureFlashcards()` + `setTargetWord()`: remove card_type/metadata writes
-- [ ] `browser.ts`: remove `setCardLayout()`; drop card_type/metadata from BrowserCard type + SEL
+- [x] Supabase: `DROP COLUMN card_type, DROP COLUMN metadata` from `ind_flashcards`
+- [x] `ensureFlashcards()` + `setTargetWord()`: remove card_type/metadata writes
+- [x] `browser.ts`: remove `setCardLayout()`; drop card_type/metadata from BrowserCard type + SEL
 - [x] Review render: effectiveMode computed with fallback chain; isAudio/isReverse/isSts locals; reverse mode rendering added
 - [x] Mode selector: OptionsSheet 4-button segmented control (forward/reverse/audio/sts), persists to srs_review_mode
 - [x] Dict word save: auto-set `target_word = word_ab`
