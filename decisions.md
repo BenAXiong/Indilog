@@ -6,7 +6,7 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
-### DEC-SRS05 · Note-centric SRS architecture — intervals on notes, modes as session settings
+### DEC-SRS05 · Note-centric SRS architecture — intervals on notes, modes as session settings — SUPERSEDED IN PART by DEC-SRS06
 
 **Context:** Current schema stores SRS metrics (`ease_factor`, `interval_days`, `repetitions`, `due_at`) on `ind_flashcards` (one card pre-created per note). `ind_flashcards.card_type` stores `'default'` or `'sts'` as a permanent property.
 
@@ -33,9 +33,51 @@ Tracks open questions and resolved architectural/product decisions.
 
 **Current state:** `ind_flashcards` exists and works. Migration to note-centric SRS (moving scheduling columns to `ind_items`, repurposing `ind_flashcards`) requires a dedicated milestone.
 
-**Decision:** Defer migration. Instrument `ind_reviews.mode` now. Do not add new `card_type` values to `ind_flashcards` in the meantime. Revisit per-mode scheduling once retention-transfer data exists.
+**Decision:** Defer scheduling migration. Instrument `ind_reviews.mode` now. Revisit per-mode scheduling once retention-transfer data exists.
 
-**Date:** 2026-05-31 · Updated 2026-06-01 (mode logging implemented)
+**Superseded by DEC-SRS06:** `card_type`, `metadata`, layout, and STS-as-card-property decisions are replaced. The card/session mode taxonomy section above no longer applies.
+
+**Date:** 2026-05-31 · Updated 2026-06-01 (mode logging) · Updated 2026-06-02 (card_type/metadata superseded by DEC-SRS06)
+
+---
+
+### DEC-SRS06 · Review modes — 4-mode system; drop card_type + metadata
+
+**Context:** DEC-SRS05 noted `card_type='sts'` should "long-term move to ind_items as a note property." `ind_items.target_word` already exists and is the authoritative source. `ind_flashcards.card_type` and `metadata.target_word` are derived duplicates with no independent value.
+
+**Decision 1 — Drop `card_type` and `metadata` from `ind_flashcards`:**
+- `card_type ('default'|'sts')` = just `target_word IS NOT NULL` — no independent meaning
+- `metadata ({ target_word, layout })` = duplicates `ind_items.target_word`; `layout` superseded by mode system
+- Both columns dropped from schema; code reads `ind_items.target_word` directly (already in the join)
+
+**Decision 2 — 4 session modes** stored in localStorage as `srs_review_mode`:
+
+| Mode | Front | Back | Fallback |
+|------|-------|------|----------|
+| `forward` | `ab` | `zh` | — (always works) |
+| `reverse` | `zh` | `ab` | → `forward` (no zh) |
+| `audio` | audio player | `ab` + `zh` | → `reverse` (no audio) |
+| `sts` | `ab` with `target_word` highlighted | `zh` | → `reverse` (no target_word) |
+
+**Decision 3 — STS rendering:** always sentence layout — full `ab` with `target_word` highlighted. Word-only layout (isolated word + blurred sentence) dropped. Works for both single-word notes (ab IS the word) and sentence notes.
+
+**Decision 4 — Extensibility:** new variants (e.g. `sts-word` = target word only, sentence hidden) are new string values + render cases. No schema changes needed — all data lives in `ind_items`.
+
+**Decision 5 — UI surface:**
+- Mode selector in dashboard review options → persistent preference
+- Mode toggle in OptionsSheet → per-session override (does not overwrite preference)
+
+**Decision 6 — `ind_reviews.mode`:** records the *resolved* mode after fallback, not the raw preference.
+
+**Decision 7 — Dict saves:** saving a word from dict search auto-sets `target_word = word_ab` (the searched word is the natural focus). Independent enhancement, no blocking dependency.
+
+**Implementation sequence:**
+1. Supabase: `ALTER TABLE ind_flashcards DROP COLUMN card_type, DROP COLUMN metadata`
+2. Remove `card_type`/`metadata` writes from `ensureFlashcards()` + `setTargetWord()`; remove `setCardLayout()` from `browser.ts`
+3. Review render: replace `isSts`/`audioMode` flags + `metadata?.target_word` with mode preference + `ind_items?.target_word` + fallback chain
+4. Add `srs_review_mode` to localStorage + mode selector in dashboard + OptionsSheet
+
+**Date:** 2026-06-02
 
 ---
 
@@ -90,7 +132,7 @@ Key decisions settled:
 
 4. **One Card per Note.** `forward`/`reverse`/`audio` are session modes (localStorage), not stored card rows. `generateReverseCardsForCollection()` is deleted. Existing `card_type='reverse'` rows removed in T-UNIFY.
 
-5. **`card_type` values:** `default | sts` only. `sts` is the only template that requires stored metadata.
+5. **`card_type` values:** ~~`default | sts`~~ — **dropped per DEC-SRS06**. `ind_flashcards.card_type` and `.metadata` columns removed. STS is now a session mode driven by `ind_items.target_word`.
 
 6. **`audio` field:** Accepts null, full URL, or Supabase Storage path. Resolved at render via `cardAudio()` which checks `card.audio` → `note.audio` in priority order.
 
@@ -176,7 +218,7 @@ After migration, `corpus_geometry.json` is reduced to a lightweight nav index (t
 | **Note Type** | Schema defining a Note's fields (e.g., text+meaning+audio) | implicit — not yet modeled |
 | **Card Template** | How a Note's fields map to a Card's front/back/prompt | `card_type` column on `ind_flashcards` |
 
-Current Card Templates: `default` (text → meaning; was `forward`, renamed in T-UNIFY), `sts` (Single Target Sentence — target word + sentence, two layouts; implemented 2026-05-31).
+Current Card Templates: ~~`default | sts`~~ — **dropped per DEC-SRS06** (2026-06-02). Review presentation is now fully determined by session mode (`forward | reverse | audio | sts`) + `ind_items.target_word`. No card-level template stored.
 `audio` is a session mode (on-the-fly, not a stored card_type). `reverse` removed in T-UNIFY (was a card row, now session mode).
 
 **Date:** 2026-05-30

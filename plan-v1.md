@@ -71,7 +71,16 @@
 - [x] Gesture hints: ↑ easy / ↓ suspend outside card; ← again / → good inside card (after flip only)
 - [x] Deck ordering: collection cards sorted by level → lesson → position; shuffle-within-level toggle
 - [x] Session end: expandable reviewed-items list + goal mastered/total + days to goal due date
-- [ ] Review mode DEC — document forward/reverse/audio/STS selection model before building (→ DEC-SRS06)
+- [x] Review mode DEC — forward/reverse/audio/sts; drop card_type+metadata; target_word as STS signal (→ DEC-SRS06)
+
+### M1-H — Review mode implementation
+
+- [ ] Supabase: `DROP COLUMN card_type, DROP COLUMN metadata` from `ind_flashcards`
+- [ ] `ensureFlashcards()` + `setTargetWord()`: remove card_type/metadata writes
+- [ ] `browser.ts`: remove `setCardLayout()`; drop card_type/metadata from BrowserCard type + SEL
+- [ ] Review render: replace `isSts`/`audioMode` flags with mode preference + `ind_items?.target_word` + fallback chain
+- [ ] Mode selector: dashboard review options (persistent `srs_review_mode`) + OptionsSheet toggle (per-session)
+- [ ] Dict word save: auto-set `target_word = word_ab`
 
 ---
 
@@ -96,7 +105,7 @@
 - [x] Dict sentence search — phrase input auto-switches to Sentences tab; CJK auto-fuzzy; min length 1 for CJK
 - [x] Dict zh→ab search — CJK input routes to word_ch/zh columns with gin_trgm indexes
 - [x] Fix dict search placeholder showing raw glid ("01") instead of language name ("Amis")
-- [ ] Post-add audio — programmatic match at save time: query corpus_occurrences by ab+language, patch ind_items.audio (no UI button)
+- [x] Post-add audio — quick programmatic match for Amis1k
 
 ---
 
@@ -142,7 +151,7 @@ Personal library of sources (people, media, references) linked to captured items
 
 - [x] Merge source + speaker fields — Speaker InlineSelector removed; source type=person covers speakers; speaker_id no longer written
 - [x] Place field — replaced text input with InlineSelector; loads past places from ind_items on mount; create new inline
-- [ ] Multi-language capture — language selector in capture form (select, defaults to profile language)
+- [x] Multi-language capture — language selector in capture form (select, defaults to profile language)
 
 ---
 
