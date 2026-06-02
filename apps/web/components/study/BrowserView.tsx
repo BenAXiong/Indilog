@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
-  listBrowserCards, updateNoteFields, setCardLayout, resetCardEase, deleteNote,
+  listBrowserCards, updateNoteFields, resetCardEase, deleteNote,
   batchDeleteNotes, batchSuspendCards, batchSetFlag,
   suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
@@ -94,7 +94,6 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   const isDue       = !card.due_at || card.due_at <= now
   const isNew       = card.repetitions === 0
   const isSuspended = !!card.suspended_at
-  const isSTS       = card.card_type === 'sts'
   const flagHex     = flagColorHex(card.flag_color)
 
   async function handleSave() {
@@ -116,19 +115,9 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
     if (targetChanged) {
       await setTargetWord(card.id, newTarget)
       patch.target_word = newTarget
-      patch.card_type   = newTarget ? 'sts' : 'default'
-      patch.metadata    = newTarget
-        ? { target_word: newTarget, layout: (card.metadata?.layout as string) ?? 'word' }
-        : null
     }
     onUpdate(patch)
     setSaving(false)
-  }
-
-  async function handleLayoutChange(layout: 'word' | 'sentence') {
-    if (!card.card_id) return
-    await setCardLayout(card.card_id, layout, card.metadata)
-    onUpdate({ metadata: { ...card.metadata, layout } })
   }
 
   function handleAudio() {
@@ -236,7 +225,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
             {flagHex && (
               <span style={{ width: 10, height: 10, borderRadius: 999, background: flagHex, flexShrink: 0 }} />
             )}
-            {isSTS && (
+            {card.target_word && (
               <span style={{ fontSize: 9, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', padding: '1px 4px', borderRadius: 3, border: `1px solid ${T.lineSoft}` }}>STS</span>
             )}
             <span style={{ fontSize: 11, color: T.inkMute, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -306,25 +295,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
               />
             </div>
 
-            {/* Layout toggle — only for STS cards */}
-            {isSTS && (
-              <div>
-                <label style={labelStyle}>STS layout</label>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {(['word', 'sentence'] as const).map(l => {
-                    const active = ((card.metadata?.layout as string) ?? 'word') === l
-                    return (
-                      <button key={l} onClick={() => handleLayoutChange(l)} style={{
-                        height: 28, padding: '0 12px', borderRadius: 7, fontSize: 12, fontWeight: 500,
-                        background: active ? T.amberBg : T.paperHi,
-                        border: `1px solid ${active ? T.amber : T.lineSoft}`,
-                        color: active ? T.amber : T.inkSoft, cursor: 'pointer',
-                      }}>{l}</button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+
 
             {/* Save / cancel */}
             <div style={{ display: 'flex', gap: 6 }}>

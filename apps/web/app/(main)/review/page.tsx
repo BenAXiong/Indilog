@@ -385,10 +385,10 @@ function ReviewSession({
   const phaseColor =
     phase === 'relearn' ? T.amber : phase === 'new' ? T.sage : T.inkFaint
 
-  const isSts       = card.card_type === 'sts'
-  const stsWord     = isSts ? ((card.metadata?.target_word as string) ?? '') : ''
+  const targetWord  = (card.ind_items as any)?.target_word as string | null ?? null
+  const isSts       = !!targetWord
+  const stsWord     = targetWord ?? ''
   const stsSentence = card.ind_items?.ab ?? ''
-  const stsLayout   = isSts ? ((card.metadata?.layout as string) ?? 'word') : 'word'
 
   // Card border tint based on phase
   const cardBorderColor =
@@ -771,23 +771,11 @@ function ReviewSession({
               >
                 <Icon name="speaker" size={26} strokeWidth={1.6} />
               </button>
-            ) : isSts && stsLayout === 'sentence' ? (
-              /* STS sentence layout — full sentence with target highlighted */
+            ) : isSts ? (
+              /* STS — full sentence with target word highlighted */
               <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
                 {renderHighlighted(stsSentence, stsWord)}
               </div>
-            ) : isSts ? (
-              /* STS word layout — target word + blurred sentence hint */
-              <>
-                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-                  {stsWord}
-                </div>
-                {!revealed && stsSentence && (
-                  <div style={{ marginTop: 12, fontSize: 13, color: T.inkSoft, lineHeight: 1.5, maxWidth: 260, filter: 'blur(3px)', opacity: 0.5, userSelect: 'none', pointerEvents: 'none' }}>
-                    {stsSentence}
-                  </div>
-                )}
-              </>
             ) : (
               /* Default layout */
               <>
@@ -822,11 +810,6 @@ function ReviewSession({
             <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ height: 1, background: T.lineSoft }} />
               <div style={{ textAlign: 'center' }}>
-                {isSts && stsLayout === 'word' && stsSentence && (
-                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, color: T.inkSoft, marginBottom: 10, lineHeight: 1.5 }}>
-                    {renderHighlighted(stsSentence, stsWord)}
-                  </div>
-                )}
                 {audioMode && !isSts && (
                   <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
                     {card.ind_items?.ab}
@@ -1133,7 +1116,6 @@ function ReviewPage() {
   const customCollection = searchParams.get('collectionId') ?? undefined
   const customCaptures   = searchParams.get('capturesOnly') === 'true'
   const customNoteType   = searchParams.get('noteType') ?? undefined
-  const customCardType   = searchParams.get('cardType') ?? undefined
   const customTagsRaw    = searchParams.get('tags')
   const customTags       = customTagsRaw ? customTagsRaw.split(',').filter(Boolean) : undefined
   const customFlagRaw    = searchParams.get('flag') ?? ''
@@ -1171,7 +1153,6 @@ function ReviewPage() {
             includeCollectionId: customCollection,
             capturesOnly:        customCaptures,
             includeNoteTypes:    customNoteType ? [customNoteType] : undefined,
-            includeCardType:     customCardType,
             includeTags:         customTags,
             dueOnly:             customDueOnly,
           })

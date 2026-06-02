@@ -16,8 +16,6 @@ export type BrowserCard = {
   repetitions:   number
   suspended_at:  string | null
   flag_color:    string | null
-  card_type:     string
-  metadata:      Record<string, unknown> | null
   // Note fields
   source:        string
   note_source:   string
@@ -44,7 +42,7 @@ export async function listBrowserCards(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color, card_type, metadata), ind_learn_collections(name)'
+  const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)'
 
   // Two parallel queries so captured items are never crowded out by the server 1000-row cap
   const [capturedRes, collectionRes] = await Promise.all([
@@ -60,7 +58,6 @@ export async function listBrowserCards(
   type CardJoin = {
     id: string; due_at: string | null; ease_factor: number; interval_days: number
     repetitions: number; suspended_at: string | null; flag_color: string | null
-    card_type: string; metadata: Record<string, unknown> | null
   }
 
   let results: BrowserCard[] = data.map(row => {
@@ -80,8 +77,6 @@ export async function listBrowserCards(
       repetitions:   card?.repetitions ?? 0,
       suspended_at:  card?.suspended_at ?? null,
       flag_color:    card?.flag_color ?? null,
-      card_type:     card?.card_type ?? 'default',
-      metadata:      card?.metadata ?? null,
       source,
       note_source:   row.note_source ?? 'captured',
       notes:         row.notes ?? null,
@@ -138,10 +133,6 @@ export async function updateNoteFields(
   await supabase.from('ind_items').update(clean).eq('id', noteId)
 }
 
-export async function setCardLayout(cardId: string, layout: 'word' | 'sentence', currentMeta: Record<string, unknown> | null): Promise<void> {
-  const supabase = createClient()
-  await supabase.from('ind_flashcards').update({ metadata: { ...currentMeta, layout } }).eq('id', cardId)
-}
 
 export async function batchDeleteNotes(noteIds: string[]): Promise<void> {
   const supabase = createClient()

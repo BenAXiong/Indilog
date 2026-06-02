@@ -12,10 +12,8 @@ export type Flashcard = {
   interval_days: number
   repetitions: number
   suspended_at: string | null
-  flag_color:   string | null
-  card_type:    string
-  audio:    string | null
-  metadata: Record<string, unknown> | null
+  flag_color: string | null
+  audio:      string | null
 }
 
 export type FlashcardWithItem = Flashcard & {
@@ -82,10 +80,6 @@ export async function ensureFlashcards(): Promise<void> {
     newItems.map(item => ({
       user_id: user.id,
       note_id: item.id,
-      ...(item.target_word ? {
-        card_type: 'sts',
-        metadata: { target_word: item.target_word, layout: 'word' },
-      } : {}),
     }))
   )
 }
@@ -100,13 +94,8 @@ export async function setTargetWord(noteId: string, targetWord: string | null): 
   const { data: existing } = await supabase
     .from('ind_flashcards').select('id').eq('note_id', noteId).eq('user_id', user.id).maybeSingle()
 
-  const cardType = targetWord ? 'sts' : 'default'
-  const metadata = targetWord ? { target_word: targetWord, layout: 'word' } : null
-
-  if (existing) {
-    await supabase.from('ind_flashcards').update({ card_type: cardType, metadata }).eq('id', existing.id)
-  } else {
-    await supabase.from('ind_flashcards').insert({ user_id: user.id, note_id: noteId, card_type: cardType, metadata })
+  if (!existing) {
+    await supabase.from('ind_flashcards').insert({ user_id: user.id, note_id: noteId })
   }
 }
 
@@ -232,7 +221,6 @@ export type ListDueOpts = {
   includeCollectionId?: string
   capturesOnly?:        boolean
   includeNoteTypes?:    string[]   // filter by ind_items.type
-  includeCardType?:     string     // 'default' | 'sts'
   includeTags?:        string[]   // OR logic: any of these tags
   includeFlagColors?:  string[]   // OR logic: any of these colors (post-filter; flagColor handles single/any/none at DB level)
   includePlaceHeard?:  string     // exact match on place_heard
@@ -242,7 +230,7 @@ export type ListDueOpts = {
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, ind_learn_collections(name, language))'
+  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
 
   // Paginate to work around Supabase's server-side 1000-row cap
   function buildQ() {
@@ -290,8 +278,6 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     results = results.filter(c => c.ind_items?.note_source !== 'collection')
   if (opts.includeNoteTypes?.length)
     results = results.filter(c => opts.includeNoteTypes!.includes(c.ind_items?.type ?? ''))
-  if (opts.includeCardType)
-    results = results.filter(c => c.card_type === opts.includeCardType)
   if (opts.includeTags?.length)
     results = results.filter(c => opts.includeTags!.some(t => (c.ind_items?.tags ?? []).includes(t)))
   if (opts.includeFlagColors?.length)
