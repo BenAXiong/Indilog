@@ -2,10 +2,22 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-02 | FIX | Review: gesture/button full alignment (again/easy pre-flip, again/good post-flip, suspend ↓ all states) |
-| 2026-06-02 | FIX | Dict placeholder: group_name now uses GLID_NAMES_EN (was raw glid) |
-| 2026-06-02 | FEATURE | M1-G: deck ordering — new collection cards sorted level→lesson→position in reload(); due cards keep due_at order |
-| 2026-06-02 13:26 | FIX | Purge language codes from all display sites — Browser info strip, dashboard recent captures, sources card + language field now a dropdown |
+| 2026-06-02 16:59 | FIX | Suppress iOS autofill bar (credit card / key / location) on InlineSelector input |
+| 2026-06-02 16:58 | FEATURE | Collapsible Recent sections — Dashboard (details/summary) + Capture (useState), collapsed by default |
+| 2026-06-02 16:51 | FEATURE | M4-C: merge source+speaker (Speaker InlineSelector removed); place field → InlineSelector with past-place history |
+| 2026-06-02 16:33 | FIX | Dict: CJK min search length 1 (was 3); 你好 now triggers results |
+| 2026-06-02 16:29 | FIX | Dict zh search: detect CJK and route to word_ch/zh column directly (fixes .or() encoding issue) |
+| 2026-06-02 16:19 | FEATURE | M2: zh→ab search in dict — word_ch + corpus_sentences.zh with gin_trgm indexes |
+| 2026-06-02 16:15 | FIX | Purge remaining language codes from review OptionsSheet + study filter lists |
+| 2026-06-02 16:08 | FIX | M1-G: easy=swipe up (was right); top/bottom gesture hints moved outside card |
+| 2026-06-02 16:01 | FEATURE | M2: dict phrase/sentence search — auto-switches to Sentences tab; phrases force fuzzy |
+| 2026-06-02 15:50 | FEATURE | M1-G: session end — expandable reviewed-items list + goal mastered/total + days to go |
+| 2026-06-02 15:42 | FEATURE | M1-G: shuffle new cards toggle (srs_shuffle_new) — randomises within level |
+| 2026-06-02 15:32 | FEATURE | M1-G: deck ordering — new collection cards sorted level→lesson→position in reload() |
+| 2026-06-02 15:21 | FIX | Add ↓ suspend gesture hint visible in all card states |
+| 2026-06-02 15:05 | FIX | Review gesture/button full alignment (again/easy pre-flip, again/good post-flip, suspend ↓) |
+| 2026-06-02 14:21 | FIX | M1-G: dict placeholder, exit warning, learning flip logic (Easy-only before flip) |
+| 2026-06-02 13:26 | FIX | Purge language codes from all display sites — Browser info strip, dashboard recent captures, sources card |
 | 2026-06-02 05:00 | FEATURE | M4-B complete: BrowserCard includes source_id; Browser expanded card shows source name as amber pill |
 | 2026-06-02 04:45 | FEATURE | M4-B: source selector in Capture form with dialect auto-fill; onCreate auto-sets dialect to current; source_id saved on ind_items |
 | 2026-06-02 04:30 | FEATURE | M4-A: ind_sources table (person/media/reference); /sources page with card grid + add/edit/delete sheet; library button in Capture header |

@@ -66,11 +66,11 @@
 
 ### M1-G — SRS UX fixes
 
-- [ ] Learning logic: Easy-only before flip; Again + Got it! after reveal (currently allows Again before seeing answer)
-- [ ] Exit warning when learning cards are in progress (e.g. "2/3 cards will reset")
-- [ ] Gesture hints shown after reveal when rating buttons are hidden (currently only shown before flip)
-- [x] Deck ordering: collection cards sorted by level → lesson → position (data already on ind_items)
-- [ ] Session end: expandable reviewed-items list + goal progress ("x% closer · N days to go")
+- [x] Learning logic: Easy-only before flip (button + swipe ↑); Again + Got it! after reveal
+- [x] Exit warning when learning cards in progress (shows count + steps, blocks exit)
+- [x] Gesture hints: ↑ easy / ↓ suspend outside card; ← again / → good inside card (after flip only)
+- [x] Deck ordering: collection cards sorted by level → lesson → position; shuffle-within-level toggle
+- [x] Session end: expandable reviewed-items list + goal mastered/total + days to goal due date
 - [ ] Review mode DEC — document forward/reverse/audio/STS selection model before building (→ DEC-SRS06)
 
 ---
@@ -93,9 +93,10 @@
 - [x] Dict lookup button in expanded card — Lookup button on empty zh; auto-fills first result; chips for alternatives; "No results" on miss
 - [x] Date range filter — from/to date inputs below filter row, filter on created_at, ✕ clear button
 - [x] Batch select + delete / suspend / flag — Select button in header; tap rows to highlight; bottom action bar with All/None, Delete (confirm), Suspend, Flag (color picker)
-- [ ] Post-add audio to saved items — Browser "Find audio" button: query corpus_occurrences by ab+language, patch ind_items.audio if match found
-- [ ] Dict sentence search — typing a full sentence in the dict page returns matching corpus sentences (searchSentences() already exists in backend)
-- [ ] Fix dict search placeholder showing raw glid ("01") instead of language name ("Amis")
+- [x] Dict sentence search — phrase input auto-switches to Sentences tab; CJK auto-fuzzy; min length 1 for CJK
+- [x] Dict zh→ab search — CJK input routes to word_ch/zh columns with gin_trgm indexes
+- [x] Fix dict search placeholder showing raw glid ("01") instead of language name ("Amis")
+- [ ] Post-add audio — programmatic match at save time: query corpus_occurrences by ab+language, patch ind_items.audio (no UI button)
 
 ---
 
