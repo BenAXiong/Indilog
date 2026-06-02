@@ -733,6 +733,10 @@ function ReviewSession({
                 {!revealed ? 'easy' : isLearning ? 'got it' : 'good'}
               </span>
             </div>
+            <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: T.inkFaint, opacity: 0.4 }}>
+              <Icon name="chev-d" size={13} strokeWidth={2} />
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>suspend</span>
+            </div>
           </>
 
           {/* Front */}
