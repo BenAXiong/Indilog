@@ -321,7 +321,7 @@ function CapturePageInner() {
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt }),
+        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt, dialect: dialect || undefined }),
       })
       const data = await res.json()
       if (data.error) { setTranslateError(data.error); setTimeout(() => setTranslateError(null), 3000) }

@@ -15,7 +15,7 @@ function langLabel(code: string): string {
 }
 
 export default function TranslatePage() {
-  const { lang, dialectLabel } = useLang()
+  const { lang, dialect, dialectLabel } = useLang()
   const [src, setSrc] = useState('zho_Hant')
   const [tgt, setTgt] = useState('ami_Latn')
   const [text, setText] = useState('')
@@ -59,7 +59,7 @@ export default function TranslatePage() {
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt }),
+        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt, dialect: dialect ?? undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Translation failed.'); return }
