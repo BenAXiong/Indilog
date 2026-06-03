@@ -537,22 +537,24 @@ function CapturePageInner() {
               <Icon name="search" size={15} strokeWidth={1.8} color={lookedUp ? T.crimson : T.inkSoft} />
             </button>
           )}
-          <button
-            onClick={handleTts}
-            disabled={ttsPlaying || !text.trim()}
-            aria-label="Listen"
-            title="Listen (TTS)"
-            style={{
-              ...iconBtn,
-              color:       ttsPlaying ? T.amber : T.inkSoft,
-              borderColor: ttsPlaying ? T.amber : T.lineSoft,
-              background:  ttsPlaying ? T.amberBg : T.paper,
-              opacity:     !text.trim() ? 0.4 : 1,
-              cursor:      (!text.trim() || ttsPlaying) ? 'default' : 'pointer',
-            }}
-          >
-            <Icon name="wave" size={15} strokeWidth={1.8} color={ttsPlaying ? T.amber : T.inkSoft} />
-          </button>
+          {(captureLanguage || lang.code) === 'ami' && (
+            <button
+              onClick={handleTts}
+              disabled={ttsPlaying || !text.trim()}
+              aria-label="Listen"
+              title="Listen (TTS)"
+              style={{
+                ...iconBtn,
+                color:       ttsPlaying ? T.amber : T.inkSoft,
+                borderColor: ttsPlaying ? T.amber : T.lineSoft,
+                background:  ttsPlaying ? T.amberBg : T.paper,
+                opacity:     !text.trim() ? 0.4 : 1,
+                cursor:      (!text.trim() || ttsPlaying) ? 'default' : 'pointer',
+              }}
+            >
+              <Icon name="wave" size={15} strokeWidth={1.8} color={ttsPlaying ? T.amber : T.inkSoft} />
+            </button>
+          )}
           <button
             onClick={recording ? stopRecording : startRecording}
             aria-label={recording ? 'Stop recording' : hasRecording ? 'Re-record' : 'Record audio'}

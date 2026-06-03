@@ -87,15 +87,17 @@ export default function TranslatePage() {
     }
   }
 
+  const isFormosanSrc = src !== 'zho_Hant'
+
   async function handleListen() {
-    if (!output || listening) return
+    const ttsText = isFormosanSrc ? text.trim() : output
+    if (!ttsText || listening) return
     setListening(true)
     try {
-      const tgtLang = tgt === 'zho_Hant' ? 'zho_Hant' : tgt.replace('_Latn', '')
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: output, dialectCode: amiDialect }),
+        body: JSON.stringify({ text: ttsText, dialectCode: amiDialect }),
       })
       const data = await res.json()
       if (data.url) {
@@ -121,8 +123,6 @@ export default function TranslatePage() {
 
   async function handleSave() {
     if (!output || !text.trim()) return
-    // ab = Formosan text, zh = Chinese text, regardless of direction
-    const isFormosanSrc = src !== 'zho_Hant'
     await createItem({
       ab:       isFormosanSrc ? text.trim() : output,
       zh:       isFormosanSrc ? output      : text.trim(),
@@ -137,10 +137,6 @@ export default function TranslatePage() {
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       <ScreenHeader title="Translate" langName={lang.name} langDialect={dialectLabel} />
-
-      <div style={{ fontSize: 12, color: T.inkMute, lineHeight: 1.4, padding: '0 4px', marginTop: -6 }}>
-        Be patient. AI services can take up to 2 min to &ldquo;wake up&rdquo; when previously inactive
-      </div>
 
       {/* Pair selector */}
       <div style={{
@@ -233,22 +229,43 @@ export default function TranslatePage() {
           placeholder="Type or paste text…"
           style={{ width: '100%', border: 0, background: 'transparent', resize: 'none', outline: 'none', fontFamily: 'inherit', fontSize: 16, color: T.ink, lineHeight: 1.4 }}
         />
-        <button
-          onClick={handleTranslate}
-          disabled={!text.trim() || loading || !pairOk}
-          style={{
-            marginTop: 8, width: '100%', padding: '11px 0', borderRadius: 12,
-            background: text.trim() && pairOk && !loading ? T.ink : T.lineSoft,
-            color: text.trim() && pairOk && !loading ? T.cream : T.inkFaint,
-            fontSize: 14, fontWeight: 600, border: 'none',
-            cursor: text.trim() && pairOk && !loading ? 'pointer' : 'default',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            transition: 'background .15s',
-          }}
-        >
-          <Icon name="sparkle" size={14} color="currentColor" />
-          {loading ? 'Translating…' : 'Translate'}
-        </button>
+        <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleTranslate}
+            disabled={!text.trim() || loading || !pairOk}
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 12,
+              background: text.trim() && pairOk && !loading ? T.ink : T.lineSoft,
+              color: text.trim() && pairOk && !loading ? T.cream : T.inkFaint,
+              fontSize: 14, fontWeight: 600, border: 'none',
+              cursor: text.trim() && pairOk && !loading ? 'pointer' : 'default',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              transition: 'background .15s',
+            }}
+          >
+            <Icon name="sparkle" size={14} color="currentColor" />
+            {loading ? 'Translating…' : 'Translate'}
+          </button>
+          {isFormosanSrc && (
+            <button
+              onClick={handleListen}
+              disabled={listening || !text.trim()}
+              style={{
+                flex: 1, padding: '11px 0', borderRadius: 12,
+                background: listening ? T.amberBg : T.paperHi,
+                border: `1px solid ${listening ? T.amber : T.lineSoft}`,
+                color: listening ? T.amber : T.inkSoft,
+                fontSize: 14, fontWeight: 600,
+                cursor: listening || !text.trim() ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                opacity: !text.trim() ? 0.4 : 1,
+              }}
+            >
+              <Icon name="speaker" size={14} strokeWidth={1.8} color="currentColor" />
+              {listening ? '…' : 'Listen'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Error */}
@@ -265,18 +282,11 @@ export default function TranslatePage() {
           border: `1.5px solid ${T.crimsonBg}`, borderRadius: 18, padding: '14px 16px',
           position: 'relative', overflow: 'hidden',
         }}>
-          <div style={{ position: 'absolute', top: -1, left: 16, height: 3, width: 36, background: T.crimson, borderRadius: '0 0 4px 4px' }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.crimson, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-              {langLabel(tgt)}
+          {modelId && (
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.cream, display: 'block', marginBottom: 6 }}>
+              {modelId}
             </span>
-            {modelId && (
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.cream }}>
-                {modelId}
-              </span>
-            )}
-          </div>
+          )}
 
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
@@ -301,16 +311,18 @@ export default function TranslatePage() {
                 <Icon name={copied ? 'check' : 'copy'} size={13} strokeWidth={1.8} />
                 {copied ? 'Copied' : 'Copy'}
               </button>
-              <button onClick={handleListen} disabled={listening} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '6px 10px', borderRadius: 8, background: listening ? T.amberBg : T.paperHi,
-                border: `1px solid ${listening ? T.amber : T.lineSoft}`,
-                color: listening ? T.amber : T.inkSoft,
-                fontSize: 12, fontWeight: 500, cursor: listening ? 'default' : 'pointer',
-              }}>
-                <Icon name="speaker" size={13} strokeWidth={1.8} />
-                {listening ? '…' : 'Listen'}
-              </button>
+              {!isFormosanSrc && (
+                <button onClick={handleListen} disabled={listening} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '6px 10px', borderRadius: 8, background: listening ? T.amberBg : T.paperHi,
+                  border: `1px solid ${listening ? T.amber : T.lineSoft}`,
+                  color: listening ? T.amber : T.inkSoft,
+                  fontSize: 12, fontWeight: 500, cursor: listening ? 'default' : 'pointer',
+                }}>
+                  <Icon name="speaker" size={13} strokeWidth={1.8} />
+                  {listening ? '…' : 'Listen'}
+                </button>
+              )}
               <div style={{ flex: 1 }} />
               <button onClick={handleSave} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
