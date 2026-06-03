@@ -141,26 +141,6 @@ export default function TranslatePage() {
         Be patient. AI services can take up to 2 min to &ldquo;wake up&rdquo; when previously inactive
       </div>
 
-      {/* Amis dialect selector — only when Amis is source or target */}
-      {(src === 'ami_Latn' || tgt === 'ami_Latn') && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '2px 4px', marginTop: -8 }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
-            Dialect
-          </span>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {AMI_DIALECTS.map(d => (
-              <button key={d.code} onClick={() => setAmiDialect(d.code)} style={{
-                padding: '3px 9px', borderRadius: 6, fontSize: 11.5, fontWeight: 500,
-                cursor: 'pointer',
-                background: amiDialect === d.code ? T.crimsonBg : T.paperHi,
-                border: `1px solid ${amiDialect === d.code ? T.crimson : T.lineSoft}`,
-                color: amiDialect === d.code ? T.crimson : T.inkMute,
-              }}>{d.label}</button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Pair selector */}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr auto 1fr',
@@ -213,6 +193,26 @@ export default function TranslatePage() {
           </select>
         </div>
       </div>
+
+      {/* Amis dialect selector — below language pair, only when Amis is involved */}
+      {(src === 'ami_Latn' || tgt === 'ami_Latn') && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '2px 4px', marginTop: -8 }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+            Dialect
+          </span>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {AMI_DIALECTS.map(d => (
+              <button key={d.code} onClick={() => setAmiDialect(d.code)} style={{
+                padding: '3px 9px', borderRadius: 6, fontSize: 11.5, fontWeight: 500,
+                cursor: 'pointer',
+                background: amiDialect === d.code ? T.crimsonBg : T.paperHi,
+                border: `1px solid ${amiDialect === d.code ? T.crimson : T.lineSoft}`,
+                color: amiDialect === d.code ? T.crimson : T.inkMute,
+              }}>{d.label}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Source panel */}
       <div style={{ background: T.paperHi, border: `1.5px solid ${T.line}`, borderRadius: 18, padding: '14px 16px' }}>
