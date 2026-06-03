@@ -187,12 +187,12 @@ Personal library of sources (people, media, references) linked to captured items
 
 Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-labs.ilrdf.org.tw/). Add TTS. Enable save-to-items from translate output.
 
-**Current state:** `/api/translate` calls Modal.run inference server (INFERENCE_API_URL set in Vercel). ILRDF Gradio probe endpoint exists at `/api/translate/probe`; ILRDF space currently 503. Capture sparkle button wired to same route.
+**Current state:** ILRDF MT + TTS both live via ai-labs.ilrdf.org.tw Gradio 5 endpoints. Modal.run remains as MT fallback for non-Amis languages.
 
-- [x] DEC-M6-01 — Modal.run MT live (INFERENCE_API_URL in Vercel); ILRDF probe built; ILRDF space 503, waiting
-- [x] MT working — translate tab + capture sparkle both call /api/translate → Modal.run inference
-- [ ] Swap `/api/translate` to ILRDF — Gradio fallback wired (ILRDF_MT_URL env var); pending probe success
-- [x] TTS route built — /api/tts tries ILRDF_TTS_URL then INFERENCE_API_URL/tts; Listen button in translate; wave button in capture
+- [x] DEC-M6-01 — ILRDF MT at ai-labs.ilrdf.org.tw/kari-seejiq-tnpusu-ai-hmjil; TTS at ai-labs.ilrdf.org.tw/hnang-kari-ai-asi-sluhay; both Gradio 5 SSE
+- [x] MT working — ILRDF primary (Amis), Modal.run fallback (all others); translate tab + capture sparkle
+- [x] Swap `/api/translate` to ILRDF — live; dialect selector in translate UI; Amis dialect→ILRDF code mapping
+- [x] TTS live — /api/tts calls ILRDF /default_speaker_tts; dialect→speaker mapping; Listen in translate, wave in capture
 - [x] Save translation output — translate Save button saves ab+zh correctly (Formosan/Chinese per direction)
 
 ---

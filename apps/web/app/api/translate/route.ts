@@ -27,6 +27,7 @@ const ZH_TO_FORMOSAN_MODEL_ID = 'FormosanBank/nllb200-zh-formosan-spm8k'
 const MAX_INPUT_CHARS         = 800
 const MAX_NEW_TOKENS          = 160
 const MAX_TRANSLATE_BODY_BYTES = 4096
+const ILRDF_TIMEOUT_MS        = 20000
 const INFERENCE_TIMEOUT_MS    = 45000
 
 const supportedPairs = [
@@ -89,42 +90,49 @@ function createMockTranslation(payload: TranslateRequest, latencyMs: number): Tr
   }
 }
 
-// Gradio 5 SSE: POST to get event_id, then GET to stream result
+// Gradio 5: POST to get event_id, GET body as text, parse complete event
 async function gradioCall(base: string, fn: string, data: unknown[], signal: AbortSignal): Promise<string | null> {
-  // Step 1: submit
+  console.log('[ilrdf] submit', fn, JSON.stringify(data[0]).slice(0, 40))
   const submitRes = await fetch(`${base}/gradio_api/call/${fn}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ data }),
     signal,
   })
+  console.log('[ilrdf] submit status', submitRes.status)
   if (!submitRes.ok) return null
   const { event_id } = await submitRes.json() as { event_id?: string }
+  console.log('[ilrdf] event_id', event_id)
   if (!event_id) return null
 
-  // Step 2: stream result
   const streamRes = await fetch(`${base}/gradio_api/call/${fn}/${event_id}`, { signal })
+  console.log('[ilrdf] stream status', streamRes.status, 'body?', !!streamRes.body)
   if (!streamRes.ok || !streamRes.body) return null
 
   const reader = streamRes.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buf += decoder.decode(value, { stream: true })
-    // Look for complete event
-    if (buf.includes('event: complete')) {
-      const dataLine = buf.split('\n').find(l => l.startsWith('data:') && buf.includes('event: complete'))
-      if (dataLine) {
-        try {
-          const arr = JSON.parse(dataLine.slice(5).trim()) as string[]
-          return arr[0] ?? null
-        } catch { return null }
+  let result: string | null = null
+  let chunkCount = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) { console.log('[ilrdf] stream done, buf:', JSON.stringify(buf)); break }
+      chunkCount++
+      buf += decoder.decode(value, { stream: true })
+      console.log('[ilrdf] chunk', chunkCount, 'buf so far:', JSON.stringify(buf))
+      const match = /event:\s*complete[\r\n]+data:\s*(\[.+\])/.exec(buf)
+      if (match) {
+        const arr = JSON.parse(match[1]) as unknown[]
+        result = typeof arr[0] === 'string' ? arr[0] : null
+        console.log('[ilrdf] result', result)
+        break
       }
     }
+  } finally {
+    try { reader.cancel() } catch { /* ignore */ }
   }
-  return null
+  return result
 }
 
 async function requestIlrdf(payload: TranslateRequest): Promise<TranslateResponse | null> {
@@ -139,7 +147,7 @@ async function requestIlrdf(payload: TranslateRequest): Promise<TranslateRespons
   const dialectCode = DIALECT_TO_ILRDF[payload.dialect ?? ''] ?? 'ami_Coas'
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), INFERENCE_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), ILRDF_TIMEOUT_MS)
 
   try {
     let translation: string | null
@@ -155,7 +163,7 @@ async function requestIlrdf(payload: TranslateRequest): Promise<TranslateRespons
       translation,
       sourceLang:   payload.sourceLang,
       targetLang:   payload.targetLang,
-      modelId:      `ilrdf/mt·${dialectCode}`,
+      modelId:      `ilrdf/${dialectCode}`,
       modelVersion: null,
       latencyMs:    0,
     }

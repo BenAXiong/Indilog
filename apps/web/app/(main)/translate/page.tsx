@@ -69,6 +69,7 @@ export default function TranslatePage() {
     setLoading(true)
     setError(null)
     setOutput('')
+    setModelId(null)
     try {
       const res = await fetch('/api/translate', {
         method: 'POST',
@@ -94,7 +95,7 @@ export default function TranslatePage() {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: output, language: tgtLang }),
+        body: JSON.stringify({ text: output, dialectCode: amiDialect }),
       })
       const data = await res.json()
       if (data.url) {
@@ -271,7 +272,7 @@ export default function TranslatePage() {
               {langLabel(tgt)}
             </span>
             {modelId && (
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.cream }}>
                 {modelId}
               </span>
             )}
@@ -285,7 +286,7 @@ export default function TranslatePage() {
             </div>
           ) : (
             <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 19, color: T.ink, lineHeight: 1.4, fontStyle: 'italic', letterSpacing: '-0.015em' }}>
-              {output}
+              {output ? output.charAt(0).toUpperCase() + output.slice(1) : ''}
             </div>
           )}
 

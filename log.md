@@ -2,6 +2,10 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-04 02:37 | FEATURE | M6: ILRDF TTS live — Gradio 5 SSE, /default_speaker_tts, dialect→speaker mapping (Coastal/Hengchun/Malan/Southern/Xiuguluan) |
+| 2026-06-04 02:37 | FEATURE | M6: ILRDF MT live — Gradio 5 SSE fixed (break not return in finally), ILRDF_MT_URL + ILRDF_TTS_URL in env |
+| 2026-06-04 02:37 | FIX | Translate: capitalize first letter only; model label color = container bg (invisible); clears between requests |
+| 2026-06-04 02:37 | FIX | Capture: hide lookup button when auto-lookup on; remove redundant hint text |
 | 2026-06-03 16:25 | FEATURE | M6: TTS route (/api/tts); Listen button in translate; wave button in capture next to mic |
 | 2026-06-03 16:25 | FIX | Translate save: ab+zh set correctly per direction; note_source=dict |
 | 2026-06-03 16:25 | FIX | Capture hydration error: LangDialectProvider starts with defaults, applies cache in useEffect |
