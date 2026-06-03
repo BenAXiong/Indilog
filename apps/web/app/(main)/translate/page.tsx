@@ -22,6 +22,7 @@ export default function TranslatePage() {
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [modelId,   setModelId]   = useState<string | null>(null)
   const [copied,    setCopied]    = useState(false)
   const [saved,     setSaved]     = useState(false)
   const [listening, setListening] = useState(false)
@@ -63,6 +64,7 @@ export default function TranslatePage() {
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Translation failed.'); return }
       setOutput(data.translation)
+      setModelId(data.modelId ?? null)
     } catch {
       setError('Could not reach the translation service.')
     } finally {
@@ -234,9 +236,11 @@ export default function TranslatePage() {
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.crimson, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
               {langLabel(tgt)}
             </span>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
-              FormosanBank/nllb200
-            </span>
+            {modelId && (
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
+                {modelId}
+              </span>
+            )}
           </div>
 
           {loading ? (
