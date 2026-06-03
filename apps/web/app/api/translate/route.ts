@@ -92,40 +92,32 @@ function createMockTranslation(payload: TranslateRequest, latencyMs: number): Tr
 
 // Gradio 5: POST to get event_id, GET body as text, parse complete event
 async function gradioCall(base: string, fn: string, data: unknown[], signal: AbortSignal): Promise<string | null> {
-  console.log('[ilrdf] submit', fn, JSON.stringify(data[0]).slice(0, 40))
   const submitRes = await fetch(`${base}/gradio_api/call/${fn}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ data }),
     signal,
   })
-  console.log('[ilrdf] submit status', submitRes.status)
   if (!submitRes.ok) return null
   const { event_id } = await submitRes.json() as { event_id?: string }
-  console.log('[ilrdf] event_id', event_id)
   if (!event_id) return null
 
   const streamRes = await fetch(`${base}/gradio_api/call/${fn}/${event_id}`, { signal })
-  console.log('[ilrdf] stream status', streamRes.status, 'body?', !!streamRes.body)
   if (!streamRes.ok || !streamRes.body) return null
 
   const reader = streamRes.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
   let result: string | null = null
-  let chunkCount = 0
   try {
     while (true) {
       const { done, value } = await reader.read()
-      if (done) { console.log('[ilrdf] stream done, buf:', JSON.stringify(buf)); break }
-      chunkCount++
+      if (done) break
       buf += decoder.decode(value, { stream: true })
-      console.log('[ilrdf] chunk', chunkCount, 'buf so far:', JSON.stringify(buf))
       const match = /event:\s*complete[\r\n]+data:\s*(\[.+\])/.exec(buf)
       if (match) {
         const arr = JSON.parse(match[1]) as unknown[]
         result = typeof arr[0] === 'string' ? arr[0] : null
-        console.log('[ilrdf] result', result)
         break
       }
     }
