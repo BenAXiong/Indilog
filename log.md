@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-04 12:00 | FEATURE | M7: /import page — deep link (#v1:<base64>), dedup check, preview table (new/duplicate), confirm import; note_source='import' |
+| 2026-06-04 12:00 | CONFIG | M7: DEC-M7-01 recorded; architecture.md + decisions.md updated (note_source='import', format v1 contract); plan-v1.md M7 added, old M7→M8 |
 | 2026-06-04 02:52 | FEATURE | Translate UX: Listen next to Translate (Formosan src, plays source); Listen in output (zh src, plays translation); remove red accent + lang label |
 | 2026-06-04 02:52 | FIX | Capture: TTS wave button only shown for Amis; remove "Be patient" row from translate |
 | 2026-06-04 02:37 | FEATURE | M6: ILRDF TTS live — Gradio 5 SSE, /default_speaker_tts, dialect→speaker mapping (Coastal/Hengchun/Malan/Southern/Xiuguluan) |

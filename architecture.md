@@ -58,6 +58,7 @@ The universal Note table. All knowledge units flow here regardless of source.
 | `collection` | Imported from a user CSV/JSON deck | Active |
 | `dict` | Saved from a dictionary lookup | Active |
 | `curriculum` | Bookmarked from the Learn tab | Active |
+| `import` | Imported from an external tool (e.g. 族語魔書 Chrome extension) via `/import` deep link | Active |
 | `text` | Saved from reading a text article | Future |
 | `video` | Saved from watching a video | Future |
 | `podcast` | Saved from listening to a podcast | Future |

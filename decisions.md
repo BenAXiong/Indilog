@@ -6,6 +6,58 @@ Tracks open questions and resolved architectural/product decisions.
 
 ## Open
 
+### DEC-M7-01 · Chrome Extension Import — format, mechanism, dedup, and note_source
+
+**Context:** The 族語魔書 (YCM PopupDict) Chrome extension can export vocabulary items from dictionary lookups. IndiHunt needs a frictionless import path.
+
+**Decision 1 — Import mechanism: deep link with hash payload**
+- Extension calls `chrome.tabs.create({ url: 'https://<app>/import#v1:<base64>' })`
+- `/import` page reads `window.location.hash` client-side (never sent to server)
+- No API key required; auth handled by the existing Supabase session in the browser
+- UTF-8 safe encoding: `btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(payload))))` on the extension side; `new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)))` on the IndiHunt side
+
+**Decision 2 — IndiHunt Import Format v1 (flat list)**
+- The extension flattens any nested examples into sibling `sentence` items before encoding — IndiHunt receives a flat list only
+- Schema:
+```json
+{
+  "version": 1,
+  "source": "ycm-popupdict",
+  "exportedAt": "ISO",
+  "items": [
+    {
+      "ab": "mato'as",
+      "zh": "老；年老的",
+      "type": "word",
+      "language": "ami",
+      "dialect": "馬蘭阿美語",
+      "audio": "https://…",
+      "notes": "Root: ma- + to'as",
+      "tags": ["KILANG"]
+    }
+  ]
+}
+```
+- `language` must be the short Indivore code (`ami`, `tay`, …). NLLB script suffixes (`_Latn`, `_Hant`) are stripped by the import page if present.
+- `type` defaults to `"word"` if omitted
+- All fields except `ab`, `language` are optional
+
+**Decision 3 — `note_source = 'import'`**
+- Imported items get `note_source: 'import'`
+- No DB migration needed — `ind_items.note_source` is an unconstrained text column (DEFAULT `'captured'`)
+
+**Decision 4 — Deduplication**
+- Dedup on exact `(ab, language)` per user, checked at import time via bounded Supabase query
+- Duplicates shown in preview as greyed-out rows, skipped on confirm (no overwrite, no merge)
+- Preview screen shows "N new · M already saved" summary before any writes
+
+**Decision 5 — Item cap**
+- Max 200 items per import batch; excess shown as a warning, trimmed to first 200
+
+**Date:** 2026-06-04
+
+---
+
 ### DEC-SRS05 · Note-centric SRS architecture — intervals on notes, modes as session settings — SUPERSEDED IN PART by DEC-SRS06
 
 **Context:** Current schema stores SRS metrics (`ease_factor`, `interval_days`, `repetitions`, `due_at`) on `ind_flashcards` (one card pre-created per note). `ind_flashcards.card_type` stores `'default'` or `'sts'` as a permanent property.
@@ -136,7 +188,7 @@ Key decisions settled:
 
 6. **`audio` field:** Accepts null, full URL, or Supabase Storage path. Resolved at render via `cardAudio()` which checks `card.audio` → `note.audio` in priority order.
 
-7. **`note_source` values:** `captured | collection | dict | curriculum | text | video | podcast`. Future values (`text`, `video`, `podcast`) reserved for upcoming content sources.
+7. **`note_source` values:** `captured | collection | dict | curriculum | import | text | video | podcast`. Future values (`text`, `video`, `podcast`) reserved for upcoming content sources. `import` added DEC-M7-01 (extension import via `/import` deep link).
 
 8. **`ensureFlashcards()`** is the single Card generation function. No separate `generateFlashcardsFromCollection()`. Called on Study mount and immediately after collection import.
 

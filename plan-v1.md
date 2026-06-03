@@ -197,7 +197,29 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ---
 
-## Milestone 7 — Tests and fixes
+## Milestone 7 — Chrome Extension Import (族語魔書 → IndiHunt)
+
+**Goal:** Direct import of vocabulary items from the 族語魔書 PopupDict Chrome extension into IndiHunt via a deep link. Extension opens `/import#v1:<base64>`, IndiHunt shows a preview with dedup info, user confirms.
+
+> Design contract in DEC-M7-01.
+
+### IndiHunt Import Format v1
+Extension opens: `https://<app>/import#v1:<base64url-encoded-JSON>`
+
+Flat payload — extension flattens examples to sibling sentence items before encoding:
+```json
+{ "version": 1, "source": "ycm-popupdict", "exportedAt": "ISO",
+  "items": [{ "ab": "…", "zh": "…", "type": "word", "language": "ami",
+               "dialect": "馬蘭阿美語", "audio": "https://…", "notes": "…", "tags": ["KILANG"] }] }
+```
+
+- [x] DEC-M7-01 recorded; architecture.md updated (`note_source = 'import'`)
+- [ ] `/import` page — decode hash, dedup check, preview table (new/duplicate rows), confirm import
+- [ ] `note_source = 'import'` shown as badge in Browser (low-priority, M2-era work)
+
+---
+
+## Milestone 8 — Tests and fixes
 
 - [x] FIX: grmpts audio still not playing — pre-existing, investigate correct URL pattern
 - [x] FIX: sentences cannot be unbookmarked — investigate handleSave / saved state reset
@@ -224,6 +246,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ## Next versions
 
+- Icons: capture = fish net, dash = stone house, study = ?, trans = stars, dict = ?
 - Add Moe dict + roots + affix drill + kilang
 - Add ILRDF dict
 - Add ILRDF colloquial corpus
@@ -233,6 +256,8 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k
 - history buttons in capture and other tabs
 - Amis1k: add simple example sentences
+- Add TTS to Amis1k deck
+- Freq analysis of curriculum x4-6 and Amis1k
 - Icons: align with CD design handoff
 - 階層×10 system (tadpole - crab - mangcel - fafoy - bear - kawas?)
 - User contributions — send to pending DB
