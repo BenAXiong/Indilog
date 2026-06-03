@@ -47,3 +47,5 @@ Book_1_nocirc_nobg*.png
 packages/amis1k/source.csv
 packages/amis1k/convert.js
 packages/dictionary/ycm_master.db
+
+.vercel

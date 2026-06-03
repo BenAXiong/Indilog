@@ -38,17 +38,21 @@ function cachedDialect(): string | null {
 }
 
 export function LangDialectProvider({ children }: { children: ReactNode }) {
-  const [lang,         setLangState]         = useState<Language>(cachedLang)
-  const [dialect,      setDialectState]      = useState<string | null>(cachedDialect)
-  const [dialectLabel, setDialectLabelState] = useState<string | null>(() => {
-    const d = cachedDialect()
-    const l = cachedLang()
-    return d ? shortDialectLabel(d, getGlid(l.code) ?? '01') : null
-  })
+  // Always start with defaults so server and client render identically (no hydration mismatch).
+  // Cache is applied in the first useEffect after hydration.
+  const [lang,         setLangState]         = useState<Language>(DEFAULT_LANG)
+  const [dialect,      setDialectState]      = useState<string | null>(null)
+  const [dialectLabel, setDialectLabelState] = useState<string | null>(null)
   const [userId,       setUserId]            = useState<string | null>(null)
 
-  // Single profile fetch on mount — refresh cache from DB
+  // Single profile fetch on mount — apply localStorage cache first, then refresh from DB
   useEffect(() => {
+    const cachedL = cachedLang()
+    const cachedD = cachedDialect()
+    setLangState(cachedL)
+    setDialectState(cachedD)
+    setDialectLabelState(cachedD ? shortDialectLabel(cachedD, getGlid(cachedL.code) ?? '01') : null)
+
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return

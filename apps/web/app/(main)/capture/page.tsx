@@ -82,6 +82,8 @@ function CapturePageInner() {
   // AI hint (meaning section)
   const [translating,    setTranslating]    = useState(false)
   const [translateError, setTranslateError] = useState<string | null>(null)
+  const [ttsPlaying,     setTtsPlaying]     = useState(false)
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
 
   // Selectors
   const [sources,         setSources]         = useState<Source[]>([])
@@ -331,6 +333,30 @@ function CapturePageInner() {
     }
   }
 
+  async function handleTts() {
+    if (!text.trim() || ttsPlaying) return
+    setTtsPlaying(true)
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim(), language: captureLanguage || lang.code }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        ttsAudioRef.current?.pause()
+        const a = new Audio(data.url)
+        ttsAudioRef.current = a
+        a.onended = () => setTtsPlaying(false)
+        await a.play()
+      } else {
+        setTtsPlaying(false)
+      }
+    } catch {
+      setTtsPlaying(false)
+    }
+  }
+
   function handleClear() {
     setEditingId(null); setText(''); setMeaning(''); setCaptureLanguage(lang.code); setDialect(''); setPlace(''); setNotes('')
     setSelectedSource(null); setSelectedTags([])
@@ -506,17 +532,35 @@ function CapturePageInner() {
               <Icon name={playing ? 'x' : 'play'} size={14} strokeWidth={1.8} color={T.sage} />
             </button>
           )}
+          {!recording && (
+            <button
+              onClick={handleLookup}
+              aria-label="Lookup words"
+              style={{
+                ...iconBtn,
+                color:       lookedUp ? T.crimson : T.inkSoft,
+                borderColor: lookedUp ? T.crimson : T.lineSoft,
+                background:  lookedUp ? T.crimsonBg : T.paper,
+              }}
+            >
+              <Icon name="search" size={15} strokeWidth={1.8} color={lookedUp ? T.crimson : T.inkSoft} />
+            </button>
+          )}
           <button
-            onClick={handleLookup}
-            aria-label="Lookup words"
+            onClick={handleTts}
+            disabled={ttsPlaying || !text.trim()}
+            aria-label="Listen"
+            title="Listen (TTS)"
             style={{
               ...iconBtn,
-              color:       lookedUp ? T.crimson : T.inkSoft,
-              borderColor: lookedUp ? T.crimson : T.lineSoft,
-              background:  lookedUp ? T.crimsonBg : T.paper,
+              color:       ttsPlaying ? T.amber : T.inkSoft,
+              borderColor: ttsPlaying ? T.amber : T.lineSoft,
+              background:  ttsPlaying ? T.amberBg : T.paper,
+              opacity:     !text.trim() ? 0.4 : 1,
+              cursor:      (!text.trim() || ttsPlaying) ? 'default' : 'pointer',
             }}
           >
-            <Icon name="search" size={15} strokeWidth={1.8} color={lookedUp ? T.crimson : T.inkSoft} />
+            <Icon name="wave" size={15} strokeWidth={1.8} color={ttsPlaying ? T.amber : T.inkSoft} />
           </button>
           <button
             onClick={recording ? stopRecording : startRecording}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
@@ -22,8 +22,10 @@ export default function TranslatePage() {
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [copied,    setCopied]    = useState(false)
+  const [saved,     setSaved]     = useState(false)
+  const [listening, setListening] = useState(false)
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const validTargets = getValidTargets(src)
   const pairOk = isPairSupported(src, tgt)
@@ -68,6 +70,31 @@ export default function TranslatePage() {
     }
   }
 
+  async function handleListen() {
+    if (!output || listening) return
+    setListening(true)
+    try {
+      const tgtLang = tgt === 'zho_Hant' ? 'zho_Hant' : tgt.replace('_Latn', '')
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: output, language: tgtLang }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        ttsAudioRef.current?.pause()
+        const a = new Audio(data.url)
+        ttsAudioRef.current = a
+        a.onended = () => setListening(false)
+        await a.play()
+      } else {
+        setListening(false)
+      }
+    } catch {
+      setListening(false)
+    }
+  }
+
   async function handleCopy() {
     if (!output) return
     await navigator.clipboard.writeText(output)
@@ -76,12 +103,15 @@ export default function TranslatePage() {
   }
 
   async function handleSave() {
-    if (!output) return
+    if (!output || !text.trim()) return
+    // ab = Formosan text, zh = Chinese text, regardless of direction
+    const isFormosanSrc = src !== 'zho_Hant'
     await createItem({
-      ab: output,
-      type: 'sentence',
-      language: langLabel(tgt),
-      notes: `Translated from: ${text.trim()}`,
+      ab:       isFormosanSrc ? text.trim() : output,
+      zh:       isFormosanSrc ? output      : text.trim(),
+      type:     'sentence',
+      language: isFormosanSrc ? src.replace('_Latn', '') : tgt.replace('_Latn', ''),
+      note_source: 'dict',
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 1800)
@@ -231,6 +261,16 @@ export default function TranslatePage() {
               }}>
                 <Icon name={copied ? 'check' : 'copy'} size={13} strokeWidth={1.8} />
                 {copied ? 'Copied' : 'Copy'}
+              </button>
+              <button onClick={handleListen} disabled={listening} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '6px 10px', borderRadius: 8, background: listening ? T.amberBg : T.paperHi,
+                border: `1px solid ${listening ? T.amber : T.lineSoft}`,
+                color: listening ? T.amber : T.inkSoft,
+                fontSize: 12, fontWeight: 500, cursor: listening ? 'default' : 'pointer',
+              }}>
+                <Icon name="speaker" size={13} strokeWidth={1.8} />
+                {listening ? '…' : 'Listen'}
               </button>
               <div style={{ flex: 1 }} />
               <button onClick={handleSave} style={{

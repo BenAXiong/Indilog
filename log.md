@@ -2,6 +2,10 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-03 16:25 | FEATURE | M6: TTS route (/api/tts); Listen button in translate; wave button in capture next to mic |
+| 2026-06-03 16:25 | FIX | Translate save: ab+zh set correctly per direction; note_source=dict |
+| 2026-06-03 16:25 | FIX | Capture hydration error: LangDialectProvider starts with defaults, applies cache in useEffect |
+| 2026-06-03 16:25 | FIX | Capture: hide lookup button when recording |
 | 2026-06-03 15:59 | CONFIG | Add INFERENCE_API_URL + INFERENCE_API_KEY to Vercel production — translate + capture sparkle now hit real Modal.run MT |
 | 2026-06-03 14:26 | FEATURE | M7: capture sparkle button → live AI translation via /api/translate (ab_Latn→zho_Hant) |
 | 2026-06-03 06:23 | FEATURE | M5-B: edge swipe to navigate tabs; daily review cap stepper (10–300); browser lookup includes sentence zh |

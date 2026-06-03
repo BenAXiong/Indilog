@@ -189,10 +189,11 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 **Current state:** `/api/translate` calls Modal.run inference server (INFERENCE_API_URL set in Vercel). ILRDF Gradio probe endpoint exists at `/api/translate/probe`; ILRDF space currently 503. Capture sparkle button wired to same route.
 
-- [~] DEC-M6-01 — ILRDF API undocumented publicly; probe endpoint built; waiting for space to come online or direct API access
-- [~] Swap `/api/translate` to ILRDF — Gradio fallback wired (ILRDF_MT_URL env var); call signature best-guess pending probe results
-- [ ] Add TTS: ILRDF TTS endpoint → playable audio in translate UI
-- [ ] Save translation output to ind_items (ab = source, zh = translation, audio = TTS URL)
+- [x] DEC-M6-01 — Modal.run MT live (INFERENCE_API_URL in Vercel); ILRDF probe built; ILRDF space 503, waiting
+- [x] MT working — translate tab + capture sparkle both call /api/translate → Modal.run inference
+- [ ] Swap `/api/translate` to ILRDF — Gradio fallback wired (ILRDF_MT_URL env var); pending probe success
+- [x] TTS route built — /api/tts tries ILRDF_TTS_URL then INFERENCE_API_URL/tts; Listen button in translate; wave button in capture
+- [x] Save translation output — translate Save button saves ab+zh correctly (Formosan/Chinese per direction)
 
 ---
 
@@ -226,6 +227,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - Add Moe dict + roots + affix drill + kilang
 - Add ILRDF dict
 - Add ILRDF colloquial corpus
+- TDL to capture: list of things you wanna learn (eg it's my treat, get lost, etc)
 - Add ex sentences to word cards (?) esp Amis 1k - lookup from browser?
 - Video capture — v2 new feature
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k
