@@ -203,7 +203,7 @@ Switch translate tab from FormosanBank to ILRDF AI Labs (https://ai-labs.ilrdf.o
 - [ ] README setup flow (clone → env → supabase → run)
 - [ ] Smoke test all 11 flows
 - [ ] Local cache for fast startup (profile + lang on first render, no flash)
-- [ ] Capture-page Translate action
+- [x] Capture-page Translate action — sparkle button calls /api/translate (ab→zh); fills meaning field
 
 
 ---

@@ -2,6 +2,12 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-03 | FEATURE | M5-B: edge swipe to navigate tabs; daily review cap stepper (10–300); browser lookup includes sentence zh |
+| 2026-06-03 | FEATURE | M7: local cache for lang+dialect in LangDialectProvider — no flash on load |
+| 2026-06-03 | FEATURE | M6: ILRDF MT probe endpoint + experimental Gradio fallback in translate route |
+| 2026-06-03 | FEATURE | M1-H complete: 4-mode review (forward/reverse/audio/sts), effectiveMode fallback chain, mode selector in OptionsSheet |
+| 2026-06-03 | SCHEMA | M1-H: DROP COLUMN card_type, metadata from ind_flashcards; STS driven by ind_items.target_word |
+| 2026-06-03 | FIX | GoalWidget: button-in-button hydration error — outer wrapper changed to div+role |
 | 2026-06-02 16:59 | FIX | Suppress iOS autofill bar (credit card / key / location) on InlineSelector input |
 | 2026-06-02 16:58 | FEATURE | Collapsible Recent sections — Dashboard (details/summary) + Capture (useState), collapsed by default |
 | 2026-06-02 16:51 | FEATURE | M4-C: merge source+speaker (Speaker InlineSelector removed); place field → InlineSelector with past-place history |

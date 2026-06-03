@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { incrementCapturedToday } from '@/lib/db/progress/stats'
 import { listSources, createSource, type Source, type CreateSourceInput } from '@/lib/db/sources/sources'
 import { LANGUAGES } from '@/lib/languages'
+import { isPairSupported } from '@/lib/translation-pairs'
 import { GLID_FAMILIES, shortDialectLabel } from '@/lib/lang/dialects'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import InlineSelector from '@/components/capture/InlineSelector'
@@ -79,7 +80,8 @@ function CapturePageInner() {
   const audioRef         = useRef<HTMLAudioElement | null>(null)
 
   // AI hint (meaning section)
-  const [showAiHint, setShowAiHint] = useState(false)
+  const [translating,    setTranslating]    = useState(false)
+  const [translateError, setTranslateError] = useState<string | null>(null)
 
   // Selectors
   const [sources,         setSources]         = useState<Source[]>([])
@@ -302,6 +304,33 @@ function CapturePageInner() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  async function handleTranslate() {
+    const src = `${captureLanguage || lang.code}_Latn`
+    const tgt = 'zho_Hant'
+    if (!text.trim()) return
+    if (!isPairSupported(src, tgt)) {
+      setTranslateError(`No translation available for ${LANGUAGES.find(l => l.code === (captureLanguage || lang.code))?.name ?? captureLanguage}`)
+      setTimeout(() => setTranslateError(null), 3000)
+      return
+    }
+    setTranslating(true)
+    setTranslateError(null)
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt }),
+      })
+      const data = await res.json()
+      if (data.error) { setTranslateError(data.error); setTimeout(() => setTranslateError(null), 3000) }
+      else if (data.translation) setMeaning(data.translation)
+    } catch {
+      setTranslateError('Translation unavailable'); setTimeout(() => setTranslateError(null), 3000)
+    } finally {
+      setTranslating(false)
+    }
+  }
+
   function handleClear() {
     setEditingId(null); setText(''); setMeaning(''); setCaptureLanguage(lang.code); setDialect(''); setPlace(''); setNotes('')
     setSelectedSource(null); setSelectedTags([])
@@ -522,24 +551,26 @@ function CapturePageInner() {
           }}
         />
 
-        {/* Meaning footer: AI hint text inline left of sparkle */}
+        {/* Meaning footer: translate button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 4 }}>
-          {showAiHint && (
-            <span style={{ fontSize: 12, color: T.inkMute, fontStyle: 'italic' }}>
-              AI translation coming soon ✨
-            </span>
+          {translateError && (
+            <span style={{ fontSize: 12, color: T.terra, fontStyle: 'italic' }}>{translateError}</span>
           )}
           <button
-            onClick={() => setShowAiHint(v => !v)}
-            aria-label="AI translation"
+            onClick={handleTranslate}
+            disabled={translating || !text.trim()}
+            aria-label="Translate to Chinese"
+            title="Translate to Chinese"
             style={{
               ...iconBtn,
-              color:       showAiHint ? T.amber : T.inkSoft,
-              borderColor: showAiHint ? T.amber : T.lineSoft,
-              background:  showAiHint ? T.amberBg : T.paper,
+              color:       translating ? T.amber : T.inkSoft,
+              borderColor: translating ? T.amber : T.lineSoft,
+              background:  translating ? T.amberBg : T.paper,
+              opacity:     !text.trim() ? 0.4 : 1,
+              cursor:      (!text.trim() || translating) ? 'default' : 'pointer',
             }}
           >
-            <Icon name="sparkle" size={15} strokeWidth={1.8} color={showAiHint ? T.amber : T.inkSoft} />
+            <Icon name="sparkle" size={15} strokeWidth={1.8} color={translating ? T.amber : T.inkSoft} />
           </button>
         </div>
       </div>
