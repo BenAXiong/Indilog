@@ -69,11 +69,12 @@ export default function ImportPage() {
   const router = useRouter()
   const { lang, dialectLabel } = useLang()
 
-  const [pageState, setPageState] = useState<PageState>('loading')
-  const [payload, setPayload]     = useState<ImportPayload | null>(null)
-  const [trimmed, setTrimmed]     = useState(false)
-  const [dupKeys, setDupKeys]     = useState<Set<string>>(new Set())
-  const [result, setResult]       = useState<{ imported: number; skipped: number } | null>(null)
+  const [pageState,       setPageState]       = useState<PageState>('loading')
+  const [payload,         setPayload]         = useState<ImportPayload | null>(null)
+  const [trimmed,         setTrimmed]         = useState(false)
+  const [dupKeys,         setDupKeys]         = useState<Set<string>>(new Set())
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
+  const [result,          setResult]          = useState<{ imported: number; skipped: number } | null>(null)
 
   // Parse hash
   useEffect(() => {
@@ -90,7 +91,7 @@ export default function ImportPage() {
     setPageState('checking')
   }, [])
 
-  // Dedup check
+  // Dedup check — also initialises selection (all non-dup indices selected)
   useEffect(() => {
     if (pageState !== 'checking' || !payload) return
     async function check() {
@@ -98,7 +99,7 @@ export default function ImportPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setPageState('unauth'); return }
 
-      const abs  = [...new Set(payload!.items.map(i => i.ab))]
+      const abs   = [...new Set(payload!.items.map(i => i.ab))]
       const langs = [...new Set(payload!.items.map(i => normLang(i.language)))]
 
       const { data } = await supabase
@@ -111,20 +112,36 @@ export default function ImportPage() {
       const keys = new Set<string>()
       for (const row of (data ?? [])) keys.add(`${row.language}:${row.ab}`)
       setDupKeys(keys)
+
+      // Select all non-duplicate items by default
+      const sel = new Set<number>()
+      payload!.items.forEach((item, i) => {
+        if (!keys.has(`${normLang(item.language)}:${item.ab}`)) sel.add(i)
+      })
+      setSelectedIndices(sel)
       setPageState('ready')
     }
     check()
   }, [pageState, payload])
 
   const items    = payload?.items ?? []
-  const newItems = items.filter(i => !dupKeys.has(`${normLang(i.language)}:${i.ab}`))
-  const dupCount = items.length - newItems.length
+  const dupCount = items.filter(i => dupKeys.has(`${normLang(i.language)}:${i.ab}`)).length
+
+  function toggleIndex(i: number) {
+    setSelectedIndices(prev => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+  }
 
   async function handleImport() {
-    if (!newItems.length || pageState === 'importing') return
+    if (!selectedIndices.size || pageState === 'importing') return
     setPageState('importing')
     let imported = 0
-    for (const item of newItems) {
+    for (let i = 0; i < items.length; i++) {
+      if (!selectedIndices.has(i)) continue
+      const item = items[i]
       const r = await createItem({
         ab:          item.ab.trim(),
         zh:          item.zh?.trim() || undefined,
@@ -138,7 +155,7 @@ export default function ImportPage() {
       })
       if (r) imported++
     }
-    setResult({ imported, skipped: dupCount + (newItems.length - imported) })
+    setResult({ imported, skipped: items.length - imported })
     setPageState('done')
   }
 
@@ -158,10 +175,11 @@ export default function ImportPage() {
           payload={payload}
           items={items}
           dupKeys={dupKeys}
-          newCount={newItems.length}
+          selectedIndices={selectedIndices}
           dupCount={dupCount}
           trimmed={trimmed}
           importing={pageState === 'importing'}
+          onToggle={toggleIndex}
           onImport={handleImport}
         />
       )}
@@ -238,7 +256,7 @@ function DoneState({ result, onStudy }: { result: { imported: number; skipped: n
       </div>
       {result.skipped > 0 && (
         <div style={{ fontSize: 13, color: T.inkMute }}>
-          {result.skipped} already in your notes — skipped
+          {result.skipped} skipped
         </div>
       )}
       <button
@@ -256,17 +274,20 @@ function DoneState({ result, onStudy }: { result: { imported: number; skipped: n
 }
 
 function PreviewState({
-  payload, items, dupKeys, newCount, dupCount, trimmed, importing, onImport,
+  payload, items, dupKeys, selectedIndices, dupCount, trimmed, importing, onToggle, onImport,
 }: {
   payload: ImportPayload
   items: ImportItem[]
   dupKeys: Set<string>
-  newCount: number
+  selectedIndices: Set<number>
   dupCount: number
   trimmed: boolean
   importing: boolean
+  onToggle: (i: number) => void
   onImport: () => void
 }) {
+  const selectedCount = selectedIndices.size
+
   return (
     <>
       {/* Source header */}
@@ -297,48 +318,65 @@ function PreviewState({
       {/* Preview list */}
       <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
         {items.map((item, i) => {
-          const isDup = dupKeys.has(`${normLang(item.language)}:${item.ab}`)
+          const isDup      = dupKeys.has(`${normLang(item.language)}:${item.ab}`)
+          const isSelected = !isDup && selectedIndices.has(i)
+          const isDeselected = !isDup && !selectedIndices.has(i)
+
           return (
             <div
               key={i}
+              onClick={() => { if (!isDup && !importing) onToggle(i) }}
               style={{
-                padding: '11px 14px',
+                padding: '10px 14px',
                 borderBottom: i < items.length - 1 ? `1px solid ${T.lineSoft}` : 'none',
-                opacity: isDup ? 0.45 : 1,
-                display: 'flex', flexDirection: 'column', gap: 3,
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                cursor: isDup || importing ? 'default' : 'pointer',
+                opacity: isDup || isDeselected ? 0.38 : 1,
+                transition: 'opacity .12s',
+                userSelect: 'none',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, color: T.ink, fontStyle: 'italic', flex: 1, lineHeight: 1.3 }}>
-                  {item.ab}
-                </span>
-                {isDup ? (
-                  <span style={{ fontSize: 10.5, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint, flexShrink: 0, marginTop: 2 }}>
-                    saved
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 10.5, fontFamily: '"JetBrains Mono", monospace', color: T.sage, flexShrink: 0, marginTop: 2 }}>
-                    new
-                  </span>
-                )}
+              {/* Selection indicator */}
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                background: isSelected ? T.sage : 'transparent',
+                border: `1.5px solid ${isDup ? T.lineSoft : isSelected ? T.sage : T.inkFaint}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background .12s, border-color .12s',
+              }}>
+                {isSelected && <Icon name="check" size={10} color="#fff" strokeWidth={2.5} />}
               </div>
-              {item.zh && (
-                <span style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.4 }}>{item.zh}</span>
-              )}
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 1 }}>
-                <span style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint }}>
-                  {langName(item.language)}{item.dialect ? ` · ${item.dialect}` : ''}
-                </span>
-                {(item.type && item.type !== 'word') && (
-                  <span style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint }}>
-                    · {item.type}
+
+              {/* Content */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, color: T.ink, fontStyle: 'italic', flex: 1, lineHeight: 1.3 }}>
+                    {item.ab}
                   </span>
+                  {isDup && (
+                    <span style={{ fontSize: 10.5, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint, flexShrink: 0, marginTop: 2 }}>
+                      saved
+                    </span>
+                  )}
+                </div>
+                {item.zh && (
+                  <span style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.4 }}>{item.zh}</span>
                 )}
-                {item.tags?.map(t => (
-                  <span key={t} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint }}>
-                    · {t}
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 1 }}>
+                  <span style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint }}>
+                    {langName(item.language)}{item.dialect ? ` · ${item.dialect}` : ''}
                   </span>
-                ))}
+                  {(item.type && item.type !== 'word') && (
+                    <span style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint }}>
+                      · {item.type}
+                    </span>
+                  )}
+                  {item.tags?.map(t => (
+                    <span key={t} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint }}>
+                      · {t}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           )
@@ -349,29 +387,29 @@ function PreviewState({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {dupCount > 0 && (
           <div style={{ fontSize: 12.5, color: T.inkMute, padding: '0 4px' }}>
-            {dupCount} item{dupCount !== 1 ? 's' : ''} already in your notes and will be skipped.
+            {dupCount} item{dupCount !== 1 ? 's' : ''} already in your notes — skipped.
           </div>
         )}
-        {newCount === 0 && (
-          <div style={{ fontSize: 13, color: T.inkSoft, textAlign: 'center', padding: '8px 0' }}>
-            All items are already in your notes.
+        {selectedCount === 0 && dupCount < items.length && (
+          <div style={{ fontSize: 13, color: T.inkSoft, textAlign: 'center', padding: '4px 0' }}>
+            No items selected.
           </div>
         )}
         <button
           onClick={onImport}
-          disabled={newCount === 0 || importing}
+          disabled={selectedCount === 0 || importing}
           style={{
             padding: '13px 0', borderRadius: 14,
-            background: newCount > 0 && !importing ? T.ink : T.lineSoft,
-            color: newCount > 0 && !importing ? T.cream : T.inkFaint,
+            background: selectedCount > 0 && !importing ? T.ink : T.lineSoft,
+            color: selectedCount > 0 && !importing ? T.cream : T.inkFaint,
             fontSize: 14, fontWeight: 600, border: 'none',
-            cursor: newCount > 0 && !importing ? 'pointer' : 'default',
+            cursor: selectedCount > 0 && !importing ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             transition: 'background .15s',
           }}
         >
           <Icon name="download" size={14} color="currentColor" />
-          {importing ? 'Importing…' : `Import ${newCount} item${newCount !== 1 ? 's' : ''}`}
+          {importing ? 'Importing…' : `Import ${selectedCount} item${selectedCount !== 1 ? 's' : ''}`}
         </button>
       </div>
     </>
