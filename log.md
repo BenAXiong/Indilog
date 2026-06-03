@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-04 13:00 | FEATURE | Import: rows selectable by default (green circle), click to deselect/skip; button count reflects live selection |
 | 2026-06-04 12:45 | FIX | Browser: query neq(note_source, collection) so import/dict/curriculum items are visible; source label updated |
 | 2026-06-04 12:30 | FIX | M7: make /import public in middleware (hash fragment lost on server redirect); add unauth sign-in prompt |
 | 2026-06-04 12:00 | FEATURE | M7: /import page — deep link (#v1:<base64>), dedup check, preview table (new/duplicate), confirm import; note_source='import' |

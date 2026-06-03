@@ -251,11 +251,12 @@ Flat payload — extension flattens examples to sibling sentence items before en
 - Add ILRDF dict
 - Add ILRDF colloquial corpus
 - TDL to capture: list of things you wanna learn (eg it's my treat, get lost, etc)
-- Add ex sentences to word cards (?) esp Amis 1k - lookup from browser?
 - Video capture — v2 new feature
+- Import: stash hash in sessionStorage before login redirect so unauthenticated users land back on /import after sign-up (currently requires re-opening from extension)
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k
 - history buttons in capture and other tabs
 - Amis1k: add simple example sentences
+- Add ex sentences to word cards (?) esp Amis 1k - lookup from browser?
 - Add TTS to Amis1k deck
 - Freq analysis of curriculum x4-6 and Amis1k
 - Icons: align with CD design handoff
