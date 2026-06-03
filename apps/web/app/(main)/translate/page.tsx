@@ -124,7 +124,7 @@ export default function TranslatePage() {
       <ScreenHeader title="Translate" langName={lang.name} langDialect={dialectLabel} />
 
       <div style={{ fontSize: 12, color: T.inkMute, lineHeight: 1.4, padding: '0 4px', marginTop: -6 }}>
-        Traditional Chinese ↔ Formosan · draft translation only
+        Be patient. AI services can take up to 2 min to &ldquo;wake up&rdquo; when previously inactive
       </div>
 
       {/* Pair selector */}
@@ -294,7 +294,7 @@ export default function TranslatePage() {
 
       <div style={{ fontSize: 11.5, color: T.inkMute, lineHeight: 1.5, padding: '0 4px', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
         <Icon name="sparkle" size={12} color={T.inkMute} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
-        Draft translation · CC-BY-NC-4.0 · Verify with a fluent speaker before relying on output.
+        Draft translation · Verify with a fluent speaker before relying on output.
       </div>
     </div>
   )
