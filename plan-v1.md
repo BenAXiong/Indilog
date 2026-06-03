@@ -253,6 +253,8 @@ Flat payload — extension flattens examples to sibling sentence items before en
 - TDL to capture: list of things you wanna learn (eg it's my treat, get lost, etc)
 - Video capture — v2 new feature
 - Import: stash hash in sessionStorage before login redirect so unauthenticated users land back on /import after sign-up (currently requires re-opening from extension)
+- AI opacity: drop modelId from /api/translate response (currently visible in DevTools network tab despite invisible in UI)
+- AI opacity: proxy TTS audio bytes through /api/tts instead of returning ILRDF file URL to client
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k
 - history buttons in capture and other tabs
 - Amis1k: add simple example sentences
