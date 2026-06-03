@@ -532,7 +532,7 @@ function CapturePageInner() {
               <Icon name={playing ? 'x' : 'play'} size={14} strokeWidth={1.8} color={T.sage} />
             </button>
           )}
-          {!recording && (
+          {!recording && !autoLookup && (
             <button
               onClick={handleLookup}
               aria-label="Lookup words"
