@@ -1,0 +1,369 @@
+'use client'
+
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { T } from '@/lib/tokens'
+import { LangAvatar, Icon } from '@/components/ui'
+import { LANGUAGES } from '@/lib/languages'
+import { getGlid, getDialectsForLang } from '@/lib/lang/lang-bridge'
+import { shortDialectLabel } from '@/lib/lang/dialects'
+import { useLang } from '@/lib/context/LangDialectProvider'
+import { createClient } from '@/lib/supabase/client'
+import type { User } from '@supabase/supabase-js'
+
+// ── Settings sheet ────────────────────────────────────────────────────────────
+
+type Tab = 'general' | 'capture' | 'dict'
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'general', label: 'General' },
+  { id: 'capture', label: 'Capture' },
+  { id: 'dict',    label: 'Dict'    },
+]
+
+function SettingsSheet({ onClose }: { onClose: () => void }) {
+  const { lang, dialect, dialectLabel, setLang, setDialect } = useLang()
+
+  const [tab,            setTab]            = useState<Tab>('general')
+  const [user,           setUser]           = useState<User | null>(null)
+  const [userId,         setUserId]         = useState<string | null>(null)
+  const [locale,         setLocale]         = useState('en')
+  const [saving,         setSaving]         = useState(false)
+  const [langPickerOpen, setLangPickerOpen] = useState(false)
+  const [pickedLang,     setPickedLang]     = useState<string | null>(null)
+  const [accountMenuOpen,setAccountMenuOpen]= useState(false)
+  const [autoLookup,     setAutoLookup]     = useState(true)
+  const [dictSources,    setDictSources]    = useState<string[]>(['klokah'])
+  const [resetHour,      setResetHourRaw]   = useState(4)
+  const accountMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('ind_auto_lookup')
+    if (stored !== null) setAutoLookup(stored === 'true')
+    const ss = localStorage.getItem('ind_dict_sources')
+    if (ss) try { setDictSources(JSON.parse(ss)) } catch {}
+    const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+    setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
+  }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      setUser(user); setUserId(user.id)
+      supabase.from('ind_profiles').select('ui_locale').eq('user_id', user.id).single()
+        .then(({ data }) => { if (data) setLocale(data.ui_locale) })
+    })
+  }, [])
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node))
+        setAccountMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  const saveLocale = useCallback(async (l: string) => {
+    if (!userId) return
+    setSaving(true)
+    await createClient().from('ind_profiles').update({ ui_locale: l }).eq('user_id', userId)
+    setSaving(false)
+  }, [userId])
+
+  async function handleSignOut() {
+    await createClient().auth.signOut()
+    window.location.href = '/login'
+  }
+
+  function closePicker() { setLangPickerOpen(false); setPickedLang(null) }
+
+  function toggleAutoLookup() {
+    const next = !autoLookup; setAutoLookup(next)
+    localStorage.setItem('ind_auto_lookup', String(next))
+  }
+
+  function toggleDictSource(id: string) {
+    setDictSources(prev => {
+      const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+      localStorage.setItem('ind_dict_sources', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const displayName  = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '—'
+  const displayEmail = user?.email ?? '—'
+
+  return (
+    // Backdrop + sheet
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(30,15,5,0.4)' }} />
+
+      <div style={{
+        position: 'relative', background: T.paper,
+        borderRadius: '20px 20px 0 0',
+        paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
+        maxHeight: '88dvh', display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '12px auto 0' }} />
+
+        {/* Sheet header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px 0' }}>
+          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 500, color: T.ink }}>
+            Settings
+          </span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: T.inkSoft }}>
+            <Icon name="x" size={20} strokeWidth={2} color={T.inkSoft} />
+          </button>
+        </div>
+
+        {/* Tab pills */}
+        <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              style={{
+                padding: '5px 12px', borderRadius: 8,
+                background: tab === t.id ? T.ink : T.paperHi,
+                color: tab === t.id ? T.cream : T.inkSoft,
+                border: `1px solid ${tab === t.id ? T.ink : T.lineSoft}`,
+                fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+              }}
+            >{t.label}</button>
+          ))}
+          {saving && (
+            <span style={{ fontSize: 11, color: T.inkFaint, marginLeft: 'auto', alignSelf: 'center', fontFamily: '"JetBrains Mono", monospace' }}>
+              saving…
+            </span>
+          )}
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ overflowY: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
+
+          {/* ── General ── */}
+          {tab === 'general' && (
+            <>
+              {/* Account */}
+              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 999, background: T.amberBg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${T.amber}`, flexShrink: 0 }}>
+                  <Icon name="user" size={20} strokeWidth={1.6} color="#8C6515" />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+                  <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayEmail}</div>
+                </div>
+                <div ref={accountMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
+                  <button
+                    onClick={() => setAccountMenuOpen(v => !v)}
+                    style={{ width: 30, height: 30, borderRadius: 8, background: accountMenuOpen ? T.paper : 'transparent', border: `1px solid ${accountMenuOpen ? T.lineSoft : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  >
+                    <Icon name="more-v" size={17} strokeWidth={2.2} color={T.inkSoft} />
+                  </button>
+                  {accountMenuOpen && (
+                    <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 70, background: T.paperHi, border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: '0 4px 16px rgba(43,34,26,0.12)', minWidth: 160, overflow: 'hidden' }}>
+                      {[
+                        { label: 'Sign out', icon: 'logout' as const, action: handleSignOut, danger: true },
+                      ].map((item) => (
+                        <button key={item.label} onClick={() => { setAccountMenuOpen(false); item.action() }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: T.crimson, fontSize: 13.5, fontWeight: 500 }}>
+                          <Icon name={item.icon} size={15} strokeWidth={1.8} color={T.crimson} />
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Study language */}
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Study language</div>
+                <button
+                  onClick={() => setLangPickerOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', borderRadius: 14, cursor: 'pointer', background: T.paperHi, border: `1px solid ${T.lineSoft}`, textAlign: 'left' }}
+                >
+                  <LangAvatar letter={lang.letter} color={lang.color} size={30} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 600, color: T.ink }}>{lang.name}</div>
+                    {dialectLabel && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 1 }}>{dialectLabel}</div>}
+                  </div>
+                  <Icon name="chevron" size={16} color={T.inkSoft} strokeWidth={1.8} />
+                </button>
+              </div>
+
+              {/* Daily reset */}
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Study</div>
+                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Daily reset</div>
+                    <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Hour the new study day begins</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {[{ delta: -1, disabled: resetHour <= 0 }, { delta: 1, disabled: resetHour >= 6 }].map(({ delta, disabled }, i) => (
+                      <button key={i} disabled={disabled}
+                        onClick={() => { const n = resetHour + delta; setResetHourRaw(n); localStorage.setItem('srs_reset_hour', String(n)) }}
+                        style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
+                        {delta < 0 ? '−' : '+'}
+                      </button>
+                    ))}
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 30, textAlign: 'center' }}>
+                      {resetHour === 0 ? '12am' : `${resetHour}am`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interface language */}
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Preferences</div>
+                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, marginBottom: 8 }}>Interface language</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[{ id: 'en', label: 'English', soon: false }, { id: 'zh', label: '繁體中文', soon: true }].map(o => (
+                      <button key={o.id} disabled={o.soon}
+                        onClick={() => { if (!o.soon) { setLocale(o.id); saveLocale(o.id) } }}
+                        style={{ flex: 1, padding: '7px', borderRadius: 9, background: locale === o.id ? T.ink : T.paper, color: locale === o.id ? T.cream : o.soon ? T.inkFaint : T.ink, border: `1px solid ${locale === o.id ? T.ink : T.lineSoft}`, fontSize: 13, fontWeight: 500, cursor: o.soon ? 'not-allowed' : 'pointer' }}>
+                        {o.label}{o.soon ? ' · soon' : ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Capture ── */}
+          {tab === 'capture' && (
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '14px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Auto-lookup</div>
+                <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Automatically search definitions as you type</div>
+              </div>
+              <button onClick={toggleAutoLookup} role="switch" aria-checked={autoLookup}
+                style={{ width: 44, height: 26, borderRadius: 999, background: autoLookup ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: 3, left: autoLookup ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </button>
+            </div>
+          )}
+
+          {/* ── Dict ── */}
+          {tab === 'dict' && (
+            <div>
+              <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Dictionary source</div>
+              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {([
+                    { id: 'klokah', label: 'Klokah',        soon: false },
+                    { id: 'ytd',    label: '族語言線上辭典', soon: true  },
+                    { id: 'moe',    label: 'MoE Dict',       soon: true  },
+                  ] as const).map(o => (
+                    <button key={o.id} disabled={o.soon}
+                      onClick={() => { if (!o.soon) toggleDictSource(o.id) }}
+                      style={{ flex: 1, padding: '8px 6px', borderRadius: 9, background: dictSources.includes(o.id) ? T.ink : T.paper, border: `1px solid ${dictSources.includes(o.id) ? T.ink : T.lineSoft}`, cursor: o.soon ? 'not-allowed' : 'pointer', opacity: o.soon ? 0.5 : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: dictSources.includes(o.id) ? T.cream : T.ink, lineHeight: 1.2 }}>{o.label}</span>
+                      {o.soon && <span style={{ fontSize: 9.5, color: dictSources.includes(o.id) ? T.cream : T.inkFaint }}>soon</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Language picker overlay — above settings sheet */}
+      {langPickerOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={closePicker} style={{ position: 'absolute', inset: 0, background: 'rgba(30,15,5,0.4)' }} />
+          <div style={{ position: 'relative', background: T.paper, borderRadius: '20px 20px 0 0', paddingTop: 16, paddingBottom: 'max(48px, env(safe-area-inset-bottom))', maxHeight: '80dvh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '0 auto 16px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', marginBottom: 12 }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: T.ink, fontFamily: 'Newsreader, Georgia, serif' }}>
+                {pickedLang ? 'Choose dialect' : 'Study language'}
+              </span>
+              <button onClick={closePicker} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
+                <Icon name="x" size={20} strokeWidth={2} color={T.inkSoft} />
+              </button>
+            </div>
+            <div style={{ padding: '0 10px' }}>
+              {pickedLang === null ? (
+                LANGUAGES.map(l => {
+                  const isActive = l.code === lang.code
+                  return (
+                    <button key={l.code}
+                      onClick={() => { const d = getDialectsForLang(l.code); if (d.length > 1) setPickedLang(l.code); else { setLang(l.code); closePicker() } }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 10px', borderRadius: 12, background: isActive ? T.crimsonBg : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                      <LangAvatar letter={l.letter} color={l.color} size={32} />
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 600 : 400, color: T.ink }}>
+                        {l.name}{l.nativeName && <span style={{ fontSize: 11.5, color: T.inkMute, fontWeight: 400 }}> · {l.nativeName}</span>}
+                      </span>
+                      {isActive && <Icon name="check" size={16} color={T.crimson} strokeWidth={2.4} />}
+                    </button>
+                  )
+                })
+              ) : (
+                <div>
+                  <button onClick={() => setPickedLang(null)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: T.inkSoft, fontSize: 13, marginBottom: 10, padding: '4px 8px' }}>
+                    <Icon name="arrow-l" size={15} strokeWidth={2} color={T.inkSoft} /> Back
+                  </button>
+                  {getDialectsForLang(pickedLang).map(d => {
+                    const label    = shortDialectLabel(d, getGlid(pickedLang) ?? '01')
+                    const isActive = d === dialect && pickedLang === lang.code
+                    return (
+                      <button key={d}
+                        onClick={() => { setLang(pickedLang); setDialect(d); closePicker() }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 10px', borderRadius: 12, background: isActive ? T.crimsonBg : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                        <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 600 : 400, color: T.ink }}>{label}</span>
+                        {isActive && <Icon name="check" size={16} color={T.crimson} strokeWidth={2.4} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Exported trigger button ───────────────────────────────────────────────────
+
+export default function SettingsButton({ variant = 'gear' }: { variant?: 'gear' | 'change' }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      {variant === 'gear' ? (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Settings"
+          style={{
+            width: 36, height: 36, borderRadius: 999, background: T.paperHi,
+            border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', color: T.inkSoft, cursor: 'pointer',
+          }}
+        >
+          <Icon name="settings" size={17} strokeWidth={1.6} />
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            fontSize: 12, color: T.inkSoft, padding: '6px 10px', borderRadius: 8,
+            background: T.paper, border: `1px solid ${T.lineSoft}`,
+            fontWeight: 500, cursor: 'pointer',
+          }}
+        >
+          Change
+        </button>
+      )}
+      {open && <SettingsSheet onClose={() => setOpen(false)} />}
+    </>
+  )
+}

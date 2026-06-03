@@ -1,9 +1,9 @@
-import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Stat, SectionHead, LangAvatar, Icon, Wordmark, Card } from '@/components/ui'
 import { getDashboardStats } from '@/lib/db/progress/stats-server'
 import { getActiveLangServer } from '@/lib/db/profile/server'
 import GoalWidget from '@/components/widgets/GoalWidget'
+import SettingsButton from '@/components/widgets/SettingsSheet'
 import { getLanguage } from '@/lib/languages'
 
 const INTENSITY = [T.lineSoft, '#F1D8C6', '#E5A88E', '#C66848', T.crimsonDp]
@@ -213,13 +213,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
         <Wordmark size={22} />
-        <Link href="/settings" aria-label="Settings" style={{
-          width: 36, height: 36, borderRadius: 999, background: T.paperHi,
-          border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: T.inkSoft,
-        }}>
-          <Icon name="settings" size={17} strokeWidth={1.6} />
-        </Link>
+        <SettingsButton />
       </div>
 
       {/* Language card */}
@@ -236,10 +230,7 @@ export default async function DashboardPage() {
             {dialectLabel && <span style={{ fontSize: 12, color: T.inkSoft }}>· {dialectLabel}</span>}
           </div>
         </div>
-        <Link href="/settings" style={{
-          fontSize: 12, color: T.inkSoft, padding: '6px 10px', borderRadius: 8,
-          background: T.paper, border: `1px solid ${T.lineSoft}`, fontWeight: 500, textDecoration: 'none',
-        }}>Change</Link>
+        <SettingsButton variant="change" />
       </Card>
 
       {/* Streak + goal row */}

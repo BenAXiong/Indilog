@@ -197,25 +197,16 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ---
 
-## Milestone 7 — Chrome Extension Import (族語魔書 → IndiHunt)
+## Milestone 7 — Chrome Extension Import + AI (族語魔書 ↔ IndiHunt) — COMPLETE
 
-**Goal:** Direct import of vocabulary items from the 族語魔書 PopupDict Chrome extension into IndiHunt via a deep link. Extension opens `/import#v1:<base64>`, IndiHunt shows a preview with dedup info, user confirms.
-
-> Design contract in DEC-M7-01.
-
-### IndiHunt Import Format v1
-Extension opens: `https://<app>/import#v1:<base64url-encoded-JSON>`
-
-Flat payload — extension flattens examples to sibling sentence items before encoding:
-```json
-{ "version": 1, "source": "ycm-popupdict", "exportedAt": "ISO",
-  "items": [{ "ab": "…", "zh": "…", "type": "word", "language": "ami",
-               "dialect": "馬蘭阿美語", "audio": "https://…", "notes": "…", "tags": ["KILANG"] }] }
-```
+> Design contract: DEC-M7-01
 
 - [x] DEC-M7-01 recorded; architecture.md updated (`note_source = 'import'`)
-- [ ] `/import` page — decode hash, dedup check, preview table (new/duplicate rows), confirm import
-- [ ] `note_source = 'import'` shown as badge in Browser (low-priority, M2-era work)
+- [x] `/import` page — hash decode, dedup, selectable preview, confirm (indilog.vercel.app/import)
+- [x] Browser: all note_source values visible (neq collection query); source labels (Imported / Dict / Curriculum)
+- [x] Extension: Export to IndiHunt — saved.js, saved.html, manifest v1.5.3
+- [x] Extension: AI MT & TTS tab — ILRDF Gradio 5 direct calls (translate + listen; Amis only)
+- [ ] Browser: `note_source = 'import'` distinct badge colour (low-priority)
 
 ---
 
