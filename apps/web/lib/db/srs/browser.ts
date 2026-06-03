@@ -44,9 +44,9 @@ export async function listBrowserCards(
 
   const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)'
 
-  // Two parallel queries so captured items are never crowded out by the server 1000-row cap
+  // Two parallel queries so collection items (potentially 1000+) never crowd out per-item notes
   const [capturedRes, collectionRes] = await Promise.all([
-    supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'captured').order('created_at', { ascending: false }),
+    supabase.from('ind_items').select(SEL).eq('user_id', user.id).neq('note_source', 'collection').order('created_at', { ascending: false }),
     supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false }),
   ])
 
@@ -64,7 +64,7 @@ export async function listBrowserCards(
     const cardArr = row.ind_flashcards as unknown as CardJoin[] | null
     const card    = Array.isArray(cardArr) ? (cardArr[0] ?? null) : null
     const col     = row.ind_learn_collections as unknown as { name: string } | null
-    const source  = col?.name ?? (row.note_source === 'collection' ? '—' : 'Captured')
+    const source  = col?.name ?? ({ dict: 'Dict', curriculum: 'Curriculum', import: 'Imported' }[row.note_source as string] ?? 'Captured')
     return {
       id:            row.id,
       card_id:       card?.id ?? null,
