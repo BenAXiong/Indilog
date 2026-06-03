@@ -505,15 +505,6 @@ function CapturePageInner() {
 
         {/* Ab area footer: [hint?] [trash?] [play?] [lookup] [mic] */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 6, gap: 6 }}>
-          {/* Inline lookup hint — visible when no text typed, disappears on input */}
-          {!text.trim() && (
-            <span style={{
-              fontSize: 11.5, color: T.inkFaint, fontStyle: 'italic',
-              marginRight: 'auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
-            }}>
-              Enter words in {lang.name} to lookup
-            </span>
-          )}
           {hasRecording && (
             <button
               onClick={discardRecording}
