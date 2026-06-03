@@ -169,24 +169,28 @@ Personal library of sources (people, media, references) linked to captured items
 - [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
+- [ ] Secondary goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
 - [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, info, etc)
 - [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
-- [ ] Deck sections collapsible
-- [ ] Swipe to switch tabs
+- [x] Deck sections collapsible
+- [x] Swipe to switch tabs — edge swipe (±28px) navigates between tabs
 
 - [ ] Separate learn from reviews? dash and study
-- [ ] Instore max reviews/learn per day, but enable learn more (estimate extra reviews later)
-- [ ] Browser zh lookup: enable multi word
+- [ ] 2-step review entry — review goal deck first, then remaining; dual CTA or flow options; needs design (relates to "Separate learn from reviews?")
+- [x] Instore max reviews/learn per day — daily cap stepper (10–300) in OptionsSheet; srs_daily_cap localStorage
+- [x] Browser zh lookup: enable multi word — lookup also searches sentences, includes sentence zh
 
 
 ---
 
 ## Milestone 6 — Translate (ILRDF AI)
 
-Switch translate tab from FormosanBank to ILRDF AI Labs (https://ai-labs.ilrdf.org.tw/). Add TTS. Enable save-to-items from translate output.
+Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-labs.ilrdf.org.tw/). Add TTS. Enable save-to-items from translate output.
 
-- [ ] DEC-M6-01 — document ILRDF API endpoints (MT + TTS), auth, language codes, rate limits
-- [ ] Swap `/api/translate` route to ILRDF MT endpoint
+**Current state:** `/api/translate` calls Modal.run inference server (INFERENCE_API_URL set in Vercel). ILRDF Gradio probe endpoint exists at `/api/translate/probe`; ILRDF space currently 503. Capture sparkle button wired to same route.
+
+- [~] DEC-M6-01 — ILRDF API undocumented publicly; probe endpoint built; waiting for space to come online or direct API access
+- [~] Swap `/api/translate` to ILRDF — Gradio fallback wired (ILRDF_MT_URL env var); call signature best-guess pending probe results
 - [ ] Add TTS: ILRDF TTS endpoint → playable audio in translate UI
 - [ ] Save translation output to ind_items (ab = source, zh = translation, audio = TTS URL)
 
@@ -202,7 +206,7 @@ Switch translate tab from FormosanBank to ILRDF AI Labs (https://ai-labs.ilrdf.o
 - [ ] Basic accessibility pass (focus order, ARIA labels)
 - [ ] README setup flow (clone → env → supabase → run)
 - [ ] Smoke test all 11 flows
-- [ ] Local cache for fast startup (profile + lang on first render, no flash)
+- [x] Local cache for fast startup — LangDialectProvider reads profile_lang_code + profile_dialect from localStorage synchronously
 - [x] Capture-page Translate action — sparkle button calls /api/translate (ab→zh); fills meaning field
 
 
@@ -217,8 +221,11 @@ Switch translate tab from FormosanBank to ILRDF AI Labs (https://ai-labs.ilrdf.o
 
 ---
 
-## Longterm
+## Next versions
 
+- Add Moe dict + roots + affix drill + kilang
+- Add ILRDF dict
+- Add ILRDF colloquial corpus
 - Add ex sentences to word cards (?) esp Amis 1k - lookup from browser?
 - Video capture — v2 new feature
 - Vocabulary + frequency analysis: Klokah vs ILRDF 1k

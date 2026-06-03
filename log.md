@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-03 15:59 | CONFIG | Add INFERENCE_API_URL + INFERENCE_API_KEY to Vercel production — translate + capture sparkle now hit real Modal.run MT |
 | 2026-06-03 14:26 | FEATURE | M7: capture sparkle button → live AI translation via /api/translate (ab_Latn→zho_Hant) |
 | 2026-06-03 06:23 | FEATURE | M5-B: edge swipe to navigate tabs; daily review cap stepper (10–300); browser lookup includes sentence zh |
 | 2026-06-03 06:17 | FEATURE | M6: ILRDF MT probe endpoint + experimental Gradio fallback in translate route |
