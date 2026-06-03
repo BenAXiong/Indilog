@@ -14,10 +14,24 @@ function langLabel(code: string): string {
   return TRANSLATION_LANGUAGES.find(l => l.code === code)?.label ?? code
 }
 
+// ILRDF dialect codes for Amis
+const AMI_DIALECTS: { code: string; label: string; dialectName: string }[] = [
+  { code: 'ami_Coas', label: 'Coastal',    dialectName: '海岸阿美語' },
+  { code: 'ami_Heng', label: 'Hengchun',   dialectName: '恆春阿美語' },
+  { code: 'ami_Mala', label: 'Malan',      dialectName: '馬蘭阿美語' },
+  { code: 'ami_Sout', label: 'Southern',   dialectName: '南部阿美語' },
+  { code: 'ami_Xiug', label: 'Xiuguluan',  dialectName: '秀姑巒阿美語' },
+]
+
+function dialectToIlrdf(dialectName: string | null): string {
+  return AMI_DIALECTS.find(d => d.dialectName === dialectName)?.code ?? 'ami_Coas'
+}
+
 export default function TranslatePage() {
   const { lang, dialect, dialectLabel } = useLang()
-  const [src, setSrc] = useState('zho_Hant')
-  const [tgt, setTgt] = useState('ami_Latn')
+  const [src, setSrc]               = useState('zho_Hant')
+  const [tgt, setTgt]               = useState('ami_Latn')
+  const [amiDialect, setAmiDialect] = useState(() => dialectToIlrdf(dialect))
   const [text, setText] = useState('')
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,7 +73,7 @@ export default function TranslatePage() {
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt, dialect: dialect ?? undefined }),
+        body: JSON.stringify({ text: text.trim(), sourceLang: src, targetLang: tgt, dialect: AMI_DIALECTS.find(d => d.code === amiDialect)?.dialectName }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Translation failed.'); return }
@@ -126,6 +140,26 @@ export default function TranslatePage() {
       <div style={{ fontSize: 12, color: T.inkMute, lineHeight: 1.4, padding: '0 4px', marginTop: -6 }}>
         Be patient. AI services can take up to 2 min to &ldquo;wake up&rdquo; when previously inactive
       </div>
+
+      {/* Amis dialect selector — only when Amis is source or target */}
+      {(src === 'ami_Latn' || tgt === 'ami_Latn') && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '2px 4px', marginTop: -8 }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+            Dialect
+          </span>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {AMI_DIALECTS.map(d => (
+              <button key={d.code} onClick={() => setAmiDialect(d.code)} style={{
+                padding: '3px 9px', borderRadius: 6, fontSize: 11.5, fontWeight: 500,
+                cursor: 'pointer',
+                background: amiDialect === d.code ? T.crimsonBg : T.paperHi,
+                border: `1px solid ${amiDialect === d.code ? T.crimson : T.lineSoft}`,
+                color: amiDialect === d.code ? T.crimson : T.inkMute,
+              }}>{d.label}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pair selector */}
       <div style={{
