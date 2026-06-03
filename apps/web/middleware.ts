@@ -25,7 +25,8 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isPublic = pathname.startsWith('/login') || pathname.startsWith('/auth')
+  // /import is public — hash fragment is client-side and must be read before any redirect
+  const isPublic = pathname.startsWith('/login') || pathname.startsWith('/auth') || pathname === '/import'
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()

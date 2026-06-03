@@ -63,7 +63,7 @@ function decodeHash(hash: string): { ok: true; payload: ImportPayload } | { ok: 
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-type PageState = 'loading' | 'empty' | 'error' | 'checking' | 'ready' | 'importing' | 'done'
+type PageState = 'loading' | 'empty' | 'error' | 'unauth' | 'checking' | 'ready' | 'importing' | 'done'
 
 export default function ImportPage() {
   const router = useRouter()
@@ -96,7 +96,7 @@ export default function ImportPage() {
     async function check() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setPageState('ready'); return }
+      if (!user) { setPageState('unauth'); return }
 
       const abs  = [...new Set(payload!.items.map(i => i.ab))]
       const langs = [...new Set(payload!.items.map(i => normLang(i.language)))]
@@ -149,6 +149,7 @@ export default function ImportPage() {
       {(pageState === 'loading' || pageState === 'checking') && <CheckingState />}
       {pageState === 'empty'   && <EmptyState />}
       {pageState === 'error'   && <ErrorState />}
+      {pageState === 'unauth'  && <UnauthState onSignIn={() => router.push('/login')} />}
       {pageState === 'done' && result && (
         <DoneState result={result} onStudy={() => router.push('/study')} />
       )}
@@ -198,6 +199,30 @@ function ErrorState() {
   return (
     <div style={{ padding: '12px 16px', background: T.amberBg, border: `1px solid ${T.amber}`, borderRadius: 12, fontSize: 13.5, color: T.terra, lineHeight: 1.5 }}>
       Could not read the import data. Make sure you&apos;re using a compatible version of the extension.
+    </div>
+  )
+}
+
+function UnauthState({ onSignIn }: Readonly<{ onSignIn: () => void }>) {
+  return (
+    <div style={{ padding: '48px 0 24px', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', textAlign: 'center' }}>
+      <Icon name="user" size={38} color={T.inkFaint} strokeWidth={1.2} />
+      <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 21, color: T.ink, fontStyle: 'italic' }}>
+        Sign in to import
+      </div>
+      <div style={{ fontSize: 13.5, color: T.inkMute, lineHeight: 1.6, maxWidth: 290 }}>
+        Sign in to IndiHunt, then re-open the import link from the extension.
+      </div>
+      <button
+        onClick={onSignIn}
+        style={{
+          marginTop: 8, padding: '11px 32px', borderRadius: 14,
+          background: T.ink, color: T.cream,
+          fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
+        }}
+      >
+        Sign in
+      </button>
     </div>
   )
 }
