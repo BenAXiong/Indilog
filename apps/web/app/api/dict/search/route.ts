@@ -16,7 +16,7 @@ type MoeRow = {
 // Module-level helpers keep fetchMoeWords simple enough to pass complexity checks
 const normMoeAb  = (s: string) => s.replace(/\|+$/, '').trim()
 const normMoeKey = (s: string) =>
-  normMoeAb(s).toLowerCase().normalize('NFC').replace(/[‘’'ʼꞌ]/g, "'")
+  normMoeAb(s).toLowerCase().normalize('NFC').replace(/[\u2018\u2019\u02BC\uA78C]/g, "'")
 const stripAuthor = (s: string) =>
   (s ?? '阿美語').replace(/\s*\([^)]*\)\s*$/, '').trim() || '阿美語'
 
@@ -66,12 +66,12 @@ async function fetchMoeWords(q: string): Promise<WordRow[]> {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const q          = searchParams.get('q')?.trim() ?? ''
-  const glid       = searchParams.get('glid')    ?? undefined
-  const dialect    = searchParams.get('dialect') ?? undefined
-  const fuzzy      = searchParams.get('fuzzy') === '1'
-  const includeMoe    = searchParams.get('moe')    === '1'
-  const includeKlokah = searchParams.get('klokah') === '1'
+  const q             = searchParams.get('q')?.trim() ?? ''
+  const glid          = searchParams.get('glid')    ?? undefined
+  const dialect       = searchParams.get('dialect') ?? undefined
+  const fuzzy         = searchParams.get('fuzzy')   === '1'
+  const includeMoe    = searchParams.get('moe')     === '1'
+  const includeKlokah = searchParams.get('klokah')  === '1'
 
   const minLen = /[㐀-鿿]/.test(q) ? 1 : 3
   if (!q || q.length < minLen) {
@@ -86,11 +86,11 @@ export async function GET(req: NextRequest) {
       moeActive     ? fetchMoeWords(q)                         : Promise.resolve<WordRow[]>([]),
     ])
 
-    // Dedup ePark words — corpus has "mafana’to" and "mafana’ to" as separate entries;
+    // Dedup ePark words — corpus has "mafana'to" and "mafana' to" as separate entries;
     // keep the longest among duplicates (spaced form is the correct romanisation).
     function normWordKey(ab: string): string {
-      return ab.toLowerCase().normalize(‘NFC’)
-        .replace(/[‘’’ʼꞌ]/g, "’").replace(/\s+/g, ‘’)
+      return ab.toLowerCase().normalize('NFC')
+        .replace(/[\u2018\u2019\u02BC\uA78C]/g, "'").replace(/\s+/g, '')
     }
     const wordMap = new Map<string, WordRow>()
     for (const w of rawWords) {

@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-04 23:44 | FIX | feat/moe-dict: replace non-ASCII chars in regex char classes with \\u escapes — fixes SWC build error |
 | 2026-06-04 23:16 | FIX | feat/moe-dict: gate ePark words+sentences behind klokah=1 param — MoE-only mode no longer leaks corpus sentences |
 | 2026-06-04 23:07 | FIX | feat/moe-dict: default dictSources to ['moe'] only — klokah off by default for clean MoE testing |
 | 2026-06-04 21:14 | FEATURE | feat/moe-dict: MoE Dict v1 — parallel fetch in /api/dict/search, merge by word_ab across dict_codes, moe=1 param, toggle in settings (default on), 5px steel-blue dot marker on MoE results |
