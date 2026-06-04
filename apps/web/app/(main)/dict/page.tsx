@@ -242,6 +242,7 @@ export default function DictionaryPage() {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [saveMsgWarn, setSaveMsgWarn] = useState(false)
   const [savedAbSet, setSavedAbSet] = useState<Set<string>>(() => new Set())
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
@@ -405,8 +406,15 @@ export default function DictionaryPage() {
   }
 
   async function handleSaveSentence(s: SentenceResult) {
+    if (savedAbSet.has(s.ab)) {
+      setSaveMsgWarn(true)
+      setSaveMsg('Already captured — to delete or suspend it, find it in Study → Browser')
+      setTimeout(() => setSaveMsg(null), 4000)
+      return
+    }
     const item = await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: s.dialect_name, note_source: 'dict' })
     if (item) setSavedAbSet(prev => new Set(prev).add(s.ab))
+    setSaveMsgWarn(false)
     setSaveMsg('Sentence saved')
     setTimeout(() => setSaveMsg(null), 2000)
   }
@@ -534,18 +542,19 @@ export default function DictionaryPage() {
         </div>
       )}
 
-      {/* Save confirmation — fixed so it's visible regardless of scroll position */}
+      {/* Save confirmation / warning — fixed so it's visible regardless of scroll position */}
       {saveMsg && (
         <div className="animate-iv-rise" style={{
           position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 80, whiteSpace: 'nowrap',
+          zIndex: 80, maxWidth: 'calc(100vw - 36px)',
           padding: '10px 16px', borderRadius: 10,
-          background: T.sageBg, border: `1px solid #D2D8AE`,
-          fontSize: 13, fontWeight: 500, color: T.sageDp,
+          background: saveMsgWarn ? T.amberBg : T.sageBg,
+          border: `1px solid ${saveMsgWarn ? T.amber : '#D2D8AE'}`,
+          fontSize: 13, fontWeight: 500, color: saveMsgWarn ? T.terra : T.sageDp,
           display: 'flex', alignItems: 'center', gap: 6,
           boxShadow: '0 4px 16px rgba(80,40,20,0.12)',
         }}>
-          <Icon name="check" size={14} color={T.sageDp} strokeWidth={2.2} />
+          <Icon name={saveMsgWarn ? 'bookmarkF' : 'check'} size={14} color={saveMsgWarn ? T.terra : T.sageDp} strokeWidth={2.2} />
           {saveMsg}
         </div>
       )}
