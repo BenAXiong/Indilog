@@ -14,12 +14,12 @@ import type { User } from '@supabase/supabase-js'
 
 type Tab = 'general' | 'capture' | 'dict' | 'review' | 'translate'
 
-const TABS: { id: Tab; icon: 'settings' | 'capture' | 'dict' | 'review' | 'translate'; label: string }[] = [
-  { id: 'general',   icon: 'settings',  label: 'General'   },
+const TABS: { id: Tab; icon: 'home' | 'learn' | 'capture' | 'translate' | 'dict'; label: string }[] = [
+  { id: 'general',   icon: 'home',      label: 'General'   },
+  { id: 'review',    icon: 'learn',     label: 'Review'    },
   { id: 'capture',   icon: 'capture',   label: 'Capture'   },
-  { id: 'dict',      icon: 'dict',      label: 'Dict'      },
-  { id: 'review',    icon: 'review',    label: 'Review'    },
   { id: 'translate', icon: 'translate', label: 'Translate' },
+  { id: 'dict',      icon: 'dict',      label: 'Dict'      },
 ]
 
 const REVIEW_MODES = [
