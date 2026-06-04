@@ -85,10 +85,11 @@ function ExactWordCard({ word, onSave, onCapture }: {
 }
 
 // ─── Sentence card ────────────────────────────────────────────
-function SentenceCard({ s, onSave, onCapture }: {
+function SentenceCard({ s, onSave, onCapture, saved = false }: {
   s: SentenceResult
   onSave: (s: SentenceResult) => void
   onCapture: (s: SentenceResult) => void
+  saved?: boolean
 }) {
   function playAudio() {
     if (s.audio_url) new Audio(s.audio_url).play().catch(() => {})
@@ -124,8 +125,11 @@ function SentenceCard({ s, onSave, onCapture }: {
               <Icon name="speaker" size={13} strokeWidth={1.8} />
             </button>
           )}
-          <button onClick={() => onSave(s)} title="Save sentence" aria-label="Save sentence" style={btnStyle}>
-            <Icon name="bookmark" size={14} strokeWidth={1.8} />
+          <button onClick={() => onSave(s)} title="Save sentence" aria-label="Save sentence" style={{
+            ...btnStyle,
+            ...(saved ? { color: T.crimson, border: `1px solid ${T.crimson}`, background: T.crimsonBg } : {}),
+          }}>
+            <Icon name={saved ? 'bookmarkF' : 'bookmark'} size={14} strokeWidth={1.8} />
           </button>
           <button onClick={() => onCapture(s)} title="Add context in Capture" aria-label="Add context in Capture" style={btnStyle}>
             <Icon name="capture" size={14} strokeWidth={1.8} />
@@ -237,6 +241,7 @@ export default function DictionaryPage() {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [savedSentIds, setSavedSentIds] = useState<Set<number>>(() => new Set())
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
@@ -389,7 +394,8 @@ export default function DictionaryPage() {
   }
 
   async function handleSaveSentence(s: SentenceResult) {
-    await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: s.dialect_name, note_source: 'dict' })
+    const item = await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: s.dialect_name, note_source: 'dict' })
+    if (item) setSavedSentIds(prev => new Set(prev).add(s.id))
     setSaveMsg('Sentence saved')
     setTimeout(() => setSaveMsg(null), 2000)
   }
@@ -656,7 +662,7 @@ export default function DictionaryPage() {
               {sentences.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {sentences.map(s => (
-                    <SentenceCard key={s.id} s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} />
+                    <SentenceCard key={s.id} s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} saved={savedSentIds.has(s.id)} />
                   ))}
                 </div>
               )}
