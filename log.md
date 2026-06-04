@@ -2,7 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-04 19:00 | FIX | Dict: sentence bookmark pre-checks ind_items on load; filled for already-saved sentences (prevents duplicate adds) |
+| 2026-06-04 19:30 | FIX | Dict: block sentence re-save; amber toast directs to Browser if already captured |
+| 2026-06-04 19:00 | FIX | Dict: sentence bookmark pre-checks ind_items on load; filled crimson for already-saved sentences |
 | 2026-06-04 18:00 | FIX | Review: touch-action:none on card prevents browser pull-to-refresh on down-swipe (suspend gesture) |
 | 2026-06-04 18:00 | FIX | Dict: save toast fixed at bottom of viewport — visible when sentences list is scrolled |
 | 2026-06-04 16:30 | REFACTOR | M5-B: settings tabs icon-only, centered, reordered to match navbar (home/study/capture/translate/dict) |
