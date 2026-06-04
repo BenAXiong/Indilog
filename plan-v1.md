@@ -166,7 +166,7 @@ Personal library of sources (people, media, references) linked to captured items
 
 ### M5-B — UI refinement
 
-- [ ] Convert /settings page to a bottom sheet on the Dashboard (dashboard is currently a server component — needs client conversion or hybrid)
+- [x] Convert /settings page to a bottom sheet on the Dashboard — SettingsSheet client island; all tabs (general/review/capture/translate/dict) wired everywhere
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Revamp GoalSheet UI
 - [ ] Secondary goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
