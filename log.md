@@ -2,20 +2,21 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-04 19:30 | FIX | Dict: block sentence re-save; amber toast directs to Browser if already captured |
-| 2026-06-04 19:00 | FIX | Dict: sentence bookmark pre-checks ind_items on load; filled crimson for already-saved sentences |
-| 2026-06-04 18:00 | FIX | Review: touch-action:none on card prevents browser pull-to-refresh on down-swipe (suspend gesture) |
-| 2026-06-04 18:00 | FIX | Dict: save toast fixed at bottom of viewport — visible when sentences list is scrolled |
-| 2026-06-04 16:30 | REFACTOR | M5-B: settings tabs icon-only, centered, reordered to match navbar (home/study/capture/translate/dict) |
-| 2026-06-04 16:00 | FEATURE | M5-B: Review + Translate settings tabs — daily cap, default mode (review); default dialect with localStorage persistence (translate) |
-| 2026-06-04 15:30 | FEATURE | M5-B: SettingsButton wired everywhere — ScreenHeader, DesktopSidebar, capture, dict all open sheet with initialTab |
-| 2026-06-04 15:00 | FEATURE | M5-B: settings bottom sheet — SettingsSheet client island replaces /settings page links on dashboard; gear + change triggers |
-| 2026-06-04 14:00 | FIX | Dashboard: restore Link import removed by mistake (used by RingCard) |
-| 2026-06-04 13:00 | FEATURE | Import: rows selectable by default (green circle), click to deselect/skip; button count reflects live selection |
-| 2026-06-04 12:45 | FIX | Browser: query neq(note_source, collection) so import/dict/curriculum items are visible; source label updated |
-| 2026-06-04 12:30 | FIX | M7: make /import public in middleware (hash fragment lost on server redirect); add unauth sign-in prompt |
-| 2026-06-04 12:00 | FEATURE | M7: /import page — deep link (#v1:<base64>), dedup check, preview table (new/duplicate), confirm import; note_source='import' |
-| 2026-06-04 12:00 | CONFIG | M7: DEC-M7-01 recorded; architecture.md + decisions.md updated (note_source='import', format v1 contract); plan-v1.md M7 added, old M7→M8 |
+| 2026-06-04 15:32 | FIX | Dict: block sentence re-save; amber toast directs to Browser if already captured |
+| 2026-06-04 15:01 | FIX | Dict: sentence bookmark pre-checks ind_items on load; filled crimson for already-saved sentences |
+| 2026-06-04 14:44 | FIX | Dict: sentence bookmark fills crimson on save (session-local tracking) |
+| 2026-06-04 14:37 | FIX | Review: touch-action:none on card prevents browser pull-to-refresh on down-swipe (suspend gesture) |
+| 2026-06-04 14:37 | FIX | Dict: save toast fixed at bottom of viewport — visible when sentences list is scrolled |
+| 2026-06-04 10:59 | REFACTOR | M5-B: settings tabs icon-only, centered, reordered to match navbar (home/study/capture/translate/dict) |
+| 2026-06-04 10:43 | FEATURE | M5-B: Review + Translate settings tabs — daily cap, default mode (review); default dialect with localStorage persistence (translate) |
+| 2026-06-04 10:34 | FIX | Dashboard: restore Link import removed by mistake (used by RingCard) |
+| 2026-06-04 10:32 | FEATURE | M5-B: SettingsButton wired everywhere — ScreenHeader, DesktopSidebar, capture, dict all open sheet with initialTab |
+| 2026-06-04 05:11 | FEATURE | M5-B: settings bottom sheet — SettingsSheet client island replaces /settings page links on dashboard; gear + change triggers |
+| 2026-06-04 03:54 | FEATURE | Import: rows selectable by default (green circle), click to deselect/skip; button count reflects live selection |
+| 2026-06-04 03:45 | FIX | Browser: query neq(note_source, collection) so import/dict/curriculum items are visible; source label updated |
+| 2026-06-04 03:40 | FIX | M7: make /import public in middleware (hash fragment lost on server redirect); add unauth sign-in prompt |
+| 2026-06-04 03:17 | FEATURE | M7: /import page — deep link (#v1:<base64>), dedup check, preview table (new/duplicate), confirm import; note_source='import' |
+| 2026-06-04 03:17 | CONFIG | M7: DEC-M7-01 recorded; architecture.md + decisions.md updated (note_source='import', format v1 contract); plan-v1.md M7 added, old M7→M8 |
 | 2026-06-04 02:52 | FEATURE | Translate UX: Listen next to Translate (Formosan src, plays source); Listen in output (zh src, plays translation); remove red accent + lang label |
 | 2026-06-04 02:52 | FIX | Capture: TTS wave button only shown for Amis; remove "Be patient" row from translate |
 | 2026-06-04 02:37 | FEATURE | M6: ILRDF TTS live — Gradio 5 SSE, /default_speaker_tts, dialect→speaker mapping (Coastal/Hengchun/Malan/Southern/Xiuguluan) |
