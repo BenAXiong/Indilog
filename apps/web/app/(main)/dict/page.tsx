@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
+import SettingsButton from '@/components/widgets/SettingsSheet'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import { GLID_FAMILIES } from '@/lib/lang/dialects'
@@ -447,18 +448,7 @@ export default function DictionaryPage() {
             >
               <Icon name="filter" size={16} strokeWidth={1.8} />
             </button>
-            <Link
-              href="/settings?from=/dict&tab=dict"
-              aria-label="Settings"
-              style={{
-                width: 36, height: 36, borderRadius: 999,
-                background: T.paperHi, border: `1px solid ${T.line}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: T.inkSoft, flexShrink: 0,
-              }}
-            >
-              <Icon name="settings" size={17} strokeWidth={1.6} />
-            </Link>
+            <SettingsButton initialTab="dict" />
           </div>
         }
       />

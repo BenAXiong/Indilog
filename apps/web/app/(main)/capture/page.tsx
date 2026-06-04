@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Button, SectionHead, Icon, Toast } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
+import SettingsButton from '@/components/widgets/SettingsSheet'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { createItem, updateItem, listItems, type Item, type ItemType } from '@/lib/db/notebook/items'
 import { createClient } from '@/lib/supabase/client'
@@ -460,9 +461,7 @@ function CapturePageInner() {
             <button onClick={() => setBatchOpen(true)} aria-label="Batch import" style={headerBtnStyle}>
               <Icon name="download" size={17} strokeWidth={1.6} />
             </button>
-            <Link href="/settings?tab=capture&from=/capture" aria-label="Settings" style={headerBtnStyle}>
-              <Icon name="settings" size={17} strokeWidth={1.6} />
-            </Link>
+            <SettingsButton initialTab="capture" />
           </div>
         }
       />

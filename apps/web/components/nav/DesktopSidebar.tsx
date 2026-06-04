@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Icon, LangAvatar, Wordmark } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
+import SettingsButton from '@/components/widgets/SettingsSheet'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', href: '/',          icon: 'home'      as const },
@@ -103,16 +104,8 @@ export default function DesktopSidebar() {
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Settings link */}
-      <Link href="/settings" style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '8px 12px', borderRadius: 10,
-        color: T.inkSoft, fontSize: 13, fontWeight: 500,
-        textDecoration: 'none', transition: 'background .15s',
-      }}>
-        <Icon name="settings" size={17} strokeWidth={1.6} color="currentColor" />
-        Settings
-      </Link>
+      {/* Settings */}
+      <SettingsButton variant="sidebar" />
     </aside>
   )
 }

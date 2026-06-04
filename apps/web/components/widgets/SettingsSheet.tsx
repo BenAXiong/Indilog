@@ -20,10 +20,10 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'dict',    label: 'Dict'    },
 ]
 
-function SettingsSheet({ onClose }: { onClose: () => void }) {
+function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => void; initialTab?: Tab }) {
   const { lang, dialect, dialectLabel, setLang, setDialect } = useLang()
 
-  const [tab,            setTab]            = useState<Tab>('general')
+  const [tab,            setTab]            = useState<Tab>(initialTab)
   const [user,           setUser]           = useState<User | null>(null)
   const [userId,         setUserId]         = useState<string | null>(null)
   const [locale,         setLocale]         = useState('en')
@@ -335,35 +335,46 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
 
 // ── Exported trigger button ───────────────────────────────────────────────────
 
-export default function SettingsButton({ variant = 'gear' }: { variant?: 'gear' | 'change' }) {
+export default function SettingsButton({
+  variant = 'gear',
+  initialTab,
+}: {
+  variant?: 'gear' | 'change' | 'sidebar'
+  initialTab?: Tab
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      {variant === 'gear' ? (
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Settings"
-          style={{
-            width: 36, height: 36, borderRadius: 999, background: T.paperHi,
-            border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', color: T.inkSoft, cursor: 'pointer',
-          }}
-        >
+      {variant === 'gear' && (
+        <button onClick={() => setOpen(true)} aria-label="Settings" style={{
+          width: 36, height: 36, borderRadius: 999, background: T.paperHi,
+          border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', color: T.inkSoft, cursor: 'pointer',
+        }}>
           <Icon name="settings" size={17} strokeWidth={1.6} />
         </button>
-      ) : (
-        <button
-          onClick={() => setOpen(true)}
-          style={{
-            fontSize: 12, color: T.inkSoft, padding: '6px 10px', borderRadius: 8,
-            background: T.paper, border: `1px solid ${T.lineSoft}`,
-            fontWeight: 500, cursor: 'pointer',
-          }}
-        >
+      )}
+      {variant === 'change' && (
+        <button onClick={() => setOpen(true)} style={{
+          fontSize: 12, color: T.inkSoft, padding: '6px 10px', borderRadius: 8,
+          background: T.paper, border: `1px solid ${T.lineSoft}`,
+          fontWeight: 500, cursor: 'pointer',
+        }}>
           Change
         </button>
       )}
-      {open && <SettingsSheet onClose={() => setOpen(false)} />}
+      {variant === 'sidebar' && (
+        <button onClick={() => setOpen(true)} style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          width: '100%', padding: '8px 12px', borderRadius: 10,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: T.inkSoft, fontSize: 13, fontWeight: 500,
+        }}>
+          <Icon name="settings" size={17} strokeWidth={1.6} color="currentColor" />
+          Settings
+        </button>
+      )}
+      {open && <SettingsSheet onClose={() => setOpen(false)} initialTab={initialTab} />}
     </>
   )
 }
