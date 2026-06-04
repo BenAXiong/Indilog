@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-04 18:00 | FIX | Review: touch-action:none on card prevents browser pull-to-refresh on down-swipe (suspend gesture) |
+| 2026-06-04 18:00 | FIX | Dict: save toast fixed at bottom of viewport — visible when sentences list is scrolled |
 | 2026-06-04 16:30 | REFACTOR | M5-B: settings tabs icon-only, centered, reordered to match navbar (home/study/capture/translate/dict) |
 | 2026-06-04 16:00 | FEATURE | M5-B: Review + Translate settings tabs — daily cap, default mode (review); default dialect with localStorage persistence (translate) |
 | 2026-06-04 15:30 | FEATURE | M5-B: SettingsButton wired everywhere — ScreenHeader, DesktopSidebar, capture, dict all open sheet with initialTab |
