@@ -49,7 +49,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [pickedLang,     setPickedLang]     = useState<string | null>(null)
   const [accountMenuOpen,setAccountMenuOpen]= useState(false)
   const [autoLookup,       setAutoLookup]       = useState(true)
-  const [dictSources,      setDictSources]      = useState<string[]>(['klokah', 'moe'])
+  const [dictSources,      setDictSources]      = useState<string[]>(['moe'])
   const [resetHour,        setResetHourRaw]     = useState(4)
   const [dailyCap,         setDailyCapRaw]      = useState(100)
   const [reviewMode,       setReviewModeRaw]    = useState('forward')

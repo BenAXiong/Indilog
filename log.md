@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-04 23:07 | FIX | feat/moe-dict: default dictSources to ['moe'] only — klokah off by default for clean MoE testing |
 | 2026-06-04 21:14 | FEATURE | feat/moe-dict: MoE Dict v1 — parallel fetch in /api/dict/search, merge by word_ab across dict_codes, moe=1 param, toggle in settings (default on), 5px steel-blue dot marker on MoE results |
 | 2026-06-04 15:32 | FIX | Dict: block sentence re-save; amber toast directs to Browser if already captured |
 | 2026-06-04 15:01 | FIX | Dict: sentence bookmark pre-checks ind_items on load; filled crimson for already-saved sentences |
