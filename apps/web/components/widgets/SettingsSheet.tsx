@@ -14,12 +14,12 @@ import type { User } from '@supabase/supabase-js'
 
 type Tab = 'general' | 'capture' | 'dict' | 'review' | 'translate'
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'general',   label: 'General'   },
-  { id: 'capture',   label: 'Capture'   },
-  { id: 'dict',      label: 'Dict'      },
-  { id: 'review',    label: 'Review'    },
-  { id: 'translate', label: 'Translate' },
+const TABS: { id: Tab; icon: 'settings' | 'capture' | 'dict' | 'review' | 'translate'; label: string }[] = [
+  { id: 'general',   icon: 'settings',  label: 'General'   },
+  { id: 'capture',   icon: 'capture',   label: 'Capture'   },
+  { id: 'dict',      icon: 'dict',      label: 'Dict'      },
+  { id: 'review',    icon: 'review',    label: 'Review'    },
+  { id: 'translate', icon: 'translate', label: 'Translate' },
 ]
 
 const REVIEW_MODES = [
@@ -148,14 +148,17 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
+              aria-label={t.label}
               style={{
-                padding: '5px 12px', borderRadius: 8,
+                width: 36, height: 36, borderRadius: 9, flexShrink: 0,
                 background: tab === t.id ? T.ink : T.paperHi,
                 color: tab === t.id ? T.cream : T.inkSoft,
                 border: `1px solid ${tab === t.id ? T.ink : T.lineSoft}`,
-                fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
-            >{t.label}</button>
+            >
+              <Icon name={t.icon} size={15} strokeWidth={1.7} color="currentColor" />
+            </button>
           ))}
           {saving && (
             <span style={{ fontSize: 11, color: T.inkFaint, marginLeft: 'auto', alignSelf: 'center', fontFamily: '"JetBrains Mono", monospace' }}>
