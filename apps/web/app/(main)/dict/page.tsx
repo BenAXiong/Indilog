@@ -11,6 +11,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import { GLID_FAMILIES } from '@/lib/lang/dialects'
 import { createItem } from '@/lib/db/notebook/items'
+import { createClient } from '@/lib/supabase/client'
 
 type WordResult = {
   id: number
@@ -241,7 +242,7 @@ export default function DictionaryPage() {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
-  const [savedSentIds, setSavedSentIds] = useState<Set<number>>(() => new Set())
+  const [savedAbSet, setSavedAbSet] = useState<Set<string>>(() => new Set())
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
@@ -293,6 +294,16 @@ export default function DictionaryPage() {
   useEffect(() => {
     if (isPhrase || isCJK) setActiveTab('sentences')
   }, [isPhrase, isCJK])
+
+  // Pre-check which sentences are already saved in ind_items
+  useEffect(() => {
+    if (sentences.length === 0) { setSavedAbSet(new Set()); return }
+    const abs = sentences.map(s => s.ab)
+    createClient().from('ind_items').select('ab').in('ab', abs).eq('type', 'sentence')
+      .then(({ data }) => {
+        if (data) setSavedAbSet(new Set(data.map((r: { ab: string }) => r.ab)))
+      })
+  }, [sentences])
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -395,7 +406,7 @@ export default function DictionaryPage() {
 
   async function handleSaveSentence(s: SentenceResult) {
     const item = await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: s.dialect_name, note_source: 'dict' })
-    if (item) setSavedSentIds(prev => new Set(prev).add(s.id))
+    if (item) setSavedAbSet(prev => new Set(prev).add(s.ab))
     setSaveMsg('Sentence saved')
     setTimeout(() => setSaveMsg(null), 2000)
   }
@@ -662,7 +673,7 @@ export default function DictionaryPage() {
               {sentences.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {sentences.map(s => (
-                    <SentenceCard key={s.id} s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} saved={savedSentIds.has(s.id)} />
+                    <SentenceCard key={s.id} s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} saved={savedAbSet.has(s.ab)} />
                   ))}
                 </div>
               )}
