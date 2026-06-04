@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { T } from '@/lib/tokens'
-import Icon from '@/components/ui/Icon'
 import SettingsButton from '@/components/widgets/SettingsSheet'
 import type { ReactNode } from 'react'
 
@@ -15,10 +14,10 @@ type ScreenHeaderProps = {
   /** Slot for a custom right-side element. Defaults to settings gear. */
   right?: ReactNode
   /** Which settings tab the gear icon opens. Defaults to general. */
-  settingsTab?: 'general' | 'capture' | 'dict'
+  settingsTab?: 'general' | 'capture' | 'dict' | 'review' | 'translate'
 }
 
-export default function ScreenHeader({ title, langName, langDialect, showHome = true, right, settingsTab }: ScreenHeaderProps) {
+export default function ScreenHeader({ title, langName, langDialect, showHome = true, right, settingsTab }: Readonly<ScreenHeaderProps>) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
       {showHome && (
@@ -45,9 +44,7 @@ export default function ScreenHeader({ title, langName, langDialect, showHome = 
           {title}
         </h1>
       </div>
-      {right !== undefined ? right : (
-        <SettingsButton initialTab={settingsTab} />
-      )}
+      {right === undefined ? <SettingsButton initialTab={settingsTab} /> : right}
     </div>
   )
 }

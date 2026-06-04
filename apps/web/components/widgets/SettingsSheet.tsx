@@ -12,12 +12,29 @@ import type { User } from '@supabase/supabase-js'
 
 // ── Settings sheet ────────────────────────────────────────────────────────────
 
-type Tab = 'general' | 'capture' | 'dict'
+type Tab = 'general' | 'capture' | 'dict' | 'review' | 'translate'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'general', label: 'General' },
-  { id: 'capture', label: 'Capture' },
-  { id: 'dict',    label: 'Dict'    },
+  { id: 'general',   label: 'General'   },
+  { id: 'capture',   label: 'Capture'   },
+  { id: 'dict',      label: 'Dict'      },
+  { id: 'review',    label: 'Review'    },
+  { id: 'translate', label: 'Translate' },
+]
+
+const REVIEW_MODES = [
+  { id: 'forward', label: 'Forward' },
+  { id: 'reverse', label: 'Reverse' },
+  { id: 'audio',   label: 'Audio'   },
+  { id: 'sts',     label: 'STS'     },
+] as const
+
+const AMI_DIALECTS_SETTINGS = [
+  { code: 'ami_Coas', label: 'Coastal 海岸'      },
+  { code: 'ami_Heng', label: 'Hengchun 恆春'     },
+  { code: 'ami_Mala', label: 'Malan 馬蘭'        },
+  { code: 'ami_Sout', label: 'Southern 南部'      },
+  { code: 'ami_Xiug', label: 'Xiuguluan 秀姑巒'  },
 ]
 
 function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => void; initialTab?: Tab }) {
@@ -31,9 +48,12 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [langPickerOpen, setLangPickerOpen] = useState(false)
   const [pickedLang,     setPickedLang]     = useState<string | null>(null)
   const [accountMenuOpen,setAccountMenuOpen]= useState(false)
-  const [autoLookup,     setAutoLookup]     = useState(true)
-  const [dictSources,    setDictSources]    = useState<string[]>(['klokah'])
-  const [resetHour,      setResetHourRaw]   = useState(4)
+  const [autoLookup,       setAutoLookup]       = useState(true)
+  const [dictSources,      setDictSources]      = useState<string[]>(['klokah'])
+  const [resetHour,        setResetHourRaw]     = useState(4)
+  const [dailyCap,         setDailyCapRaw]      = useState(100)
+  const [reviewMode,       setReviewModeRaw]    = useState('forward')
+  const [translateDialect, setTranslateDialect] = useState('ami_Coas')
   const accountMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -43,6 +63,10 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     if (ss) try { setDictSources(JSON.parse(ss)) } catch {}
     const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
+    const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100')
+    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(10, cap)))
+    setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
+    setTranslateDialect(localStorage.getItem('translate_ami_dialect') ?? 'ami_Coas')
   }, [])
 
   useEffect(() => {
@@ -234,6 +258,63 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                 </div>
               </div>
             </>
+          )}
+
+          {/* ── Review ── */}
+          {tab === 'review' && (
+            <>
+              {/* Daily cap */}
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Session</div>
+                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Daily cap</div>
+                    <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Max reviews per day</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {[{ delta: -10, disabled: dailyCap <= 10 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
+                      <button key={i} disabled={disabled}
+                        onClick={() => { const n = dailyCap + delta; setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)) }}
+                        style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
+                        {delta < 0 ? '−' : '+'}
+                      </button>
+                    ))}
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 30, textAlign: 'center' }}>{dailyCap}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Default review mode */}
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Default mode</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {REVIEW_MODES.map(m => (
+                    <button key={m.id}
+                      onClick={() => { setReviewModeRaw(m.id); localStorage.setItem('srs_review_mode', m.id) }}
+                      style={{ flex: 1, padding: '8px 4px', borderRadius: 9, background: reviewMode === m.id ? T.crimsonBg : T.paperHi, border: `1.5px solid ${reviewMode === m.id ? T.crimson : T.lineSoft}`, color: reviewMode === m.id ? T.crimson : T.inkMute, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Translate ── */}
+          {tab === 'translate' && (
+            <div>
+              <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Default Amis dialect</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {AMI_DIALECTS_SETTINGS.map(d => (
+                  <button key={d.code}
+                    onClick={() => { setTranslateDialect(d.code); localStorage.setItem('translate_ami_dialect', d.code) }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderRadius: 12, background: translateDialect === d.code ? T.crimsonBg : T.paperHi, border: `1.5px solid ${translateDialect === d.code ? T.crimson : T.lineSoft}`, cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: 14, fontWeight: translateDialect === d.code ? 600 : 400, color: T.ink }}>{d.label}</span>
+                    {translateDialect === d.code && <Icon name="check" size={15} color={T.crimson} strokeWidth={2.4} />}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* ── Capture ── */}

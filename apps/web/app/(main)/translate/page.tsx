@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
@@ -31,7 +31,11 @@ export default function TranslatePage() {
   const { lang, dialect, dialectLabel } = useLang()
   const [src, setSrc]               = useState('zho_Hant')
   const [tgt, setTgt]               = useState('ami_Latn')
-  const [amiDialect, setAmiDialect] = useState(() => dialectToIlrdf(dialect))
+  const [amiDialect, setAmiDialect] = useState('ami_Coas')
+  useEffect(() => {
+    setAmiDialect(localStorage.getItem('translate_ami_dialect') ?? dialectToIlrdf(dialect) ?? 'ami_Coas')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [text, setText] = useState('')
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -136,7 +140,7 @@ export default function TranslatePage() {
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <ScreenHeader title="Translate" langName={lang.name} langDialect={dialectLabel} />
+      <ScreenHeader title="Translate" langName={lang.name} langDialect={dialectLabel} settingsTab="translate" />
 
       {/* Pair selector */}
       <div style={{
@@ -199,7 +203,7 @@ export default function TranslatePage() {
           </span>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {AMI_DIALECTS.map(d => (
-              <button key={d.code} onClick={() => setAmiDialect(d.code)} style={{
+              <button key={d.code} onClick={() => { setAmiDialect(d.code); localStorage.setItem('translate_ami_dialect', d.code) }} style={{
                 padding: '3px 9px', borderRadius: 6, fontSize: 11.5, fontWeight: 500,
                 cursor: 'pointer',
                 background: amiDialect === d.code ? T.crimsonBg : T.paperHi,
