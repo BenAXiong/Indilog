@@ -143,7 +143,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
         </div>
 
         {/* Tab pills */}
-        <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0' }}>
+        <div style={{ display: 'flex', gap: 6, padding: '10px 18px 0', justifyContent: 'center' }}>
           {TABS.map(t => (
             <button
               key={t.id}
