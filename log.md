@@ -2,11 +2,13 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-04 16:30 | REFACTOR | M5-B: settings tabs icon-only, centered, reordered to match navbar (home/study/capture/translate/dict) |
+| 2026-06-04 16:00 | FEATURE | M5-B: Review + Translate settings tabs — daily cap, default mode (review); default dialect with localStorage persistence (translate) |
+| 2026-06-04 15:30 | FEATURE | M5-B: SettingsButton wired everywhere — ScreenHeader, DesktopSidebar, capture, dict all open sheet with initialTab |
+| 2026-06-04 15:00 | FEATURE | M5-B: settings bottom sheet — SettingsSheet client island replaces /settings page links on dashboard; gear + change triggers |
+| 2026-06-04 14:00 | FIX | Dashboard: restore Link import removed by mistake (used by RingCard) |
 | 2026-06-04 13:00 | FEATURE | Import: rows selectable by default (green circle), click to deselect/skip; button count reflects live selection |
 | 2026-06-04 12:45 | FIX | Browser: query neq(note_source, collection) so import/dict/curriculum items are visible; source label updated |
-| 2026-06-04 16:00 | FEATURE | M5-B: Review + Translate settings tabs — daily cap, default mode (review); default dialect with localStorage persistence (translate) |
-| 2026-06-04 15:30 | FEATURE | M5-B: SettingsButton wired everywhere — ScreenHeader, DesktopSidebar, capture, dict all open sheet with initialTab; usePathname removed from ScreenHeader |
-| 2026-06-04 15:00 | FEATURE | M5-B: settings bottom sheet — SettingsSheet client island replaces /settings page links on dashboard; gear + change triggers |
 | 2026-06-04 12:30 | FIX | M7: make /import public in middleware (hash fragment lost on server redirect); add unauth sign-in prompt |
 | 2026-06-04 12:00 | FEATURE | M7: /import page — deep link (#v1:<base64>), dedup check, preview table (new/duplicate), confirm import; note_source='import' |
 | 2026-06-04 12:00 | CONFIG | M7: DEC-M7-01 recorded; architecture.md + decisions.md updated (note_source='import', format v1 contract); plan-v1.md M7 added, old M7→M8 |
