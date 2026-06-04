@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Stat, SectionHead, LangAvatar, Icon, Wordmark, Card } from '@/components/ui'
 import { getDashboardStats } from '@/lib/db/progress/stats-server'
