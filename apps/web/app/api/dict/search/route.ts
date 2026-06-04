@@ -70,7 +70,8 @@ export async function GET(req: NextRequest) {
   const glid       = searchParams.get('glid')    ?? undefined
   const dialect    = searchParams.get('dialect') ?? undefined
   const fuzzy      = searchParams.get('fuzzy') === '1'
-  const includeMoe = searchParams.get('moe')   === '1'
+  const includeMoe    = searchParams.get('moe')    === '1'
+  const includeKlokah = searchParams.get('klokah') === '1'
 
   const minLen = /[㐀-鿿]/.test(q) ? 1 : 3
   if (!q || q.length < minLen) {
@@ -78,20 +79,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch ePark words, sentences, and (optionally) MoE in parallel
     const moeActive = includeMoe && (!glid || glid === AMIS_GLID)
     const [rawWords, rawSentences, moeWords] = await Promise.all([
-      searchWords(q, glid, dialect, fuzzy),
-      searchSentences(q, glid, dialect, fuzzy),
-      moeActive ? fetchMoeWords(q) : Promise.resolve<WordRow[]>([]),
+      includeKlokah ? searchWords(q, glid, dialect, fuzzy)     : Promise.resolve([]),
+      includeKlokah ? searchSentences(q, glid, dialect, fuzzy) : Promise.resolve([]),
+      moeActive     ? fetchMoeWords(q)                         : Promise.resolve<WordRow[]>([]),
     ])
 
-    // Dedup ePark words by (space-collapsed ab, dialect_name).
-    // ILRDF corpus contains both "mafana'to" and "mafana' to" as separate entries;
-    // keep the longest among duplicates — the spaced form is the correct romanisation.
+    // Dedup ePark words — corpus has "mafana’to" and "mafana’ to" as separate entries;
+    // keep the longest among duplicates (spaced form is the correct romanisation).
     function normWordKey(ab: string): string {
-      return ab.toLowerCase().normalize('NFC')
-        .replace(/[‘’'ʼꞌ]/g, "'").replace(/\s+/g, '')
+      return ab.toLowerCase().normalize(‘NFC’)
+        .replace(/[‘’’ʼꞌ]/g, "’").replace(/\s+/g, ‘’)
     }
     const wordMap = new Map<string, WordRow>()
     for (const w of rawWords) {
@@ -101,11 +100,9 @@ export async function GET(req: NextRequest) {
     }
     const eparkWords = Array.from(wordMap.values())
 
-    // Merge ePark + MoE, exact matches first
     const words = [...eparkWords, ...moeWords]
       .sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
 
-    // Deduplicate sentences by id — prefer entries with audio_url
     const sentenceMap = new Map<string, SentenceRow>()
     for (const s of rawSentences) {
       if (!sentenceMap.has(s.id) || (!sentenceMap.get(s.id)!.audio_url && s.audio_url)) {

@@ -252,18 +252,18 @@ export default function DictionaryPage() {
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
-  const [moeEnabled, setMoeEnabled] = useState(true)
+  const [moeEnabled,    setMoeEnabled]    = useState(true)
+  const [klokahEnabled, setKlokahEnabled] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
 
-  // Sync MoE toggle from settings
+  // Sync source toggles from settings
   useEffect(() => {
     try {
       const stored = localStorage.getItem('ind_dict_sources')
-      if (stored) {
-        const sources: string[] = JSON.parse(stored)
-        setMoeEnabled(sources.includes('moe'))
-      }
+      const sources: string[] = stored ? JSON.parse(stored) : ['moe']
+      setMoeEnabled(sources.includes('moe'))
+      setKlokahEnabled(sources.includes('klokah'))
     } catch {}
   }, [])
 
@@ -287,17 +287,18 @@ export default function DictionaryPage() {
     }
   }, [lang, dialects, userChangedGlid])
 
-  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean) => {
+  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean, withKlokah: boolean) => {
     const trimmed = term.trim()
     const minLen = /[㐀-鿿]/.test(trimmed) ? 1 : 3
     if (trimmed.length < minLen) { setWords([]); setSentences([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)
     const params = new URLSearchParams({ q: trimmed })
-    if (glidFilter) params.set('glid', glidFilter)
-    if (dialectF)   params.set('dialect', dialectF)
-    if (isFuzzy)    params.set('fuzzy', '1')
-    if (withMoe)    params.set('moe', '1')
+    if (glidFilter)  params.set('glid', glidFilter)
+    if (dialectF)    params.set('dialect', dialectF)
+    if (isFuzzy)     params.set('fuzzy', '1')
+    if (withMoe)     params.set('moe', '1')
+    if (withKlokah)  params.set('klokah', '1')
     const res = await fetch(`/api/dict/search?${params}`)
     const data = await res.json()
     if (data.error) setDbError(data.error)
@@ -326,9 +327,9 @@ export default function DictionaryPage() {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     // phrases + CJK: always fuzzy so they match mid-sentence / mid-definition
-    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy, moeEnabled), 320)
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy, moeEnabled, klokahEnabled), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, dialectFilter, fuzzy, isPhrase, isCJK, moeEnabled, runSearch])
+  }, [q, glid, dialectFilter, fuzzy, isPhrase, isCJK, moeEnabled, klokahEnabled, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
