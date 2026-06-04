@@ -756,6 +756,7 @@ function ReviewSession({
             position: 'relative', background: T.paperHi, borderRadius: 22,
             border: `1px solid ${cardBorderColor}`, padding: '26px 22px', minHeight: 280,
             display: 'flex', flexDirection: 'column', cursor: revealed ? 'default' : 'pointer',
+            touchAction: 'none',
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >

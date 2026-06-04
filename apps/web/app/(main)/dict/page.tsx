@@ -517,13 +517,16 @@ export default function DictionaryPage() {
         </div>
       )}
 
-      {/* Save confirmation */}
+      {/* Save confirmation — fixed so it's visible regardless of scroll position */}
       {saveMsg && (
         <div className="animate-iv-rise" style={{
-          padding: '10px 14px', borderRadius: 10,
+          position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 80, whiteSpace: 'nowrap',
+          padding: '10px 16px', borderRadius: 10,
           background: T.sageBg, border: `1px solid #D2D8AE`,
           fontSize: 13, fontWeight: 500, color: T.sageDp,
           display: 'flex', alignItems: 'center', gap: 6,
+          boxShadow: '0 4px 16px rgba(80,40,20,0.12)',
         }}>
           <Icon name="check" size={14} color={T.sageDp} strokeWidth={2.2} />
           {saveMsg}
