@@ -76,7 +76,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
     const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100')
-    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(10, cap)))
+    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setTranslateDialect(localStorage.getItem('translate_ami_dialect') ?? 'ami_Coas')
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
@@ -381,9 +381,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                       <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Max reviews per day</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {[{ delta: -10, disabled: dailyCap <= 10 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
+                      {[{ delta: -10, disabled: dailyCap <= 1 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
                         <button key={i} disabled={disabled}
-                          onClick={() => { const n = Math.min(300, Math.max(10, dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)); saveToCloud({ daily_cap: n }) }}
+                          onClick={() => { const n = Math.min(300, Math.max(1,dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)); saveToCloud({ daily_cap: n }) }}
                           style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
                           {delta < 0 ? '−' : '+'}
                         </button>
@@ -394,9 +394,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                         value={dailyCap}
                         onChange={e => {
                           const n = parseInt(e.target.value.replace(/\D/g, ''))
-                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 10) { localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) } }
+                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 1) { localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) } }
                         }}
-                        onBlur={() => { const c = Math.min(300, Math.max(10, dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) }}
+                        onBlur={() => { const c = Math.min(300, Math.max(1,dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) }}
                         onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                         style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, width: 48, textAlign: 'center', background: T.paper, border: `1px solid ${T.lineSoft}`, borderRadius: 7, padding: '3px 4px', outline: 'none' }}
                       />

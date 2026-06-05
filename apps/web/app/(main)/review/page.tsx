@@ -222,11 +222,11 @@ function OptionsSheet({
               <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Max cards reviewed per day</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <button onClick={() => setDailyCap(dailyCap - 10)} disabled={dailyCap <= 10} style={{
+              <button onClick={() => setDailyCap(dailyCap - 10)} disabled={dailyCap <= 1} style={{
                 width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
-                background: T.paperHi, color: T.inkSoft, cursor: dailyCap <= 10 ? 'default' : 'pointer',
+                background: T.paperHi, color: T.inkSoft, cursor: dailyCap <= 1 ? 'default' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 300, opacity: dailyCap <= 10 ? 0.35 : 1,
+                fontSize: 18, fontWeight: 300, opacity: dailyCap <= 1 ? 0.35 : 1,
               }}>−</button>
               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>
                 {dailyCap}
@@ -393,7 +393,7 @@ function ReviewSession({
     const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
     setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
     const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100')
-    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(10, cap)))
+    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
     setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
@@ -409,7 +409,7 @@ function ReviewSession({
     localStorage.setItem('srs_learning_steps', String(n))
   }
   function setDailyCap(v: number) {
-    const n = Math.min(300, Math.max(10, v))
+    const n = Math.min(300, Math.max(1,v))
     setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n))
   }
   function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v) }
