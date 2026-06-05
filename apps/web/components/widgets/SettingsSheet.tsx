@@ -176,6 +176,10 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px 0' }}>
           <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 500, color: T.ink }}>
             Settings
+            <span style={{ color: T.inkMute, fontWeight: 400 }}>
+              {' · '}{TABS.find(t => t.id === tab)?.label ?? ''}
+              {tab === 'study' ? ` · ${studySubtab === 'study' ? 'Study' : 'Review'}` : ''}
+            </span>
           </span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: T.inkSoft }}>
             <Icon name="x" size={20} strokeWidth={2} color={T.inkSoft} />
