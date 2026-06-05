@@ -306,7 +306,7 @@ export default function StudyView({ source }: Props) {
 
   const handleSaveWarning = () => {
     setSaveMsgWarn(true)
-    setSaveMsg('Already saved — find it in Notebook to remove')
+    setSaveMsg('Already saved — find it in the Captures deck to remove')
     setTimeout(() => setSaveMsg(null), 4000)
   }
 
