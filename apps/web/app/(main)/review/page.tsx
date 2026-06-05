@@ -354,13 +354,14 @@ function ReviewSession({
   const audioRef     = useRef<HTMLAudioElement | null>(null)
   type LastRated = { cardId: string; prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null } }
   const lastRatedRef = useRef<LastRated | null>(null)
-  const [canUndo, setCanUndo] = useState(false)
+  const [canUndo,      setCanUndo]      = useState(false)
+  const [showKebab,    setShowKebab]    = useState(false)
   const onExitRef = useRef(onExit)
   useEffect(() => { onExitRef.current = onExit })
   const sessionEndFiredRef = useRef(false)
 
-  // Stop audio when card advances
-  useEffect(() => { audioRef.current?.pause() }, [qIdx])
+  // Stop audio + close kebab when card advances
+  useEffect(() => { audioRef.current?.pause(); setShowKebab(false) }, [qIdx])
 
   // Autoplay in audio mode when card changes
   useEffect(() => {
@@ -661,6 +662,7 @@ function ReviewSession({
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
 
       {/* Session header */}
+      {/* Session header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 0', flexShrink: 0 }}>
         <button onClick={() => {
           const learningInProgress = queue.slice(qIdx).filter(e => e.phase === 'new' && e.pass > 0)
@@ -677,23 +679,11 @@ function ReviewSession({
           <Icon name="close" size={16} strokeWidth={2} />
         </button>
 
-        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {getLangName(lang.language)}{lang.dialect ? ` · ${lang.dialect}` : ''}
           </div>
         </div>
-
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em', flexShrink: 0 }}>
-          {qIdx + 1} / {queue.length}
-        </span>
-
-        <button onClick={handleDefer} aria-label="Defer to tomorrow" style={{
-          width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
-        }}>
-          <Icon name="skip-fwd" size={15} strokeWidth={1.8} />
-        </button>
 
         <button onClick={() => setShowOptions(true)} aria-label="Session options" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
@@ -702,29 +692,78 @@ function ReviewSession({
         }}>
           <Icon name="settings" size={16} strokeWidth={1.7} />
         </button>
+
+        {/* Kebab — skip + suspend */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button onClick={() => setShowKebab(p => !p)} aria-label="More actions" style={{
+            width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: T.inkSoft, cursor: 'pointer',
+          }}>
+            <Icon name="more-v" size={16} strokeWidth={2} />
+          </button>
+          {showKebab && (
+            <>
+              <div onClick={() => setShowKebab(false)} style={{ position: 'fixed', inset: 0, zIndex: 25 }} />
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 26,
+                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                borderRadius: 13, boxShadow: '0 4px 16px rgba(43,34,26,0.12)',
+                overflow: 'hidden', minWidth: 185,
+              }}>
+                <button onClick={() => { setShowKebab(false); handleDefer() }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '12px 14px', background: 'none', border: 'none',
+                  cursor: 'pointer', fontSize: 14, color: T.ink, textAlign: 'left',
+                }}>
+                  <Icon name="skip-fwd" size={15} strokeWidth={1.8} color={T.inkSoft} />
+                  Skip to tomorrow
+                </button>
+                <div style={{ height: 1, background: T.lineSoft }} />
+                <button onClick={() => { setShowKebab(false); handleSuspend() }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '12px 14px', background: 'none', border: 'none',
+                  cursor: 'pointer', fontSize: 14, color: T.ink, textAlign: 'left',
+                }}>
+                  <Icon name="pause" size={15} strokeWidth={1.8} color={T.inkSoft} />
+                  Suspend card
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Progress bar + requeue indicator */}
+      {/* Progress bar + counter / undo row */}
       <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
           <div style={{ width: `${(qIdx / Math.max(queue.length, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5, minHeight: 16 }}>
-          {canUndo ? (
-            <button onClick={handleUndo} style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 18, color: T.inkSoft, letterSpacing: '0.03em',
-            }}>
-              <Icon name="rotate-ccw" size={20} strokeWidth={2} color={T.inkSoft} />
-              undo
-            </button>
-          ) : <span />}
-          {pendingRequeue > 0 && (
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, letterSpacing: '0.03em' }}>
-              ↩ {pendingRequeue} returning
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 5, minHeight: 20 }}>
+          {/* Left: returning indicator */}
+          <div>
+            {pendingRequeue > 0 && (
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, letterSpacing: '0.03em' }}>
+                ↩ {pendingRequeue} returning
+              </span>
+            )}
+          </div>
+          {/* Right: counter stacked above undo */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em' }}>
+              {qIdx + 1} / {queue.length}
             </span>
-          )}
+            {canUndo && (
+              <button onClick={handleUndo} style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 18, color: T.inkSoft, letterSpacing: '0.03em',
+              }}>
+                <Icon name="rotate-ccw" size={20} strokeWidth={2} color={T.inkSoft} />
+                undo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -776,7 +815,7 @@ function ReviewSession({
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: T.inkFaint,
             }}>
-              <Icon name="archive" size={15} strokeWidth={1.8} />
+              <Icon name="pause" size={15} strokeWidth={1.8} />
             </button>
             {showFlagPicker && (
               <div style={{ display: 'flex', gap: 5, alignItems: 'center', paddingLeft: 4 }}>
