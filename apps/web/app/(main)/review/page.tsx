@@ -1317,7 +1317,9 @@ function ReviewPage() {
     }
     const sorted = [...orderedNew, ...otherCards]
     const cap = context.dailyCap
-    const sessionCap = (isCustom || isMore) ? sorted.length : Math.max(0, cap - context.reviewedToday)
+    const sessionCap = isCustom ? sorted.length
+      : isMore        ? cap
+      : Math.max(0, cap - context.reviewedToday)
     setCards(sorted.slice(0, sessionCap))
     setCtx(context)
     setLoading(false)
