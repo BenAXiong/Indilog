@@ -426,14 +426,44 @@ function ReviewSession({
     }
   }, [qIdx, queue.length])
 
-  const entry = queue[qIdx]
+  const entry       = queue[qIdx]
+  // Compute before early return so hook call count is stable across renders
+  const isLearning  = (entry?.phase ?? 'review') !== 'review'
+  const isFinalPass = (entry?.pass ?? 0) >= learningSteps - 1
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!entry) return
+    function onKey(e: KeyboardEvent) {
+      if (showOptions) return
+      if (!revealed) {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
+        else if (e.key === 'ArrowUp')   submit('easy')
+        else if (e.key === 'ArrowDown') handleSuspend()
+      } else {
+        if      (e.key === '1' || e.key === 'ArrowLeft')                    submit('again')
+        else if (e.key === '2' && showHardEasy && !isLearning)             submit('hard')
+        else if (e.key === '3' || e.key === 'ArrowRight')                  submit(isLearning ? 'easy' : 'good')
+        else if ((e.key === '4' && showHardEasy) || e.key === 'ArrowUp')   submit('easy')
+        else if (e.key === 'ArrowDown')                                     handleSuspend()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [revealed, showHardEasy, showOptions, isLearning]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Intervals memoised for rating buttons
+  const intervals = useMemo(() => {
+    if (!entry) return {} as Record<string, string>
+    const st = cardSMState(entry.card)
+    return Object.fromEntries(RATINGS.map(r => [r.id, formatDays(estimateInterval(st, r.id))]))
+  }, [entry?.card?.id, entry?.card?.ease_factor, entry?.card?.interval_days, entry?.card?.repetitions]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!entry) return null  // transitioning to done state
 
   const { card, phase, pass, originalInterval, restarts } = entry
   const lang  = cardMeta(card)
   const state = cardSMState(card)
-  const isLearning  = phase !== 'review'
-  const isFinalPass = pass >= learningSteps - 1
 
   // Phase label / color for top-right of card
   const phaseLabel =
@@ -472,25 +502,6 @@ function ReviewSession({
   const pendingRequeue = queue.slice(qIdx + 1).filter(e => e.pass > 0).length
 
   // Keyboard shortcuts
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (showOptions) return
-      if (!revealed) {
-        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
-        else if (e.key === 'ArrowUp')   submit('easy')
-        else if (e.key === 'ArrowDown') handleSuspend()
-      } else {
-        if      (e.key === '1' || e.key === 'ArrowLeft')                    submit('again')
-        else if (e.key === '2' && showHardEasy && !isLearning)             submit('hard')
-        else if (e.key === '3' || e.key === 'ArrowRight')                  submit(isLearning ? 'easy' : 'good')
-        else if ((e.key === '4' && showHardEasy) || e.key === 'ArrowUp')   submit('easy')
-        else if (e.key === 'ArrowDown')                                     handleSuspend()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [revealed, showHardEasy, showOptions, isLearning]) // eslint-disable-line react-hooks/exhaustive-deps
-
   async function submit(rating: Rating) {
     lastRatedRef.current = null
     setCanUndo(false)
@@ -629,11 +640,6 @@ function ReviewSession({
         ? RATINGS.filter(r => r.id === 'easy')
         : RATINGS.filter(r => r.id === 'again' || r.id === 'easy'))
     : showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
-
-  const intervals = useMemo(() =>
-    Object.fromEntries(RATINGS.map(r => [r.id, formatDays(estimateInterval(state, r.id))])),
-  [card.id, card.ease_factor, card.interval_days, card.repetitions] // eslint-disable-line react-hooks/exhaustive-deps
-  )
 
   // Context-aware button label
   function ratingLabel(id: Rating): string {
