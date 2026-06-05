@@ -25,6 +25,7 @@ import { getDeckGoalStats } from '@/lib/db/profile/goal'
 type SessionContext = {
   reviewedToday:    number
   dailyGoal:        number
+  dailyCap:         number
   streak:           number
   goalCollectionId: string | null
   goalDueDate:      string | null
@@ -39,14 +40,14 @@ function cardSMState(card: FlashcardWithItem): SMState {
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null, goalDueDate: null }
+  if (!user) return { reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, goalCollectionId: null, goalDueDate: null }
 
   const today   = new Date().toISOString().slice(0, 10)
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
   const fromStr = from30.toISOString().slice(0, 10)
 
   const [profileRes, todayRes, dailyRes] = await Promise.all([
-    supabase.from('ind_profiles').select('daily_goal, goal_collection_id, goal_due_date').eq('user_id', user.id).maybeSingle(),
+    supabase.from('ind_profiles').select('daily_goal, goal_collection_id, goal_due_date, preferences').eq('user_id', user.id).maybeSingle(),
     supabase.from('ind_daily_stats').select('reviewed_count').eq('user_id', user.id).eq('date', today).maybeSingle(),
     supabase.from('ind_daily_stats').select('date, reviewed_count').eq('user_id', user.id).gte('date', fromStr).order('date', { ascending: false }),
   ])
@@ -58,9 +59,15 @@ async function loadSessionContext(): Promise<SessionContext> {
   const cur = new Date()
   while (reviewSet.has(cur.toISOString().slice(0, 10))) { streak++; cur.setDate(cur.getDate() - 1) }
 
+  const prefs = profileRes.data?.preferences as Record<string, unknown> | null
+  const dailyCap = typeof prefs?.daily_cap === 'number' ? prefs.daily_cap : 100
+  // Sync to localStorage so the OptionsSheet shows the correct value
+  if (typeof window !== 'undefined') localStorage.setItem('srs_daily_cap', String(dailyCap))
+
   return {
     reviewedToday:    todayRes.data?.reviewed_count ?? 0,
     dailyGoal:        profileRes.data?.daily_goal ?? 20,
+    dailyCap,
     streak,
     goalCollectionId: profileRes.data?.goal_collection_id ?? null,
     goalDueDate:      profileRes.data?.goal_due_date ?? null,
@@ -1234,7 +1241,7 @@ function ReviewPage() {
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, streak: 0, goalCollectionId: null, goalDueDate: null })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, goalCollectionId: null, goalDueDate: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount,    setSessionCount]    = useState(0)
   const [sessionKey,      setSessionKey]      = useState(0)
@@ -1308,8 +1315,8 @@ function ReviewPage() {
       })
     }
     const sorted = [...orderedNew, ...otherCards]
-    const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100') || 100
-    const sessionCap = Math.min(cap, Math.max(0, cap - context.reviewedToday) || cap)
+    const cap = context.dailyCap
+    const sessionCap = isCustom ? sorted.length : Math.max(0, cap - context.reviewedToday)
     setCards(sorted.slice(0, sessionCap))
     setCtx(context)
     setLoading(false)

@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 03:59 | FIX | Review session cap: read daily_cap from ind_profiles.preferences (not localStorage default); sync to localStorage on load; custom sessions uncapped; fix || cap fallback bug |
+| 2026-06-06 02:04 | FEATURE | Review session header: kebab menu (skip+suspend), lang left, counter+undo below bar right, returning below bar left; pause icon |
 | 2026-06-05 23:46 | FIX | Learning cards: up=Easy before reveal only; after reveal up disabled, right=Good (non-final) / Got it! (final); label + gesture + hint all synced |
 | 2026-06-05 23:01 | FIX | Review hints fully mirror ratingLabel(): up/right label tracks isFinalPass/restarts; right hint amber for learning (easy action) |
 | 2026-06-05 22:45 | CONFIG | CLAUDE.md: add commit cadence guidelines |
