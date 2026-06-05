@@ -167,7 +167,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
         position: 'relative', background: T.paper,
         borderRadius: '20px 20px 0 0',
         paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
-        height: '60vh', maxHeight: '88dvh', display: 'flex', flexDirection: 'column',
+        height: '80vh', maxHeight: '92dvh', display: 'flex', flexDirection: 'column',
       }}>
         {/* Handle */}
         <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '12px auto 0' }} />
@@ -506,9 +506,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px' }}>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {([
-                    { id: 'klokah', label: 'Klokah',        soon: false },
-                    { id: 'moe',    label: 'MoE Dict',       soon: false },
-                    { id: 'ytd',    label: '族語言線上辭典', soon: true  },
+                    { id: 'klokah', label: 'ePark',        soon: false },
+                    { id: 'moe',    label: 'Kilang',       soon: false },
+                    { id: 'ytd',    label: '族語辭典', soon: true  },
                   ] as const).map(o => (
                     <button key={o.id} disabled={o.soon}
                       onClick={() => { if (!o.soon) toggleDictSource(o.id) }}
