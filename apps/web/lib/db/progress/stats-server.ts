@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 export type DashboardStats = {
@@ -44,6 +45,7 @@ function reviewLevel(count: number): number {
 }
 
 export async function getDashboardStats(language = 'ami'): Promise<DashboardStats> {
+  noStore()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return EMPTY

@@ -595,8 +595,8 @@ export default function StudyPage() {
       {activeTab === 'decks' && (
         <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* Review all CTA + Custom session button */}
-          <div style={{ display: 'flex', gap: 8 }}>
+          {/* Review all CTA + Custom session button — disabled pending rework */}
+          <div style={{ display: 'none' }}>
             <Link href="/review" style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
               height: 54, borderRadius: 15, textDecoration: 'none',
