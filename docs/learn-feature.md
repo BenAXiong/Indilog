@@ -159,7 +159,7 @@ The source, selected item, level, and grammar comparison state are persisted in 
 
 Within Learn, the user selects a dialect for the active language (e.g., 南勢阿美語 within Amis). This selection should persist cross-device.
 
-**Decision:** Store the selected dialect in `ind_profiles.default_dialect` (already in schema, currently deferred per plan.md Phase 2). This field is wired up as part of the Learn feature.
+**Decision:** Store the selected dialect in `ind_profiles.default_dialect` (already in schema, currently deferred per plan-v0.md Phase 2). This field is wired up as part of the Learn feature.
 
 - On Learn page mount: read `default_dialect` from `ind_profiles`. If null, fall back to `GLID_FAMILIES[glid][0]`.
 - When user changes dialect in Learn: write back to `ind_profiles.default_dialect`.
@@ -478,7 +478,7 @@ Settings panel (accessible from header icon):
 
 ## 15. Cross-references
 
-- `plan.md` Phase 10 — Learn feature v1
+- `plan-v0.md` Phase 10 — Learn feature v1
 - `decisions.md` — DEC-L01 through DEC-L04, DEC-R05 (Learn was placeholder in v0)
 - `log.md` — implementation entries as phases complete
 - `temp_learn/` — source handoff directory (can be deleted after Phase L0 assets are copied)

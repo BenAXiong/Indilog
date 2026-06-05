@@ -2,6 +2,13 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-05 14:51 | CONFIG | Docs: plan.md → plan-v0.md rename; plan-v1.md updated; CLAUDE.md, agents.md, log.md minor updates |
+| 2026-06-05 03:04 | FIX | Review cards UI: getLangName() in header (was 'ami'), undo 2x larger, left hint 'repeat' in learning, up hint always amber + label tracks isFinalPass, remove dead isAudio branch, remove skipCurrent() |
+| 2026-06-04 23:48 | CONFIG | CLAUDE.md: add code constraint — no literal non-ASCII in regex char classes in .ts; use \\uXXXX escapes |
+| 2026-06-04 23:44 | FIX | feat/moe-dict: replace non-ASCII chars in regex char classes with \\u escapes — fixes SWC build error |
+| 2026-06-04 23:16 | FIX | feat/moe-dict: gate ePark words+sentences behind klokah=1 param — MoE-only mode no longer leaks corpus sentences |
+| 2026-06-04 23:07 | FIX | feat/moe-dict: default dictSources to ['moe'] only — klokah off by default for clean MoE testing |
+| 2026-06-04 21:14 | FEATURE | feat/moe-dict: MoE Dict v1 — parallel fetch in /api/dict/search, merge by word_ab across dict_codes, moe=1 param, toggle in settings (default on), 5px steel-blue dot marker on MoE results |
 | 2026-06-04 15:32 | FIX | Dict: block sentence re-save; amber toast directs to Browser if already captured |
 | 2026-06-04 15:01 | FIX | Dict: sentence bookmark pre-checks ind_items on load; filled crimson for already-saved sentences |
 | 2026-06-04 14:44 | FIX | Dict: sentence bookmark fills crimson on save (session-local tracking) |
@@ -286,3 +293,4 @@
 | 2026-05-28 01:17 | FEATURE | capture: Tags row always visible inline in context section with inline add; dialect dropdown uncapped height; settings capture tab: Tags section removed |
 | 2026-05-28 01:30 | CONFIG | Regenerate all icons from modified Book_1_nocirc_nobg source — icon.png 512×512, apple-icon.png 180×180, icon-192.png 192×192, icon-512.png 512×512 |
 | 2026-05-28 01:37 | FIX | cross-env for Windows-compatible NODE_OPTIONS in build script; Toast position:fixed (was absolute, clipped by scroll containers); flashcards use meaning column for card back with notes fallback; commit previously untracked meaning + audio_url migration files |
+ 

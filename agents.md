@@ -14,20 +14,20 @@ Build in layers. Complete each phase before moving to the next. Do not half-wire
 
 | Doc | Purpose | When to update |
 |-----|---------|---------------|
-| `plan.md` | Detailed todo, phase by phase | Mark tasks done as you complete them; add sub-tasks as discovered |
+| `plan-v0.md` | Detailed todo, phase by phase | Mark tasks done as you complete them; add sub-tasks as discovered |
 | `log.md` | Timestamped record of features, fixes, schema changes, and decisions | Every meaningful change — at least one entry per session |
 | `decisions.md` | Open questions and resolved architectural/product decisions | When a new ambiguity is discovered or resolved |
 | `agents.md` (this file) | Workflow rules for agents | When a new pattern or rule is established |
 | `CLAUDE.md` | Project-level setup notes for Claude Code | When env vars, commands, or tooling change |
 | `architecture.md` | Canonical data model — Note/Card schema, session modes, audio resolution, migration status | When schema or model decisions change |
 
-**Rule:** Do not end a session without updating `log.md` and checking that `plan.md` reflects completed work.
+**Rule:** Do not end a session without updating `log.md` and checking that `plan-v0.md` reflects completed work.
 
 ---
 
 ## Session startup checklist
 
-1. Read `plan.md` — identify the current phase and next task.
+1. Read `plan-v0.md` — identify the current phase and next task.
 2. Read `decisions.md` — check for open questions that affect the current task.
 3. Check `log.md` — orient yourself to what was last done.
 4. If a design checkpoint is due, fetch the Claude Design output before writing UI code.
@@ -52,7 +52,7 @@ Do not improvise visual direction when design output is available for the compon
 
 - Each phase has explicit exit criteria in the workflow doc — verify them before declaring a phase complete.
 - Log phase completions in `log.md` with a `[PHASE COMPLETE]` marker.
-- Update `plan.md` to mark the phase done and surface the next phase.
+- Update `plan-v0.md` to mark the phase done and surface the next phase.
 
 ---
 
@@ -176,7 +176,7 @@ Types: `FEATURE`, `FIX`, `SCHEMA`, `DECISION`, `PHASE COMPLETE`, `CHECKPOINT`, `
 - Do not implement features from the out-of-scope list.
 - Do not skip design checkpoints when a new major screen is being built.
 - Do not make silent decisions about translation pairs, dictionary API shape, or auth flow — these belong in `decisions.md`.
-- Do not end a session with `plan.md` still showing tasks that were completed in that session.
+- Do not end a session with `plan-v0.md` still showing tasks that were completed in that session.
 - Do not invent log timestamps — always derive them from `git log -1 --format="%ai"` after committing.
 - Do not batch all work into one commit per phase — commit per screen or meaningful unit so log entries get real distinct timestamps.
 - Do not start a new phase without running the phase-start confirmation gate.

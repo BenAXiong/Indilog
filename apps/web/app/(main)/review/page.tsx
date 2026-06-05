@@ -570,15 +570,11 @@ function ReviewSession({
     setQIdx(qi => qi - 1)
   }
 
-  function skipCurrent() {
-    setRevealed(false)
-    setQIdx(qi => qi + 1)
-  }
-
   async function handleSuspend() {
     await suspendCard(card.id)
     setShowFlagPicker(false)
-    skipCurrent()
+    setRevealed(false)
+    setQIdx(qi => qi + 1)
   }
 
   function handleSetFlag(color: string | null) {
@@ -683,7 +679,7 @@ function ReviewSession({
 
         <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
           <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {lang.language}{lang.dialect ? ` · ${lang.dialect}` : ''}
+            {getLangName(lang.language)}{lang.dialect ? ` · ${lang.dialect}` : ''}
           </div>
         </div>
 
@@ -716,11 +712,11 @@ function ReviewSession({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5, minHeight: 16 }}>
           {canUndo ? (
             <button onClick={handleUndo} style={{
-              display: 'flex', alignItems: 'center', gap: 4,
+              display: 'flex', alignItems: 'center', gap: 7,
               background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, letterSpacing: '0.03em',
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 18, color: T.inkSoft, letterSpacing: '0.03em',
             }}>
-              <Icon name="rotate-ccw" size={10} strokeWidth={2} color={T.inkFaint} />
+              <Icon name="rotate-ccw" size={20} strokeWidth={2} color={T.inkSoft} />
               undo
             </button>
           ) : <span />}
@@ -737,9 +733,11 @@ function ReviewSession({
 
         {/* ↑ easy hint — outside card, above */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.42 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: !revealed ? T.amber : T.sage }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.amber }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {!revealed ? 'easy' : isLearning ? 'got it' : 'easy'}
+              {!revealed
+                ? (isLearning && (isFinalPass || restarts >= 1) ? 'got it' : 'easy')
+                : (isLearning ? 'got it' : 'easy')}
             </span>
             <Icon name="chevron" size={13} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
           </div>
@@ -808,7 +806,7 @@ function ReviewSession({
             <>
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
                 <Icon name="arrow-l" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{isLearning ? 'repeat' : 'again'}</span>
               </div>
               <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.5 }}>
                 <Icon name="arrow-r" size={17} strokeWidth={2} />
@@ -852,12 +850,7 @@ function ReviewSession({
                 <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
                   {card.ind_items?.ab}
                 </div>
-                {isAudio && (
-                  <span style={{ marginTop: 10, fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
-                    ♪ no audio
-                  </span>
-                )}
-                {!isAudio && cardAudio(card) && (
+                {cardAudio(card) && (
                   <button
                     onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
                     aria-label="Play audio"

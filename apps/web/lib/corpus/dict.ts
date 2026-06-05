@@ -8,6 +8,7 @@ export type WordRow = {
   dialect_name: string
   glid: string
   exact: boolean
+  source?: 'epark' | 'moe'
 }
 
 export type SentenceRow = {

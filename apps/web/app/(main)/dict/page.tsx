@@ -14,12 +14,13 @@ import { createItem } from '@/lib/db/notebook/items'
 import { createClient } from '@/lib/supabase/client'
 
 type WordResult = {
-  id: number
+  id: number | string
   word_ab: string
   word_ch: string
   dialect_name: string
   glid: string
   exact: boolean
+  source?: 'epark' | 'moe'
 }
 
 type SentenceResult = {
@@ -52,6 +53,9 @@ function ExactWordCard({ word, onSave, onCapture }: {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
               <span style={{ fontSize: 11.5, color: T.inkSoft }}>{word.dialect_name}</span>
+              {word.source === 'moe' && (
+                <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
+              )}
             </div>
           </div>
           <span style={{
@@ -248,8 +252,20 @@ export default function DictionaryPage() {
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const [moeEnabled,    setMoeEnabled]    = useState(true)
+  const [klokahEnabled, setKlokahEnabled] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
+
+  // Sync source toggles from settings
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ind_dict_sources')
+      const sources: string[] = stored ? JSON.parse(stored) : ['moe']
+      setMoeEnabled(sources.includes('moe'))
+      setKlokahEnabled(sources.includes('klokah'))
+    } catch {}
+  }, [])
 
   // Load dialects once
   useEffect(() => {
@@ -271,16 +287,18 @@ export default function DictionaryPage() {
     }
   }, [lang, dialects, userChangedGlid])
 
-  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean) => {
+  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean, withKlokah: boolean) => {
     const trimmed = term.trim()
     const minLen = /[㐀-鿿]/.test(trimmed) ? 1 : 3
     if (trimmed.length < minLen) { setWords([]); setSentences([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)
     const params = new URLSearchParams({ q: trimmed })
-    if (glidFilter) params.set('glid', glidFilter)
-    if (dialectF)   params.set('dialect', dialectF)
-    if (isFuzzy)    params.set('fuzzy', '1')
+    if (glidFilter)  params.set('glid', glidFilter)
+    if (dialectF)    params.set('dialect', dialectF)
+    if (isFuzzy)     params.set('fuzzy', '1')
+    if (withMoe)     params.set('moe', '1')
+    if (withKlokah)  params.set('klokah', '1')
     const res = await fetch(`/api/dict/search?${params}`)
     const data = await res.json()
     if (data.error) setDbError(data.error)
@@ -309,9 +327,9 @@ export default function DictionaryPage() {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     // phrases + CJK: always fuzzy so they match mid-sentence / mid-definition
-    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy), 320)
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy, moeEnabled, klokahEnabled), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, dialectFilter, fuzzy, isPhrase, isCJK, runSearch])
+  }, [q, glid, dialectFilter, fuzzy, isPhrase, isCJK, moeEnabled, klokahEnabled, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
@@ -606,11 +624,14 @@ export default function DictionaryPage() {
                         boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
                       }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink }}>
                               {w.word_ab}
                             </span>
                             <span style={{ fontSize: 11, color: T.inkFaint }}>{w.dialect_name}</span>
+                            {w.source === 'moe' && (
+                              <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
+                            )}
                           </div>
                           <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {w.word_ch}

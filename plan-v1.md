@@ -1,6 +1,6 @@
 # Indivore — v1 Plan
 
-> v0 plan (all phases 0–10 + Architecture Baseline) lives in `plan.md`.
+> v0 plan (all phases 0–10 + Architecture Baseline) lives in `plan-v0.md`.
 > This document tracks v1 milestones.
 
 > Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
@@ -167,18 +167,21 @@ Personal library of sources (people, media, references) linked to captured items
 ### M5-B — UI refinement
 
 - [x] Convert /settings page to a bottom sheet on the Dashboard — SettingsSheet client island; all tabs (general/review/capture/translate/dict) wired everywhere
-- [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
-- [ ] Revamp GoalSheet UI
-- [ ] Secondary goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
-- [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, info, etc)
-- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
 - [x] Deck sections collapsible
 - [x] Swipe to switch tabs — edge swipe (±28px) navigates between tabs
-
+- [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, info, etc)
+- [ ] Revamp GoalSheet UI
+- [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
+- [ ] Secondary goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
+- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
 - [ ] Separate learn from reviews? dash and study
-- [ ] 2-step review entry — review goal deck first, then remaining; dual CTA or flow options; needs design (relates to "Separate learn from reviews?")
+
+### M5-C — Minor feature refinement
+
 - [x] Instore max reviews/learn per day — daily cap stepper (10–300) in OptionsSheet; srs_daily_cap localStorage
 - [x] Browser zh lookup: enable multi word — lookup also searches sentences, includes sentence zh
+- [ ] 2-step review entry — review goal deck first, then remaining; dual CTA or flow options; needs design (relates to "Separate learn from reviews?")
+
 
 
 ---
@@ -214,6 +217,10 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 - [x] FIX: grmpts audio still not playing — pre-existing, investigate correct URL pattern
 - [x] FIX: sentences cannot be unbookmarked — investigate handleSave / saved state reset
+- [x] FIX: review pull-to-refresh on down-swipe — `touchAction: none` on card div
+- [x] FIX: dict sentence bookmark toast invisible when scrolled — moved to `position: fixed` at bottom
+- [x] FIX: dict sentence saved state not pre-loaded across sessions — `savedAbSet` pre-check from `ind_items` on sentences state change
+- [x] FIX: dict sentence could be re-saved indefinitely — block duplicates, show amber warning toast
 
 - [ ] Desktop usability pass
 - [ ] Error states (API failures, auth errors)
@@ -223,6 +230,28 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] Local cache for fast startup — LangDialectProvider reads profile_lang_code + profile_dialect from localStorage synchronously
 - [x] Capture-page Translate action — sparkle button calls /api/translate (ab→zh); fills meaning field
 
+
+---
+
+## Dict Source Expansion — MoE Dictionary
+
+> Branch: `feat/moe-dict` (active testing, not yet merged)
+
+### V1 — Definitions + source toggle
+
+- [x] MoE source toggle in SettingsSheet — defaults to MoE-only for testing; `klokahEnabled` gates ePark
+- [x] `GET /api/dict/search` — parallel fetch: ePark words+sentences (klokah gate) + MoE words (moe gate)
+- [x] MoE proxy: Indivore API → Citadel `/api/moe_shadow`; merge rows by normalised `word_ab`; concat defs with ` · `
+- [x] 5px steel-blue dot marker on MoE results (discreet; for testing only)
+- [x] MoE results sorted with ePark words (exact-first, then by length)
+- [ ] Merge `feat/moe-dict` → main after test coverage confirmed
+
+### V2 — Deferred
+
+- [ ] Root/affix chips from MoE data
+- [ ] MoE example sentences in Sentences tab
+- [ ] Lineage/morphology rendering
+- [ ] Remove dot marker once sources are unified (no source badges in final UI)
 
 ---
 
@@ -237,8 +266,10 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ## Next versions
 
+- Avoid need for signal during review
+- Use disctionary to explore affixes (examples)
 - Icons: capture = fish net, dash = stone house, study = ?, trans = stars, dict = ?
-- Add Moe dict + roots + affix drill + kilang
+- Add MoE dict roots + affix drill (V2 of MoE expansion above)
 - Add ILRDF dict
 - Add ILRDF colloquial corpus
 - TDL to capture: list of things you wanna learn (eg it's my treat, get lost, etc)
@@ -265,6 +296,6 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 ## Versioning
 
 - **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done.
-- **v1** — M1 complete. M2–M5 pending. Target: `v1.0.0` when M1 + M2 ship; M3–M5 extend to `v1.x`.
+- **v1** — M1–M4, M6, M7 complete. M5 (UI polish, pending dashboard/goals/cards revamp), M8 (tests), MoE dict expansion in progress. Target: `v1.0.0` when M1–M8 all complete.
 
-Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1 + M2 ship.
+Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1–M8 complete.

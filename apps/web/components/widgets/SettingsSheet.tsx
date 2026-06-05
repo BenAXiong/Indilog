@@ -49,7 +49,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [pickedLang,     setPickedLang]     = useState<string | null>(null)
   const [accountMenuOpen,setAccountMenuOpen]= useState(false)
   const [autoLookup,       setAutoLookup]       = useState(true)
-  const [dictSources,      setDictSources]      = useState<string[]>(['klokah'])
+  const [dictSources,      setDictSources]      = useState<string[]>(['moe'])
   const [resetHour,        setResetHourRaw]     = useState(4)
   const [dailyCap,         setDailyCapRaw]      = useState(100)
   const [reviewMode,       setReviewModeRaw]    = useState('forward')
@@ -342,8 +342,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                 <div style={{ display: 'flex', gap: 6 }}>
                   {([
                     { id: 'klokah', label: 'Klokah',        soon: false },
+                    { id: 'moe',    label: 'MoE Dict',       soon: false },
                     { id: 'ytd',    label: '族語言線上辭典', soon: true  },
-                    { id: 'moe',    label: 'MoE Dict',       soon: true  },
                   ] as const).map(o => (
                     <button key={o.id} disabled={o.soon}
                       onClick={() => { if (!o.soon) toggleDictSource(o.id) }}
