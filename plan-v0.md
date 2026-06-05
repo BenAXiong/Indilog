@@ -77,8 +77,7 @@
 - [x] Profile creation on first login (upsert)
 - [x] Active study language selector in Settings
 - [x] Default dialect selector in Settings — bottom-sheet picker with dialect step for multi-dialect languages (done in Phase 10 / Settings overhaul)
-- [ ] Local cache for fast startup → plan-v1.md M3
-- [ ] **Design Checkpoint 2** — skipped; built iteratively from handoff, not needed
+- [x] **Design Checkpoint 2** — skipped; built iteratively from handoff, not needed
 
 **Exit criteria:** User can sign in. Profile row created. Active language and dialect persist. UI works after refresh.
 
@@ -111,8 +110,6 @@
 
 ### UX surfaces
 
-- [ ] Saved material list (Library) → plan-v1.md M2
-- [ ] Item detail drawer or page → plan-v1.md M2
 - [x] Basic source selector (InlineSelector in Capture)
 - [x] Basic speaker selector (InlineSelector in Capture)
 
@@ -138,7 +135,7 @@
 - [x] Edit-after-save behavior
 - [x] Recent captures list below form
 - [x] "Set this language as app default" action
-- [ ] **Design Checkpoint 3** — skipped; built iteratively from handoff
+- [x] **Design Checkpoint 3** — skipped; built iteratively from handoff
 
 **Exit criteria:** User can capture quickly. Form does not feel like a long form. Saved items appear in Library/Review.
 
@@ -157,8 +154,7 @@
 - [x] Save word action from result → `createItem`
 - [x] "Open in Capture" action from result → `/capture?text=&notes=`
 - [x] Loading state, empty state, DB error banner
-- [ ] Capture token lookup → plan-v1.md (DEC-L08; FTS infrastructure ready)
-- [ ] **Design Checkpoint 4** — skipped; built iteratively from handoff
+- [x] **Design Checkpoint 4** — skipped; built iteratively from handoff
 
 **Exit criteria:** User can search dictionary. User can save words and navigate to Capture from results.
 
@@ -179,9 +175,7 @@ Post-completion improvements built during and after Phase 10:
 - [x] 3-character minimum search (trimmed; guard in both page and route)
 - [x] Word dedup in route by space-stripped normalisation key — removes corpus spacing inconsistencies (→ DEC-D01)
 - [x] `LIMIT` removed from word and sentence queries — 3-char minimum keeps worst-case result count manageable (~2K rows)
-- [x] Settings: `dict` tab — interface language toggle + dictionary source toggles (Klokah on; 族語言線上辭典 / MoE Dict disabled stubs)
-- [ ] Capture token lookup → plan-v1.md (DEC-L08)
-
+- [x] Settings: `dict` tab — interface language toggle + dictionary source toggles (Klokah on; MoE Dict wired on `feat/moe-dict`)
 ---
 
 ## Phase 6 — Translation Integration ✅
@@ -196,8 +190,7 @@ Post-completion improvements built during and after Phase 10:
 - [x] Save output as captured item
 - [x] Loading shimmer and error states
 - [x] Translation direction independent of active study language
-- [ ] Capture-page Translate action → plan-v1.md M3
-- [ ] **Design Checkpoint 5** — skipped; built iteratively from handoff
+- [x] **Design Checkpoint 5** — skipped; built iteratively from handoff
 
 **Exit criteria:** Supported pairs translate. Unsupported pairs disabled. Output saveable.
 
@@ -219,7 +212,7 @@ Post-completion improvements built during and after Phase 10:
 - [x] Dashboard review stats (due count, reviewed today)
 - [x] Basic streak logic — computed from `ind_daily_stats.captured_count`; heatmap wiring → plan-v1.md M1-D
 - [x] Saved-material browsing inside Review tab
-- [ ] **Design Checkpoint 6** — skipped; built iteratively from handoff
+- [x] **Design Checkpoint 6** — skipped; built iteratively from handoff
 
 **Exit criteria:** User can review due cards. Ratings update due dates. Dashboard reflects reviewed counts.
 
@@ -238,7 +231,7 @@ Post-completion improvements built during and after Phase 10:
 - [x] Learned lessons placeholder (static "—", dimmed)
 - [x] Recent captures list
 - [x] Quick resume action (contextual: "Start Review" if dueCount > 0, else "Capture")
-- [ ] **Design Checkpoint 7** — skipped; built iteratively from handoff
+- [x] **Design Checkpoint 7** — skipped; built iteratively from handoff
 
 **Exit criteria:** Dashboard opens cleanly. User understands what to do next. Main stats are real.
 
@@ -255,12 +248,6 @@ Post-completion improvements built during and after Phase 10:
 - [x] Supabase redirect URL check (OAuth callback registered)
 - [~] Loading states — Dict/Learn covered; Capture/Review/Dashboard need a pass to verify all async paths
 - [~] Empty states — Dict covered; other tabs need audit for consistent no-data messages
-- [ ] Document all env vars in `.env.example` and `README` ← **do now**
-- [ ] README setup flow (clone → env → supabase → run) — deferred to v1
-- [ ] Desktop usability pass — deferred to v1
-- [ ] Error states (API failures, auth errors) — deferred to v1
-- [ ] Basic accessibility pass — deferred to v1
-- [ ] Smoke test all 11 flows — deferred to v1
 
 **Exit criteria:** App deployable. Main v0 loop works. README explains setup. Known gaps listed.
 
@@ -345,7 +332,6 @@ See `plan-v1.md` for the full breakdown. Items from v0 phases that didn't ship:
 - [x] Inline word lookup on study card tokens → `/api/lookup`
 - [x] Completion counts → Dashboard Lessons stat (real data replaces "—")
 - [x] Mobile spacing pass
-- [ ] Accessibility pass → plan-v1.md M3
 
 **[PHASE COMPLETE 2026-05-26 14:00]** — Full study view for all 4 sources, collection creation, hub with progress, inline word lookup. Merged feat/learn → main.
 
@@ -369,9 +355,11 @@ Display as a "Did you mean?" row beneath the "not found" card in the Capture loo
 
 ---
 
-### Issue 1 — Essay and Dialogue Topics: Wrong Count and Polluted Titles
+### Issue 1 — Essay and Dialogue Topics: Wrong Count and Polluted Titles — **RESOLVED (M3, 2026-06-01)**
 
-**Symptom:** `corpus_geometry.json` has 73 essay topics and 61 dialogue topics instead of 60 each.
+> Geometry rebuilt to 24-slot structure via master JSON TID role detection (DEC-M3-01). Fresh rescrape completed June 2026. Citadel branch `fix/essay-dialogue-geometry`. Items below were addressed as part of that work.
+
+**Symptom:** `corpus_geometry.json` had 73 essay topics and 61 dialogue topics instead of 60 each.
 
 **Root cause (confirmed by reading `geometry_crystallizer.py`):**
 
@@ -381,12 +369,11 @@ Display as a "Did you mean?" row beneath the "not found" card in the Capture loo
 
 3. **Duplicate inferred titles.** 11 essay titles and 3 dialogue titles appear more than once (e.g. `我的名字是Ljumeg。` 3×, `這辣椒很辣…` 3×). This is a consequence of the same Chinese sentence appearing in multiple TIDs.
 
-**What to ask/check in Citadel:**
+**What to ask/check in Citadel:** *(resolved via DEC-M3-01)*
 
-- [ ] In `essay_scraper.py`: does it scrape TIDs from both `S1` and `S2` lesson blocks of the ES master JSON? If so, does `S2` contain vocabulary TIDs rather than sentence TIDs? If yes, filter to `S1` only (or whichever section contains full sentences).
-- [ ] What is the expected topic count per dialect for essays and dialogues? Run the validation query from `REPORT.md` against `ycm_master.db` to see per-dialect category counts and confirm which dialects inflate `max_len`.
-- [ ] Fix the crystallizer to use a minimum-coverage threshold: only include a topic slot if `len(alignment) >= N` (suggest N = 10 or half of all dialects). This will drop the orphan slots at 71–72 and 60.
-- [ ] Consider deduplication by aboriginal text hash before assigning ordinal slots, to prevent the same content appearing twice.
+- [x] In `essay_scraper.py`: S1 vs S2 TID structure — resolved via master JSON TID role detection (solo TID = 學習一, repeat >1× = 學習二/原版; 詞彙/練習 excluded)
+- [x] Expected topic count + which dialects inflate `max_len` — confirmed during rescrape validation
+- [x] Fix crystallizer — geometry rebuilt with role detection rather than coverage threshold; equivalent outcome
 
 **Impact on Indivore:** Hub shows wrong totals (73/61 instead of 60/60). ContentSheet groups (`初級`/`中級`/`高級`) break at the boundary. The `essayDiff` helper assumes 60 items. Duplicate `title_zh` causes `.find()` to silently resolve to the wrong topic.
 
@@ -394,30 +381,10 @@ Display as a "Did you mean?" row beneath the "not found" card in the Capture loo
 - Use `index` as the stable selector (already recommended in `REPORT.md`) — switch `/api/curriculum` to accept `index` instead of `title_zh` to avoid duplicate-title collisions.
 - Cap displayed total at `Math.min(total, 60)` as a stopgap until crystallizer is fixed.
 
----
-
-### Issue 2 — Twelve (Lessons): Aboriginal Titles Missing
-
-**Symptom:** Lesson cards in ContentSheet show the zh title only; the ab title row is blank.
-
-**What exists:** `corpus_geometry.json → twelve.titles[level][class]` has all 120 zh titles (scraped from `data/raw/twelve/{l}_{c}.json` → `data["titleCh"]`). No ab titles are present anywhere.
-
-**Why:** The crystallizer only reads `titleCh` from the twelve raw JSON. It does not read a `titleAb` / `titleLang` field. It is unknown whether the raw twelve JSON files even contain such a field.
-
-**What to ask/check in Citadel:**
-
-- [ ] Open any raw twelve JSON file (e.g. `data/raw/twelve/twelve_l1_c1.json`). Does it have a field like `titleAb`, `titleLang`, `titleIndigenous`, or a dialect-specific key alongside `titleCh`? If yes, add it to the crystallizer output as `titles_ab[level][class]` (language-agnostic, one representative dialect) or `titles_ab[dialect][level][class]` (per-dialect map).
-- [ ] If the raw JSON does NOT have an ab title: check whether the klokah.tw twelve lesson HTML page has the lesson title in the indigenous language anywhere (e.g. a page heading). If yes, a simple fetch-and-parse of `https://web.klokah.tw/twelve/...` could extract it.
-- [ ] Clarify: should ab lesson titles be dialect-specific? The zh titles are dialect-neutral (共通 titles). If the indigenous title is the same across dialects for each lesson, one array suffices. If not, a per-dialect map is needed.
-
-**Impact on Indivore:** ContentSheet lesson cards show empty ab title row with `minHeight: '1.2em'` placeholder. Low priority cosmetically, but adds context and is the right label for learners.
-
----
-
 ### Tracking
 
-| Issue | Owner | Blocked on | Priority |
-|-------|-------|-----------|----------|
-| Essay/dialogue topic count (73/61 → 60/60) | Citadel | crystallizer fix + optional re-scrape | High — affects hub counts, group splits, completion % |
-| Duplicate title_zh → use index as selector | Indivore | can do now | Medium — prevents silent wrong-topic loads |
-| Twelve ab titles | Citadel | raw file inspection first | Low — cosmetic in ContentSheet |
+| Issue | Owner | Status |
+|-------|-------|--------|
+| Essay/dialogue topic count (73/61 → 60/60) | Citadel | **done** (M3, DEC-M3-01) |
+| Duplicate title_zh → use index as selector | Indivore | **done** (M3) |
+| Twelve ab titles | Citadel | **done** (see architecture docs) |

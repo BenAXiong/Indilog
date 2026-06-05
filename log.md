@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-05 14:51 | CONFIG | Docs: plan.md → plan-v0.md rename; plan-v1.md updated; CLAUDE.md, agents.md, log.md minor updates |
+| 2026-06-05 03:04 | FIX | Review cards UI: getLangName() in header (was 'ami'), undo 2x larger, left hint 'repeat' in learning, up hint always amber + label tracks isFinalPass, remove dead isAudio branch, remove skipCurrent() |
 | 2026-06-04 23:48 | CONFIG | CLAUDE.md: add code constraint — no literal non-ASCII in regex char classes in .ts; use \\uXXXX escapes |
 | 2026-06-04 23:44 | FIX | feat/moe-dict: replace non-ASCII chars in regex char classes with \\u escapes — fixes SWC build error |
 | 2026-06-04 23:16 | FIX | feat/moe-dict: gate ePark words+sentences behind klokah=1 param — MoE-only mode no longer leaks corpus sentences |
