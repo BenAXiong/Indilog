@@ -335,12 +335,23 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       {[{ delta: -10, disabled: dailyCap <= 10 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
                         <button key={i} disabled={disabled}
-                          onClick={() => { const n = dailyCap + delta; setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)) }}
+                          onClick={() => { const n = Math.min(300, Math.max(10, dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)) }}
                           style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
                           {delta < 0 ? '−' : '+'}
                         </button>
                       ))}
-                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 30, textAlign: 'center' }}>{dailyCap}</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={dailyCap}
+                        onChange={e => {
+                          const n = parseInt(e.target.value.replace(/\D/g, ''))
+                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 10) localStorage.setItem('srs_daily_cap', String(c)) }
+                        }}
+                        onBlur={() => { const c = Math.min(300, Math.max(10, dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_daily_cap', String(c)) }}
+                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                        style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, width: 48, textAlign: 'center', background: T.paper, border: `1px solid ${T.lineSoft}`, borderRadius: 7, padding: '3px 4px', outline: 'none' }}
+                      />
                     </div>
                   </div>
                   {/* Learning passes */}
