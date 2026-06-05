@@ -30,6 +30,15 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   translate_dialect: 'ami_Coas',
 }
 
+export async function patchPreferences(patch: Partial<UserPreferences>): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const { data } = await supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).single()
+  const current = { ...DEFAULT_PREFERENCES, ...(data?.preferences as Partial<UserPreferences>) }
+  await savePreferences(user.id, { ...current, ...patch })
+}
+
 export async function savePreferences(userId: string, prefs: UserPreferences): Promise<void> {
   const supabase = createClient()
   await supabase

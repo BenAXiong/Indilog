@@ -19,6 +19,7 @@ import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { estimateInterval, formatDays, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 import { getDeckGoalStats } from '@/lib/db/profile/goal'
+import { patchPreferences } from '@/lib/db/profile/preferences'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -412,7 +413,7 @@ function ReviewSession({
     const n = Math.min(300, Math.max(1,v))
     setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n))
   }
-  function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v) }
+  function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v); patchPreferences({ review_mode: v }) }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 

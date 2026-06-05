@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 04:52 | FIX | Review mode persists to cloud: patchPreferences helper + wire into ReviewSession.setReviewMode |
 | 2026-06-06 04:46 | CONFIG | Daily cap min: 10 → 1 (review page + settings sheet, all clamps and guards) |
 | 2026-06-06 04:42 | FIX | ReviewSession: RATINGS TDZ — move const before useMemo that references it |
 | 2026-06-06 04:35 | FIX | ReviewSession: hooks violation — keyboard useEffect and intervals useMemo were after early return; moved before it with entry-null guards |
