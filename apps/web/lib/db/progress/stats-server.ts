@@ -50,9 +50,8 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return EMPTY
 
-  const now       = new Date().toISOString()
-  const today     = now.slice(0, 10)
-  const in24h     = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const now   = new Date().toISOString()
+  const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
   // 120-day window covers 16-week heatmap + streak computation
   const from120 = new Date()
@@ -185,15 +184,27 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     }
   }
 
-  const todayStats   = statsMap.get(today)
-  const profileData  = profileRes.data
+  const profileData = profileRes.data
+  const prefs       = (profileData?.preferences as Record<string, unknown>) ?? {}
+
+  // Honour the user's daily reset hour when determining "today"
+  const resetHour   = (prefs.reset_hour as number) ?? 4
+  const studyDate   = new Date()
+  if (studyDate.getHours() < resetHour) studyDate.setDate(studyDate.getDate() - 1)
+  const today       = studyDate.toISOString().slice(0, 10)
+
+  const todayStats    = statsMap.get(today)
+  const reviewedToday = todayStats?.reviewed ?? 0
+  const cap           = (prefs.daily_cap as number) ?? 100
+  // Cards left today: slots remaining in the cap, bounded by what's actually due
+  const dueCount      = Math.min(dueRes.count ?? 0, Math.max(0, cap - reviewedToday))
 
   return {
     streak,
     chain,
-    reviewedToday: todayStats?.reviewed ?? 0,
+    reviewedToday,
     dailyGoal:     profileData?.daily_goal ?? 20,
-    dueCount:      Math.min(dueRes.count ?? 0, (profileData?.preferences as Record<string,unknown> | null)?.daily_cap as number ?? 100),
+    dueCount,
     dueTomorrow:   dueTomorrowRes.count ?? 0,
     heatmap,
     monthLabels,
