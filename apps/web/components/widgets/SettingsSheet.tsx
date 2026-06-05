@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { LangAvatar, Icon } from '@/components/ui'
 import { LANGUAGES } from '@/lib/languages'
@@ -650,6 +651,13 @@ export default function SettingsButton({
   initialTab?: Tab
 }) {
   const [open, setOpen] = useState(false)
+  const router = useRouter()
+
+  function handleClose() {
+    setOpen(false)
+    router.refresh()
+  }
+
   return (
     <>
       {variant === 'gear' && (
@@ -681,7 +689,7 @@ export default function SettingsButton({
           Settings
         </button>
       )}
-      {open && <SettingsSheet onClose={() => setOpen(false)} initialTab={initialTab} />}
+      {open && <SettingsSheet onClose={handleClose} initialTab={initialTab} />}
     </>
   )
 }
