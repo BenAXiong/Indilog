@@ -602,9 +602,9 @@ function ReviewSession({
       }
       return  // horizontal swipes before flip do nothing
     }
-    // After flip: ← again, → good/got it, ↑ easy, ↓ suspend
+    // After flip: ← again, → good/got it, ↓ suspend; ↑ only for review (no easy after reveal in learning)
     if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : isLearning ? 'easy' : 'good')
-    else if (absY > absX && absY > THRESH) { if (dy < 0) submit('easy'); else handleSuspend() }
+    else if (absY > absX && absY > THRESH) { if (dy < 0) { if (!isLearning) submit('easy') } else handleSuspend() }
   }
 
   // Rating buttons
@@ -632,7 +632,7 @@ function ReviewSession({
     if (phase === 'new') {
       if (id === 'again') return 'Repeat'
       const useGotIt = isFinalPass || restarts >= 1
-      return useGotIt ? 'Got it!' : 'Easy'
+      return useGotIt ? 'Got it!' : 'Good'
     }
     if (phase === 'relearn') {
       return id === 'again' ? 'Repeat' : 'Got it!'
@@ -731,14 +731,10 @@ function ReviewSession({
       {/* Card area — flex column so hints sit naturally above/below card */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 16px 0' }}>
 
-        {/* ↑ easy hint — outside card, above */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.42 }}>
+        {/* ↑ easy hint — outside card, above; hidden after reveal in learning (up gesture disabled then) */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: revealed && isLearning ? 0 : 0.42 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.amber }}>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {isLearning
-                ? (phase === 'relearn' || isFinalPass || restarts >= 1 ? 'got it' : 'easy')
-                : 'easy'}
-            </span>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>easy</span>
             <Icon name="chevron" size={13} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
           </div>
         </div>
@@ -811,7 +807,7 @@ function ReviewSession({
               <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: isLearning ? T.amber : T.sage, opacity: 0.5 }}>
                 <Icon name="arrow-r" size={17} strokeWidth={2} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>
-                  {isLearning ? (phase === 'relearn' || isFinalPass || restarts >= 1 ? 'got it' : 'easy') : 'good'}
+                  {isLearning ? (phase === 'relearn' || isFinalPass || restarts >= 1 ? 'got it' : 'good') : 'good'}
                 </span>
               </div>
             </>
