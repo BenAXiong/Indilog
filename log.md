@@ -2,6 +2,13 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-05 20:27 | FEATURE | Account-sync all settings via ind_profiles.preferences JSONB; dashboard dueCount capped server-side |
+| 2026-06-05 18:05 | FEATURE | SettingsSheet header: "Settings · {Tab} · {Subtab}" live breadcrumb |
+| 2026-06-05 18:02 | FEATURE | Settings Study tab: daily cap is now a typed input (clamps to 10–300 on blur/Enter), +/− still works |
+| 2026-06-05 17:56 | FIX | SettingsSheet: bump height to 80vh / 92dvh; accept manual edits |
+| 2026-06-05 17:49 | REFACTOR | SettingsSheet: collapse Study+Review into Study tab with [Study|Review] subtab segmented control; back to 5 top-level tabs |
+| 2026-06-05 17:39 | FIX | SettingsSheet: fixed height 60vh (maxHeight 88dvh) — eliminates resize wiggle on tab change |
+| 2026-06-05 17:34 | FEATURE | SettingsSheet: split Review tab into Study (cap, passes, shuffle) + Review (mode, buttons, hard/easy, language filter); Tab type exported; ScreenHeader type updated |
 | 2026-06-05 14:51 | CONFIG | Docs: plan.md → plan-v0.md rename; plan-v1.md updated; CLAUDE.md, agents.md, log.md minor updates |
 | 2026-06-05 03:04 | FIX | Review cards UI: getLangName() in header (was 'ami'), undo 2x larger, left hint 'repeat' in learning, up hint always amber + label tracks isFinalPass, remove dead isAudio branch, remove skipCurrent() |
 | 2026-06-04 23:48 | CONFIG | CLAUDE.md: add code constraint — no literal non-ASCII in regex char classes in .ts; use \\uXXXX escapes |

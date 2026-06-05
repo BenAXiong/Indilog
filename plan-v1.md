@@ -170,11 +170,11 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Deck sections collapsible
 - [x] Swipe to switch tabs — edge swipe (±28px) navigates between tabs
 - [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, info, etc)
+- [ ] Separate learn from reviews? dash and study
 - [ ] Revamp GoalSheet UI
 - [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Secondary goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
 - [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
-- [ ] Separate learn from reviews? dash and study
 
 ### M5-C — Minor feature refinement
 
@@ -274,6 +274,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - Add ILRDF colloquial corpus
 - TDL to capture: list of things you wanna learn (eg it's my treat, get lost, etc)
 - Video capture — v2 new feature
+- Cards swipe animations
 - Import: stash hash in sessionStorage before login redirect so unauthenticated users land back on /import after sign-up (currently requires re-opening from extension)
 - AI opacity: drop modelId from /api/translate response (currently visible in DevTools network tab despite invisible in UI)
 - AI opacity: proxy TTS audio bytes through /api/tts instead of returning ILRDF file URL to client
