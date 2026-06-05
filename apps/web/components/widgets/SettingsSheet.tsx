@@ -9,6 +9,7 @@ import { shortDialectLabel } from '@/lib/lang/dialects'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { createClient } from '@/lib/supabase/client'
 import { listUserLanguages } from '@/lib/db/srs/flashcards'
+import { savePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/lib/db/profile/preferences'
 import type { User } from '@supabase/supabase-js'
 
 // ── Settings sheet ────────────────────────────────────────────────────────────
@@ -91,8 +92,24 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user); setUserId(user.id)
-      supabase.from('ind_profiles').select('ui_locale').eq('user_id', user.id).single()
-        .then(({ data }) => { if (data) setLocale(data.ui_locale) })
+      supabase.from('ind_profiles').select('ui_locale, preferences').eq('user_id', user.id).single()
+        .then(({ data }) => {
+          if (!data) return
+          if (data.ui_locale) setLocale(data.ui_locale)
+          const p = { ...DEFAULT_PREFERENCES, ...(data.preferences ?? {}) } as UserPreferences
+          setDailyCapRaw(p.daily_cap);         localStorage.setItem('srs_daily_cap',      String(p.daily_cap))
+          setReviewModeRaw(p.review_mode);     localStorage.setItem('srs_review_mode',     p.review_mode)
+          setResetHourRaw(p.reset_hour);       localStorage.setItem('srs_reset_hour',      String(p.reset_hour))
+          setShowHardEasyRaw(p.show_hard_easy);localStorage.setItem('srs_show_hard_easy',  String(p.show_hard_easy))
+          setShowButtonsRaw(p.show_buttons);   localStorage.setItem('srs_show_buttons',    String(p.show_buttons))
+          setShuffleNewRaw(p.shuffle_new);     localStorage.setItem('srs_shuffle_new',     String(p.shuffle_new))
+          setLearningStepsRaw(p.learning_steps);localStorage.setItem('srs_learning_steps', String(p.learning_steps))
+          setShowAllLangsRaw(p.show_all_langs);localStorage.setItem('srs_show_all_langs',  String(p.show_all_langs))
+          setExcludedLangsRaw(p.excluded_langs);localStorage.setItem('srs_excluded_langs', JSON.stringify(p.excluded_langs))
+          setAutoLookup(p.auto_lookup);        localStorage.setItem('ind_auto_lookup',     String(p.auto_lookup))
+          setDictSources(p.dict_sources);      localStorage.setItem('ind_dict_sources',    JSON.stringify(p.dict_sources))
+          setTranslateDialect(p.translate_dialect); localStorage.setItem('translate_ami_dialect', p.translate_dialect)
+        })
     })
   }, [])
 
@@ -122,6 +139,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   function toggleAutoLookup() {
     const next = !autoLookup; setAutoLookup(next)
     localStorage.setItem('ind_auto_lookup', String(next))
+    saveToCloud({ auto_lookup: next })
   }
 
   useEffect(() => {
@@ -129,28 +147,53 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
       listUserLanguages().then(setAvailLangs)
   }, [tab, studySubtab, showAllLangs, availLangs])
 
-  function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
-  function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v)) }
-  function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new', String(v)) }
+  function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)); saveToCloud({ show_hard_easy: v }) }
+  function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v));   saveToCloud({ show_buttons: v }) }
+  function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new', String(v));    saveToCloud({ shuffle_new: v }) }
   function setLearningSteps(v: number) {
-    const n = Math.min(5, Math.max(1, v)); setLearningStepsRaw(n); localStorage.setItem('srs_learning_steps', String(n))
+    const n = Math.min(5, Math.max(1, v)); setLearningStepsRaw(n); localStorage.setItem('srs_learning_steps', String(n)); saveToCloud({ learning_steps: n })
   }
   function setShowAllLangs(v: boolean) {
     setShowAllLangsRaw(v); localStorage.setItem('srs_show_all_langs', String(v))
-    if (v) { setExcludedLangsRaw([]); localStorage.setItem('srs_excluded_langs', '[]') }
+    if (v) { setExcludedLangsRaw([]); localStorage.setItem('srs_excluded_langs', '[]'); saveToCloud({ show_all_langs: v, excluded_langs: [] }) }
+    else   { saveToCloud({ show_all_langs: v }) }
   }
   function toggleLang(code: string) {
     setExcludedLangsRaw(prev => {
       const next = prev.includes(code) ? prev.filter(l => l !== code) : [...prev, code]
       localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
+      saveToCloud({ excluded_langs: next })
       return next
     })
+  }
+
+  function buildPrefs(patch: Partial<UserPreferences> = {}): UserPreferences {
+    return {
+      daily_cap:        dailyCap,
+      review_mode:      reviewMode,
+      reset_hour:       resetHour,
+      show_hard_easy:   showHardEasy,
+      show_buttons:     showButtons,
+      shuffle_new:      shuffleNew,
+      learning_steps:   learningSteps,
+      show_all_langs:   showAllLangs,
+      excluded_langs:   excludedLangs,
+      auto_lookup:      autoLookup,
+      dict_sources:     dictSources,
+      translate_dialect: translateDialect,
+      ...patch,
+    }
+  }
+
+  function saveToCloud(patch: Partial<UserPreferences>) {
+    if (userId) savePreferences(userId, buildPrefs(patch))
   }
 
   function toggleDictSource(id: string) {
     setDictSources(prev => {
       const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
       localStorage.setItem('ind_dict_sources', JSON.stringify(next))
+      saveToCloud({ dict_sources: next })
       return next
     })
   }
@@ -276,7 +319,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     {[{ delta: -1, disabled: resetHour <= 0 }, { delta: 1, disabled: resetHour >= 6 }].map(({ delta, disabled }, i) => (
                       <button key={i} disabled={disabled}
-                        onClick={() => { const n = resetHour + delta; setResetHourRaw(n); localStorage.setItem('srs_reset_hour', String(n)) }}
+                        onClick={() => { const n = resetHour + delta; setResetHourRaw(n); localStorage.setItem('srs_reset_hour', String(n)); saveToCloud({ reset_hour: n }) }}
                         style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
                         {delta < 0 ? '−' : '+'}
                       </button>
@@ -339,7 +382,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       {[{ delta: -10, disabled: dailyCap <= 10 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
                         <button key={i} disabled={disabled}
-                          onClick={() => { const n = Math.min(300, Math.max(10, dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)) }}
+                          onClick={() => { const n = Math.min(300, Math.max(10, dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)); saveToCloud({ daily_cap: n }) }}
                           style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
                           {delta < 0 ? '−' : '+'}
                         </button>
@@ -350,9 +393,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                         value={dailyCap}
                         onChange={e => {
                           const n = parseInt(e.target.value.replace(/\D/g, ''))
-                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 10) localStorage.setItem('srs_daily_cap', String(c)) }
+                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 10) { localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) } }
                         }}
-                        onBlur={() => { const c = Math.min(300, Math.max(10, dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_daily_cap', String(c)) }}
+                        onBlur={() => { const c = Math.min(300, Math.max(10, dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) }}
                         onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                         style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, width: 48, textAlign: 'center', background: T.paper, border: `1px solid ${T.lineSoft}`, borderRadius: 7, padding: '3px 4px', outline: 'none' }}
                       />
@@ -398,7 +441,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                     <div style={{ display: 'flex', gap: 6 }}>
                       {REVIEW_MODES.map(m => (
                         <button key={m.id}
-                          onClick={() => { setReviewModeRaw(m.id); localStorage.setItem('srs_review_mode', m.id) }}
+                          onClick={() => { setReviewModeRaw(m.id); localStorage.setItem('srs_review_mode', m.id); saveToCloud({ review_mode: m.id }) }}
                           style={{ flex: 1, padding: '8px 4px', borderRadius: 9, background: reviewMode === m.id ? T.crimsonBg : T.paperHi, border: `1.5px solid ${reviewMode === m.id ? T.crimson : T.lineSoft}`, color: reviewMode === m.id ? T.crimson : T.inkMute, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                           {m.label}
                         </button>
@@ -490,7 +533,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {AMI_DIALECTS_SETTINGS.map(d => (
                   <button key={d.code}
-                    onClick={() => { setTranslateDialect(d.code); localStorage.setItem('translate_ami_dialect', d.code) }}
+                    onClick={() => { setTranslateDialect(d.code); localStorage.setItem('translate_ami_dialect', d.code); saveToCloud({ translate_dialect: d.code }) }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderRadius: 12, background: translateDialect === d.code ? T.crimsonBg : T.paperHi, border: `1.5px solid ${translateDialect === d.code ? T.crimson : T.lineSoft}`, cursor: 'pointer', textAlign: 'left' }}>
                     <span style={{ fontSize: 14, fontWeight: translateDialect === d.code ? 600 : 400, color: T.ink }}>{d.label}</span>
                     {translateDialect === d.code && <Icon name="check" size={15} color={T.crimson} strokeWidth={2.4} />}

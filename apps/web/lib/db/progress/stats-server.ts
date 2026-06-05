@@ -115,7 +115,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
 
     supabase
       .from('ind_profiles')
-      .select('daily_goal, goal_collection_id, goal_due_date')
+      .select('daily_goal, goal_collection_id, goal_due_date, preferences')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -191,7 +191,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     chain,
     reviewedToday: todayStats?.reviewed ?? 0,
     dailyGoal:     profileData?.daily_goal ?? 20,
-    dueCount:      dueRes.count ?? 0,
+    dueCount:      Math.min(dueRes.count ?? 0, (profileData?.preferences as Record<string,unknown> | null)?.daily_cap as number ?? 100),
     dueTomorrow:   dueTomorrowRes.count ?? 0,
     heatmap,
     monthLabels,
