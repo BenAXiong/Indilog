@@ -94,19 +94,44 @@ One Card per Note by default. Session mode never generates additional Card rows 
 
 ## Session Modes (display only — not stored in DB)
 
-Persisted in `localStorage` key `srs_session_mode`. Set in the review OptionsSheet.
+Persisted in `localStorage` key `srs_review_mode` **and** `ind_profiles.preferences.review_mode`. Set in the review OptionsSheet or SettingsSheet.
 
-| Mode | Prompt shown | Reveal shows |
-|------|-------------|-------------|
-| `forward` | `note.ab` | `note.zh` |
-| `reverse` | `note.zh` | `note.ab` |
-| `audio` | Audio play button (autoplay on load); falls back to `forward` if no audio | `note.ab` + `note.zh` |
+| Mode | Prompt shown | Reveal shows | Fallback |
+|------|-------------|--------------|---------|
+| `forward` | `note.ab` | `note.zh` | — |
+| `reverse` | `note.zh` | `note.ab` | → `forward` (no zh) |
+| `audio` | Audio player (autoplay) | `note.ab` + `note.zh` | → `reverse` (no audio) |
+| `sts` | `ab` with `target_word` highlighted | `note.zh` | → `reverse` (no target_word) |
 
 **Rule:** Never create a new `ind_flashcards` row just because a different session mode is needed. Modes are view logic only.
 
 ---
 
+---
+
+## Settings / Preferences sync — mandatory rule
+
+> **Any setting changed in any UI must be written to both `localStorage` AND `ind_profiles.preferences` (via `patchPreferences`).** Do not write to localStorage alone.
+
+**Why:** `SettingsSheet` syncs from the cloud on mount and will silently overwrite any localStorage-only change the next time the user opens Settings. This also ensures cross-device consistency.
+
+**Pattern:**
+```typescript
+// In every setter — localStorage first (fast/optimistic), then cloud (fire-and-forget)
+function setSomeSetting(v: T) {
+  setSomeSettingRaw(v)
+  localStorage.setItem('srs_some_setting', String(v))
+  patchPreferences({ some_setting: v })  // from @/lib/db/profile/preferences
+}
+```
+
+**`patchPreferences(patch)`** — defined in `lib/db/profile/preferences.ts`. Fetches current prefs, merges the patch, saves. Non-blocking fire-and-forget is fine for settings.
+
+---
+
 ## Card Templates (stored — `card_type = 'sts'` only)
+
+> **Note:** `card_type` and `metadata` columns were dropped from `ind_flashcards` in DEC-SRS06 (2026-06-02). The section below is retained for historical reference only. STS is now driven entirely by `ind_items.target_word`.
 
 STS = Single Target Sentence. Tests a specific word in the context of a sentence. Requires stored metadata.
 

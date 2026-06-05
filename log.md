@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 04:55 | FIX | All OptionsSheet setters now sync to cloud via patchPreferences (showHardEasy, showButtons, learningSteps, dailyCap, shuffleNew, showAllLangs, excludedLangs) |
+| 2026-06-06 04:55 | CONFIG | architecture.md: fix stale session mode key, add 4th sts mode, add mandatory settings sync rule; decisions.md: DEC-SRS08 |
 | 2026-06-06 04:52 | FIX | Review mode persists to cloud: patchPreferences helper + wire into ReviewSession.setReviewMode |
 | 2026-06-06 04:46 | CONFIG | Daily cap min: 10 → 1 (review page + settings sheet, all clamps and guards) |
 | 2026-06-06 04:42 | FIX | ReviewSession: RATINGS TDZ — move const before useMemo that references it |

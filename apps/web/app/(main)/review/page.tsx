@@ -125,7 +125,12 @@ function OptionsSheet({
   function handleToggleShowAll(v: boolean) {
     setShowAllLangs(v)
     localStorage.setItem('srs_show_all_langs', String(v))
-    if (v) { setExcludedLangs([]); localStorage.setItem('srs_excluded_langs', '[]') }
+    if (v) {
+      setExcludedLangs([]); localStorage.setItem('srs_excluded_langs', '[]')
+      patchPreferences({ show_all_langs: v, excluded_langs: [] })
+    } else {
+      patchPreferences({ show_all_langs: v })
+    }
     onReloadNeeded()
   }
 
@@ -134,6 +139,7 @@ function OptionsSheet({
     const next = nowExcluded ? [...excludedLangs, code] : excludedLangs.filter(l => l !== code)
     setExcludedLangs(next)
     localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
+    patchPreferences({ excluded_langs: next })
     onReloadNeeded()
   }
 
@@ -401,17 +407,16 @@ function ReviewSession({
     try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
 
-  function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new', String(v)) }
-  function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
-  function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v)) }
+  function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new',    String(v)); patchPreferences({ shuffle_new: v }) }
+  function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)); patchPreferences({ show_hard_easy: v }) }
+  function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons',   String(v)); patchPreferences({ show_buttons: v }) }
   function setLearningSteps(v: number) {
     const n = Math.min(5, Math.max(1, v))
-    setLearningStepsRaw(n)
-    localStorage.setItem('srs_learning_steps', String(n))
+    setLearningStepsRaw(n); localStorage.setItem('srs_learning_steps', String(n)); patchPreferences({ learning_steps: n })
   }
   function setDailyCap(v: number) {
-    const n = Math.min(300, Math.max(1,v))
-    setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n))
+    const n = Math.min(300, Math.max(1, v))
+    setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)); patchPreferences({ daily_cap: n })
   }
   function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v); patchPreferences({ review_mode: v }) }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
