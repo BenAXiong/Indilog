@@ -9,6 +9,13 @@
 - Format: `| 2026-MM-DD HH:MM | TYPE | Description |`
 - Types: FEATURE, FIX, REFACTOR, SCHEMA, CONFIG, PHASE COMPLETE
 
+## Commit cadence
+- Commit after each complete, self-contained unit: one bug fix, one feature, one schema change
+- Multiple small related tweaks (e.g. 2–3 copy fixes in one session) can be batched into one commit if they're trivially related
+- Never commit mid-feature when code is broken or partial
+- Never batch unrelated changes — a bug fix + a new feature = two commits
+- Rule of thumb: if the `git log` entry for this commit reads as one complete thing, it's the right size
+
 ## Code constraints
 - Never put non-ASCII characters literally inside regex character classes in `.ts` files — SWC rejects them at build time and the Write/Edit tools corrupt them silently via JSON encoding. Always use `\uXXXX` escapes: e.g. `/[‘’ʼꞌ]/g` for apostrophe variants, NOT the literal curly-quote characters.
 
