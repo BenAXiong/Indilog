@@ -2,6 +2,9 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-05 22:00 | FIX | Dashboard dueCount: subtract reviewedToday from cap, apply reset hour from preferences for correct study date |
+| 2026-06-05 21:05 | FEATURE | SettingsButton calls router.refresh() on close — dashboard re-renders instantly with new settings |
+| 2026-06-05 20:54 | FIX | Dashboard due count: unstable_noStore() bypasses Next.js cache; Study review CTA hidden pending rework |
 | 2026-06-05 20:27 | FEATURE | Account-sync all settings via ind_profiles.preferences JSONB; dashboard dueCount capped server-side |
 | 2026-06-05 18:05 | FEATURE | SettingsSheet header: "Settings · {Tab} · {Subtab}" live breadcrumb |
 | 2026-06-05 18:02 | FEATURE | Settings Study tab: daily cap is now a typed input (clamps to 10–300 on blur/Enter), +/− still works |
