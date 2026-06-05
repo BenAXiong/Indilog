@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-05 22:29 | FIX | Curriculum bookmark: persist fill state via useEffect sync on initialSavedId; warn instead of delete on re-tap; success/warning toasts |
 | 2026-06-05 22:23 | FIX | Curriculum bookmark button silently failing — source_id (UUID FK to ind_sources) was receiving corpus original_uuid string; dropped the invalid field |
 | 2026-06-05 22:00 | FIX | Dashboard dueCount: subtract reviewedToday from cap, apply reset hour from preferences for correct study date |
 | 2026-06-05 21:05 | FEATURE | SettingsButton calls router.refresh() on close — dashboard re-renders instantly with new settings |

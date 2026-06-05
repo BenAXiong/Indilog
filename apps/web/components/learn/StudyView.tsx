@@ -61,6 +61,8 @@ export default function StudyView({ source }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [completions,  setCompletions]  = useState<Set<string>>(new Set())
   const [lookup,       setLookup]       = useState<{ word: string; rect: DOMRect } | null>(null)
+  const [saveMsg,      setSaveMsg]      = useState<string | null>(null)
+  const [saveMsgWarn,  setSaveMsgWarn]  = useState(false)
 
   const audioRef  = useRef<HTMLAudioElement | null>(null)
   const settingsRef = useRef<HTMLDivElement>(null)
@@ -289,11 +291,23 @@ export default function StudyView({ source }: Props) {
 
   // ── Save to ind_items ───────────────────────────────────────────────────────
   const handleSave = async (ab: string, zh: string, audioUrl?: string | null): Promise<Item | null> => {
-    return createItem({
+    const item = await createItem({
       ab, zh: zh || undefined, type: 'sentence', language: langCode,
       dialect, note_source: 'curriculum',
       audio: audioUrl || undefined,
     })
+    if (item) {
+      setSaveMsgWarn(false)
+      setSaveMsg('Saved to notebook')
+      setTimeout(() => setSaveMsg(null), 2000)
+    }
+    return item
+  }
+
+  const handleSaveWarning = () => {
+    setSaveMsgWarn(true)
+    setSaveMsg('Already saved — find it in Notebook to remove')
+    setTimeout(() => setSaveMsg(null), 4000)
   }
 
   // ── Current item pill label ─────────────────────────────────────────────────
@@ -405,6 +419,7 @@ export default function StudyView({ source }: Props) {
               onLookup={(word, rect) => setLookup({ word, rect })}
               onPlay={handlePlay}
               onSave={handleSave}
+              onSaveWarning={handleSaveWarning}
             />
           ))
         )}
@@ -473,6 +488,24 @@ export default function StudyView({ source }: Props) {
           anchorRect={lookup.rect}
           onClose={() => setLookup(null)}
         />
+      )}
+
+      {/* Save toast */}
+      {saveMsg && (
+        <div className="animate-iv-rise" style={{
+          position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 80, maxWidth: 'calc(100vw - 36px)',
+          padding: '10px 16px', borderRadius: 10,
+          background: saveMsgWarn ? T.amberBg : T.sageBg,
+          border: `1px solid ${saveMsgWarn ? T.amber : '#D2D8AE'}`,
+          fontSize: 13, fontWeight: 500, color: saveMsgWarn ? T.terra : T.sageDp,
+          display: 'flex', alignItems: 'center', gap: 6,
+          boxShadow: '0 4px 16px rgba(80,40,20,0.12)',
+        }}>
+          <Icon name={saveMsgWarn ? 'bookmarkF' : 'check'} size={14}
+            color={saveMsgWarn ? T.terra : T.sageDp} strokeWidth={2.2} />
+          {saveMsg}
+        </div>
       )}
     </div>
   )

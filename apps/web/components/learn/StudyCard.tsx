@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
-import { deleteItem, type Item } from '@/lib/db/notebook/items'
+import type { Item } from '@/lib/db/notebook/items'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import type { ZhMode } from './SettingsPanel'
 
@@ -16,12 +16,16 @@ type Props = {
   onLookup?: (word: string, rect: DOMRect) => void
   onPlay: (url: string) => void
   onSave: (ab: string, zh: string, audioUrl?: string | null) => Promise<Item | null>
+  onSaveWarning: () => void
 }
 
-export default function StudyCard({ row, index, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave }: Readonly<Props>) {
+export default function StudyCard({ row, index, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
   const [savedId,    setSavedId]    = useState<string | null>(initialSavedId ?? null)
+
+  // Sync when savedItemMap resolves asynchronously after mount
+  useEffect(() => { setSavedId(initialSavedId ?? null) }, [initialSavedId])
 
   const tokens = row.ab.split(/\s+/).filter(Boolean)
 
@@ -37,8 +41,7 @@ export default function StudyCard({ row, index, zhMode, lookupOn, initialSavedId
 
   const handleSave = async () => {
     if (savedId) {
-      await deleteItem(savedId)
-      setSavedId(null)
+      onSaveWarning()
     } else {
       const item = await onSave(row.ab, row.zh ?? '', row.audio_url)
       if (item) setSavedId(item.id)
