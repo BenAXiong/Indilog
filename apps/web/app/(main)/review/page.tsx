@@ -735,9 +735,9 @@ function ReviewSession({
         <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.42 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.amber }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {!revealed
-                ? (isLearning && (isFinalPass || restarts >= 1) ? 'got it' : 'easy')
-                : (isLearning ? 'got it' : 'easy')}
+              {isLearning
+                ? (phase === 'relearn' || isFinalPass || restarts >= 1 ? 'got it' : 'easy')
+                : 'easy'}
             </span>
             <Icon name="chevron" size={13} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
           </div>
@@ -808,10 +808,10 @@ function ReviewSession({
                 <Icon name="arrow-l" size={17} strokeWidth={2} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{isLearning ? 'repeat' : 'again'}</span>
               </div>
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.5 }}>
+              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: isLearning ? T.amber : T.sage, opacity: 0.5 }}>
                 <Icon name="arrow-r" size={17} strokeWidth={2} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>
-                  {isLearning ? 'got it' : 'good'}
+                  {isLearning ? (phase === 'relearn' || isFinalPass || restarts >= 1 ? 'got it' : 'easy') : 'good'}
                 </span>
               </div>
             </>
