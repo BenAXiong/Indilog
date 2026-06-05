@@ -244,7 +244,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] MoE proxy: Indivore API → Citadel `/api/moe_shadow`; merge rows by normalised `word_ab`; concat defs with ` · `
 - [x] 5px steel-blue dot marker on MoE results (discreet; for testing only)
 - [x] MoE results sorted with ePark words (exact-first, then by length)
-- [ ] Merge `feat/moe-dict` → main after test coverage confirmed
+- [x] Merge `feat/moe-dict` → main after test coverage confirmed
 
 ### V2 — Deferred
 
