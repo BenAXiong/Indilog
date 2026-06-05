@@ -166,7 +166,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
         position: 'relative', background: T.paper,
         borderRadius: '20px 20px 0 0',
         paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
-        maxHeight: '88dvh', display: 'flex', flexDirection: 'column',
+        height: '60vh', maxHeight: '88dvh', display: 'flex', flexDirection: 'column',
       }}>
         {/* Handle */}
         <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '12px auto 0' }} />
