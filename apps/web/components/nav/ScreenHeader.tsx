@@ -14,7 +14,7 @@ type ScreenHeaderProps = {
   /** Slot for a custom right-side element. Defaults to settings gear. */
   right?: ReactNode
   /** Which settings tab the gear icon opens. Defaults to general. */
-  settingsTab?: 'general' | 'study' | 'review' | 'capture' | 'dict' | 'translate'
+  settingsTab?: 'general' | 'study' | 'capture' | 'dict' | 'translate'
 }
 
 export default function ScreenHeader({ title, langName, langDialect, showHome = true, right, settingsTab }: Readonly<ScreenHeaderProps>) {

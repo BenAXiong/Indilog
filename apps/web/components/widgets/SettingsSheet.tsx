@@ -13,12 +13,12 @@ import type { User } from '@supabase/supabase-js'
 
 // ── Settings sheet ────────────────────────────────────────────────────────────
 
-export type Tab = 'general' | 'study' | 'review' | 'capture' | 'dict' | 'translate'
+export type Tab = 'general' | 'study' | 'capture' | 'dict' | 'translate'
+type StudySubtab = 'study' | 'review'
 
-const TABS: { id: Tab; icon: 'home' | 'learn' | 'review' | 'capture' | 'translate' | 'dict'; label: string }[] = [
+const TABS: { id: Tab; icon: 'home' | 'learn' | 'capture' | 'translate' | 'dict'; label: string }[] = [
   { id: 'general',   icon: 'home',      label: 'General'   },
   { id: 'study',     icon: 'learn',     label: 'Study'     },
-  { id: 'review',    icon: 'review',    label: 'Review'    },
   { id: 'capture',   icon: 'capture',   label: 'Capture'   },
   { id: 'translate', icon: 'translate', label: 'Translate' },
   { id: 'dict',      icon: 'dict',      label: 'Dict'      },
@@ -43,6 +43,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const { lang, dialect, dialectLabel, setLang, setDialect } = useLang()
 
   const [tab,            setTab]            = useState<Tab>(initialTab)
+  const [studySubtab,    setStudySubtab]    = useState<StudySubtab>('study')
   const [user,           setUser]           = useState<User | null>(null)
   const [userId,         setUserId]         = useState<string | null>(null)
   const [locale,         setLocale]         = useState('en')
@@ -124,9 +125,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   }
 
   useEffect(() => {
-    if (tab === 'review' && !showAllLangs && availLangs === null)
+    if (tab === 'study' && studySubtab === 'review' && !showAllLangs && availLangs === null)
       listUserLanguages().then(setAvailLangs)
-  }, [tab, showAllLangs, availLangs])
+  }, [tab, studySubtab, showAllLangs, availLangs])
 
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
   function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v)) }
@@ -302,149 +303,168 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
             </>
           )}
 
-          {/* ── Study ── */}
+          {/* ── Study (with Review subtab) ── */}
           {tab === 'study' && (
             <>
-              <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Session limits</div>
-              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
-                {/* Daily cap */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Daily cap</div>
-                    <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Max reviews per day</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {[{ delta: -10, disabled: dailyCap <= 10 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
-                      <button key={i} disabled={disabled}
-                        onClick={() => { const n = dailyCap + delta; setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)) }}
-                        style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
-                        {delta < 0 ? '−' : '+'}
-                      </button>
-                    ))}
-                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 30, textAlign: 'center' }}>{dailyCap}</span>
-                  </div>
-                </div>
-                {/* Learning passes */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Learning passes</div>
-                    <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Times a new card repeats before graduating</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {[{ delta: -1, disabled: learningSteps <= 1 }, { delta: 1, disabled: learningSteps >= 5 }].map(({ delta, disabled }, i) => (
-                      <button key={i} disabled={disabled}
-                        onClick={() => setLearningSteps(learningSteps + delta)}
-                        style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
-                        {delta < 0 ? '−' : '+'}
-                      </button>
-                    ))}
-                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 20, textAlign: 'center' }}>{learningSteps}</span>
-                  </div>
-                </div>
-                {/* Shuffle new */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Shuffle new cards</div>
-                    <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Randomise order within each deck level</div>
-                  </div>
-                  <button onClick={() => setShuffleNew(!shuffleNew)} role="switch" aria-checked={shuffleNew}
-                    style={{ width: 44, height: 26, borderRadius: 999, background: shuffleNew ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                    <div style={{ position: 'absolute', top: 3, left: shuffleNew ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              {/* Subtab segmented control */}
+              <div style={{ display: 'flex', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 11, padding: 3, gap: 3 }}>
+                {(['study', 'review'] as const).map(s => (
+                  <button key={s} onClick={() => setStudySubtab(s)} style={{
+                    flex: 1, padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                    background: studySubtab === s ? T.paper : 'transparent',
+                    border: `1px solid ${studySubtab === s ? T.lineSoft : 'transparent'}`,
+                    boxShadow: studySubtab === s ? '0 1px 2px rgba(0,0,0,0.07)' : 'none',
+                    color: studySubtab === s ? T.ink : T.inkMute,
+                    fontSize: 13, fontWeight: studySubtab === s ? 600 : 400,
+                    transition: 'all .15s',
+                  }}>
+                    {s === 'study' ? 'Study' : 'Review'}
                   </button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ── Review ── */}
-          {tab === 'review' && (
-            <>
-              {/* Review mode */}
-              <div>
-                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Default mode</div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {REVIEW_MODES.map(m => (
-                    <button key={m.id}
-                      onClick={() => { setReviewModeRaw(m.id); localStorage.setItem('srs_review_mode', m.id) }}
-                      style={{ flex: 1, padding: '8px 4px', borderRadius: 9, background: reviewMode === m.id ? T.crimsonBg : T.paperHi, border: `1.5px solid ${reviewMode === m.id ? T.crimson : T.lineSoft}`, color: reviewMode === m.id ? T.crimson : T.inkMute, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
 
-              {/* Display toggles */}
-              <div>
-                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Display</div>
+              {/* Study subtab */}
+              {studySubtab === 'study' && (
                 <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                  {/* Daily cap */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Rating buttons</div>
-                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Off = gesture-only grading</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Daily cap</div>
+                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Max reviews per day</div>
                     </div>
-                    <button onClick={() => setShowButtons(!showButtons)} role="switch" aria-checked={showButtons}
-                      style={{ width: 44, height: 26, borderRadius: 999, background: showButtons ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                      <div style={{ position: 'absolute', top: 3, left: showButtons ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {[{ delta: -10, disabled: dailyCap <= 10 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
+                        <button key={i} disabled={disabled}
+                          onClick={() => { const n = dailyCap + delta; setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)) }}
+                          style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
+                          {delta < 0 ? '−' : '+'}
+                        </button>
+                      ))}
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 30, textAlign: 'center' }}>{dailyCap}</span>
+                    </div>
                   </div>
+                  {/* Learning passes */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Learning passes</div>
+                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Times a new card repeats before graduating</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {[{ delta: -1, disabled: learningSteps <= 1 }, { delta: 1, disabled: learningSteps >= 5 }].map(({ delta, disabled }, i) => (
+                        <button key={i} disabled={disabled}
+                          onClick={() => setLearningSteps(learningSteps + delta)}
+                          style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
+                          {delta < 0 ? '−' : '+'}
+                        </button>
+                      ))}
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 20, textAlign: 'center' }}>{learningSteps}</span>
+                    </div>
+                  </div>
+                  {/* Shuffle new */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Hard + Easy</div>
-                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Show all four grades, not just two</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Shuffle new cards</div>
+                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Randomise order within each deck level</div>
                     </div>
-                    <button onClick={() => setShowHardEasy(!showHardEasy)} role="switch" aria-checked={showHardEasy}
-                      style={{ width: 44, height: 26, borderRadius: 999, background: showHardEasy ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                      <div style={{ position: 'absolute', top: 3, left: showHardEasy ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    <button onClick={() => setShuffleNew(!shuffleNew)} role="switch" aria-checked={shuffleNew}
+                      style={{ width: 44, height: 26, borderRadius: 999, background: shuffleNew ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: 3, left: shuffleNew ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                     </button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Language filter */}
-              <div>
-                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Languages</div>
-                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: showAllLangs ? undefined : `1px solid ${T.lineSoft}` }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Show all languages</div>
-                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Include all languages in review</div>
+              {/* Review subtab */}
+              {studySubtab === 'review' && (
+                <>
+                  {/* Review mode */}
+                  <div>
+                    <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Default mode</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {REVIEW_MODES.map(m => (
+                        <button key={m.id}
+                          onClick={() => { setReviewModeRaw(m.id); localStorage.setItem('srs_review_mode', m.id) }}
+                          style={{ flex: 1, padding: '8px 4px', borderRadius: 9, background: reviewMode === m.id ? T.crimsonBg : T.paperHi, border: `1.5px solid ${reviewMode === m.id ? T.crimson : T.lineSoft}`, color: reviewMode === m.id ? T.crimson : T.inkMute, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                          {m.label}
+                        </button>
+                      ))}
                     </div>
-                    <button onClick={() => setShowAllLangs(!showAllLangs)} role="switch" aria-checked={showAllLangs}
-                      style={{ width: 44, height: 26, borderRadius: 999, background: showAllLangs ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                      <div style={{ position: 'absolute', top: 3, left: showAllLangs ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                    </button>
                   </div>
-                  {!showAllLangs && (
-                    <div style={{ padding: '8px 14px 12px' }}>
-                      {availLangs === null ? (
-                        <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
-                      ) : availLangs.map(code => {
-                        const included = !excludedLangs.includes(code)
-                        return (
-                          <button key={code} onClick={() => toggleLang(code)} style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            width: '100%', padding: '8px 0', background: 'none', border: 'none',
-                            cursor: 'pointer', textAlign: 'left',
-                          }}>
-                            <div style={{
-                              width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                              background: included ? T.crimson : 'transparent',
-                              border: `1.5px solid ${included ? T.crimson : T.line}`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
-                            </div>
-                            <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
-                          </button>
-                        )
-                      })}
-                      <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 4, lineHeight: 1.5 }}>
-                        Excluded languages still accumulate due cards.
+
+                  {/* Display toggles */}
+                  <div>
+                    <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Display</div>
+                    <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Rating buttons</div>
+                          <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Off = gesture-only grading</div>
+                        </div>
+                        <button onClick={() => setShowButtons(!showButtons)} role="switch" aria-checked={showButtons}
+                          style={{ width: 44, height: 26, borderRadius: 999, background: showButtons ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                          <div style={{ position: 'absolute', top: 3, left: showButtons ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Hard + Easy</div>
+                          <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Show all four grades, not just two</div>
+                        </div>
+                        <button onClick={() => setShowHardEasy(!showHardEasy)} role="switch" aria-checked={showHardEasy}
+                          style={{ width: 44, height: 26, borderRadius: 999, background: showHardEasy ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                          <div style={{ position: 'absolute', top: 3, left: showHardEasy ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        </button>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+
+                  {/* Language filter */}
+                  <div>
+                    <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Languages</div>
+                    <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: showAllLangs ? undefined : `1px solid ${T.lineSoft}` }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Show all languages</div>
+                          <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Include all languages in review</div>
+                        </div>
+                        <button onClick={() => setShowAllLangs(!showAllLangs)} role="switch" aria-checked={showAllLangs}
+                          style={{ width: 44, height: 26, borderRadius: 999, background: showAllLangs ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                          <div style={{ position: 'absolute', top: 3, left: showAllLangs ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                      {!showAllLangs && (
+                        <div style={{ padding: '8px 14px 12px' }}>
+                          {availLangs === null ? (
+                            <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
+                          ) : availLangs.map(code => {
+                            const included = !excludedLangs.includes(code)
+                            return (
+                              <button key={code} onClick={() => toggleLang(code)} style={{
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                width: '100%', padding: '8px 0', background: 'none', border: 'none',
+                                cursor: 'pointer', textAlign: 'left',
+                              }}>
+                                <div style={{
+                                  width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                                  background: included ? T.crimson : 'transparent',
+                                  border: `1.5px solid ${included ? T.crimson : T.line}`,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                  {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
+                                </div>
+                                <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
+                              </button>
+                            )
+                          })}
+                          <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 4, lineHeight: 1.5 }}>
+                            Excluded languages still accumulate due cards.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
 
