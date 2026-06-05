@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 04:08 | FIX | Dashboard: "Review more?" (amber) when cap met but queue not empty; "All caught up!" only when truly empty; ?more=1 bypasses daily cap in session |
 | 2026-06-06 03:59 | FIX | Review session cap: read daily_cap from ind_profiles.preferences (not localStorage default); sync to localStorage on load; custom sessions uncapped; fix || cap fallback bug |
 | 2026-06-06 02:04 | FEATURE | Review session header: kebab menu (skip+suspend), lang left, counter+undo below bar right, returning below bar left; pause icon |
 | 2026-06-05 23:46 | FIX | Learning cards: up=Easy before reveal only; after reveal up disabled, right=Good (non-final) / Got it! (final); label + gesture + hint all synced |

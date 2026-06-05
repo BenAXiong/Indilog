@@ -8,6 +8,7 @@ export type DashboardStats = {
   reviewedToday: number
   dailyGoal: number
   dueCount: number
+  totalDue: number
   dueTomorrow: number
   heatmap: number[][]       // [week 0..15][day 0..6], level 0-4, week 0 = oldest
   monthLabels: (string | null)[]  // label per week column, null if mid-month
@@ -28,7 +29,7 @@ export type DashboardStats = {
 const EMPTY: DashboardStats = {
   streak: 0, chain: new Array(7).fill(false) as boolean[],
   reviewedToday: 0, dailyGoal: 20,
-  dueCount: 0, dueTomorrow: 0,
+  dueCount: 0, totalDue: 0, dueTomorrow: 0,
   heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
   monthLabels: new Array(16).fill(null) as (string | null)[],
   mastered: 0, active: 0, thisWeek: 0,
@@ -205,6 +206,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     reviewedToday,
     dailyGoal:     profileData?.daily_goal ?? 20,
     dueCount,
+    totalDue:      dueRes.count ?? 0,
     dueTomorrow:   dueTomorrowRes.count ?? 0,
     heatmap,
     monthLabels,

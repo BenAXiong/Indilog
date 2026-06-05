@@ -1225,6 +1225,7 @@ function ReviewPage() {
   const filterParam      = searchParams.get('filter')
   const flagColor        = flagParam ?? (filterParam === 'flagged' ? 'any' : undefined)
   const isCustom         = searchParams.get('custom') === '1'
+  const isMore           = searchParams.get('more') === '1'
   const customLang       = searchParams.get('lang') ?? undefined
   const customDialect    = searchParams.get('dialect') ?? undefined
   const customCollection = searchParams.get('collectionId') ?? undefined
@@ -1316,7 +1317,7 @@ function ReviewPage() {
     }
     const sorted = [...orderedNew, ...otherCards]
     const cap = context.dailyCap
-    const sessionCap = isCustom ? sorted.length : Math.max(0, cap - context.reviewedToday)
+    const sessionCap = (isCustom || isMore) ? sorted.length : Math.max(0, cap - context.reviewedToday)
     setCards(sorted.slice(0, sessionCap))
     setCtx(context)
     setLoading(false)
