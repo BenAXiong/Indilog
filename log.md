@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 04:42 | FIX | ReviewSession: RATINGS TDZ — move const before useMemo that references it |
 | 2026-06-06 04:35 | FIX | ReviewSession: hooks violation — keyboard useEffect and intervals useMemo were after early return; moved before it with entry-null guards |
 | 2026-06-06 04:14 | FIX | Review more session: cap to daily_cap cards, not full queue |
 | 2026-06-06 04:08 | FIX | Dashboard: "Review more?" (amber) when cap met but queue not empty; "All caught up!" only when truly empty; ?more=1 bypasses daily cap in session |

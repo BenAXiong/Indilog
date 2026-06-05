@@ -452,6 +452,14 @@ function ReviewSession({
     return () => window.removeEventListener('keydown', onKey)
   }, [revealed, showHardEasy, showOptions, isLearning]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Rating button definitions — placed here so useMemo below can reference them
+  const RATINGS: { id: Rating; label: string; color: string }[] = [
+    { id: 'again', label: 'Again', color: T.crimson },
+    { id: 'hard',  label: 'Hard',  color: T.terra   },
+    { id: 'good',  label: 'Good',  color: T.sage    },
+    { id: 'easy',  label: 'Easy',  color: T.amber   },
+  ]
+
   // Intervals memoised for rating buttons
   const intervals = useMemo(() => {
     if (!entry) return {} as Record<string, string>
@@ -626,13 +634,6 @@ function ReviewSession({
     else if (absY > absX && absY > THRESH) { if (dy < 0) { if (!isLearning) submit('easy') } else handleSuspend() }
   }
 
-  // Rating buttons
-  const RATINGS: { id: Rating; label: string; color: string }[] = [
-    { id: 'again', label: 'Again', color: T.crimson },
-    { id: 'hard',  label: 'Hard',  color: T.terra   },
-    { id: 'good',  label: 'Good',  color: T.sage    },
-    { id: 'easy',  label: 'Easy',  color: T.amber   },
-  ]
   // Learning: before reveal → Easy only; after reveal → Repeat + Got it!
   // Review: after reveal → Again/Good (or all four if showHardEasy)
   const visibleRatings = isLearning
