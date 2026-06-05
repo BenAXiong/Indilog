@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-05 23:46 | FIX | Learning cards: up=Easy before reveal only; after reveal up disabled, right=Good (non-final) / Got it! (final); label + gesture + hint all synced |
+| 2026-06-05 23:01 | FIX | Review hints fully mirror ratingLabel(): up/right label tracks isFinalPass/restarts; right hint amber for learning (easy action) |
 | 2026-06-05 22:45 | CONFIG | CLAUDE.md: add commit cadence guidelines |
 | 2026-06-05 22:33 | FIX | Curriculum bookmark warning: "Notebook" → "Captures deck" |
 | 2026-06-05 22:29 | FIX | Curriculum bookmark: persist fill state via useEffect sync on initialSavedId; warn instead of delete on re-tap; success/warning toasts |

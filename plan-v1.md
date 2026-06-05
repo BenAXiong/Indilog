@@ -66,9 +66,9 @@
 
 ### M1-G — SRS UX fixes
 
-- [x] Learning logic: Easy-only before flip (button + swipe ↑); Again + Got it! after reveal
+- [x] Learning logic: Easy-only before flip (button + swipe ↑); Again + Good (non-final) / Got it! (final pass or relearn) after reveal; ↑ gesture disabled after reveal in learning
 - [x] Exit warning when learning cards in progress (shows count + steps, blocks exit)
-- [x] Gesture hints: ↑ easy / ↓ suspend outside card; ← again / → good inside card (after flip only)
+- [x] Gesture hints: ↑ easy / ↓ suspend outside card (↑ hidden after reveal in learning); ← again / → good or got it! inside card (after flip only)
 - [x] Deck ordering: collection cards sorted by level → lesson → position; shuffle-within-level toggle
 - [x] Session end: expandable reviewed-items list + goal mastered/total + days to goal due date
 - [x] Review mode DEC — forward/reverse/audio/sts; drop card_type+metadata; target_word as STS signal (→ DEC-SRS06)
@@ -266,6 +266,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ## Next versions
 
+- Find how many gaoji vocab have exsent in ePark
 - Avoid need for signal during review
 - Use disctionary to explore affixes (examples)
 - Icons: capture = fish net, dash = stone house, study = ?, trans = stars, dict = ?
