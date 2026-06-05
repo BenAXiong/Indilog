@@ -15,7 +15,7 @@ type Props = {
   initialSavedId?: string | null
   onLookup?: (word: string, rect: DOMRect) => void
   onPlay: (url: string) => void
-  onSave: (ab: string, zh: string, audioUrl?: string | null, sourceId?: string) => Promise<Item | null>
+  onSave: (ab: string, zh: string, audioUrl?: string | null) => Promise<Item | null>
 }
 
 export default function StudyCard({ row, index, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave }: Readonly<Props>) {
@@ -40,7 +40,7 @@ export default function StudyCard({ row, index, zhMode, lookupOn, initialSavedId
       await deleteItem(savedId)
       setSavedId(null)
     } else {
-      const item = await onSave(row.ab, row.zh ?? '', row.audio_url, row.original_uuid)
+      const item = await onSave(row.ab, row.zh ?? '', row.audio_url)
       if (item) setSavedId(item.id)
     }
   }
