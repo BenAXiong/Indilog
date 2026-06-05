@@ -4,19 +4,21 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { T } from '@/lib/tokens'
 import { LangAvatar, Icon } from '@/components/ui'
 import { LANGUAGES } from '@/lib/languages'
-import { getGlid, getDialectsForLang } from '@/lib/lang/lang-bridge'
+import { getGlid, getDialectsForLang, getLangName } from '@/lib/lang/lang-bridge'
 import { shortDialectLabel } from '@/lib/lang/dialects'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { createClient } from '@/lib/supabase/client'
+import { listUserLanguages } from '@/lib/db/srs/flashcards'
 import type { User } from '@supabase/supabase-js'
 
 // ── Settings sheet ────────────────────────────────────────────────────────────
 
-type Tab = 'general' | 'capture' | 'dict' | 'review' | 'translate'
+export type Tab = 'general' | 'study' | 'review' | 'capture' | 'dict' | 'translate'
 
-const TABS: { id: Tab; icon: 'home' | 'learn' | 'capture' | 'translate' | 'dict'; label: string }[] = [
+const TABS: { id: Tab; icon: 'home' | 'learn' | 'review' | 'capture' | 'translate' | 'dict'; label: string }[] = [
   { id: 'general',   icon: 'home',      label: 'General'   },
-  { id: 'review',    icon: 'learn',     label: 'Review'    },
+  { id: 'study',     icon: 'learn',     label: 'Study'     },
+  { id: 'review',    icon: 'review',    label: 'Review'    },
   { id: 'capture',   icon: 'capture',   label: 'Capture'   },
   { id: 'translate', icon: 'translate', label: 'Translate' },
   { id: 'dict',      icon: 'dict',      label: 'Dict'      },
@@ -54,6 +56,13 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [dailyCap,         setDailyCapRaw]      = useState(100)
   const [reviewMode,       setReviewModeRaw]    = useState('forward')
   const [translateDialect, setTranslateDialect] = useState('ami_Coas')
+  const [showHardEasy,    setShowHardEasyRaw]   = useState(true)
+  const [showButtons,     setShowButtonsRaw]    = useState(true)
+  const [shuffleNew,      setShuffleNewRaw]     = useState(false)
+  const [learningSteps,   setLearningStepsRaw]  = useState(3)
+  const [showAllLangs,    setShowAllLangsRaw]   = useState(true)
+  const [excludedLangs,   setExcludedLangsRaw]  = useState<string[]>([])
+  const [availLangs,      setAvailLangs]        = useState<string[] | null>(null)
   const accountMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -67,6 +76,13 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(10, cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setTranslateDialect(localStorage.getItem('translate_ami_dialect') ?? 'ami_Coas')
+    setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
+    setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
+    setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
+    const steps = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
+    setLearningStepsRaw(isNaN(steps) ? 3 : Math.min(5, Math.max(1, steps)))
+    setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
+    try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
 
   useEffect(() => {
@@ -105,6 +121,29 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   function toggleAutoLookup() {
     const next = !autoLookup; setAutoLookup(next)
     localStorage.setItem('ind_auto_lookup', String(next))
+  }
+
+  useEffect(() => {
+    if (tab === 'review' && !showAllLangs && availLangs === null)
+      listUserLanguages().then(setAvailLangs)
+  }, [tab, showAllLangs, availLangs])
+
+  function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)) }
+  function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v)) }
+  function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new', String(v)) }
+  function setLearningSteps(v: number) {
+    const n = Math.min(5, Math.max(1, v)); setLearningStepsRaw(n); localStorage.setItem('srs_learning_steps', String(n))
+  }
+  function setShowAllLangs(v: boolean) {
+    setShowAllLangsRaw(v); localStorage.setItem('srs_show_all_langs', String(v))
+    if (v) { setExcludedLangsRaw([]); localStorage.setItem('srs_excluded_langs', '[]') }
+  }
+  function toggleLang(code: string) {
+    setExcludedLangsRaw(prev => {
+      const next = prev.includes(code) ? prev.filter(l => l !== code) : [...prev, code]
+      localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
+      return next
+    })
   }
 
   function toggleDictSource(id: string) {
@@ -263,13 +302,13 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
             </>
           )}
 
-          {/* ── Review ── */}
-          {tab === 'review' && (
+          {/* ── Study ── */}
+          {tab === 'study' && (
             <>
-              {/* Daily cap */}
-              <div>
-                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Session</div>
-                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Session limits</div>
+              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                {/* Daily cap */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Daily cap</div>
                     <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Max reviews per day</div>
@@ -285,9 +324,42 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                     <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 30, textAlign: 'center' }}>{dailyCap}</span>
                   </div>
                 </div>
+                {/* Learning passes */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Learning passes</div>
+                    <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Times a new card repeats before graduating</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {[{ delta: -1, disabled: learningSteps <= 1 }, { delta: 1, disabled: learningSteps >= 5 }].map(({ delta, disabled }, i) => (
+                      <button key={i} disabled={disabled}
+                        onClick={() => setLearningSteps(learningSteps + delta)}
+                        style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
+                        {delta < 0 ? '−' : '+'}
+                      </button>
+                    ))}
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 20, textAlign: 'center' }}>{learningSteps}</span>
+                  </div>
+                </div>
+                {/* Shuffle new */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Shuffle new cards</div>
+                    <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Randomise order within each deck level</div>
+                  </div>
+                  <button onClick={() => setShuffleNew(!shuffleNew)} role="switch" aria-checked={shuffleNew}
+                    style={{ width: 44, height: 26, borderRadius: 999, background: shuffleNew ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                    <div style={{ position: 'absolute', top: 3, left: shuffleNew ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                  </button>
+                </div>
               </div>
+            </>
+          )}
 
-              {/* Default review mode */}
+          {/* ── Review ── */}
+          {tab === 'review' && (
+            <>
+              {/* Review mode */}
               <div>
                 <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Default mode</div>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -298,6 +370,79 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                       {m.label}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Display toggles */}
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Display</div>
+                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Rating buttons</div>
+                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Off = gesture-only grading</div>
+                    </div>
+                    <button onClick={() => setShowButtons(!showButtons)} role="switch" aria-checked={showButtons}
+                      style={{ width: 44, height: 26, borderRadius: 999, background: showButtons ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: 3, left: showButtons ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Hard + Easy</div>
+                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Show all four grades, not just two</div>
+                    </div>
+                    <button onClick={() => setShowHardEasy(!showHardEasy)} role="switch" aria-checked={showHardEasy}
+                      style={{ width: 44, height: 26, borderRadius: 999, background: showHardEasy ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: 3, left: showHardEasy ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Language filter */}
+              <div>
+                <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Languages</div>
+                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: showAllLangs ? undefined : `1px solid ${T.lineSoft}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Show all languages</div>
+                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Include all languages in review</div>
+                    </div>
+                    <button onClick={() => setShowAllLangs(!showAllLangs)} role="switch" aria-checked={showAllLangs}
+                      style={{ width: 44, height: 26, borderRadius: 999, background: showAllLangs ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: 3, left: showAllLangs ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    </button>
+                  </div>
+                  {!showAllLangs && (
+                    <div style={{ padding: '8px 14px 12px' }}>
+                      {availLangs === null ? (
+                        <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
+                      ) : availLangs.map(code => {
+                        const included = !excludedLangs.includes(code)
+                        return (
+                          <button key={code} onClick={() => toggleLang(code)} style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            width: '100%', padding: '8px 0', background: 'none', border: 'none',
+                            cursor: 'pointer', textAlign: 'left',
+                          }}>
+                            <div style={{
+                              width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                              background: included ? T.crimson : 'transparent',
+                              border: `1.5px solid ${included ? T.crimson : T.line}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
+                            </div>
+                            <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
+                          </button>
+                        )
+                      })}
+                      <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 4, lineHeight: 1.5 }}>
+                        Excluded languages still accumulate due cards.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
