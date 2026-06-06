@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 19:57 | SCHEMA | M5-B Phase 1: ind_priority_decks table (position, in_simulation, simulation_deadline); data migration from goal_collection_id; ind_daily_stats.learned_count + increment_learned_today RPC; daily_cap → review_cap rename across preferences, review page, SettingsSheet, stats-server |
 | 2026-06-06 15:40 | CONFIG | Migrate decisions.md monolith to 46 per-file ADRs in docs/adr/ (DEC-XXX-slug format); decisions.md becomes thin index; agents.md + CLAUDE.md updated; global ADR-FORMAT.md updated to DEC-FEAT-NN naming convention |
 | 2026-06-06 14:48 | CONFIG | plan-v1.md: M8 bug fixes logged, MoE dict section added, versioning updated, stale deferred items removed from completed phases |
 | 2026-06-06 04:55 | FIX | All OptionsSheet setters now sync to cloud via patchPreferences (showHardEasy, showButtons, learningSteps, dailyCap, shuffleNew, showAllLangs, excludedLangs) |
