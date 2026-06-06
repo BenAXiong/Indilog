@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 14:48 | CONFIG | plan-v1.md: M8 bug fixes logged, MoE dict section added, versioning updated, stale deferred items removed from completed phases |
 | 2026-06-06 04:55 | FIX | All OptionsSheet setters now sync to cloud via patchPreferences (showHardEasy, showButtons, learningSteps, dailyCap, shuffleNew, showAllLangs, excludedLangs) |
 | 2026-06-06 04:55 | CONFIG | architecture.md: fix stale session mode key, add 4th sts mode, add mandatory settings sync rule; decisions.md: DEC-SRS08 |
 | 2026-06-06 04:52 | FIX | Review mode persists to cloud: patchPreferences helper + wire into ReviewSession.setReviewMode |
