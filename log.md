@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 20:24 | FEATURE | M5-B Phase 3: Review session stripped of learn/relearn phases; priority sort via ind_priority_decks; Review N more CTA with editable stepper (review_more_size pref); SessionContext migrated from goalCollectionId to priorityCollectionIds |
 | 2026-06-06 20:12 | FEATURE | M5-B Phase 2: listLearnFlashcards (new fn, priority-sorted); listDueFlashcards + getDueStats restricted to repetitions>0; priority.ts CRUD for ind_priority_decks; simulation.ts computeSimulation (learnTarget/reviewTarget); DashboardStats extended with learnedToday/newCount/learnTarget/reviewTarget/simulationActive |
 | 2026-06-06 19:57 | SCHEMA | M5-B Phase 1: ind_priority_decks table (position, in_simulation, simulation_deadline); data migration from goal_collection_id; ind_daily_stats.learned_count + increment_learned_today RPC; daily_cap → review_cap rename across preferences, review page, SettingsSheet, stats-server |
 | 2026-06-06 15:40 | CONFIG | Migrate decisions.md monolith to 46 per-file ADRs in docs/adr/ (DEC-XXX-slug format); decisions.md becomes thin index; agents.md + CLAUDE.md updated; global ADR-FORMAT.md updated to DEC-FEAT-NN naming convention |
