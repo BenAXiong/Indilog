@@ -169,20 +169,23 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Convert /settings page to a bottom sheet on the Dashboard — SettingsSheet client island; all tabs (general/review/capture/translate/dict) wired everywhere
 - [x] Deck sections collapsible
 - [x] Swipe to switch tabs — edge swipe (±28px) navigates between tabs
-- [ ] Separate Learn from Reviews in Dashboard and Study
-- [ ] Change Learn workflow: get twice right to graduate, interval 12h
-- [ ] Secondary Goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
-- [ ] Revamp GoalSheet UI
-- [ ] Revamp Cards UI (rewind, skip, gestures, scores buttons, info, etc)
-- [ ] Add grading feedback
+- [x] Separate Learn from Reviews in Dashboard and Study — see DEC-M5-01; boundary = repetitions===0; strict separation; 2 CTAs, 2 rings
+- [x] Learn session: Exposure pass → 2× consecutive Good = 12h graduation, Easy = 4d; Again resets counter; cap default 10 max 20
+- [x] Priority list — ind_priority_decks table (position, in_simulation, simulation_deadline); replaces goal_collection_id; always-on sort; shuffle deferred (in-deck vs inter-deck options not yet evaluated)
+- [x] Dynamic simulation — Simulate tab in GoalSheet; outputs learnTarget + reviewTarget daily (never stored); replaces static daily_goal
+- [x] Mastery grades — Seed/Planted/Rooted/Blooming; see DEC-SRS09; rename "mastered" stat to "Rooted"
+- [x] ind_daily_stats: add learned_count column; add increment_learned_today RPC
+- [x] Revamp GoalSheet UI — 3 tabs: Goals (manual/calculated toggle), Priority (ordered deck list), Simulate (deadline + deck selection + curve)
+- [ ] Refine Cards UI (rewind, skip, gestures, scores buttons, info, etc)
+- [ ] Add visual grading feedback
 - [ ] Revamp Dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
-- [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
+- [ ] Curriculum content layout options — compact / standard / flashcard view; toggled per-section or globally
 
 ### M5-C — Feature refinement
 
 - [x] Instore max reviews/learn per day — daily cap stepper (10–300) in OptionsSheet; srs_daily_cap localStorage
 - [x] Browser zh lookup: enable multi word — lookup also searches sentences, includes sentence zh
-- [ ] 2-step review entry — review goal deck first, then remaining; dual CTA or flow options; needs design (relates to "Separate learn from reviews?")
+- [x] 2-step review entry — resolved by Learn/Review split + priority list (DEC-M5-01)
 
 
 
@@ -268,6 +271,8 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ## Next versions
 
+- 3rd dashboard ring for Captures (alongside Learn + Review rings) — deferred until capture goals are designed
+- Configurable streak: hitting any/all/combination of caps selectable per goal type — deferred until 3-ring dashboard exists (E-option; v1 streak = any cap hit)
 - Amis100 - useful fun version
 - Dialogue 001
 - Find how many gaoji vocab have exsent in ePark
