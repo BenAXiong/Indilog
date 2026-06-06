@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 20:48 | FEATURE | M5-B Phase 7: computeMasteryGrade (Seed/Planted/Rooted/Blooming); grade badge in Browser expanded card; Stats subtab Mastered→Rooted+Blooming; Dashboard "Rooted" label |
 | 2026-06-06 20:38 | FEATURE | M5-B Phase 5: Dashboard dual-ring (Learn sage + Review crimson); 3-state Learn CTA + 3-state Review CTA; StreakCard today-dot uses sim/manual logic; dueCount capped by reviewTarget |
 | 2026-06-06 20:32 | FEATURE | M5-B Phase 4: /learn-session route — Exposure pass + Test pass mechanics, graduateLearnCard (12h Good/4d Easy), 2-dot progress, priority toast, increment_learned_today |
 | 2026-06-06 20:24 | FEATURE | M5-B Phase 3: Review session stripped of learn/relearn phases; priority sort via ind_priority_decks; Review N more CTA with editable stepper (review_more_size pref); SessionContext migrated from goalCollectionId to priorityCollectionIds |
