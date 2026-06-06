@@ -3,79 +3,555 @@
 import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
+import { patchPreferences } from '@/lib/db/profile/preferences'
+import {
+  listPriorityDecks, addPriorityDeck, removePriorityDeck,
+  reorderPriorityDecks, setPriorityDeckSimulation,
+  type PriorityDeck,
+} from '@/lib/db/srs/priority'
+import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
-import { saveGoalData, clearGoal, getDeckGoalStats, type GoalData } from '@/lib/db/profile/goal'
+import { runSimulation, buildCurve, type SimulationCurve } from '@/lib/db/srs/simulation-client'
+import { createClient } from '@/lib/supabase/client'
 
-type Props = {
-  open:         boolean
-  onClose:      () => void
-  initialGoal:  GoalData
-  onSaved:      (goal: GoalData) => void
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type GoalMode = 'manual' | 'calculated'
+type Tab = 'goals' | 'priority' | 'simulate'
+
+type DeckStat = { total: number; rooted: number }
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function TabBar({ active, onSelect }: { active: Tab; onSelect: (t: Tab) => void }) {
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'goals',    label: 'Goals'    },
+    { id: 'priority', label: 'Priority' },
+    { id: 'simulate', label: 'Simulate' },
+  ]
+  return (
+    <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${T.lineSoft}`, margin: '0 18px', marginBottom: 0 }}>
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => onSelect(t.id)} style={{
+          flex: 1, padding: '10px 0', background: 'none', border: 'none',
+          borderBottom: `2px solid ${active === t.id ? T.crimson : 'transparent'}`,
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: '0.07em',
+          color: active === t.id ? T.crimson : T.inkMute,
+          cursor: 'pointer', transition: 'color .12s',
+        }}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
 }
 
-export default function GoalSheet({ open, onClose, initialGoal, onSaved }: Props) {
-  const [collections, setCollections] = useState<CollectionMeta[]>([])
-  const [collectionId, setCollectionId] = useState(initialGoal.goal_collection_id ?? '')
-  const [dailyGoal, setDailyGoal]       = useState(String(initialGoal.daily_goal))
-  const [dueDate, setDueDate]           = useState(initialGoal.goal_due_date ?? '')
-  const [deckStats, setDeckStats]       = useState<{ total: number; mastered: number } | null>(null)
-  const [saving, setSaving]             = useState(false)
+function Stepper({ value, onChange, min, max, step = 1 }: { value: number; onChange: (v: number) => void; min: number; max: number; step?: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <button onClick={() => onChange(Math.max(min, value - step))} disabled={value <= min} style={{
+        width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.line}`,
+        background: T.paperHi, color: T.inkSoft, cursor: value <= min ? 'default' : 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, fontWeight: 300, opacity: value <= min ? 0.35 : 1,
+      }}>−</button>
+      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 17, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>
+        {value}
+      </span>
+      <button onClick={() => onChange(Math.min(max, value + step))} disabled={value >= max} style={{
+        width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.line}`,
+        background: T.paperHi, color: T.inkSoft, cursor: value >= max ? 'default' : 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, fontWeight: 300, opacity: value >= max ? 0.35 : 1,
+      }}>+</button>
+    </div>
+  )
+}
 
+function ProgressBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, overflow: 'hidden', flex: 1 }}>
+      <div style={{ height: '100%', borderRadius: 999, background: color, width: `${Math.min(100, Math.round(pct * 100))}%`, transition: 'width .4s' }} />
+    </div>
+  )
+}
+
+// ─── GoalSheet ─────────────────────────────────────────────────────────────────
+
+export default function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [tab,          setTab]          = useState<Tab>('goals')
+  const [mode,         setMode]         = useState<GoalMode>('manual')
+  const [learnCap,     setLearnCapRaw]  = useState(10)
+  const [reviewCap,    setReviewCapRaw] = useState(100)
+  const [simOutput,    setSimOutput]    = useState<SimulationCurve | null>(null)
+  const [simLoading,   setSimLoading]   = useState(false)
+
+  // Priority tab
+  const [decks,        setDecks]        = useState<PriorityDeck[]>([])
+  const [deckStats,    setDeckStats]    = useState<Record<string, DeckStat>>({})
+  const [collections,  setCollections]  = useState<CollectionMeta[]>([])
+  const [addPicker,    setAddPicker]    = useState(false)
+  const [priorityLoading, setPriorityLoading] = useState(false)
+
+  // Simulate tab
+  const [simDeadline,  setSimDeadline]  = useState('')
+  const [simResult,    setSimResult]    = useState<ReturnType<typeof buildCurve> | null>(null)
+  const [simRunning,   setSimRunning]   = useState(false)
+  const [totalNew,     setTotalNew]     = useState(0)
+
+  // Load on open
   useEffect(() => {
     if (!open) return
-    listCollections().then(setCollections)
-  }, [open])
+    loadPrefs()
+    loadPriority()
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!collectionId) { setDeckStats(null); return }
-    getDeckGoalStats(collectionId).then(setDeckStats)
-  }, [collectionId])
+  async function loadPrefs() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle()
+    const prefs = data?.preferences as Record<string, unknown> | null
+    const lc = typeof prefs?.learn_cap === 'number' ? prefs.learn_cap : 10
+    const rc = typeof prefs?.review_cap === 'number' ? prefs.review_cap : 100
+    setLearnCapRaw(lc)
+    setReviewCapRaw(rc)
+    localStorage.setItem('srs_learn_cap', String(lc))
+    localStorage.setItem('srs_review_cap', String(rc))
+  }
+
+  async function loadPriority() {
+    setPriorityLoading(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setPriorityLoading(false); return }
+    const [decksData, cols] = await Promise.all([
+      listPriorityDecks(user.id),
+      listCollections(),
+    ])
+    setDecks(decksData)
+    setCollections(cols)
+    setPriorityLoading(false)
+    // Lazily load rooted stats for each deck
+    for (const d of decksData) {
+      getDeckRootedStats(d.collection_id).then(stats => {
+        setDeckStats(prev => ({ ...prev, [d.collection_id]: stats }))
+      })
+    }
+    // Pre-populate simulate deadlines from first sim deck
+    const firstSim = decksData.find(d => d.in_simulation && d.simulation_deadline)
+    if (firstSim?.simulation_deadline) setSimDeadline(firstSim.simulation_deadline)
+  }
+
+  function setLearnCap(v: number) {
+    setLearnCapRaw(v)
+    localStorage.setItem('srs_learn_cap', String(v))
+    patchPreferences({ learn_cap: v })
+  }
+  function setReviewCap(v: number) {
+    setReviewCapRaw(v)
+    localStorage.setItem('srs_review_cap', String(v))
+    patchPreferences({ review_cap: v })
+  }
+
+  // ── Goals tab ──────────────────────────────────────────────────────────────
+
+  async function recalculate() {
+    setSimLoading(true)
+    const simDecks = decks.filter(d => d.in_simulation)
+    if (!simDecks.length) { setSimLoading(false); return }
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSimLoading(false); return }
+    const result = await runSimulation({
+      collectionIds: simDecks.map(d => d.collection_id),
+      deadline: simDecks.find(d => d.simulation_deadline)?.simulation_deadline ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      learnCap, reviewCap,
+    })
+    setSimOutput(result)
+    setSimLoading(false)
+  }
+
+  const LEARN_LEVELS = [
+    { label: 'Chill',    value: 3  },
+    { label: 'Regular',  value: 5  },
+    { label: 'Serious',  value: 10 },
+    { label: 'Hardcore', value: 20 },
+  ]
+
+  function GoalsTab() {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', gap: 6, background: T.lineSoft, borderRadius: 10, padding: 4 }}>
+          {(['manual', 'calculated'] as const).map(m => (
+            <button key={m} onClick={() => { setMode(m); if (m === 'calculated') recalculate() }} style={{
+              flex: 1, height: 32, borderRadius: 7, border: 'none', cursor: 'pointer',
+              background: mode === m ? T.paperHi : 'transparent',
+              color: mode === m ? T.ink : T.inkMute,
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              boxShadow: mode === m ? '0 1px 3px rgba(40,20,10,0.1)' : 'none',
+              transition: 'background .12s',
+            }}>
+              {m}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'manual' ? (
+          <>
+            {/* Learn cap */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <label style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Learn cap / day
+                </label>
+                <Stepper value={learnCap} onChange={setLearnCap} min={1} max={20} />
+              </div>
+              {/* Level labels */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {LEARN_LEVELS.map(lv => (
+                  <button key={lv.label} onClick={() => setLearnCap(lv.value)} style={{
+                    flex: 1, padding: '5px 0', borderRadius: 7, border: `1px solid ${learnCap === lv.value ? T.sage : T.lineSoft}`,
+                    background: learnCap === lv.value ? T.sageBg : T.paper,
+                    color: learnCap === lv.value ? '#566234' : T.inkMute,
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 600,
+                    textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
+                  }}>
+                    {lv.label}
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'inherit', marginTop: 1 }}>{lv.value}</div>
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
+                Projected review load: ~{learnCap * 2}/day after 1w · ~{learnCap * 3}/day after 2w · ~{learnCap * 2}/day long-term
+              </div>
+            </div>
+
+            {/* Review cap */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Review cap / day
+                </label>
+                <Stepper value={reviewCap} onChange={setReviewCap} min={10} max={300} step={10} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, padding: '14px 16px' }}>
+            {simLoading ? (
+              <div style={{ fontSize: 13, color: T.inkMute, textAlign: 'center' }}>Calculating…</div>
+            ) : simOutput ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 32, fontWeight: 600, color: T.sage, letterSpacing: '-0.03em' }}>{simOutput.learnTarget}</div>
+                    <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Learn/day</div>
+                  </div>
+                  <div style={{ width: 1, background: T.lineSoft }} />
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 32, fontWeight: 600, color: T.crimson, letterSpacing: '-0.03em' }}>{simOutput.reviewTarget}</div>
+                    <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Review/day</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+                  <button onClick={recalculate} style={{ fontSize: 12, color: T.crimson, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                    Recalculate
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: T.inkMute, textAlign: 'center', lineHeight: 1.5 }}>
+                No simulation configured yet.<br />
+                <button onClick={() => setTab('simulate')} style={{ fontSize: 12, color: T.crimson, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, marginTop: 4 }}>
+                  Set up in Simulate tab →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Priority tab ───────────────────────────────────────────────────────────
+
+  const availableToAdd = collections.filter(c => !decks.some(d => d.collection_id === c.id))
+
+  async function handleMoveUp(userId: string, idx: number) {
+    if (idx === 0) return
+    const newOrder = [...decks]
+    ;[newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]]
+    setDecks(newOrder)
+    await reorderPriorityDecks(userId, newOrder.map(d => d.id))
+  }
+
+  async function handleMoveDown(userId: string, idx: number) {
+    if (idx === decks.length - 1) return
+    const newOrder = [...decks]
+    ;[newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]]
+    setDecks(newOrder)
+    await reorderPriorityDecks(userId, newOrder.map(d => d.id))
+  }
+
+  async function handleAdd(userId: string, collectionId: string) {
+    setAddPicker(false)
+    await addPriorityDeck(userId, collectionId)
+    await loadPriority()
+  }
+
+  async function handleRemove(userId: string, collectionId: string) {
+    setDecks(prev => prev.filter(d => d.collection_id !== collectionId))
+    await removePriorityDeck(userId, collectionId)
+  }
+
+  async function handleToggleSim(userId: string, collectionId: string, inSim: boolean) {
+    setDecks(prev => prev.map(d => d.collection_id === collectionId ? { ...d, in_simulation: inSim } : d))
+    await setPriorityDeckSimulation(userId, collectionId, inSim)
+  }
+
+  function PriorityTab() {
+    const [userId, setUserId] = useState<string | null>(null)
+    useEffect(() => {
+      const supabase = createClient()
+      supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null))
+    }, [])
+
+    if (priorityLoading) {
+      return <div style={{ textAlign: 'center', padding: 24, fontSize: 13, color: T.inkMute }}>Loading…</div>
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {decks.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '20px 16px', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, fontSize: 13, color: T.inkMute }}>
+            No priority decks yet. Add one below.
+          </div>
+        )}
+        {decks.map((deck, idx) => {
+          const col = collections.find(c => c.id === deck.collection_id)
+          const stat = deckStats[deck.collection_id]
+          const rootedPct = stat && stat.total > 0 ? stat.rooted / stat.total : 0
+          return (
+            <div key={deck.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12 }}>
+              {/* Position arrows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                <button onClick={() => userId && handleMoveUp(userId, idx)} disabled={idx === 0} style={{ width: 20, height: 20, borderRadius: 5, border: `1px solid ${T.lineSoft}`, background: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: T.inkFaint, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === 0 ? 0.3 : 1 }}>
+                  <Icon name="chevron" size={10} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
+                </button>
+                <button onClick={() => userId && handleMoveDown(userId, idx)} disabled={idx === decks.length - 1} style={{ width: 20, height: 20, borderRadius: 5, border: `1px solid ${T.lineSoft}`, background: 'none', cursor: idx === decks.length - 1 ? 'default' : 'pointer', color: T.inkFaint, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: idx === decks.length - 1 ? 0.3 : 1 }}>
+                  <Icon name="chev-d" size={10} strokeWidth={2} />
+                </button>
+              </div>
+
+              {/* Name + progress */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {col?.name ?? '…'}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
+                  <ProgressBar pct={rootedPct} color="#7B8C46" />
+                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, flexShrink: 0 }}>
+                    {stat ? `${Math.round(rootedPct * 100)}% rooted` : '…'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sim toggle */}
+              <button onClick={() => userId && handleToggleSim(userId, deck.collection_id, !deck.in_simulation)} style={{
+                width: 36, height: 20, borderRadius: 999, flexShrink: 0, position: 'relative',
+                background: deck.in_simulation ? T.crimson : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
+              }}>
+                <span style={{
+                  position: 'absolute', top: 2, left: deck.in_simulation ? 18 : 2, width: 16, height: 16,
+                  borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
+                }} />
+              </button>
+
+              {/* Remove */}
+              <button onClick={() => userId && handleRemove(userId, deck.collection_id)} style={{
+                width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.lineSoft}`, background: 'none',
+                color: T.inkFaint, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Icon name="x" size={12} strokeWidth={2.5} />
+              </button>
+            </div>
+          )
+        })}
+
+        {/* Add deck */}
+        {availableToAdd.length > 0 && (
+          <div>
+            {addPicker ? (
+              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
+                {availableToAdd.map(c => (
+                  <button key={c.id} onClick={() => { if (!userId) return; handleAdd(userId, c.id) }} style={{
+                    display: 'block', width: '100%', padding: '11px 14px', background: 'none', border: 'none',
+                    borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                    fontSize: 14, color: T.ink,
+                  }}>
+                    {c.name}
+                    <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>{c.card_count} cards</span>
+                  </button>
+                ))}
+                <button onClick={() => setAddPicker(false)} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setAddPicker(true)} style={{
+                width: '100%', height: 42, borderRadius: 12,
+                border: `1px dashed ${T.line}`, background: 'none',
+                color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}>
+                <Icon name="plus" size={14} strokeWidth={2} color={T.inkFaint} /> Add deck
+              </button>
+            )}
+          </div>
+        )}
+
+        {decks.length > 0 && (
+          <div style={{ fontSize: 11.5, color: T.inkFaint, lineHeight: 1.5 }}>
+            Toggle the red switch to include a deck in the simulation.
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Simulate tab ───────────────────────────────────────────────────────────
+
+  async function handleRunSimulation() {
+    const simDecks = decks.filter(d => d.in_simulation)
+    if (!simDecks.length || !simDeadline) return
+    setSimRunning(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSimRunning(false); return }
+
+    // Count total new cards across sim decks (for buildCurve)
+    let newCardCount = 0
+    for (const d of simDecks) {
+      const s = deckStats[d.collection_id]
+      if (s) newCardCount += s.total  // rough proxy; actual new = total - repetitions>0
+    }
+    setTotalNew(newCardCount)
+
+    const result = await runSimulation({
+      collectionIds: simDecks.map(d => d.collection_id),
+      deadline: simDeadline,
+      learnCap, reviewCap,
+    })
+    setSimResult(buildCurve(result, newCardCount))
+    setSimRunning(false)
+  }
+
+  async function handleApplySimulation() {
+    if (!simResult) return
+    const today = simResult[0]
+    setLearnCap(today.learnTarget)
+    setReviewCap(today.reviewTarget)
+    setMode('calculated')
+    setSimOutput(today)
+    // Save deadline to all in-simulation decks
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    for (const d of decks.filter(dk => dk.in_simulation)) {
+      await setPriorityDeckSimulation(user.id, d.collection_id, true, simDeadline)
+    }
+    setDecks(prev => prev.map(d => d.in_simulation ? { ...d, simulation_deadline: simDeadline } : d))
+    setTab('goals')
+  }
+
+  function SimulateTab() {
+    const simDecks = decks.filter(d => d.in_simulation)
+    const canRun = simDecks.length > 0 && simDeadline
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Sim decks display */}
+        <div>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+            Decks in simulation
+          </div>
+          {simDecks.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: T.inkMute, lineHeight: 1.5 }}>
+              No decks marked for simulation. Enable the toggle on decks in the Priority tab.
+              <button onClick={() => setTab('priority')} style={{ fontSize: 12, color: T.crimson, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, marginLeft: 4 }}>→ Priority</button>
+            </div>
+          ) : simDecks.map(d => (
+            <div key={d.id} style={{ fontSize: 13, color: T.ink, padding: '5px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: T.crimson, flexShrink: 0 }} />
+              {collections.find(c => c.id === d.collection_id)?.name ?? '…'}
+            </div>
+          ))}
+        </div>
+
+        {/* Deadline */}
+        <div>
+          <label style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+            Deadline
+          </label>
+          <input type="date" value={simDeadline} onChange={e => setSimDeadline(e.target.value)} style={{
+            display: 'block', width: '100%', padding: '11px 12px', borderRadius: 10,
+            background: T.paperHi, border: `1px solid ${T.line}`,
+            fontSize: 15, color: simDeadline ? T.ink : T.inkFaint, fontFamily: 'inherit', boxSizing: 'border-box',
+          }} />
+        </div>
+
+        {/* Run button */}
+        <button onClick={handleRunSimulation} disabled={!canRun || simRunning} style={{
+          height: 46, borderRadius: 12, background: canRun ? T.crimson : T.lineSoft,
+          color: canRun ? '#fff' : T.inkFaint, border: 'none', fontSize: 14.5, fontWeight: 600,
+          cursor: canRun ? 'pointer' : 'default',
+          boxShadow: canRun ? '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 8px rgba(120,30,15,0.2)' : 'none',
+        }}>
+          {simRunning ? 'Running…' : 'Run simulation'}
+        </button>
+
+        {/* Output curve */}
+        {simResult && (
+          <>
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', padding: '8px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
+                <div style={{ flex: 2, fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }} />
+                <div style={{ flex: 1, textAlign: 'right', fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.sage, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Learn</div>
+                <div style={{ flex: 1, textAlign: 'right', fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.crimson, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>Review</div>
+              </div>
+              {simResult.map((row, i) => (
+                <div key={row.label} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', borderBottom: i < simResult.length - 1 ? `1px solid ${T.lineSoft}` : 'none' }}>
+                  <div style={{ flex: 2, fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>{row.label}</div>
+                  <div style={{ flex: 1, textAlign: 'right', fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 600, color: T.sage, letterSpacing: '-0.02em' }}>{row.learnTarget}</div>
+                  <div style={{ flex: 1, textAlign: 'right', fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 600, color: T.crimson, letterSpacing: '-0.02em' }}>{row.reviewTarget}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={handleApplySimulation} style={{
+              height: 46, borderRadius: 12, background: T.sageBg,
+              color: '#566234', border: `1px solid #D2D8AE`,
+              fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+            }}>
+              Apply as my daily targets →
+            </button>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  // ── Sheet render ───────────────────────────────────────────────────────────
 
   if (!open) return null
 
-  const daily = parseInt(dailyGoal) || 0
-  const remaining = deckStats ? Math.max(0, deckStats.total - deckStats.mastered) : null
-
-  let hint = ''
-  let simPeak = 0
-  let simSteady = 0
-  if (remaining !== null && daily > 0) {
-    const days = Math.ceil(remaining / daily)
-    const eta = new Date()
-    eta.setDate(eta.getDate() + days)
-    const etaStr = eta.toLocaleDateString('en', { month: 'short', day: 'numeric' })
-    hint = `${remaining} cards left · ~${days} days at ${daily}/day (by ${etaStr})`
-    // Linear simulator: avg review interval ≈ 7 days while learning, 14 days at steady state
-    simPeak    = daily + Math.round(Math.min(remaining, daily * 28) / 7)  // ~4 weeks in
-    simSteady  = Math.round(remaining / 14)  // after deck complete, long-term load
-  }
-
-  async function handleSave() {
-    setSaving(true)
-    const patch: GoalData = {
-      daily_goal:         parseInt(dailyGoal) || 20,
-      goal_collection_id: collectionId || null,
-      goal_due_date:      dueDate || null,
-    }
-    await saveGoalData(patch)
-    onSaved(patch)
-    setSaving(false)
-    onClose()
-  }
-
-  async function handleClear() {
-    await clearGoal()
-    onSaved({ daily_goal: parseInt(dailyGoal) || 20, goal_collection_id: null, goal_due_date: null })
-    onClose()
-  }
-
   return (
     <>
-      <div onClick={onClose} style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(30,18,10,0.35)', zIndex: 70,
-      }} />
-
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,10,0.35)', zIndex: 70 }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         background: T.paper, borderRadius: '20px 20px 0 0',
@@ -83,160 +559,31 @@ export default function GoalSheet({ open, onClose, initialGoal, onSaved }: Props
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 -8px 32px rgba(40,20,10,0.12)',
         paddingBottom: 'env(safe-area-inset-bottom)',
+        maxHeight: '88vh',
       }}>
+        {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
           <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineSoft }} />
         </div>
 
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 18px 0',
-        }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 18px 0' }}>
           <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink }}>
-            Learning Goal
+            Goals
           </span>
-          <button onClick={onClose} style={{
-            width: 28, height: 28, borderRadius: 999,
-            background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: T.inkMute,
-          }}>
+          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.lineSoft}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.inkMute }}>
             <Icon name="x" size={14} strokeWidth={2} />
           </button>
         </div>
 
-        <div style={{ height: 1, background: T.lineSoft, margin: '10px 18px 0' }} />
+        {/* Tab bar */}
+        <TabBar active={tab} onSelect={setTab} />
 
-        <div style={{ padding: '16px 18px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Deck picker */}
-          <div>
-            <label style={{
-              display: 'block', fontSize: 11, fontWeight: 600, color: T.inkMute,
-              textTransform: 'uppercase', letterSpacing: '0.08em',
-              fontFamily: '"JetBrains Mono", monospace', marginBottom: 6,
-            }}>Target deck</label>
-            <div style={{ position: 'relative' }}>
-              <select
-                value={collectionId}
-                onChange={e => setCollectionId(e.target.value)}
-                style={{
-                  display: 'block', width: '100%', padding: '11px 36px 11px 12px',
-                  borderRadius: 10, background: T.paperHi, border: `1px solid ${T.line}`,
-                  fontSize: 15, color: collectionId ? T.ink : T.inkMute,
-                  fontFamily: 'inherit', cursor: 'pointer',
-                  appearance: 'none', WebkitAppearance: 'none',
-                }}
-              >
-                <option value="">— None —</option>
-                {collections.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <div style={{
-                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                pointerEvents: 'none', color: T.inkMute,
-              }}>
-                <Icon name="chev-d" size={14} strokeWidth={2} />
-              </div>
-            </div>
-          </div>
-
-          {/* Daily goal */}
-          <div>
-            <label style={{
-              display: 'block', fontSize: 11, fontWeight: 600, color: T.inkMute,
-              textTransform: 'uppercase', letterSpacing: '0.08em',
-              fontFamily: '"JetBrains Mono", monospace', marginBottom: 6,
-            }}>Daily goal</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input
-                type="number" min="1" max="500"
-                value={dailyGoal}
-                onChange={e => setDailyGoal(e.target.value)}
-                style={{
-                  width: 80, padding: '11px 0', borderRadius: 10,
-                  background: T.paperHi, border: `1px solid ${T.line}`,
-                  fontSize: 20, fontFamily: '"JetBrains Mono", monospace',
-                  fontWeight: 600, color: T.ink, textAlign: 'center',
-                }}
-              />
-              <span style={{ fontSize: 14, color: T.inkSoft }}>cards / day</span>
-            </div>
-          </div>
-
-          {/* Target date (optional) */}
-          <div>
-            <label style={{
-              display: 'block', fontSize: 11, fontWeight: 600, color: T.inkMute,
-              textTransform: 'uppercase', letterSpacing: '0.08em',
-              fontFamily: '"JetBrains Mono", monospace', marginBottom: 6,
-            }}>
-              Target date&nbsp;
-              <span style={{ fontSize: 10, fontWeight: 400, letterSpacing: 0, textTransform: 'none' }}>
-                (optional)
-              </span>
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
-              style={{
-                display: 'block', width: '100%', padding: '11px 12px',
-                borderRadius: 10, background: T.paperHi, border: `1px solid ${T.line}`,
-                fontSize: 15, color: dueDate ? T.ink : T.inkFaint,
-                fontFamily: 'inherit', boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Hint + simulator */}
-          {hint && (
-            <div style={{
-              padding: '10px 12px', borderRadius: 10,
-              background: T.amberBg, border: `1px solid #EBD49A`,
-              fontSize: 13, color: T.inkSoft, lineHeight: 1.6,
-              fontFamily: '"JetBrains Mono", monospace',
-              display: 'flex', flexDirection: 'column', gap: 4,
-            }}>
-              <span>{hint}</span>
-              <div style={{ height: 1, background: '#EBD49A', margin: '2px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: T.inkFaint }}>Now</span>
-                <span>~{daily}/day</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: T.inkFaint }}>Peak (reviews building)</span>
-                <span>~{simPeak}/day</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: T.inkFaint }}>Long-term</span>
-                <span>~{simSteady}/day</span>
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-            <button onClick={handleSave} disabled={saving} style={{
-              height: 52, borderRadius: 13, border: 'none',
-              background: T.crimson, color: '#fff',
-              fontSize: 16, fontWeight: 600, cursor: saving ? 'default' : 'pointer',
-              opacity: saving ? 0.7 : 1,
-              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2)',
-            }}>
-              {saving ? 'Saving…' : 'Save goal'}
-            </button>
-            {initialGoal.goal_collection_id && (
-              <button onClick={handleClear} style={{
-                height: 44, borderRadius: 13,
-                border: `1px solid ${T.lineSoft}`, background: T.paperHi,
-                color: T.inkSoft, fontSize: 14, fontWeight: 500, cursor: 'pointer',
-              }}>
-                Clear goal
-              </button>
-            )}
-          </div>
+        {/* Tab content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px 24px' }}>
+          {tab === 'goals'    && <GoalsTab />}
+          {tab === 'priority' && <PriorityTab />}
+          {tab === 'simulate' && <SimulateTab />}
         </div>
       </div>
     </>

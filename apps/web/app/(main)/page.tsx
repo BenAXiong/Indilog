@@ -293,11 +293,7 @@ export default async function DashboardPage() {
         return (
           <div style={{ display: 'flex', gap: 10 }}>
             <StreakCard streak={stats.streak} chain={stats.chain} todayActive={todayActive} />
-            <GoalWidget initialGoal={{
-              daily_goal:         stats.dailyGoal,
-              goal_collection_id: stats.goalCollectionId,
-              goal_due_date:      stats.goalDueDate,
-            }} />
+            <GoalWidget />
           </div>
         )
       })()}
