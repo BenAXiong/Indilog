@@ -4,51 +4,38 @@ import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import GoalSheet from '@/components/sheets/GoalSheet'
-import { getDeckGoalStats, type GoalData } from '@/lib/db/profile/goal'
+import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { listCollections } from '@/lib/db/progress/collections'
+import { createClient } from '@/lib/supabase/client'
 
-type Props = {
-  initialGoal: GoalData
-}
-
-const PAUSE_KEY = 'srs_goal_paused'
-
-export default function GoalWidget({ initialGoal }: Props) {
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [goal, setGoal]           = useState<GoalData>(initialGoal)
-  const [deckName, setDeckName]   = useState<string | null>(null)
-  const [deckStats, setDeckStats] = useState<{ total: number; mastered: number } | null>(null)
-  const [paused, setPaused]       = useState(() =>
-    typeof window !== 'undefined' && localStorage.getItem(PAUSE_KEY) === '1'
-  )
-
-  function togglePause(e: React.MouseEvent) {
-    e.stopPropagation()
-    const next = !paused
-    setPaused(next)
-    localStorage.setItem(PAUSE_KEY, next ? '1' : '0')
-  }
+export default function GoalWidget() {
+  const [sheetOpen,  setSheetOpen]  = useState(false)
+  const [deckName,   setDeckName]   = useState<string | null>(null)
+  const [rootedPct,  setRootedPct]  = useState<number | null>(null)
+  const [simActive,  setSimActive]  = useState(false)
+  const [loaded,     setLoaded]     = useState(false)
 
   useEffect(() => {
-    if (!goal.goal_collection_id) { setDeckName(null); setDeckStats(null); return }
-    Promise.all([
-      listCollections().then(cols => cols.find(c => c.id === goal.goal_collection_id)?.name ?? null),
-      getDeckGoalStats(goal.goal_collection_id),
-    ]).then(([name, stats]) => {
-      setDeckName(name)
-      setDeckStats(stats)
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setLoaded(true); return }
+      const decks = await listPriorityDecks(user.id)
+      if (!decks.length) { setLoaded(true); return }
+      const top = decks[0]
+      const [cols, stats] = await Promise.all([
+        listCollections(),
+        getDeckRootedStats(top.collection_id),
+      ])
+      const col = cols.find(c => c.id === top.collection_id)
+      setDeckName(col?.name ?? null)
+      setRootedPct(stats.total > 0 ? stats.rooted / stats.total : 0)
+      setSimActive(decks.some(d => d.in_simulation))
+      setLoaded(true)
     })
-  }, [goal.goal_collection_id])
+  }, [])
 
-  const isActive = !!goal.goal_collection_id
-
-  let daysLeft: number | null = null
-  if (goal.goal_due_date) {
-    const ms = new Date(goal.goal_due_date).getTime() - Date.now()
-    daysLeft = Math.max(0, Math.ceil(ms / 86400000))
-  }
-
-  const masteredPct = deckStats && deckStats.total > 0 ? deckStats.mastered / deckStats.total : 0
+  const isActive = deckName !== null
 
   return (
     <>
@@ -65,69 +52,56 @@ export default function GoalWidget({ initialGoal }: Props) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute,
-            textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600,
-          }}>Goal</span>
-          {isActive && (
-            <button
-              onClick={togglePause}
-              style={{
-                padding: '2px 7px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-                letterSpacing: '0.05em', textTransform: 'uppercase',
-                background: paused ? T.amberBg : T.sageBg,
-                color: paused ? T.amber : T.sageDp,
-              }}
-            >
-              {paused ? 'Paused' : 'Active'}
-            </button>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+            Goal
+          </span>
+          {loaded && isActive && (
+            <span style={{
+              padding: '2px 7px', borderRadius: 999,
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+              letterSpacing: '0.05em', textTransform: 'uppercase',
+              background: simActive ? T.crimsonBg : T.sageBg,
+              color: simActive ? T.crimson : '#566234',
+            }}>
+              {simActive ? 'Simulated' : 'Manual'}
+            </span>
           )}
         </div>
 
-        {isActive ? (
+        {!loaded ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', marginTop: 6 }}>
+            <div style={{ width: 80, height: 10, borderRadius: 5, background: T.lineSoft }} />
+          </div>
+        ) : isActive ? (
           <>
             <div style={{ flex: 1, marginTop: 5, minWidth: 0 }}>
-              <div style={{
-                fontSize: 13, fontWeight: 600, color: T.ink,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {deckName ?? '…'}
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {deckName}
               </div>
               <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
-                {daysLeft !== null ? `${daysLeft} days left` : `${goal.daily_goal} cards/day`}
+                {rootedPct !== null ? `${Math.round(rootedPct * 100)}% rooted` : '…'}
               </div>
             </div>
             <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 10, overflow: 'hidden' }}>
               <div style={{
-                height: '100%', borderRadius: 999, background: T.amber,
-                width: `${Math.round(masteredPct * 100)}%`,
+                height: '100%', borderRadius: 999, background: '#7B8C46',
+                width: `${Math.round((rootedPct ?? 0) * 100)}%`,
                 transition: 'width 0.4s ease',
               }} />
-            </div>
-            <div style={{
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkMute, marginTop: 4,
-            }}>
-              {Math.round(masteredPct * 100)}% known
             </div>
           </>
         ) : (
           <>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
               <Icon name="plus" size={14} color={T.inkFaint} strokeWidth={2} />
-              <span style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>Set a goal</span>
+              <span style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>Set priority decks</span>
             </div>
             <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 10 }} />
           </>
         )}
       </div>
 
-      <GoalSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        initialGoal={goal}
-        onSaved={newGoal => setGoal(newGoal)}
-      />
+      <GoalSheet open={sheetOpen} onClose={() => { setSheetOpen(false); /* re-load on close */ setLoaded(false) }} />
     </>
   )
 }

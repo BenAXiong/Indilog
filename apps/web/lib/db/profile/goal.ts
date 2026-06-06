@@ -35,6 +35,32 @@ export async function clearGoal(): Promise<void> {
   await saveGoalData({ goal_collection_id: null, goal_due_date: null })
 }
 
+export type DeckRootedStats = { total: number; rooted: number }
+
+export async function getDeckRootedStats(collectionId: string): Promise<DeckRootedStats> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { total: 0, rooted: 0 }
+
+  const [totalRes, rootedRes] = await Promise.all([
+    supabase
+      .from('ind_flashcards')
+      .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('ind_items.collection_id', collectionId),
+    supabase
+      .from('ind_flashcards')
+      .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('ind_items.collection_id', collectionId)
+      .gte('interval_days', 21)
+      .gte('repetitions', 5)
+      .gte('ease_factor', 2.5),
+  ])
+
+  return { total: totalRes.count ?? 0, rooted: rootedRes.count ?? 0 }
+}
+
 export type DeckGoalStats = { total: number; mastered: number }
 
 export async function getDeckGoalStats(collectionId: string): Promise<DeckGoalStats> {

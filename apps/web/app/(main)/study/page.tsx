@@ -300,10 +300,10 @@ function StudyStatsView({ stats }: { stats: StudyStats }) {
         <SectionHead title="Overview" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
-            { label: 'Total cards',  value: stats.totalCards, color: T.crimson },
-            { label: 'Due today',    value: stats.dueToday,   color: T.amber   },
-            { label: 'Known',        value: stats.known,      color: T.sage    },
-            { label: 'Mastered',     value: stats.mastered,   color: T.sageDp  },
+            { label: 'Total cards', value: stats.totalCards, color: T.crimson },
+            { label: 'Due today',   value: stats.dueToday,   color: T.amber   },
+            { label: 'Rooted',      value: stats.rooted,     color: '#566234'  },
+            { label: 'Blooming',    value: stats.blooming,   color: '#3a601a'  },
           ].map(({ label, value, color }) => (
             <div key={label} style={{
               padding: '14px 14px', borderRadius: 14,

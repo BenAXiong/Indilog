@@ -2,6 +2,13 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 20:53 | FEATURE | M5-B Phase 6: GoalSheet 3-tab rewrite (Goals/Priority/Simulate); GoalWidget shows top priority deck + rooted%; getDeckRootedStats; simulation-client.ts (runSimulation + buildCurve) |
+| 2026-06-06 20:48 | FEATURE | M5-B Phase 7: computeMasteryGrade (Seed/Planted/Rooted/Blooming); grade badge in Browser expanded card; Stats subtab Mastered→Rooted+Blooming; Dashboard "Rooted" label |
+| 2026-06-06 20:38 | FEATURE | M5-B Phase 5: Dashboard dual-ring (Learn sage + Review crimson); 3-state Learn CTA + 3-state Review CTA; StreakCard today-dot uses sim/manual logic; dueCount capped by reviewTarget |
+| 2026-06-06 20:32 | FEATURE | M5-B Phase 4: /learn-session route — Exposure pass + Test pass mechanics, graduateLearnCard (12h Good/4d Easy), 2-dot progress, priority toast, increment_learned_today |
+| 2026-06-06 20:24 | FEATURE | M5-B Phase 3: Review session stripped of learn/relearn phases; priority sort via ind_priority_decks; Review N more CTA with editable stepper (review_more_size pref); SessionContext migrated from goalCollectionId to priorityCollectionIds |
+| 2026-06-06 20:12 | FEATURE | M5-B Phase 2: listLearnFlashcards (new fn, priority-sorted); listDueFlashcards + getDueStats restricted to repetitions>0; priority.ts CRUD for ind_priority_decks; simulation.ts computeSimulation (learnTarget/reviewTarget); DashboardStats extended with learnedToday/newCount/learnTarget/reviewTarget/simulationActive |
+| 2026-06-06 19:57 | SCHEMA | M5-B Phase 1: ind_priority_decks table (position, in_simulation, simulation_deadline); data migration from goal_collection_id; ind_daily_stats.learned_count + increment_learned_today RPC; daily_cap → review_cap rename across preferences, review page, SettingsSheet, stats-server |
 | 2026-06-06 15:40 | CONFIG | Migrate decisions.md monolith to 46 per-file ADRs in docs/adr/ (DEC-XXX-slug format); decisions.md becomes thin index; agents.md + CLAUDE.md updated; global ADR-FORMAT.md updated to DEC-FEAT-NN naming convention |
 | 2026-06-06 14:48 | CONFIG | plan-v1.md: M8 bug fixes logged, MoE dict section added, versioning updated, stale deferred items removed from completed phases |
 | 2026-06-06 04:55 | FIX | All OptionsSheet setters now sync to cloud via patchPreferences (showHardEasy, showButtons, learningSteps, dailyCap, shuffleNew, showAllLangs, excludedLangs) |

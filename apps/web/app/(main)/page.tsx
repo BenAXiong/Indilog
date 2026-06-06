@@ -11,7 +11,9 @@ const INTENSITY = [T.lineSoft, '#F1D8C6', '#E5A88E', '#C66848', T.crimsonDp]
 
 // ─── Streak + goal row ───────────────────────────────────────────────────────
 
-function StreakCard({ streak, chain }: { streak: number; chain: boolean[] }) {
+function StreakCard({ streak, chain, todayActive }: { streak: number; chain: boolean[]; todayActive: boolean }) {
+  // Override today's slot (index 6) with the new Learn+Review logic
+  const displayChain = [...chain.slice(0, 6), todayActive]
   return (
     <div style={{
       flex: 1, padding: '13px 14px', borderRadius: 16,
@@ -27,7 +29,7 @@ function StreakCard({ streak, chain }: { streak: number; chain: boolean[] }) {
         <span style={{ fontSize: 12, opacity: 0.85 }}>days</span>
       </div>
       <div style={{ display: 'flex', gap: 4, marginTop: 11 }}>
-        {chain.map((active, i) => (
+        {displayChain.map((active, i) => (
           <span key={i} style={{
             flex: 1, height: 5, borderRadius: 999,
             background: active ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.28)',
@@ -42,92 +44,142 @@ function StreakCard({ streak, chain }: { streak: number; chain: boolean[] }) {
 }
 
 
-// ─── Progress ring + CTA ─────────────────────────────────────────────────────
+// ─── Two-ring card + CTAs ────────────────────────────────────────────────────
 
-function RingCard({ reviewed, goal, due, totalDue }: { reviewed: number; goal: number; due: number; totalDue: number }) {
-  const pct = goal > 0 ? Math.min(reviewed / goal, 1) : 0
-  const R = 52, C = 2 * Math.PI * R
-  const capMet = due === 0 && totalDue > 0
+function DualRingCard({
+  learnedToday, learnTarget, newCount,
+  reviewedToday, reviewTarget, dueCount, totalDue,
+}: {
+  learnedToday: number;  learnTarget: number;  newCount: number
+  reviewedToday: number; reviewTarget: number; dueCount: number; totalDue: number
+}) {
+  const R = 38, C = 2 * Math.PI * R
+  const learnPct  = learnTarget  > 0 ? Math.min(learnedToday  / learnTarget,  1) : 0
+  const reviewPct = reviewTarget > 0 ? Math.min(reviewedToday / reviewTarget, 1) : 0
+  const learnN = Math.min(newCount, Math.max(0, learnTarget - learnedToday))
+
+  function Ring({ pct, color }: { pct: number; color: string }) {
+    return (
+      <div style={{ position: 'relative', width: 84, height: 84 }}>
+        <svg width="84" height="84" viewBox="0 0 84 84">
+          <circle cx="42" cy="42" r={R} fill="none" stroke={T.lineSoft} strokeWidth="9" />
+          <circle cx="42" cy="42" r={R} fill="none" stroke={color} strokeWidth="9"
+            strokeLinecap="round" strokeDasharray={C}
+            strokeDashoffset={C * (1 - pct)}
+            transform="rotate(-90 42 42)"
+          />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <slot />
+        </div>
+      </div>
+    )
+  }
+
+  function RingWithCount({ pct, color, count, target }: { pct: number; color: string; count: number; target: number }) {
+    return (
+      <div style={{ position: 'relative', width: 84, height: 84 }}>
+        <svg width="84" height="84" viewBox="0 0 84 84">
+          <circle cx="42" cy="42" r={R} fill="none" stroke={T.lineSoft} strokeWidth="9" />
+          <circle cx="42" cy="42" r={R} fill="none" stroke={color} strokeWidth="9"
+            strokeLinecap="round" strokeDasharray={C}
+            strokeDashoffset={C * (1 - pct)}
+            transform="rotate(-90 42 42)"
+          />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
+            {count}
+          </span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, color: T.inkMute, marginTop: 1 }}>
+            / {target}
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <Card raised pad={18}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-        {/* Ring */}
-        <div style={{ position: 'relative', width: 124, height: 124, flexShrink: 0 }}>
-          <svg width="124" height="124" viewBox="0 0 124 124">
-            <circle cx="62" cy="62" r={R} fill="none" stroke={T.lineSoft} strokeWidth="11" />
-            <circle cx="62" cy="62" r={R} fill="none" stroke={T.crimson} strokeWidth="11"
-              strokeLinecap="round"
-              strokeDasharray={C}
-              strokeDashoffset={C * (1 - pct)}
-              transform="rotate(-90 62 62)"
-            />
-          </svg>
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 34, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-              {reviewed}
-            </span>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, marginTop: 2, letterSpacing: '0.03em' }}>
-              / {goal} today
-            </span>
+    <Card raised pad={16}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        {/* ── Learn half ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+            Learn
           </div>
+          <RingWithCount pct={learnPct} color={T.sage} count={learnedToday} target={learnTarget} />
+          {learnedToday < learnTarget && newCount > 0 ? (
+            <Link href="/learn-session?start=1" style={{
+              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.sage, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              fontSize: 13.5, fontWeight: 600,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(80,120,30,0.22)',
+            }}>
+              <Icon name="play" size={12} color="#fff" />
+              Learn {learnN}
+            </Link>
+          ) : learnedToday >= learnTarget && newCount > 0 ? (
+            <Link href="/learn-session" style={{
+              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 600,
+            }}>
+              Learn more?
+            </Link>
+          ) : (
+            <div style={{
+              width: '100%', height: 44, borderRadius: 12,
+              background: T.sageBg, border: `1px solid #D2D8AE`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>No new cards</span>
+            </div>
+          )}
         </div>
 
-        {/* Due count */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-            Due now
+        {/* Divider */}
+        <div style={{ width: 1, background: T.lineSoft, alignSelf: 'stretch' }} />
+
+        {/* ── Review half ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+            Review
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 3 }}>
-            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 40, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-              {due}
-            </span>
-            <span style={{ fontSize: 13, color: T.inkSoft }}>cards</span>
-          </div>
-          {due > 0 && (
-            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
-              ~{Math.ceil(due * 0.5)} min
+          <RingWithCount pct={reviewPct} color={T.crimson} count={reviewedToday} target={reviewTarget} />
+          {dueCount > 0 && reviewedToday < reviewTarget ? (
+            <Link href="/review?start=1" style={{
+              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.crimson, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              fontSize: 13.5, fontWeight: 600,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
+            }}>
+              <Icon name="play" size={12} color="#fff" />
+              Review {dueCount}
+            </Link>
+          ) : reviewedToday >= reviewTarget && totalDue > 0 ? (
+            <Link href="/review?start=1&more=1" style={{
+              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 600,
+            }}>
+              Review more
+            </Link>
+          ) : (
+            <div style={{
+              width: '100%', height: 44, borderRadius: 12,
+              background: T.sageBg, border: `1px solid #D2D8AE`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+              <Icon name="check" size={14} color={T.sageDp} strokeWidth={2.2} />
+              <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>All caught up!</span>
             </div>
           )}
         </div>
       </div>
-
-      {due > 0 ? (
-        <Link href="/review?start=1" style={{
-          marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          height: 56, borderRadius: 15, textDecoration: 'none',
-          background: T.crimson, color: '#fff',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)',
-        }}>
-          <Icon name="play" size={15} color="#fff" />
-          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review {due} due</span>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 500, opacity: 0.82, marginLeft: 2 }}>
-            ~{Math.ceil(due * 0.5)} min
-          </span>
-        </Link>
-      ) : capMet ? (
-        <Link href="/review?start=1&more=1" style={{
-          marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          height: 56, borderRadius: 15, textDecoration: 'none',
-          background: T.amber, color: '#fff',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(160,100,10,0.2), 0 8px 18px rgba(160,100,10,0.15)',
-        }}>
-          <Icon name="play" size={15} color="#fff" />
-          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em' }}>Review more?</span>
-        </Link>
-      ) : (
-        <div style={{
-          marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          height: 56, borderRadius: 15,
-          background: T.sageBg, border: `1px solid #D2D8AE`,
-        }}>
-          <Icon name="check" size={17} color={T.sageDp} strokeWidth={2.2} />
-          <span style={{ fontSize: 15, fontWeight: 600, color: T.sageDp, marginLeft: 8 }}>All caught up!</span>
-        </div>
-      )}
     </Card>
   )
 }
@@ -233,17 +285,24 @@ export default async function DashboardPage() {
       </Card>
 
       {/* Streak + goal row */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <StreakCard streak={stats.streak} chain={stats.chain} />
-        <GoalWidget initialGoal={{
-          daily_goal:         stats.dailyGoal,
-          goal_collection_id: stats.goalCollectionId,
-          goal_due_date:      stats.goalDueDate,
-        }} />
-      </div>
+      {(() => {
+        // Streak: today counts if both targets met (simulation) or any progress (manual)
+        const todayActive = stats.simulationActive
+          ? stats.learnedToday >= stats.learnTarget && stats.reviewedToday >= stats.reviewTarget
+          : stats.learnedToday > 0 || stats.reviewedToday > 0
+        return (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <StreakCard streak={stats.streak} chain={stats.chain} todayActive={todayActive} />
+            <GoalWidget />
+          </div>
+        )
+      })()}
 
-      {/* Ring + CTA */}
-      <RingCard reviewed={stats.reviewedToday} goal={stats.dailyGoal} due={stats.dueCount} totalDue={stats.totalDue} />
+      {/* Two-ring card: Learn + Review */}
+      <DualRingCard
+        learnedToday={stats.learnedToday}   learnTarget={stats.learnTarget}    newCount={stats.newCount}
+        reviewedToday={stats.reviewedToday} reviewTarget={stats.reviewTarget}  dueCount={stats.dueCount}  totalDue={stats.totalDue}
+      />
 
       {/* Heatmap */}
       <div>
@@ -255,7 +314,7 @@ export default async function DashboardPage() {
       <div>
         <SectionHead title="Overview" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Stat value={stats.mastered}    label="Mastered"      icon="check"   accent={T.sage}   />
+          <Stat value={stats.mastered}    label="Rooted"        icon="check"   accent={T.sage}   />
           <Stat value={stats.active}      label="Active cards"  icon="card"    accent={T.crimson} />
           <Stat value={stats.thisWeek}    label="This week"     icon="review"  accent={T.terra}  />
           <Stat value={stats.dueTomorrow} label="Due tomorrow"  icon="layers"  accent={T.amber}  />

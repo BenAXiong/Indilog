@@ -1,15 +1,21 @@
 import { unstable_noStore as noStore } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { computeSimulation } from '@/lib/db/srs/simulation'
 
 export type DashboardStats = {
   // SRS widgets
   streak: number
   chain: boolean[]          // last 7 days: reviewed_count > 0
   reviewedToday: number
+  learnedToday: number
   dailyGoal: number
   dueCount: number
   totalDue: number
+  newCount: number          // repetitions===0, not suspended
   dueTomorrow: number
+  learnTarget: number       // from simulation or learn_cap pref
+  reviewTarget: number      // from simulation or review_cap pref
+  simulationActive: boolean
   heatmap: number[][]       // [week 0..15][day 0..6], level 0-4, week 0 = oldest
   monthLabels: (string | null)[]  // label per week column, null if mid-month
   mastered: number          // ease_factor >= 2.5 AND interval_days >= 21
@@ -28,8 +34,9 @@ export type DashboardStats = {
 
 const EMPTY: DashboardStats = {
   streak: 0, chain: new Array(7).fill(false) as boolean[],
-  reviewedToday: 0, dailyGoal: 20,
-  dueCount: 0, totalDue: 0, dueTomorrow: 0,
+  reviewedToday: 0, learnedToday: 0, dailyGoal: 20,
+  dueCount: 0, totalDue: 0, newCount: 0, dueTomorrow: 0,
+  learnTarget: 10, reviewTarget: 100, simulationActive: false,
   heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
   monthLabels: new Array(16).fill(null) as (string | null)[],
   mastered: 0, active: 0, thisWeek: 0,
@@ -65,22 +72,25 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     dueTomorrowRes,
     masteredRes,
     activeRes,
+    newCountRes,
     totalItemsRes,
     recentRes,
     profileRes,
   ] = await Promise.all([
     supabase
       .from('ind_daily_stats')
-      .select('date, reviewed_count, captured_count')
+      .select('date, reviewed_count, captured_count, learned_count')
       .eq('user_id', user.id)
       .gte('date', fromDate)
       .order('date', { ascending: false }),
 
+    // 2F: due reviews only — repetitions>0 ensures new cards excluded
     supabase
       .from('ind_flashcards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .or(`due_at.is.null,due_at.lte.${now}`)
+      .lte('due_at', now)
+      .gt('repetitions', 0)
       .is('suspended_at', null),
 
     supabase
@@ -102,6 +112,14 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
       .from('ind_flashcards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id),
+
+    // 2E: new cards available to learn
+    supabase
+      .from('ind_flashcards')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('repetitions', 0)
+      .is('suspended_at', null),
 
     supabase
       .from('ind_items')
@@ -125,9 +143,13 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const dailyRows = dailyRes.data ?? []
 
   // Build lookup map
-  const statsMap = new Map<string, { reviewed: number; captured: number }>()
+  const statsMap = new Map<string, { reviewed: number; captured: number; learned: number }>()
   for (const r of dailyRows) {
-    statsMap.set(r.date, { reviewed: r.reviewed_count ?? 0, captured: r.captured_count ?? 0 })
+    statsMap.set(r.date, {
+      reviewed: r.reviewed_count ?? 0,
+      captured: r.captured_count ?? 0,
+      learned:  (r as Record<string, unknown>).learned_count as number ?? 0,
+    })
   }
 
   // Streak — based on reviewed_count (not captured)
@@ -196,27 +218,40 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
 
   const todayStats    = statsMap.get(today)
   const reviewedToday = todayStats?.reviewed ?? 0
-  const cap           = (prefs.daily_cap as number) ?? 100
-  // Cards left today: slots remaining in the cap, bounded by what's actually due
-  const dueCount      = Math.min(dueRes.count ?? 0, Math.max(0, cap - reviewedToday))
+  const learnedToday  = todayStats?.learned  ?? 0
+  const reviewCap     = (prefs.review_cap as number) ?? 100
+
+  // 2E: simulation targets (falls back to pref caps when no sim decks)
+  const sim = await computeSimulation(user.id, {
+    learn_cap:  (prefs.learn_cap  as number) ?? 10,
+    review_cap: reviewCap,
+  })
+
+  // Cards left today: slots remaining in the review target, bounded by what's actually due
+  const dueCount = Math.min(dueRes.count ?? 0, Math.max(0, sim.reviewTarget - reviewedToday))
 
   return {
     streak,
     chain,
     reviewedToday,
-    dailyGoal:     profileData?.daily_goal ?? 20,
+    learnedToday,
+    dailyGoal:      profileData?.daily_goal ?? 20,
     dueCount,
-    totalDue:      dueRes.count ?? 0,
-    dueTomorrow:   dueTomorrowRes.count ?? 0,
+    totalDue:       dueRes.count      ?? 0,
+    newCount:       newCountRes.count ?? 0,
+    dueTomorrow:    dueTomorrowRes.count ?? 0,
+    learnTarget:    sim.learnTarget,
+    reviewTarget:   sim.reviewTarget,
+    simulationActive: sim.fromSimulation,
     heatmap,
     monthLabels,
-    mastered:      masteredRes.count ?? 0,
-    active:        activeRes.count ?? 0,
+    mastered:       masteredRes.count ?? 0,
+    active:         activeRes.count   ?? 0,
     thisWeek,
     goalCollectionId: profileData?.goal_collection_id ?? null,
     goalDueDate:      profileData?.goal_due_date       ?? null,
-    capturedTotal: totalItemsRes.count ?? 0,
-    capturedToday: todayStats?.captured ?? 0,
-    recentItems:   recentRes.data ?? [],
+    capturedTotal:  totalItemsRes.count ?? 0,
+    capturedToday:  todayStats?.captured ?? 0,
+    recentItems:    recentRes.data ?? [],
   }
 }

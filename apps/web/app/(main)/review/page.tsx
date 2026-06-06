@@ -10,7 +10,7 @@ import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
-  rateCard, rateCardRelearn, cardMeta, cardAudio,
+  rateCard, cardMeta, cardAudio,
   suspendCard, setFlagColor, deferCard, undoRating,
   type FlashcardWithItem, type Rating, type ListDueOpts,
 } from '@/lib/db/srs/flashcards'
@@ -20,16 +20,17 @@ import { estimateInterval, formatDays, type SMState } from '@/lib/db/srs/schedul
 import { createClient } from '@/lib/supabase/client'
 import { getDeckGoalStats } from '@/lib/db/profile/goal'
 import { patchPreferences } from '@/lib/db/profile/preferences'
+import { listPriorityDecks } from '@/lib/db/srs/priority'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SessionContext = {
-  reviewedToday:    number
-  dailyGoal:        number
-  dailyCap:         number
-  streak:           number
-  goalCollectionId: string | null
-  goalDueDate:      string | null
+  reviewedToday:         number
+  dailyGoal:             number
+  dailyCap:              number
+  streak:                number
+  priorityCollectionIds: string[]
+  reviewMoreSize:        number | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -41,16 +42,17 @@ function cardSMState(card: FlashcardWithItem): SMState {
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, goalCollectionId: null, goalDueDate: null }
+  if (!user) return { reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null }
 
   const today   = new Date().toISOString().slice(0, 10)
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
   const fromStr = from30.toISOString().slice(0, 10)
 
-  const [profileRes, todayRes, dailyRes] = await Promise.all([
-    supabase.from('ind_profiles').select('daily_goal, goal_collection_id, goal_due_date, preferences').eq('user_id', user.id).maybeSingle(),
+  const [profileRes, todayRes, dailyRes, priorityDecks] = await Promise.all([
+    supabase.from('ind_profiles').select('daily_goal, preferences').eq('user_id', user.id).maybeSingle(),
     supabase.from('ind_daily_stats').select('reviewed_count').eq('user_id', user.id).eq('date', today).maybeSingle(),
     supabase.from('ind_daily_stats').select('date, reviewed_count').eq('user_id', user.id).gte('date', fromStr).order('date', { ascending: false }),
+    listPriorityDecks(user.id),
   ])
 
   const reviewSet = new Set(
@@ -61,17 +63,17 @@ async function loadSessionContext(): Promise<SessionContext> {
   while (reviewSet.has(cur.toISOString().slice(0, 10))) { streak++; cur.setDate(cur.getDate() - 1) }
 
   const prefs = profileRes.data?.preferences as Record<string, unknown> | null
-  const dailyCap = typeof prefs?.daily_cap === 'number' ? prefs.daily_cap : 100
-  // Sync to localStorage so the OptionsSheet shows the correct value
-  if (typeof window !== 'undefined') localStorage.setItem('srs_daily_cap', String(dailyCap))
+  const dailyCap = typeof prefs?.review_cap === 'number' ? prefs.review_cap : 100
+  const reviewMoreSize = typeof prefs?.review_more_size === 'number' ? prefs.review_more_size : null
+  if (typeof window !== 'undefined') localStorage.setItem('srs_review_cap', String(dailyCap))
 
   return {
-    reviewedToday:    todayRes.data?.reviewed_count ?? 0,
-    dailyGoal:        profileRes.data?.daily_goal ?? 20,
+    reviewedToday:         todayRes.data?.reviewed_count ?? 0,
+    dailyGoal:             profileRes.data?.daily_goal ?? 20,
     dailyCap,
     streak,
-    goalCollectionId: profileRes.data?.goal_collection_id ?? null,
-    goalDueDate:      profileRes.data?.goal_due_date ?? null,
+    priorityCollectionIds: priorityDecks.map(d => d.collection_id),
+    reviewMoreSize,
   }
 }
 
@@ -96,7 +98,6 @@ async function countDueTomorrow(): Promise<number> {
 function OptionsSheet({
   showHardEasy, setShowHardEasy,
   showButtons, setShowButtons,
-  learningSteps, setLearningSteps,
   dailyCap, setDailyCap,
   reviewMode, setReviewMode,
   shuffleNew, setShuffleNew,
@@ -107,7 +108,6 @@ function OptionsSheet({
 }: {
   showHardEasy: boolean; setShowHardEasy: (v: boolean) => void
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
-  learningSteps: number; setLearningSteps: (v: number) => void
   dailyCap:     number;  setDailyCap:     (v: number) => void
   reviewMode:   string;  setReviewMode:   (v: string) => void
   shuffleNew:   boolean; setShuffleNew:   (v: boolean) => void
@@ -197,31 +197,6 @@ function OptionsSheet({
           <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
           <Toggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
 
-          {/* Learning passes stepper */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>Learning passes</div>
-              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Times a new card repeats before graduating</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <button onClick={() => setLearningSteps(learningSteps - 1)} disabled={learningSteps <= 1} style={{
-                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
-                background: T.paperHi, color: T.inkSoft, cursor: learningSteps <= 1 ? 'default' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 300, opacity: learningSteps <= 1 ? 0.35 : 1,
-              }}>−</button>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, fontWeight: 700, color: T.ink, minWidth: 20, textAlign: 'center' }}>
-                {learningSteps}
-              </span>
-              <button onClick={() => setLearningSteps(learningSteps + 1)} disabled={learningSteps >= 5} style={{
-                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
-                background: T.paperHi, color: T.inkSoft, cursor: learningSteps >= 5 ? 'default' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 300, opacity: learningSteps >= 5 ? 0.35 : 1,
-              }}>+</button>
-            </div>
-          </div>
-
           {/* Daily cap stepper */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
             <div style={{ flex: 1 }}>
@@ -302,20 +277,9 @@ function OptionsSheet({
 
 // ─── ReviewSession ────────────────────────────────────────────────────────────
 
-type CardPhase = 'review' | 'new' | 'relearn'
-
 type QueueEntry = {
-  card:             FlashcardWithItem
-  pass:             number    // 0 = first encounter, 1+ = requeue pass
-  phase:            CardPhase
-  originalInterval: number   // for relearn: the interval before the lapse
-  restarts:         number    // how many times this card has been reset to pass 0
+  card: FlashcardWithItem
 }
-
-// Mature threshold: cards with interval ≥ 7d trigger a relearn burst on lapse
-const MATURE_THRESHOLD = 7
-// Max full restarts before forcing Good graduation
-const MAX_RESTARTS = 3
 
 function renderHighlighted(sentence: string, target: string) {
   if (!target || !sentence) return sentence
@@ -343,20 +307,13 @@ function ReviewSession({
   onExit: (reviewed: number, reviewedCards: FlashcardWithItem[]) => void
   onReloadNeeded: () => void
 }) {
-  const [queue, setQueue] = useState<QueueEntry[]>(() =>
-    cards.map(c => ({
-      card: c, pass: 0, restarts: 0,
-      phase: (c.repetitions === 0 && c.interval_days === 0) ? 'new' : 'review',
-      originalInterval: c.interval_days,
-    }))
-  )
+  const [queue, setQueue] = useState<QueueEntry[]>(() => cards.map(c => ({ card: c })))
   const [qIdx,          setQIdx]          = useState(0)
   const completedRef                       = useRef(new Set<string>())
   const [revealed,       setRevealed]      = useState(false)
   const [showOptions,    setShowOptions]   = useState(false)
   const [showHardEasy,   setShowHardEasyRaw] = useState(true)
   const [showButtons,    setShowButtonsRaw]  = useState(true)
-  const [learningSteps,  setLearningStepsRaw] = useState(3)
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
   const [dailyCap,       setDailyCapRaw]    = useState(100)
@@ -397,9 +354,7 @@ function ReviewSession({
   useEffect(() => {
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
-    const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
-    setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
-    const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100')
+    const cap = parseInt(localStorage.getItem('srs_review_cap') ?? '100')
     setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
@@ -410,13 +365,9 @@ function ReviewSession({
   function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new',    String(v)); patchPreferences({ shuffle_new: v }) }
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)); patchPreferences({ show_hard_easy: v }) }
   function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons',   String(v)); patchPreferences({ show_buttons: v }) }
-  function setLearningSteps(v: number) {
-    const n = Math.min(5, Math.max(1, v))
-    setLearningStepsRaw(n); localStorage.setItem('srs_learning_steps', String(n)); patchPreferences({ learning_steps: n })
-  }
   function setDailyCap(v: number) {
     const n = Math.min(300, Math.max(1, v))
-    setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)); patchPreferences({ daily_cap: n })
+    setDailyCapRaw(n); localStorage.setItem('srs_review_cap', String(n)); patchPreferences({ review_cap: n })
   }
   function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v); patchPreferences({ review_mode: v }) }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
@@ -432,10 +383,7 @@ function ReviewSession({
     }
   }, [qIdx, queue.length])
 
-  const entry       = queue[qIdx]
-  // Compute before early return so hook call count is stable across renders
-  const isLearning  = (entry?.phase ?? 'review') !== 'review'
-  const isFinalPass = (entry?.pass ?? 0) >= learningSteps - 1
+  const entry = queue[qIdx]
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -447,16 +395,16 @@ function ReviewSession({
         else if (e.key === 'ArrowUp')   submit('easy')
         else if (e.key === 'ArrowDown') handleSuspend()
       } else {
-        if      (e.key === '1' || e.key === 'ArrowLeft')                    submit('again')
-        else if (e.key === '2' && showHardEasy && !isLearning)             submit('hard')
-        else if (e.key === '3' || e.key === 'ArrowRight')                  submit(isLearning ? 'easy' : 'good')
-        else if ((e.key === '4' && showHardEasy) || e.key === 'ArrowUp')   submit('easy')
-        else if (e.key === 'ArrowDown')                                     handleSuspend()
+        if      (e.key === '1' || e.key === 'ArrowLeft')                submit('again')
+        else if (e.key === '2' && showHardEasy)                         submit('hard')
+        else if (e.key === '3' || e.key === 'ArrowRight')               submit('good')
+        else if ((e.key === '4' && showHardEasy) || e.key === 'ArrowUp') submit('easy')
+        else if (e.key === 'ArrowDown')                                  handleSuspend()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [revealed, showHardEasy, showOptions, isLearning]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [revealed, showHardEasy, showOptions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Rating button definitions — placed here so useMemo below can reference them
   const RATINGS: { id: Rating; label: string; color: string }[] = [
@@ -475,20 +423,12 @@ function ReviewSession({
 
   if (!entry) return null  // transitioning to done state
 
-  const { card, phase, pass, originalInterval, restarts } = entry
-  const lang  = cardMeta(card)
-  const state = cardSMState(card)
+  const { card } = entry
+  const lang     = cardMeta(card)
+  const state    = cardSMState(card)
+  const phaseLabel = lang.type
 
-  // Phase label / color for top-right of card
-  const phaseLabel =
-    phase === 'relearn' ? 'Relearning'
-    : phase === 'new' && (pass > 0 || restarts > 0) ? 'Learning'
-    : phase === 'new' ? 'New'
-    : lang.type
-  const phaseColor =
-    phase === 'relearn' ? T.amber : phase === 'new' ? T.sage : T.inkFaint
-
-  const targetWord  = (card.ind_items as any)?.target_word as string | null ?? null
+  const targetWord  = card.ind_items?.target_word ?? null
   const hasZh       = !!(card.ind_items?.zh)
   const hasAudio    = !!cardAudio(card)
   // Resolve effective mode with fallback chain (DEC-SRS06)
@@ -506,78 +446,14 @@ function ReviewSession({
   const stsWord     = targetWord ?? ''
   const stsSentence = card.ind_items?.ab ?? ''
 
-  // Card border tint based on phase
-  const cardBorderColor =
-    phase === 'relearn' ? '#EBD49A'
-    : phase === 'new' ? '#D2D8AE'
-    : T.lineSoft
-
-  // Pending requeue count
-  const pendingRequeue = queue.slice(qIdx + 1).filter(e => e.pass > 0).length
-
-  // Keyboard shortcuts
   async function submit(rating: Rating) {
     lastRatedRef.current = null
     setCanUndo(false)
-    const r: Rating = (isLearning && rating === 'hard') ? 'again' : rating
     const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
-    const sessionMode = effectiveMode
-
-    if (phase === 'review') {
-      if (r === 'again' && card.interval_days >= MATURE_THRESHOLD) {
-        setQueue(prev => [...prev, { card, pass: 0, restarts: 0, phase: 'relearn', originalInterval: card.interval_days }])
-      } else {
-        await rateCard(card.id, r, state, sessionMode)
-        completedRef.current.add(card.id)
-        lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
-      }
-
-    } else if (phase === 'new') {
-      if (r === 'again') {
-        // "Repeat"
-        if (isFinalPass) {
-          if (restarts >= MAX_RESTARTS) {
-            // Cap reached → force Good graduation
-            await rateCard(card.id, 'good', state, sessionMode)
-            completedRef.current.add(card.id)
-            lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
-          } else {
-            // Reset to pass 0
-            setQueue(prev => [...prev, { ...entry, pass: 0, restarts: restarts + 1 }])
-          }
-        } else {
-          setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
-        }
-      } else {
-        // "Easy" (first attempt, non-final) or "Got it!" (final / after restart)
-        const useGood = isFinalPass || restarts >= 1
-        await rateCard(card.id, useGood ? 'good' : 'easy', state, sessionMode)
-        completedRef.current.add(card.id)
-        lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
-      }
-
-    } else { // relearn
-      if (r === 'again') {
-        // "Repeat"
-        if (isFinalPass) {
-          if (restarts >= MAX_RESTARTS) {
-            await rateCard(card.id, 'again', state, sessionMode)
-            completedRef.current.add(card.id)
-            lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
-          } else {
-            setQueue(prev => [...prev, { ...entry, pass: 0, restarts: restarts + 1 }])
-          }
-        } else {
-          setQueue(prev => [...prev, { ...entry, pass: pass + 1 }])
-        }
-      } else {
-        // "Got it!" — 50% recovery
-        await rateCardRelearn(card.id, 'good', state, originalInterval, sessionMode)
-        completedRef.current.add(card.id)
-        lastRatedRef.current = { cardId: card.id, prevState }; setCanUndo(true)
-      }
-    }
-
+    await rateCard(card.id, rating, state, effectiveMode)
+    completedRef.current.add(card.id)
+    lastRatedRef.current = { cardId: card.id, prevState }
+    setCanUndo(true)
     setRevealed(false)
     setShowFlagPicker(false)
     setQIdx(qi => qi + 1)
@@ -635,48 +511,12 @@ function ReviewSession({
       }
       return  // horizontal swipes before flip do nothing
     }
-    // After flip: ← again, → good/got it, ↓ suspend; ↑ only for review (no easy after reveal in learning)
-    if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : isLearning ? 'easy' : 'good')
-    else if (absY > absX && absY > THRESH) { if (dy < 0) { if (!isLearning) submit('easy') } else handleSuspend() }
+    // After flip: ← again, → good, ↓ suspend, ↑ easy
+    if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : 'good')
+    else if (absY > absX && absY > THRESH) { if (dy < 0) submit('easy'); else handleSuspend() }
   }
 
-  // Learning: before reveal → Easy only; after reveal → Repeat + Got it!
-  // Review: after reveal → Again/Good (or all four if showHardEasy)
-  const visibleRatings = isLearning
-    ? (!revealed
-        ? RATINGS.filter(r => r.id === 'easy')
-        : RATINGS.filter(r => r.id === 'again' || r.id === 'easy'))
-    : showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
-
-  // Context-aware button label
-  function ratingLabel(id: Rating): string {
-    if (phase === 'new') {
-      if (id === 'again') return 'Repeat'
-      const useGotIt = isFinalPass || restarts >= 1
-      return useGotIt ? 'Got it!' : 'Good'
-    }
-    if (phase === 'relearn') {
-      return id === 'again' ? 'Repeat' : 'Got it!'
-    }
-    return { again: 'Again', hard: 'Hard', good: 'Good', easy: 'Easy' }[id] ?? id
-  }
-
-  // Context-aware interval sub-label
-  function intervalLabel(id: Rating): string {
-    if (phase === 'new') {
-      if (id === 'again') {
-        if (isFinalPass) return restarts >= MAX_RESTARTS ? formatDays(estimateInterval(state, 'good')) : '↩ 0'
-        return '↩'
-      }
-      const useGood = isFinalPass || restarts >= 1
-      return formatDays(estimateInterval(state, useGood ? 'good' : 'easy'))
-    }
-    if (phase === 'relearn') {
-      if (id === 'again') return isFinalPass ? '↩ 0' : '↩'
-      return formatDays(Math.max(1, Math.floor(originalInterval * 0.5)))
-    }
-    return intervals[id]
-  }
+  const visibleRatings = showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
@@ -685,11 +525,6 @@ function ReviewSession({
       {/* Session header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 0', flexShrink: 0 }}>
         <button onClick={() => {
-          const learningInProgress = queue.slice(qIdx).filter(e => e.phase === 'new' && e.pass > 0)
-          if (learningInProgress.length > 0) {
-            const count = learningInProgress.length
-            if (!window.confirm(`${count} learning card${count > 1 ? 's' : ''} will reset to 0/${learningSteps} if you exit now. Continue?`)) return
-          }
           onExit(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)))
         }} aria-label="Exit session" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
@@ -761,13 +596,7 @@ function ReviewSession({
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 5, minHeight: 20 }}>
           {/* Left: returning indicator */}
-          <div>
-            {pendingRequeue > 0 && (
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, letterSpacing: '0.03em' }}>
-                ↩ {pendingRequeue} returning
-              </span>
-            )}
-          </div>
+          <div />
           {/* Right: counter stacked above undo */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em' }}>
@@ -790,8 +619,8 @@ function ReviewSession({
       {/* Card area — flex column so hints sit naturally above/below card */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 16px 0' }}>
 
-        {/* ↑ easy hint — outside card, above; hidden after reveal in learning (up gesture disabled then) */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: revealed && isLearning ? 0 : 0.42 }}>
+        {/* ↑ easy hint — outside card, above */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.42 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.amber }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>easy</span>
             <Icon name="chevron" size={13} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
@@ -807,7 +636,7 @@ function ReviewSession({
           }}
           style={{
             position: 'relative', background: T.paperHi, borderRadius: 22,
-            border: `1px solid ${cardBorderColor}`, padding: '26px 22px', minHeight: 280,
+            border: `1px solid ${T.lineSoft}`, padding: '26px 22px', minHeight: 280,
             display: 'flex', flexDirection: 'column', cursor: revealed ? 'default' : 'pointer',
             touchAction: 'none',
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
@@ -815,7 +644,7 @@ function ReviewSession({
         >
           {/* Phase label */}
           <div style={{ position: 'absolute', top: 14, right: 16 }}>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: phaseColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               {phaseLabel}
             </span>
           </div>
@@ -861,13 +690,11 @@ function ReviewSession({
             <>
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
                 <Icon name="arrow-l" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{isLearning ? 'repeat' : 'again'}</span>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
               </div>
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: isLearning ? T.amber : T.sage, opacity: 0.5 }}>
+              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.5 }}>
                 <Icon name="arrow-r" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>
-                  {isLearning ? (phase === 'relearn' || isFinalPass || restarts >= 1 ? 'got it' : 'good') : 'good'}
-                </span>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>good</span>
               </div>
             </>
           )}
@@ -964,23 +791,9 @@ function ReviewSession({
         </div>
       </div>
 
-      {/* Pass dots (learning / relearn only) */}
-      {phase !== 'review' && (
-        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', gap: 7, padding: '10px 0 0' }}>
-          {Array.from({ length: learningSteps }).map((_, i) => (
-            <div key={i} style={{
-              width: 7, height: 7, borderRadius: 999,
-              background: i <= pass ? phaseColor : 'transparent',
-              border: `1.5px solid ${i <= pass ? phaseColor : T.line}`,
-              transition: 'all .2s',
-            }} />
-          ))}
-        </div>
-      )}
-
       {/* Rating row */}
       <div style={{ padding: '16px 16px 32px', flexShrink: 0 }}>
-        {showButtons && (revealed || isLearning) ? (
+        {showButtons && revealed ? (
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${visibleRatings.length}, 1fr)`, gap: 7 }}>
             {visibleRatings.map(r => (
               <button
@@ -996,8 +809,8 @@ function ReviewSession({
                 onPointerUp={e => { (e.currentTarget as HTMLButtonElement).style.background = T.paperHi; (e.currentTarget as HTMLButtonElement).style.color = r.color }}
                 onPointerLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = T.paperHi; (e.currentTarget as HTMLButtonElement).style.color = r.color }}
               >
-                <span style={{ fontSize: 13.5 }}>{ratingLabel(r.id)}</span>
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, opacity: 0.75, fontWeight: 500 }}>{intervalLabel(r.id)}</span>
+                <span style={{ fontSize: 13.5 }}>{r.label}</span>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, opacity: 0.75, fontWeight: 500 }}>{intervals[r.id]}</span>
               </button>
             ))}
           </div>
@@ -1009,7 +822,6 @@ function ReviewSession({
         <OptionsSheet
           showHardEasy={showHardEasy}       setShowHardEasy={setShowHardEasy}
           showButtons={showButtons}         setShowButtons={setShowButtons}
-          learningSteps={learningSteps}     setLearningSteps={setLearningSteps}
           dailyCap={dailyCap}               setDailyCap={setDailyCap}
           reviewMode={reviewMode}           setReviewMode={setReviewMode}
           shuffleNew={shuffleNew}           setShuffleNew={setShuffleNew}
@@ -1032,8 +844,7 @@ function ReviewEnd({
   goalMet,
   streak,
   reviewedCards,
-  goalCollectionId,
-  goalDueDate,
+  reviewMoreN: reviewMoreNProp,
   onReviewMore,
   onDone,
 }: {
@@ -1041,19 +852,23 @@ function ReviewEnd({
   goalMet: boolean
   streak: number
   reviewedCards: FlashcardWithItem[]
-  goalCollectionId: string | null
-  goalDueDate: string | null
-  onReviewMore: () => void
+  reviewMoreN: number
+  onReviewMore: (n: number) => void
   onDone: () => void
 }) {
-  const [dueTomorrow,  setDueTomorrow]  = useState<number | null>(null)
-  const [goalStats,    setGoalStats]    = useState<{ total: number; mastered: number } | null>(null)
-  const [listExpanded, setListExpanded] = useState(false)
+  const [dueTomorrow,    setDueTomorrow]    = useState<number | null>(null)
+  const [listExpanded,   setListExpanded]   = useState(false)
+  const [reviewMoreN,    setReviewMoreNRaw] = useState(reviewMoreNProp)
+  const [editingMore,    setEditingMore]    = useState(false)
 
-  useEffect(() => {
-    countDueTomorrow().then(setDueTomorrow)
-    if (goalCollectionId) getDeckGoalStats(goalCollectionId).then(setGoalStats)
-  }, [goalCollectionId])
+  useEffect(() => { countDueTomorrow().then(setDueTomorrow) }, [])
+
+  function setReviewMoreN(n: number) {
+    const v = Math.max(10, Math.round(n / 5) * 5)
+    setReviewMoreNRaw(v)
+    localStorage.setItem('srs_review_more_size', String(v))
+    patchPreferences({ review_more_size: v })
+  }
 
   const confetti = useMemo(() => {
     let s = 11
@@ -1124,26 +939,6 @@ function ReviewEnd({
           </div>
           <div style={{ fontSize: 17, color: T.inkSoft, marginTop: 8, fontWeight: 500 }}>cards reviewed</div>
 
-          {/* Goal progress */}
-          {goalStats && (() => {
-            const pct = goalStats.total > 0 ? Math.round(goalStats.mastered / goalStats.total * 100) : 0
-            const daysLeft = goalDueDate
-              ? Math.max(0, Math.ceil((new Date(goalDueDate).getTime() - Date.now()) / 86400000))
-              : null
-            return (
-              <div style={{ marginTop: 20, padding: '12px 18px', borderRadius: 14, background: T.amberBg, border: `1px solid ${T.amber}40`, maxWidth: 300, width: '100%' }}>
-                <div style={{ fontSize: 13, color: T.amber, fontWeight: 700 }}>
-                  {goalStats.mastered} / {goalStats.total} mastered · {pct}%
-                </div>
-                {daysLeft !== null && (
-                  <div style={{ fontSize: 13, color: T.ink, fontWeight: 700, marginTop: 4 }}>
-                    {daysLeft} day{daysLeft !== 1 ? 's' : ''} to go
-                  </div>
-                )}
-              </div>
-            )
-          })()}
-
           {dueTomorrow !== null && (
             <div style={{
               marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -1198,6 +993,15 @@ function ReviewEnd({
 
       {/* Actions */}
       <div style={{ padding: '0 16px 40px', position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {editingMore && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, background: T.paperHi, border: `1px solid ${T.lineSoft}` }}>
+            <span style={{ fontSize: 13, color: T.inkSoft }}>Review</span>
+            <button onClick={() => setReviewMoreN(reviewMoreN - 5)} disabled={reviewMoreN <= 10} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: reviewMoreN <= 10 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: reviewMoreN <= 10 ? 0.35 : 1, fontSize: 16 }}>−</button>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, fontWeight: 700, color: T.ink, minWidth: 32, textAlign: 'center' }}>{reviewMoreN}</span>
+            <button onClick={() => setReviewMoreN(reviewMoreN + 5)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>+</button>
+            <span style={{ fontSize: 13, color: T.inkSoft }}>more cards</span>
+          </div>
+        )}
         <button onClick={handleShare} style={{
           width: '100%', height: 46, borderRadius: 13, background: T.paperHi, color: T.ink,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -1207,14 +1011,22 @@ function ReviewEnd({
           <Icon name="share" size={16} strokeWidth={1.9} /> Share progress
         </button>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onReviewMore} style={{
-            flex: 1, height: 52, borderRadius: 14, background: T.paperHi, color: T.ink,
-            border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            fontSize: 15, fontWeight: 600, cursor: 'pointer',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-          }}>
-            <Icon name="review" size={15} strokeWidth={2} /> Review more
-          </button>
+          {/* Review N more — with inline editable N */}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', gap: 0, borderRadius: 14, border: `1px solid ${T.line}`, overflow: 'hidden', background: T.paperHi, boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset' }}>
+            <button onClick={() => onReviewMore(reviewMoreN)} style={{
+              flex: 1, height: 52, background: 'none', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              fontSize: 15, fontWeight: 600, cursor: 'pointer', color: T.ink,
+            }}>
+              <Icon name="review" size={15} strokeWidth={2} /> {reviewMoreN} more
+            </button>
+            <button onClick={() => setEditingMore(v => !v)} aria-label="Edit count" style={{
+              width: 36, background: 'none', border: 'none', borderLeft: `1px solid ${T.lineSoft}`,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkFaint,
+            }}>
+              <Icon name="pen" size={13} strokeWidth={2} />
+            </button>
+          </div>
           <button onClick={onDone} style={{
             flex: 1, height: 52, borderRadius: 14,
             background: T.crimson, color: '#fff', border: `1px solid ${T.crimson}`,
@@ -1255,7 +1067,7 @@ function ReviewPage() {
 
   const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, goalCollectionId: null, goalDueDate: null })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount,    setSessionCount]    = useState(0)
   const [sessionKey,      setSessionKey]      = useState(0)
@@ -1295,48 +1107,28 @@ function ReviewPage() {
           })(),
       loadSessionContext(),
     ])
-    const goalPaused = localStorage.getItem('srs_goal_paused') === '1'
-    const goalId = (!isCustom && !goalPaused) ? context.goalCollectionId : null
-    const goalSorted = goalId
-      ? [...c.filter(x => x.ind_items?.collection_id === goalId), ...c.filter(x => x.ind_items?.collection_id !== goalId)]
-      : c
 
-    // Sort/shuffle new collection cards; keep due cards by due_at
-    const isNewColl = (x: typeof goalSorted[0]) =>
-      !x.due_at && (x.ind_items as any)?.note_source === 'collection'
-    const newCollCards = goalSorted.filter(isNewColl)
-    const otherCards   = goalSorted.filter(x => !isNewColl(x))
-
-    const shuffleNewCards = localStorage.getItem('srs_shuffle_new') === 'true'
-    let orderedNew: typeof newCollCards
-    if (shuffleNewCards) {
-      // Shuffle within each level (keep levels in order)
-      const byLevel = new Map<number, typeof newCollCards>()
-      for (const c of newCollCards) {
-        const lv = (c.ind_items as any)?.level ?? 0
-        if (!byLevel.has(lv)) byLevel.set(lv, [])
-        byLevel.get(lv)!.push(c)
+    // Priority sort: deck 1 first, then deck 2, …, then non-priority. Stable — preserves due_at order within each group.
+    const priorityIds = context.priorityCollectionIds
+    if (!isCustom && priorityIds.length > 0) {
+      const priorityIdx = (x: FlashcardWithItem) => {
+        const colId = x.ind_items?.collection_id
+        if (!colId) return Infinity
+        const i = priorityIds.indexOf(colId)
+        return i === -1 ? Infinity : i
       }
-      orderedNew = [...byLevel.entries()]
-        .sort(([a], [b]) => a - b)
-        .flatMap(([, cards]) => cards.sort(() => Math.random() - 0.5))
-    } else {
-      orderedNew = [...newCollCards].sort((a, b) => {
-        const ia = a.ind_items as any, ib = b.ind_items as any
-        return (ia.level ?? 0) - (ib.level ?? 0)
-            || (ia.lesson ?? 0) - (ib.lesson ?? 0)
-            || (ia.position ?? 0) - (ib.position ?? 0)
-      })
+      c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
     }
-    const sorted = [...orderedNew, ...otherCards]
-    const cap = context.dailyCap
-    const sessionCap = isCustom ? sorted.length
-      : isMore        ? cap
+
+    const cap          = context.dailyCap
+    const reviewMoreN  = context.reviewMoreSize ?? Math.max(10, Math.round(cap / 50) * 5)
+    const sessionCap   = isCustom ? c.length
+      : isMore         ? reviewMoreN
       : Math.max(0, cap - context.reviewedToday)
-    setCards(sorted.slice(0, sessionCap))
+    setCards(c.slice(0, sessionCap))
     setCtx(context)
     setLoading(false)
-    if (autostart && !autostartedRef.current && sorted.length > 0) {
+    if (autostart && !autostartedRef.current && c.length > 0) {
       autostartedRef.current = true
       setMode('reviewing')
     }
@@ -1363,8 +1155,26 @@ function ReviewPage() {
     reload()
   }
 
-  function handleReviewMore() {
-    setMode(cards.length > 0 ? 'reviewing' : 'landing')
+  async function handleReviewMore(n: number) {
+    const exclude = await getExcludeFromReview()
+    const more = await listDueFlashcards({
+      excludeLangs:       ctx.priorityCollectionIds.length === 0 && localStorage.getItem('srs_show_all_langs') !== 'false'
+        ? [] : JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]'),
+      excludeCollections: exclude.collections,
+      excludeCaptures:    exclude.captures,
+    })
+    const priorityIds = ctx.priorityCollectionIds
+    if (priorityIds.length > 0) {
+      const priorityIdx = (x: FlashcardWithItem) => {
+        const colId = x.ind_items?.collection_id
+        if (!colId) return Infinity
+        const i = priorityIds.indexOf(colId)
+        return i === -1 ? Infinity : i
+      }
+      more.sort((a, b) => priorityIdx(a) - priorityIdx(b))
+    }
+    setCards(more.slice(0, n))
+    setMode(more.length > 0 ? 'reviewing' : 'landing')
   }
 
   const goalMet = ctx.reviewedToday + sessionCount >= ctx.dailyGoal
@@ -1380,8 +1190,7 @@ function ReviewPage() {
       goalMet={goalMet}
       streak={ctx.streak}
       reviewedCards={reviewedCards}
-      goalCollectionId={ctx.goalCollectionId}
-      goalDueDate={ctx.goalDueDate}
+      reviewMoreN={ctx.reviewMoreSize ?? Math.max(10, Math.round(ctx.dailyCap / 50) * 5)}
       onReviewMore={handleReviewMore}
       onDone={autostart ? () => router.push('/') : () => setMode('landing')}
     />

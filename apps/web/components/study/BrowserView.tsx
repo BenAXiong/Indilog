@@ -13,7 +13,7 @@ import {
 import { setTargetWord } from '@/lib/db/srs/flashcards'
 import { listSources } from '@/lib/db/sources/sources'
 import { getLanguage } from '@/lib/languages'
-import { formatDays, computeStrength } from '@/lib/db/srs/schedule'
+import { formatDays, computeStrength, computeMasteryGrade } from '@/lib/db/srs/schedule'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 
 const FILTERS: { value: BrowserFilter; label: string }[] = [
@@ -361,6 +361,31 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
                       {pct}%
                     </span>
                   </div>
+                </div>
+              )
+            })()}
+
+            {/* Mastery grade */}
+            {card.card_id && (() => {
+              const grade = computeMasteryGrade(card)
+              const GRADE_STYLE: Record<string, { color: string; bg: string; border: string }> = {
+                seed:     { color: T.amber,  bg: T.amberBg,   border: '#EBD49A' },
+                planted:  { color: T.inkSoft, bg: T.paperHi,  border: T.lineSoft },
+                rooted:   { color: '#566234', bg: '#E4E7CC',  border: '#D2D8AE'  },
+                blooming: { color: '#3a601a', bg: '#cfe8b8',  border: '#b2d895'  },
+              }
+              const gs = GRADE_STYLE[grade]
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={labelStyle}>Grade</label>
+                  <span style={{
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    color: gs.color, background: gs.bg, border: `1px solid ${gs.border}`,
+                    padding: '3px 8px', borderRadius: 6,
+                  }}>
+                    {grade}
+                  </span>
                 </div>
               )
             })()}

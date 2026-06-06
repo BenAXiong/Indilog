@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { nextFormoSRS1, nextRelearn, type SMState, type Rating } from './schedule'
+import { listPriorityDecks } from './priority'
 
 export type { Rating } from './schedule'
 
@@ -21,6 +22,8 @@ export type FlashcardWithItem = Flashcard & {
     ab: string; zh: string | null; audio: string | null
     type: string; language: string; dialect: string | null; note_source: string
     collection_id: string | null; tags: string[] | null; place_heard: string | null
+    target_word: string | null
+    level: number | null; lesson: number | null; position: number | null
     ind_learn_collections: { name: string; language: string } | null
   } | null
 }
@@ -172,7 +175,8 @@ export async function getDueStats(
     return supabase.from('ind_flashcards')
       .select('note_id, ind_items(note_source, collection_id, language)')
       .eq('user_id', user!.id)
-      .or(`due_at.is.null,due_at.lte.${now}`)
+      .lte('due_at', now)
+      .gt('repetitions', 0)
       .is('suspended_at', null)
   }
 
@@ -236,8 +240,9 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
   function buildQ() {
     let q = supabase.from('ind_flashcards').select(SEL)
       .is('suspended_at', null)
-      .order('due_at', { ascending: true, nullsFirst: true })
-    if (opts.dueOnly !== false) q = q.or(`due_at.is.null,due_at.lte.${now}`)
+      .gt('repetitions', 0)   // Review: never show new (repetitions===0) cards
+      .order('due_at', { ascending: true, nullsFirst: false })
+    if (opts.dueOnly !== false) q = q.lte('due_at', now)
     if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
     else if (opts.flagColor === 'none') q = q.is('flag_color', null)
     else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
@@ -286,6 +291,92 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     results = results.filter(c => c.ind_items?.place_heard === opts.includePlaceHeard)
 
   return results
+}
+
+/**
+ * Graduates a card from the Learn session.
+ * Sets repetitions=1, interval_days=0.5 (12h) for 'good' or 4d for 'easy',
+ * writes a review record, and calls increment_learned_today.
+ */
+export async function graduateLearnCard(
+  flashcardId: string,
+  type: 'good' | 'easy',
+): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const intervalDays = type === 'easy' ? 4 : 0.5
+  const dueAt  = new Date(Date.now() + intervalDays * 86_400_000).toISOString()
+  const today  = getStudyDate()
+
+  await Promise.all([
+    supabase.from('ind_flashcards').update({
+      due_at:        dueAt,
+      ease_factor:   2.5,
+      interval_days: intervalDays,
+      repetitions:   1,
+    }).eq('id', flashcardId),
+    supabase.from('ind_reviews').insert({
+      user_id:      user.id,
+      flashcard_id: flashcardId,
+      rating:       type,
+      due_at:       dueAt,
+      mode:         'learn',
+    }),
+    supabase.rpc('increment_learned_today', { p_user_id: user.id, p_date: today }),
+  ])
+}
+
+export async function listLearnFlashcards(): Promise<FlashcardWithItem[]> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
+
+  const PAGE = 1000
+  const pages: FlashcardWithItem[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('ind_flashcards')
+      .select(SEL)
+      .eq('user_id', user.id)
+      .eq('repetitions', 0)
+      .is('suspended_at', null)
+      .range(from, from + PAGE - 1)
+    if (error) { console.error('listLearnFlashcards:', error); break }
+    if (data?.length) pages.push(...(data as FlashcardWithItem[]))
+    if (!data?.length || data.length < PAGE) break
+    from += PAGE
+  }
+
+  if (!pages.length) return []
+
+  // Priority sort: deck position → level → lesson → position; non-priority last
+  const priorityDecks = await listPriorityDecks(user.id)
+  const priorityMap = new Map<string, number>()
+  for (const deck of priorityDecks) priorityMap.set(deck.collection_id, deck.position)
+
+  pages.sort((a, b) => {
+    const aCol = a.ind_items?.collection_id ?? null
+    const bCol = b.ind_items?.collection_id ?? null
+    const aPri = aCol != null ? (priorityMap.get(aCol) ?? Infinity) : Infinity
+    const bPri = bCol != null ? (priorityMap.get(bCol) ?? Infinity) : Infinity
+    if (aPri !== bPri) return aPri - bPri
+    if (aPri !== Infinity) {
+      const aLv = a.ind_items?.level   ?? 0; const bLv = b.ind_items?.level   ?? 0
+      const aLe = a.ind_items?.lesson  ?? 0; const bLe = b.ind_items?.lesson  ?? 0
+      const aPo = a.ind_items?.position ?? 0; const bPo = b.ind_items?.position ?? 0
+      if (aLv !== bLv) return aLv - bLv
+      if (aLe !== bLe) return aLe - bLe
+      return aPo - bPo
+    }
+    return 0
+  })
+
+  return pages
 }
 
 // Used when a mature card completes its relearn burst (Good/Easy = 50% recovery).
