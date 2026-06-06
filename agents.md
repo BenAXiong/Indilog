@@ -16,7 +16,7 @@ Build in layers. Complete each phase before moving to the next. Do not half-wire
 |-----|---------|---------------|
 | `plan-v0.md` | Detailed todo, phase by phase | Mark tasks done as you complete them; add sub-tasks as discovered |
 | `log.md` | Timestamped record of features, fixes, schema changes, and decisions | Every meaningful change — at least one entry per session |
-| `decisions.md` | Open questions and resolved architectural/product decisions | When a new ambiguity is discovered or resolved |
+| `decisions.md` | ADR index — links to all individual decisions in `docs/adr/` | When a new ADR is added or status changes |
 | `agents.md` (this file) | Workflow rules for agents | When a new pattern or rule is established |
 | `CLAUDE.md` | Project-level setup notes for Claude Code | When env vars, commands, or tooling change |
 | `architecture.md` | Canonical data model — Note/Card schema, session modes, audio resolution, migration status | When schema or model decisions change |
@@ -28,7 +28,7 @@ Build in layers. Complete each phase before moving to the next. Do not half-wire
 ## Session startup checklist
 
 1. Read `plan-v0.md` — identify the current phase and next task.
-2. Read `decisions.md` — check for open questions that affect the current task.
+2. Read `decisions.md` — check the ADR index for open decisions that affect the current task; open the relevant ADR file(s) in `docs/adr/` for full context.
 3. Check `log.md` — orient yourself to what was last done.
 4. If a design checkpoint is due, fetch the Claude Design output before writing UI code.
 5. **Before starting a new phase:** run the phase-start confirmation gate (see "Clarify before you build").
@@ -82,7 +82,7 @@ Do not proceed until the user confirms. This is mandatory, not optional.
 
 1. Check `decisions.md` — it may already be resolved.
 2. If unresolved, stop and ask the user. Do not self-resolve and move on.
-3. Once answered, log the resolution in `decisions.md` under Resolved before continuing.
+3. Once answered, create an ADR in `docs/adr/` and add it to the index in `decisions.md` before continuing.
 
 Do not silently make any decision — minor or major — without logging it and getting user sign-off.
 
@@ -92,7 +92,7 @@ Do not silently make any decision — minor or major — without logging it and 
 
 **Data model:** Before touching `ind_items`, `ind_flashcards`, or any file in `lib/db/srs/` or `lib/db/notebook/`, read `architecture.md`. It is the canonical reference for the Note/Card model, field names, session modes, and migration status. Do not add `front`/`back` fields to notes or cards under any circumstances.
 
-Before creating any new file in `apps/web/lib/` or `apps/web/components/`, check the directory contract in **DEC-ARCH01** (`decisions.md`) and place it in the right folder:
+Before creating any new file in `apps/web/lib/` or `apps/web/components/`, check the directory contract in **[DEC-ARCH01](docs/adr/DEC-ARCH01-lib-directory-contract.md)** and place it in the right folder:
 
 | What you're building | Where it goes |
 |---|---|
