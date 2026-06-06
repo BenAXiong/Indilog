@@ -169,14 +169,16 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Convert /settings page to a bottom sheet on the Dashboard — SettingsSheet client island; all tabs (general/review/capture/translate/dict) wired everywhere
 - [x] Deck sections collapsible
 - [x] Swipe to switch tabs — edge swipe (±28px) navigates between tabs
-- [ ] Revamp cards UI (rewind, skip, gestures, scores buttons, info, etc)
-- [ ] Separate learn from reviews? dash and study
+- [ ] Separate Learn from Reviews in Dashboard and Study
+- [ ] Change Learn workflow: get twice right to graduate, interval 12h
+- [ ] Secondary Goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
 - [ ] Revamp GoalSheet UI
-- [ ] Revamp dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
-- [ ] Secondary goal — optional second goal deck + due date; needs design (GoalSheet, GoalWidget, review sort priority)
+- [ ] Revamp Cards UI (rewind, skip, gestures, scores buttons, info, etc)
+- [ ] Add grading feedback
+- [ ] Revamp Dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Curriculum layout options — compact / standard / flashcard view; toggled per-section or globally
 
-### M5-C — Minor feature refinement
+### M5-C — Feature refinement
 
 - [x] Instore max reviews/learn per day — daily cap stepper (10–300) in OptionsSheet; srs_daily_cap localStorage
 - [x] Browser zh lookup: enable multi word — lookup also searches sentences, includes sentence zh
@@ -266,6 +268,8 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ## Next versions
 
+- Amis100 - useful fun version
+- Dialogue 001
 - Find how many gaoji vocab have exsent in ePark
 - Avoid need for signal during review
 - Use disctionary to explore affixes (examples)
