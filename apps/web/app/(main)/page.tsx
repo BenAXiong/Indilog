@@ -318,7 +318,7 @@ export default async function DashboardPage() {
       <div>
         <SectionHead title="Overview" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Stat value={stats.mastered}    label="Mastered"      icon="check"   accent={T.sage}   />
+          <Stat value={stats.mastered}    label="Rooted"        icon="check"   accent={T.sage}   />
           <Stat value={stats.active}      label="Active cards"  icon="card"    accent={T.crimson} />
           <Stat value={stats.thisWeek}    label="This week"     icon="review"  accent={T.terra}  />
           <Stat value={stats.dueTomorrow} label="Due tomorrow"  icon="layers"  accent={T.amber}  />

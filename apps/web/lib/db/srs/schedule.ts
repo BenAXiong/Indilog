@@ -126,6 +126,22 @@ export function nextRelearn(
   return { due_at, new_state: { ease_factor, interval_days: nextInterval, repetitions } }
 }
 
+// ─── Mastery grades (DEC-SRS09) ──────────────────────────────────────────────
+
+export type MasteryGrade = 'seed' | 'planted' | 'rooted' | 'blooming'
+
+export function computeMasteryGrade(card: {
+  repetitions: number
+  interval_days: number
+  ease_factor: number
+}): MasteryGrade {
+  if (card.repetitions === 0) return 'seed'
+  if (card.interval_days >= 60) return 'blooming'
+  // v+: test interval-only (A) threshold — less SRS-reliant, may work at 85%
+  if (card.interval_days >= 21 && card.repetitions >= 5 && card.ease_factor >= 2.5) return 'rooted'
+  return 'planted'
+}
+
 // ─── Card strength (B model) ──────────────────────────────────────────────────
 // strength = R × S_norm
 // R (retrievability) = exp(-t / interval)  — probability of recall right now

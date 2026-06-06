@@ -10,8 +10,9 @@ export type CollectionStat = {
 export type StudyStats = {
   totalCards: number
   dueToday: number
-  known: number        // ease_factor >= 2.5 AND interval_days >= 21
-  mastered: number     // interval_days >= 60
+  known: number        // ease_factor >= 2.5 AND interval_days >= 21 (used for coverage bars)
+  rooted: number       // interval_days >= 21 AND repetitions >= 5 AND ease_factor >= 2.5
+  blooming: number     // interval_days >= 60
   captures: CollectionStat   // non-collection notes (captured, dict, curriculum)
   collections: CollectionStat[]
   dailyCounts: Array<{ date: string; count: number }>  // last 14 days
@@ -19,7 +20,7 @@ export type StudyStats = {
 }
 
 const EMPTY: StudyStats = {
-  totalCards: 0, dueToday: 0, known: 0, mastered: 0,
+  totalCards: 0, dueToday: 0, known: 0, rooted: 0, blooming: 0,
   captures: { id: 'captures', name: 'Captures & lookups', total: 0, known: 0 },
   collections: [], dailyCounts: [], avgPerDay: 0,
 }
@@ -63,7 +64,7 @@ export async function getStudyStats(): Promise<StudyStats> {
   const [cardsRes, dailyRes] = await Promise.all([
     supabase
       .from('ind_flashcards')
-      .select('ease_factor, interval_days, due_at, suspended_at, ind_items(note_source, collection_id, ind_learn_collections(id, name))')
+      .select('ease_factor, interval_days, repetitions, due_at, suspended_at, ind_items(note_source, collection_id, ind_learn_collections(id, name))')
       .eq('user_id', user.id)
       .limit(10000),
     supabase
@@ -75,18 +76,19 @@ export async function getStudyStats(): Promise<StudyStats> {
   ])
 
   const cards = cardsRes.data ?? []
-  let dueToday = 0, known = 0, mastered = 0
+  let dueToday = 0, known = 0, rooted = 0, blooming = 0
   const captures = { total: 0, known: 0 }
   const colMap   = new Map<string, CollectionStat>()
 
   for (const card of cards) {
-    const suspended  = !!card.suspended_at
-    const isKnown    = card.ease_factor >= 2.5 && card.interval_days >= 21
-    const isDue      = (!card.due_at || card.due_at <= now) && !suspended
+    const suspended = !!card.suspended_at
+    const isKnown   = card.ease_factor >= 2.5 && card.interval_days >= 21
+    const isDue     = (!card.due_at || card.due_at <= now) && !suspended
 
-    if (isKnown)              known++
-    if (card.interval_days >= 60) mastered++
-    if (isDue)                dueToday++
+    if (isKnown) known++
+    if (card.interval_days >= 60) blooming++
+    if (card.interval_days >= 21 && (card as Record<string, unknown>).repetitions as number >= 5 && card.ease_factor >= 2.5) rooted++
+    if (isDue)   dueToday++
 
     accumulateCard(card.ind_items as unknown as NoteJoin, isKnown, colMap, captures) // NOSONAR — TS2352 without unknown bridge
   }
@@ -113,7 +115,8 @@ export async function getStudyStats(): Promise<StudyStats> {
     totalCards: cards.length,
     dueToday,
     known,
-    mastered,
+    rooted,
+    blooming,
     captures: { id: 'captures', name: 'Captures & lookups', total: captures.total, known: captures.known },
     collections: Array.from(colMap.values()).sort((a, b) => b.total - a.total),
     dailyCounts,
