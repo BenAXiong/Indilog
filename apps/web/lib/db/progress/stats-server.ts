@@ -220,14 +220,15 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const reviewedToday = todayStats?.reviewed ?? 0
   const learnedToday  = todayStats?.learned  ?? 0
   const reviewCap     = (prefs.review_cap as number) ?? 100
-  // Cards left today: slots remaining in the review cap, bounded by what's actually due
-  const dueCount      = Math.min(dueRes.count ?? 0, Math.max(0, reviewCap - reviewedToday))
 
   // 2E: simulation targets (falls back to pref caps when no sim decks)
   const sim = await computeSimulation(user.id, {
     learn_cap:  (prefs.learn_cap  as number) ?? 10,
     review_cap: reviewCap,
   })
+
+  // Cards left today: slots remaining in the review target, bounded by what's actually due
+  const dueCount = Math.min(dueRes.count ?? 0, Math.max(0, sim.reviewTarget - reviewedToday))
 
   return {
     streak,
