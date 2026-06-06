@@ -61,9 +61,9 @@ async function loadSessionContext(): Promise<SessionContext> {
   while (reviewSet.has(cur.toISOString().slice(0, 10))) { streak++; cur.setDate(cur.getDate() - 1) }
 
   const prefs = profileRes.data?.preferences as Record<string, unknown> | null
-  const dailyCap = typeof prefs?.daily_cap === 'number' ? prefs.daily_cap : 100
+  const dailyCap = typeof prefs?.review_cap === 'number' ? prefs.review_cap : 100
   // Sync to localStorage so the OptionsSheet shows the correct value
-  if (typeof window !== 'undefined') localStorage.setItem('srs_daily_cap', String(dailyCap))
+  if (typeof window !== 'undefined') localStorage.setItem('srs_review_cap', String(dailyCap))
 
   return {
     reviewedToday:    todayRes.data?.reviewed_count ?? 0,
@@ -399,7 +399,7 @@ function ReviewSession({
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
     const saved = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
     setLearningStepsRaw(isNaN(saved) ? 3 : Math.min(5, Math.max(1, saved)))
-    const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100')
+    const cap = parseInt(localStorage.getItem('srs_review_cap') ?? '100')
     setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
@@ -416,7 +416,7 @@ function ReviewSession({
   }
   function setDailyCap(v: number) {
     const n = Math.min(300, Math.max(1, v))
-    setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)); patchPreferences({ daily_cap: n })
+    setDailyCapRaw(n); localStorage.setItem('srs_review_cap', String(n)); patchPreferences({ review_cap: n })
   }
   function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v); patchPreferences({ review_mode: v }) }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }

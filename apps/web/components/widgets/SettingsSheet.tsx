@@ -75,7 +75,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     if (ss) try { setDictSources(JSON.parse(ss)) } catch {}
     const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
-    const cap = parseInt(localStorage.getItem('srs_daily_cap') ?? '100')
+    const cap = parseInt(localStorage.getItem('srs_review_cap') ?? '100')
     setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setTranslateDialect(localStorage.getItem('translate_ami_dialect') ?? 'ami_Coas')
@@ -98,7 +98,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
           if (!data) return
           if (data.ui_locale) setLocale(data.ui_locale)
           const p = { ...DEFAULT_PREFERENCES, ...(data.preferences ?? {}) } as UserPreferences
-          setDailyCapRaw(p.daily_cap);         localStorage.setItem('srs_daily_cap',      String(p.daily_cap))
+          setDailyCapRaw(p.review_cap);        localStorage.setItem('srs_review_cap',     String(p.review_cap))
           setReviewModeRaw(p.review_mode);     localStorage.setItem('srs_review_mode',     p.review_mode)
           setResetHourRaw(p.reset_hour);       localStorage.setItem('srs_reset_hour',      String(p.reset_hour))
           setShowHardEasyRaw(p.show_hard_easy);localStorage.setItem('srs_show_hard_easy',  String(p.show_hard_easy))
@@ -170,7 +170,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
 
   function buildPrefs(patch: Partial<UserPreferences> = {}): UserPreferences {
     return {
-      daily_cap:        dailyCap,
+      review_cap:        dailyCap,
+      learn_cap:         10,
+      review_more_size:  null,
       review_mode:      reviewMode,
       reset_hour:       resetHour,
       show_hard_easy:   showHardEasy,
@@ -383,7 +385,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       {[{ delta: -10, disabled: dailyCap <= 1 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
                         <button key={i} disabled={disabled}
-                          onClick={() => { const n = Math.min(300, Math.max(1,dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_daily_cap', String(n)); saveToCloud({ daily_cap: n }) }}
+                          onClick={() => { const n = Math.min(300, Math.max(1,dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_review_cap', String(n)); saveToCloud({ review_cap: n }) }}
                           style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
                           {delta < 0 ? '−' : '+'}
                         </button>
@@ -394,9 +396,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                         value={dailyCap}
                         onChange={e => {
                           const n = parseInt(e.target.value.replace(/\D/g, ''))
-                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 1) { localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) } }
+                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 1) { localStorage.setItem('srs_review_cap', String(c)); saveToCloud({ review_cap: c }) } }
                         }}
-                        onBlur={() => { const c = Math.min(300, Math.max(1,dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_daily_cap', String(c)); saveToCloud({ daily_cap: c }) }}
+                        onBlur={() => { const c = Math.min(300, Math.max(1,dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_review_cap', String(c)); saveToCloud({ review_cap: c }) }}
                         onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                         style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, width: 48, textAlign: 'center', background: T.paper, border: `1px solid ${T.lineSoft}`, borderRadius: 7, padding: '3px 4px', outline: 'none' }}
                       />

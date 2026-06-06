@@ -196,7 +196,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
 
   const todayStats    = statsMap.get(today)
   const reviewedToday = todayStats?.reviewed ?? 0
-  const cap           = (prefs.daily_cap as number) ?? 100
+  const cap           = (prefs.review_cap as number) ?? 100
   // Cards left today: slots remaining in the cap, bounded by what's actually due
   const dueCount      = Math.min(dueRes.count ?? 0, Math.max(0, cap - reviewedToday))
 
