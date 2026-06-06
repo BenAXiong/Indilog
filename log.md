@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-06 21:05 | FIX | GoalSheet height fixed at 50vh (was maxHeight: 88vh) |
 | 2026-06-06 20:53 | FEATURE | M5-B Phase 6: GoalSheet 3-tab rewrite (Goals/Priority/Simulate); GoalWidget shows top priority deck + rooted%; getDeckRootedStats; simulation-client.ts (runSimulation + buildCurve) |
 | 2026-06-06 20:48 | FEATURE | M5-B Phase 7: computeMasteryGrade (Seed/Planted/Rooted/Blooming); grade badge in Browser expanded card; Stats subtab Mastered→Rooted+Blooming; Dashboard "Rooted" label |
 | 2026-06-06 20:38 | FEATURE | M5-B Phase 5: Dashboard dual-ring (Learn sage + Review crimson); 3-state Learn CTA + 3-state Review CTA; StreakCard today-dot uses sim/manual logic; dueCount capped by reviewTarget |
