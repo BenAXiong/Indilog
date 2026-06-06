@@ -293,6 +293,41 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
   return results
 }
 
+/**
+ * Graduates a card from the Learn session.
+ * Sets repetitions=1, interval_days=0.5 (12h) for 'good' or 4d for 'easy',
+ * writes a review record, and calls increment_learned_today.
+ */
+export async function graduateLearnCard(
+  flashcardId: string,
+  type: 'good' | 'easy',
+): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const intervalDays = type === 'easy' ? 4 : 0.5
+  const dueAt  = new Date(Date.now() + intervalDays * 86_400_000).toISOString()
+  const today  = getStudyDate()
+
+  await Promise.all([
+    supabase.from('ind_flashcards').update({
+      due_at:        dueAt,
+      ease_factor:   2.5,
+      interval_days: intervalDays,
+      repetitions:   1,
+    }).eq('id', flashcardId),
+    supabase.from('ind_reviews').insert({
+      user_id:      user.id,
+      flashcard_id: flashcardId,
+      rating:       type,
+      due_at:       dueAt,
+      mode:         'learn',
+    }),
+    supabase.rpc('increment_learned_today', { p_user_id: user.id, p_date: today }),
+  ])
+}
+
 export async function listLearnFlashcards(): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
