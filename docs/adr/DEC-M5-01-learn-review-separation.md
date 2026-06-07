@@ -30,6 +30,12 @@ Consequence: **in-flight progress is lost on exit.** A card that received 1× Go
 
 By contrast, **Review sessions write immediately** on every rating — `rateCard()` updates `ind_flashcards` and appends to `ind_reviews` as soon as the user taps a rating button. Undo (`undoRating`) is available for one step.
 
+### Suspend replacement (overflow buffer)
+
+Both Learn and Review sessions maintain an **overflow buffer**: all available cards beyond the initial session cap, loaded in full at session start and held in memory.
+
+When a card is suspended mid-session, the next overflow card is appended to the queue as a replacement, keeping the session count stable. If the overflow is exhausted, the session shrinks by one (no cards left to draw from). Custom Review sessions (flag, language, or source filter) load all matched cards with no cap, so their overflow is always empty.
+
 ## Daily targets and the priority-list goal model
 
 Daily targets (Learn cards/day, Review cards/day) are **never stored** — they are computed fresh on each dashboard/session load from the active Simulation. Two modes:

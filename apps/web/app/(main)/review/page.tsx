@@ -298,16 +298,19 @@ function renderHighlighted(sentence: string, target: string) {
 
 function ReviewSession({
   cards,
+  overflow: initialOverflow,
   ctx,
   onExit,
   onReloadNeeded,
 }: {
-  cards: FlashcardWithItem[]
-  ctx: SessionContext
-  onExit: (reviewed: number, reviewedCards: FlashcardWithItem[]) => void
+  cards:    FlashcardWithItem[]
+  overflow: FlashcardWithItem[]
+  ctx:      SessionContext
+  onExit:   (reviewed: number, reviewedCards: FlashcardWithItem[]) => void
   onReloadNeeded: () => void
 }) {
-  const [queue, setQueue] = useState<QueueEntry[]>(() => cards.map(c => ({ card: c })))
+  const [queue,    setQueue]    = useState<QueueEntry[]>(() => cards.map(c => ({ card: c })))
+  const [overflow, setOverflow] = useState<FlashcardWithItem[]>(initialOverflow)
   const [qIdx,          setQIdx]          = useState(0)
   const completedRef                       = useRef(new Set<string>())
   const [revealed,       setRevealed]      = useState(false)
@@ -483,6 +486,12 @@ function ReviewSession({
     await suspendCard(card.id)
     setShowFlagPicker(false)
     setRevealed(false)
+    setOverflow(prev => {
+      if (!prev.length) return prev
+      const [next, ...rest] = prev
+      setQueue(q => [...q, { card: next }])
+      return rest
+    })
     setQIdx(qi => qi + 1)
   }
 
@@ -1085,8 +1094,9 @@ function ReviewPage() {
 
   const autostart = searchParams.get('start') === '1' && !isCustom
 
-  const [mode,    setMode]    = useState<'landing' | 'reviewing' | 'done'>('landing')
-  const [cards,   setCards]   = useState<FlashcardWithItem[]>([])
+  const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
+  const [cards,    setCards]    = useState<FlashcardWithItem[]>([])
+  const [overflow, setOverflow] = useState<FlashcardWithItem[]>([])
   const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount,    setSessionCount]    = useState(0)
@@ -1146,6 +1156,7 @@ function ReviewPage() {
       : isMore         ? reviewMoreN
       : Math.max(0, cap - context.reviewedToday)
     setCards(c.slice(0, sessionCap))
+    setOverflow(isCustom ? [] : c.slice(sessionCap))
     setCtx(context)
     setLoading(false)
     if (autostart && !autostartedRef.current && c.length > 0) {
@@ -1201,7 +1212,7 @@ function ReviewPage() {
 
   // Full-screen overlays (reviewing + done)
   if (mode === 'reviewing' && cards.length > 0) {
-    return <ReviewSession key={sessionKey} cards={cards} ctx={ctx} onExit={handleSessionExit} onReloadNeeded={handleReloadNeeded} />
+    return <ReviewSession key={sessionKey} cards={cards} overflow={overflow} ctx={ctx} onExit={handleSessionExit} onReloadNeeded={handleReloadNeeded} />
   }
 
   if (mode === 'done') {
