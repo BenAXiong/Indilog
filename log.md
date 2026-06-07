@@ -2,6 +2,17 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-08 02:40 | FIX | Learn session: overflow replacement card inserted before test entries, not at tail — prevents exposure cards appearing mid-test-phase after a suspend |
+| 2026-06-08 02:35 | FIX | SRS date calculations: switch from toISOString() (UTC) to localDateStr() (local) throughout — getStudyDate, stats-client 2-week range, simulation daysLeft; wrong dates for UTC+8 users crossing midnight |
+| 2026-06-08 02:21 | FIX | Review session: pendingRef gate blocks re-entrant action handlers (rapid keypresses / lag could fire submit/defer/suspend/undo multiple times, advancing qIdx beyond queue) |
+| 2026-06-08 02:20 | FIX | Learn session: pendingRef gate blocks re-entrant action handlers; same race as Review — rapid ArrowUp during lag skipped cards and ended session early |
+| 2026-06-08 02:13 | FEATURE | Learn session exposure pass: Easy (swipe-up / ArrowUp) now available — graduates directly at 4d without test; ↑ hint always visible; DEC-M5-01 updated with open question on removing Easy from test pass |
+| 2026-06-08 02:05 | FIX | graduateLearnCard: missing .eq('user_id') meant flashcard UPDATE matched 0 rows silently while ind_reviews INSERT succeeded; all 11 affected cards from first session repaired in DB |
+| 2026-06-08 01:52 | FIX | Review session: suspended card draws overflow replacement (same behaviour as Learn); custom sessions (flag/lang filter) have empty overflow |
+| 2026-06-08 01:49 | FIX | Learn session: suspend draws next card from overflow buffer to keep session count stable; LearnPage passes filtered.slice(toLearn) as overflow |
+| 2026-06-08 00:14 | CONFIG | DEC-M5-01: document Learn session persistence model (graduation is sole DB write point, in-flight progress lost on exit); document overflow buffer / suspend replacement behaviour |
+| 2026-06-08 00:07 | FEATURE | Session cards (Learn + Review): flag icon (Lucide flag-on-pole, flagF filled variant); flag button bottom-left; layout — grade badge top-left alone, suspend top-right |
+| 2026-06-08 00:01 | FEATURE | Session card UI: flags restored in both Learn and Review; grade badge (Seed/Planted/Rooted/Blooming) top-left; suspend top-right; hint opacities bumped to 0.65 |
 | 2026-06-07 19:04 | FEATURE | Simulation: proper FormoSRS-1 day-by-day forward projection (projectSimulation + advanceGood + reviewDaysFrom); server-side reviewTarget de-inflated; see DEC-SRS10 |
 | 2026-06-07 20:50 | FEATURE | GoalSheet: 60vh height, body scroll lock while open |
 | 2026-06-07 20:40 | FEATURE | Learn session: settings gear button + LearnOptionsSheet (review mode + language filter); language filter syncs with Review session keys |
