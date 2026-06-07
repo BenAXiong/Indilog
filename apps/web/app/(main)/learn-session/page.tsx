@@ -382,6 +382,19 @@ function LearnSession({ cards, ctx, onExit }: {
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >
+          {/* Suspend button — top-left, exposure pass only */}
+          {!exposureDone && (
+            <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
+              <button onClick={handleSuspend} aria-label="Suspend card" style={{
+                width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: T.inkFaint,
+              }}>
+                <Icon name="pause" size={15} strokeWidth={1.8} />
+              </button>
+            </div>
+          )}
+
           {/* Phase label */}
           <div style={{ position: 'absolute', top: 14, right: 16 }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: !exposureDone ? T.sage : T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -447,24 +460,14 @@ function LearnSession({ cards, ctx, onExit }: {
       {/* Action row */}
       <div style={{ padding: '16px 16px 32px', flexShrink: 0 }}>
         {!exposureDone ? (
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={handleSuspend} style={{
-              width: 56, height: 56, borderRadius: 15, flexShrink: 0,
-              background: T.paperHi, color: T.inkFaint,
-              border: `1px solid ${T.lineSoft}`, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Icon name="pause" size={18} strokeWidth={1.8} />
-            </button>
-            <button onClick={handleExposureOK} style={{
-              flex: 1, height: 56, borderRadius: 15, background: T.sage, color: '#fff',
-              border: 'none', fontSize: 17, fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 14px rgba(80,120,30,0.2)',
-            }}>
-              <Icon name="check" size={17} strokeWidth={2.5} color="#fff" /> OK, got it
-            </button>
-          </div>
+          <button onClick={handleExposureOK} style={{
+            width: '100%', height: 56, borderRadius: 15, background: T.sage, color: '#fff',
+            border: 'none', fontSize: 17, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 14px rgba(80,120,30,0.2)',
+          }}>
+            <Icon name="check" size={17} strokeWidth={2.5} color="#fff" /> OK, got it
+          </button>
         ) : revealed ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7 }}>
             {([
