@@ -1,84 +1,156 @@
 import { createClient } from '@/lib/supabase/client'
 
-export type SimulationCurve = {
-  learnTarget: number
-  reviewTarget: number
+export type SimulationDay   = { day: number; learn: number; review: number }
+export type SimulationCurve = Array<{ label: string; learnTarget: number; reviewTarget: number }>
+export type TodayTarget     = { learnTarget: number; reviewTarget: number }
+
+// ─── FormoSRS-1 deterministic advance (Good rating, no fuzz) ─────────────────
+// Mirrors nextFormoSRS1 'good' branch in schedule.ts without randomisation.
+
+function advanceGood(rep: number, interval: number, ease: number) {
+  const nextInterval = rep === 0
+    ? 1
+    : Math.max(1, Math.round(interval * ease))
+  return {
+    rep:      rep + 1,
+    interval: nextInterval,
+    ease:     Math.min(4, ease + 0.02),
+  }
 }
 
-/**
- * Client-side simulation for the GoalSheet Simulate tab.
- * Computes learnTarget/reviewTarget for a specific set of decks + deadline,
- * regardless of the `in_simulation` flags in the DB.
- */
-export async function runSimulation(params: {
-  collectionIds: string[]
-  deadline: string
-  learnCap: number
-  reviewCap: number
-}): Promise<SimulationCurve> {
-  const { collectionIds, deadline, learnCap, reviewCap } = params
-  if (!collectionIds.length || !deadline) {
-    return { learnTarget: learnCap, reviewTarget: reviewCap }
+// Collect every day this card will be reviewed, starting from `firstDay`,
+// up to (but not including) `maxDay`.
+// `state` is the card's state *at* `firstDay` (i.e., when it next comes due).
+function reviewDaysFrom(
+  firstDay: number,
+  state: { rep: number; interval: number; ease: number },
+  maxDay: number,
+): number[] {
+  const days: number[] = []
+  let d = firstDay
+  let s = state
+  while (d < maxDay) {
+    days.push(d)
+    const next = advanceGood(s.rep, s.interval, s.ease)
+    d += Math.ceil(next.interval)
+    s  = next
   }
+  return days
+}
+
+// ─── Main projection ──────────────────────────────────────────────────────────
+
+export async function projectSimulation(params: {
+  collectionIds: string[]
+  deadline:      string
+  learnCap:      number
+}): Promise<{ days: SimulationDay[]; learnTarget: number } | null> {
+  const { collectionIds, deadline, learnCap } = params
+  if (!collectionIds.length || !deadline) return null
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { learnTarget: learnCap, reviewTarget: reviewCap }
+  if (!user) return null
 
-  const today = new Date().toISOString().slice(0, 10)
-  const now   = new Date().toISOString()
-  const daysRemaining = Math.max(
-    1,
-    Math.ceil((new Date(deadline).getTime() - new Date(today).getTime()) / 86_400_000),
-  )
+  const todayMs  = new Date(new Date().toISOString().slice(0, 10)).getTime()
+  const daysLeft = Math.max(1, Math.ceil(
+    (new Date(deadline).getTime() - todayMs) / 86_400_000,
+  ))
 
+  // Fetch current card states for all sim-deck collections
   const PAGE = 1000
-  type CardRow = { repetitions: number; suspended_at: string | null; due_at: string | null }
-  const allCards: CardRow[] = []
+  type CardRow = {
+    repetitions:   number
+    ease_factor:   number
+    interval_days: number
+    suspended_at:  string | null
+    due_at:        string | null
+    ind_items: { collection_id: string | null } | null
+  }
+  const all: CardRow[] = []
   let from = 0
   while (true) {
     const { data: page } = await supabase
       .from('ind_flashcards')
-      .select('repetitions, suspended_at, due_at, ind_items!inner(collection_id)')
+      .select('repetitions, ease_factor, interval_days, suspended_at, due_at, ind_items!inner(collection_id)')
       .eq('user_id', user.id)
       .in('ind_items.collection_id', collectionIds)
       .range(from, from + PAGE - 1)
-    if (page?.length) allCards.push(...(page as unknown as CardRow[]))
+    if (page?.length) all.push(...(page as unknown as CardRow[]))
     if (!page?.length || page.length < PAGE) break
     from += PAGE
   }
 
-  const unsuspended = allCards.filter(c => !c.suspended_at)
-  const newCards = unsuspended.filter(c => c.repetitions === 0).length
-  const reviewDue = unsuspended.filter(c => c.repetitions > 0 && c.due_at != null && c.due_at <= now).length
+  const active    = all.filter(c => !c.suspended_at)
+  const newCards  = active.filter(c => c.repetitions === 0)
+  const graduated = active.filter(c => c.repetitions > 0)
 
-  const learnTarget  = Math.max(1, Math.ceil(newCards / daysRemaining))
-  // v+: replace with proper SM-2 forward projection per card
-  const reviewTarget = Math.max(5, Math.round((reviewDue + learnTarget * 2) / 5) * 5)
+  // Daily learn rate needed to graduate all new cards by the deadline
+  const learnTarget = Math.max(1, Math.min(learnCap, Math.ceil(newCards.length / daysLeft)))
 
-  return { learnTarget, reviewTarget }
+  // Per-day counters
+  const learnLoad  = new Array<number>(daysLeft).fill(0)
+  const reviewLoad = new Array<number>(daysLeft).fill(0)
+
+  // ── 1. Already-graduated cards: project from their current due_at ──────────
+  for (const card of graduated) {
+    const dueDayF = card.due_at
+      ? (new Date(card.due_at).getTime() - todayMs) / 86_400_000
+      : 0
+    const firstDay = Math.max(0, Math.ceil(dueDayF))
+    for (const d of reviewDaysFrom(
+      firstDay,
+      { rep: card.repetitions, interval: card.interval_days, ease: card.ease_factor },
+      daysLeft,
+    )) {
+      reviewLoad[d]++
+    }
+  }
+
+  // ── 2. New cards graduated at learnTarget/day ─────────────────────────────
+  // All cards graduating on day g share the same review schedule, so compute
+  // once and multiply — avoids O(n_cards) loops for large decks.
+  let remaining = newCards.length
+  for (let g = 0; g < daysLeft && remaining > 0; g++) {
+    const graduating = Math.min(learnTarget, remaining)
+    remaining    -= graduating
+    learnLoad[g]  = graduating
+
+    // Learn graduation: rep=1, interval=0.5d, ease=2.5 (matches graduateLearnCard)
+    // First review: g + ceil(0.5) = g+1
+    const reviewDays = reviewDaysFrom(
+      g + 1,
+      { rep: 1, interval: 0.5, ease: 2.5 },
+      daysLeft,
+    )
+    for (const d of reviewDays) reviewLoad[d] += graduating
+  }
+
+  const days: SimulationDay[] = Array.from({ length: daysLeft }, (_, d) => ({
+    day:    d,
+    learn:  learnLoad[d],
+    review: reviewLoad[d],
+  }))
+
+  return { days, learnTarget }
 }
 
-/**
- * 3-row projection curve for the Simulate tab output table.
- * Returns today / 2-week / 3-month estimates.
- */
-export function buildCurve(
-  today: SimulationCurve,
-  totalNewCards: number,
-): Array<{ label: string; learnTarget: number; reviewTarget: number }> {
-  const learned2w = Math.min(today.learnTarget * 14, totalNewCards)
-  const remaining2w = Math.max(0, totalNewCards - learned2w)
-  const learn2w  = remaining2w > 0 ? today.learnTarget : 0
-  const review2w = Math.max(5, Math.round((today.reviewTarget * 1.2) / 5) * 5)
+// ─── Curve table for GoalSheet ────────────────────────────────────────────────
 
-  // At 3 months, assume all new cards are learned; review is steady-state
-  const learn3mo  = 0
-  const review3mo = Math.max(5, Math.round((totalNewCards / 21) / 5) * 5)
+export function buildCurveFromDays(
+  days: SimulationDay[],
+): SimulationCurve {
+  function row(label: string, d: SimulationDay) {
+    return { label, learnTarget: d.learn, reviewTarget: d.review }
+  }
+  function pick(targetDay: number) {
+    return days[Math.min(targetDay, days.length - 1)]
+  }
 
-  return [
-    { label: 'Today',    learnTarget: today.learnTarget,  reviewTarget: today.reviewTarget },
-    { label: '2 weeks',  learnTarget: learn2w,            reviewTarget: review2w           },
-    { label: '3 months', learnTarget: learn3mo,           reviewTarget: review3mo          },
-  ]
+  const curve: SimulationCurve = [row('Today', pick(0))]
+  if (days.length > 14) curve.push(row('2 weeks',  pick(14)))
+  if (days.length > 60) curve.push(row('At deadline', pick(Math.floor(days.length * 0.8))))
+  else                  curve.push(row('At deadline', pick(days.length - 1)))
+
+  return curve
 }

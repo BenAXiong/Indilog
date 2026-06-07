@@ -76,8 +76,10 @@ export async function computeSimulation(
   }
 
   const learnTarget = Math.max(1, Math.ceil(totalNewCards / minDaysRemaining))
-  // v+: replace with proper SM-2 forward projection per card
-  const reviewTarget = Math.max(5, Math.round((existingReviewDue + learnTarget * 2) / 5) * 5)
+  // Use only actually-due reviews from sim decks as today's review target.
+  // The `+ learnTarget * 2` inflation was wrong: newly-graduated cards only
+  // generate reviews from tomorrow onwards, not today.
+  const reviewTarget = Math.max(prefs.review_cap as number ?? 100, existingReviewDue)
 
   return { learnTarget, reviewTarget, fromSimulation: true }
 }

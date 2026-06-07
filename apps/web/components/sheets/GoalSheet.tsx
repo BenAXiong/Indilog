@@ -11,7 +11,7 @@ import {
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
-import { runSimulation, buildCurve, type SimulationCurve } from '@/lib/db/srs/simulation-client'
+import { projectSimulation, buildCurveFromDays, type SimulationCurve, type TodayTarget } from '@/lib/db/srs/simulation-client'
 import { createClient } from '@/lib/supabase/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [mode,         setMode]         = useState<GoalMode>('manual')
   const [learnCap,     setLearnCapRaw]  = useState(10)
   const [reviewCap,    setReviewCapRaw] = useState(100)
-  const [simOutput,    setSimOutput]    = useState<SimulationCurve | null>(null)
+  const [simOutput,    setSimOutput]    = useState<TodayTarget | null>(null)
   const [simLoading,   setSimLoading]   = useState(false)
 
   // Priority tab
@@ -96,9 +96,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   // Simulate tab
   const [simDeadline,  setSimDeadline]  = useState('')
-  const [simResult,    setSimResult]    = useState<ReturnType<typeof buildCurve> | null>(null)
+  const [simResult,    setSimResult]    = useState<SimulationCurve | null>(null)
   const [simRunning,   setSimRunning]   = useState(false)
-  const [totalNew,     setTotalNew]     = useState(0)
 
   // Lock body scroll while sheet is open
   useEffect(() => {
@@ -169,15 +168,14 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     setSimLoading(true)
     const simDecks = decks.filter(d => d.in_simulation)
     if (!simDecks.length) { setSimLoading(false); return }
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSimLoading(false); return }
-    const result = await runSimulation({
+    const deadline = simDecks.find(d => d.simulation_deadline)?.simulation_deadline
+      ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+    const result = await projectSimulation({
       collectionIds: simDecks.map(d => d.collection_id),
-      deadline: simDecks.find(d => d.simulation_deadline)?.simulation_deadline ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-      learnCap, reviewCap,
+      deadline,
+      learnCap,
     })
-    setSimOutput(result)
+    if (result) setSimOutput({ learnTarget: result.days[0]?.learn ?? result.learnTarget, reviewTarget: result.days[0]?.review ?? 0 })
     setSimLoading(false)
   }
 
@@ -437,35 +435,22 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     const simDecks = decks.filter(d => d.in_simulation)
     if (!simDecks.length || !simDeadline) return
     setSimRunning(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSimRunning(false); return }
-
-    // Count total new cards across sim decks (for buildCurve)
-    let newCardCount = 0
-    for (const d of simDecks) {
-      const s = deckStats[d.collection_id]
-      if (s) newCardCount += s.total  // rough proxy; actual new = total - repetitions>0
-    }
-    setTotalNew(newCardCount)
-
-    const result = await runSimulation({
+    const result = await projectSimulation({
       collectionIds: simDecks.map(d => d.collection_id),
-      deadline: simDeadline,
-      learnCap, reviewCap,
+      deadline:      simDeadline,
+      learnCap,
     })
-    setSimResult(buildCurve(result, newCardCount))
+    if (result) setSimResult(buildCurveFromDays(result.days))
     setSimRunning(false)
   }
 
   async function handleApplySimulation() {
     if (!simResult) return
-    const today = simResult[0]
-    setLearnCap(today.learnTarget)
-    setReviewCap(today.reviewTarget)
+    // Apply the learnTarget from today's row; leave reviewCap under user control
+    setLearnCap(simResult[0].learnTarget)
     setMode('calculated')
-    setSimOutput(today)
-    // Save deadline to all in-simulation decks
+    setSimOutput({ learnTarget: simResult[0].learnTarget, reviewTarget: simResult[0].reviewTarget })
+    // Persist deadline to all in-simulation decks
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
