@@ -310,13 +310,14 @@ export async function graduateLearnCard(
   const dueAt  = new Date(Date.now() + intervalDays * 86_400_000).toISOString()
   const today  = getStudyDate()
 
+  const { error: fcErr } = await supabase
+    .from('ind_flashcards')
+    .update({ due_at: dueAt, ease_factor: 2.5, interval_days: intervalDays, repetitions: 1 })
+    .eq('id', flashcardId)
+    .eq('user_id', user.id)
+  if (fcErr) console.error('graduateLearnCard: flashcard update failed', fcErr)
+
   await Promise.all([
-    supabase.from('ind_flashcards').update({
-      due_at:        dueAt,
-      ease_factor:   2.5,
-      interval_days: intervalDays,
-      repetitions:   1,
-    }).eq('id', flashcardId),
     supabase.from('ind_reviews').insert({
       user_id:      user.id,
       flashcard_id: flashcardId,
