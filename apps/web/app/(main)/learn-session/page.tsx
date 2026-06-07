@@ -55,8 +55,29 @@ async function loadLearnContext(): Promise<LearnContext> {
     listPriorityDecks(user.id),
   ])
 
-  const prefs = profileRes.data?.preferences as Record<string, unknown> | null
-  const learnCap = typeof prefs?.learn_cap === 'number' ? prefs.learn_cap : 10
+  const prefs      = profileRes.data?.preferences as Record<string, unknown> | null
+  const prefCap    = typeof prefs?.learn_cap === 'number' ? prefs.learn_cap : 10
+
+  // When simulation is active, derive learnCap from target rate (matches dashboard CTA)
+  let learnCap = prefCap
+  const simDecks = priorityDecks.filter(d => d.in_simulation && d.simulation_deadline)
+  if (simDecks.length > 0) {
+    const deadline = simDecks.reduce(
+      (min, d) => (d.simulation_deadline! < min ? d.simulation_deadline! : min),
+      simDecks[0].simulation_deadline!,
+    )
+    const daysLeft = Math.max(1, Math.ceil(
+      (new Date(deadline).getTime() - new Date(today).getTime()) / 86_400_000,
+    ))
+    const { count: newCards } = await supabase
+      .from('ind_flashcards')
+      .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .in('ind_items.collection_id', simDecks.map(d => d.collection_id))
+      .eq('repetitions', 0)
+      .is('suspended_at', null)
+    learnCap = Math.max(1, Math.ceil((newCards ?? 0) / daysLeft))
+  }
 
   return {
     learnedToday:          (statsRes.data as Record<string, unknown> | null)?.learned_count as number ?? 0,

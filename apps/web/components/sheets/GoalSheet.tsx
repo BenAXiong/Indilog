@@ -552,7 +552,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 -8px 32px rgba(40,20,10,0.12)',
         paddingBottom: 'env(safe-area-inset-bottom)',
-        height: '60vh',
+        height: '95vh',
       }}>
         {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
