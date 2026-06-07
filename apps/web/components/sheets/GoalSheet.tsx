@@ -100,6 +100,14 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [simRunning,   setSimRunning]   = useState(false)
   const [totalNew,     setTotalNew]     = useState(0)
 
+  // Lock body scroll while sheet is open
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [open])
+
   // Load on open
   useEffect(() => {
     if (!open) return
@@ -559,7 +567,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 -8px 32px rgba(40,20,10,0.12)',
         paddingBottom: 'env(safe-area-inset-bottom)',
-        height: '50vh',
+        height: '60vh',
       }}>
         {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
