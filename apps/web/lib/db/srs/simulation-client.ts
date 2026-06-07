@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { localDateStr } from './flashcards'
 
 export type SimulationDay   = { day: number; learn: number; review: number }
 export type SimulationCurve = Array<{ label: string; learnTarget: number; reviewTarget: number }>
@@ -52,7 +53,7 @@ export async function projectSimulation(params: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const todayMs  = new Date(new Date().toISOString().slice(0, 10)).getTime()
+  const todayMs  = new Date(localDateStr()).getTime()
   const daysLeft = Math.max(1, Math.ceil(
     (new Date(deadline).getTime() - todayMs) / 86_400_000,
   ))

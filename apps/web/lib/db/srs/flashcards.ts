@@ -103,17 +103,20 @@ export async function setTargetWord(noteId: string, targetWord: string | null): 
 }
 
 
+export function localDateStr(date: Date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 function getStudyDate(): string {
   const resetHour = typeof window !== 'undefined'
     ? parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     : 4
   const now = new Date()
   if (now.getHours() < resetHour) {
-    const d = new Date(now)
-    d.setDate(d.getDate() - 1)
-    return d.toISOString().slice(0, 10)
+    const prev = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+    return localDateStr(prev)
   }
-  return now.toISOString().slice(0, 10)
+  return localDateStr(now)
 }
 
 export async function getExcludeFromReview(): Promise<{ collections: string[]; captures: boolean }> {

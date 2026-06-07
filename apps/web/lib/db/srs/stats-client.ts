@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { localDateStr } from './flashcards'
 
 export type CollectionStat = {
   id: string
@@ -59,7 +60,7 @@ export async function getStudyStats(): Promise<StudyStats> {
   const now = new Date().toISOString()
   const twoWeeksAgo = new Date()
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 13)
-  const fromDate = twoWeeksAgo.toISOString().slice(0, 10)
+  const fromDate = localDateStr(twoWeeksAgo)
 
   const [cardsRes, dailyRes] = await Promise.all([
     supabase
@@ -103,7 +104,7 @@ export async function getStudyStats(): Promise<StudyStats> {
   for (let i = 13; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
-    const dateStr = d.toISOString().slice(0, 10)
+    const dateStr = localDateStr(d)
     dailyCounts.push({ date: dateStr, count: dailyMap.get(dateStr) ?? 0 })
   }
 
