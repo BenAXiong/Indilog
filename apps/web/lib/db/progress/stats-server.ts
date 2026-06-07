@@ -2,11 +2,12 @@ import { unstable_noStore as noStore } from 'next/cache'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { computeSimulation } from '@/lib/db/srs/simulation'
+import type { LocalDateString } from '@/lib/db/srs/flashcards'
 
-function dateStep(dateStr: string, days: number): string {
+function dateStep(dateStr: LocalDateString, days: number): LocalDateString {
   const [y, m, d] = dateStr.split('-').map(Number)
   const r = new Date(y, m - 1, d + days)
-  return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, '0')}-${String(r.getDate()).padStart(2, '0')}`
+  return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, '0')}-${String(r.getDate()).padStart(2, '0')}` as LocalDateString
 }
 
 export type DashboardStats = {
@@ -149,10 +150,10 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
 
   const dailyRows = dailyRes.data ?? []
 
-  // Build lookup map
-  const statsMap = new Map<string, { reviewed: number; captured: number; learned: number }>()
+  // Build lookup map — keyed by LocalDateString so plain toISOString().slice() strings are rejected
+  const statsMap = new Map<LocalDateString, { reviewed: number; captured: number; learned: number }>()
   for (const r of dailyRows) {
-    statsMap.set(r.date, {
+    statsMap.set(r.date as LocalDateString, {
       reviewed: r.reviewed_count ?? 0,
       captured: r.captured_count ?? 0,
       learned:  (r as Record<string, unknown>).learned_count as number ?? 0,
@@ -166,11 +167,11 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const cookieStore = await cookies()
   const cookieDate  = cookieStore.get('srs_study_date')?.value
   const resetHour   = (prefs.reset_hour as number) ?? 4
-  const today       = cookieDate ?? (() => {
+  const today: LocalDateString = (cookieDate ?? (() => {
     const d = new Date()
     if (d.getHours() < resetHour) d.setDate(d.getDate() - 1)
     return d.toISOString().slice(0, 10)
-  })()
+  })()) as LocalDateString
 
   // Streak — based on reviewed_count (not captured)
   const reviewSet = new Set(

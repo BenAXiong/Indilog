@@ -103,11 +103,18 @@ export async function setTargetWord(noteId: string, targetWord: string | null): 
 }
 
 
-export function localDateStr(date: Date = new Date()): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+// Branded type: only produced by localDateStr() or getStudyDate().
+// Plain strings from new Date().toISOString().slice(0,10) are NOT assignable here,
+// forcing an explicit cast that is visible in code review.
+declare const __localDate: unique symbol
+export type LocalDateString = string & { readonly [__localDate]: true }
+
+export function localDateStr(date: Date = new Date()): LocalDateString {
+  const s = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return s as LocalDateString
 }
 
-export function getStudyDate(): string {
+export function getStudyDate(): LocalDateString {
   const resetHour = typeof window !== 'undefined'
     ? parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     : 4

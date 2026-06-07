@@ -61,7 +61,7 @@ async function loadSessionContext(): Promise<SessionContext> {
   )
   let streak = 0
   let cur = today
-  while (reviewSet.has(cur)) { streak++; const [y,m,d] = cur.split('-').map(Number); const p = new Date(y,m-1,d-1); cur = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}` }
+  while (reviewSet.has(cur)) { streak++; const [y,m,d] = cur.split('-').map(Number); const p = new Date(y,m-1,d-1); cur = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}` as typeof today }
 
   const prefs = profileRes.data?.preferences as Record<string, unknown> | null
   const dailyCap = typeof prefs?.review_cap === 'number' ? prefs.review_cap : 100

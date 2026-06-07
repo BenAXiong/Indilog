@@ -76,7 +76,7 @@ export async function getDashboardStats(language?: string): Promise<DashboardSta
     while (dateSet.has(cursor)) {
       streak++
       const [y,m,d] = cursor.split('-').map(Number); const p = new Date(y,m-1,d-1)
-      cursor = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}`
+      cursor = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}` as typeof cursor
     }
   }
 
