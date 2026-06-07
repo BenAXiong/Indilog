@@ -12,7 +12,7 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 |----|-------|--------|
 | [DEC-ARCH01](docs/adr/DEC-ARCH01-lib-directory-contract.md) | Shared YCM utilities — `lib/` directory contract | accepted |
 | [DEC-ARCH02](docs/adr/DEC-ARCH02-unified-note-card-model.md) | Unified Note/Card model | accepted |
-| [DEC-DASH-01](docs/adr/DEC-DASH-01-duecount-divergence.md) | Dashboard dueCount vs session count divergence | open |
+| [DEC-DASH-01](docs/adr/DEC-DASH-01-duecount-divergence.md) | Dashboard dueCount vs session count divergence | resolved in Phase 2F of plan-v1-M5-srs.md |
 | [DEC-D01](docs/adr/DEC-D01-dict-word-dedup-normalisation.md) | Dictionary word dedup: space-stripping normalisation | accepted |
 | [DEC-L01](docs/adr/DEC-L01-learn-all-16-languages.md) | Learn available for all 16 languages | accepted |
 | [DEC-L02](docs/adr/DEC-L02-saved-view-all-sentences.md) | Saved view shows all captured sentences for the language | accepted |
@@ -52,7 +52,10 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-SRS05](docs/adr/DEC-SRS05-note-centric-srs-architecture.md) | Note-centric SRS architecture | accepted (partially superseded by DEC-SRS06) |
 | [DEC-SRS06](docs/adr/DEC-SRS06-review-modes-drop-card-type.md) | Review modes — 4-mode system; drop card_type | accepted |
 | [DEC-SRS07](docs/adr/DEC-SRS07-learning-phase-gesture-labels.md) | Learning phase gesture + label design | accepted |
-| [DEC-SRS08](docs/adr/DEC-SRS08-session-cap-source-of-truth.md) | Session cap source of truth + "Review more" UX | accepted |
+| [DEC-SRS08](docs/adr/DEC-SRS08-session-cap-source-of-truth.md) | Session cap source of truth + "Review more" UX | superseded by DEC-M5-01 |
+| [DEC-SRS09](docs/adr/DEC-SRS09-mastery-grades.md) | Mastery grades — Seed / Planted / Rooted / Blooming | accepted |
+| [DEC-SRS10](docs/adr/DEC-SRS10-simulation-forward-projection.md) | Simulation — FormoSRS-1 day-by-day forward projection | accepted |
+| [DEC-M5-01](docs/adr/DEC-M5-01-learn-review-separation.md) | Learn / Review session separation + priority-list goal model | accepted |
 | [DEC-001](docs/adr/DEC-001-dictionary-corpus-api-contract.md) | Dictionary and corpus API contract | accepted |
 | [DEC-002](docs/adr/DEC-002-supported-translation-pairs.md) | Supported translation pairs (v0) | superseded by DEC-M6-01 |
 | [DEC-R06](docs/adr/DEC-R06-spaced-repetition-simple.md) | Spaced repetition stays simple (v0) | superseded by DEC-SRS03 |
