@@ -9,7 +9,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  listLearnFlashcards, graduateLearnCard, cardMeta, cardAudio,
+  listLearnFlashcards, graduateLearnCard, suspendCard, cardMeta, cardAudio,
   type FlashcardWithItem,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
@@ -146,6 +146,7 @@ function LearnSession({ cards, ctx, onExit }: {
     function onKey(e: KeyboardEvent) {
       if (!exposureDone) {
         if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); handleExposureOK() }
+        else if (e.key === 'ArrowDown') handleSuspend()
         return
       }
       if (!revealed) {
@@ -185,6 +186,12 @@ function LearnSession({ cards, ctx, onExit }: {
   const graduatedCount = graduatedRef.current.size
 
   // ── Actions ───────────────────────────────────────────────────────────────
+
+  async function handleSuspend() {
+    await suspendCard(card.id)
+    setRevealed(false)
+    setQIdx(qi => qi + 1)
+  }
 
   function handleExposureOK() {
     setQueue(prev => prev.map((e, i) => i === qIdx ? { ...e, exposureDone: true } : e))
@@ -227,6 +234,7 @@ function LearnSession({ cards, ctx, onExit }: {
     const THRESH = 70
     if (!exposureDone) {
       if (absX > absY && absX > THRESH && dx > 0) handleExposureOK()
+      else if (absY > absX && absY > THRESH && dy > 0) handleSuspend()
       return
     }
     if (!revealed) {
@@ -415,11 +423,12 @@ function LearnSession({ cards, ctx, onExit }: {
           )}
         </div>
 
-        {/* ↓ hint — exposure pass only */}
+        {/* ↓ suspend hint — exposure pass only */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: exposureDone ? 0 : 0.38 }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em', color: T.inkFaint }}>
-            tap or swipe → to confirm
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.inkFaint }}>
+            <Icon name="chev-d" size={13} strokeWidth={2} />
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>suspend</span>
+          </div>
         </div>
       </div>
 
@@ -438,14 +447,24 @@ function LearnSession({ cards, ctx, onExit }: {
       {/* Action row */}
       <div style={{ padding: '16px 16px 32px', flexShrink: 0 }}>
         {!exposureDone ? (
-          <button onClick={handleExposureOK} style={{
-            width: '100%', height: 56, borderRadius: 15, background: T.sage, color: '#fff',
-            border: 'none', fontSize: 17, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 14px rgba(80,120,30,0.2)',
-          }}>
-            <Icon name="check" size={17} strokeWidth={2.5} color="#fff" /> OK, got it
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={handleSuspend} style={{
+              width: 56, height: 56, borderRadius: 15, flexShrink: 0,
+              background: T.paperHi, color: T.inkFaint,
+              border: `1px solid ${T.lineSoft}`, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="pause" size={18} strokeWidth={1.8} />
+            </button>
+            <button onClick={handleExposureOK} style={{
+              flex: 1, height: 56, borderRadius: 15, background: T.sage, color: '#fff',
+              border: 'none', fontSize: 17, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 14px rgba(80,120,30,0.2)',
+            }}>
+              <Icon name="check" size={17} strokeWidth={2.5} color="#fff" /> OK, got it
+            </button>
+          </div>
         ) : revealed ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7 }}>
             {([
