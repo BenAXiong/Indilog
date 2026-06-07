@@ -1,10 +1,12 @@
 import BottomNav from '@/components/nav/BottomNav'
 import DesktopSidebar from '@/components/nav/DesktopSidebar'
 import { LangDialectProvider } from '@/lib/context/LangDialectProvider'
+import StudyDateSync from '@/components/StudyDateSync'
 
 export default function MainLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <LangDialectProvider>
+      <StudyDateSync />
       <div className="min-h-screen bg-cream">
         <div className="lg:grid lg:grid-cols-[232px_1fr] lg:min-h-screen">
           <div className="hidden lg:block">

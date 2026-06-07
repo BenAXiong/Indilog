@@ -1,4 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { computeSimulation } from '@/lib/db/srs/simulation'
 
@@ -210,11 +211,17 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const profileData = profileRes.data
   const prefs       = (profileData?.preferences as Record<string, unknown>) ?? {}
 
-  // Honour the user's daily reset hour when determining "today"
+  // Use client-set srs_study_date cookie as source of truth (the client knows the local
+  // timezone; server runs in UTC and would compute a different date for UTC+N users).
+  // Falls back to UTC-based formula if the cookie is absent (e.g. first visit).
+  const cookieStore = await cookies()
+  const cookieDate  = cookieStore.get('srs_study_date')?.value
   const resetHour   = (prefs.reset_hour as number) ?? 4
-  const studyDate   = new Date()
-  if (studyDate.getHours() < resetHour) studyDate.setDate(studyDate.getDate() - 1)
-  const today       = studyDate.toISOString().slice(0, 10)
+  const today       = cookieDate ?? (() => {
+    const d = new Date()
+    if (d.getHours() < resetHour) d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+  })()
 
   const todayStats    = statsMap.get(today)
   const reviewedToday = todayStats?.reviewed ?? 0
