@@ -194,9 +194,10 @@ function LearnSession({ cards, ctx, onExit }: {
   }
 
   function handleExposureOK() {
-    setQueue(prev => prev.map((e, i) => i === qIdx ? { ...e, exposureDone: true } : e))
+    // Requeue at back for the test pass, then advance — all exposures come before any tests
+    setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
     setRevealed(false)
-    // Don't advance qIdx — card stays, now shows as test pass
+    setQIdx(qi => qi + 1)
   }
 
   async function handleGraduate(type: 'good' | 'easy') {
