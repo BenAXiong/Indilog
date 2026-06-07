@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getStudyDate } from '@/lib/db/srs/flashcards'
 
 export type DashboardStats = {
   streak: number
@@ -25,7 +26,7 @@ export async function getDashboardStats(language?: string): Promise<DashboardSta
   }
   if (!user) return empty
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getStudyDate()
 
   const [statsRes, totalRes, recentRes, dueRes] = await Promise.all([
     // Today's daily stats row
@@ -71,10 +72,11 @@ export async function getDashboardStats(language?: string): Promise<DashboardSta
     const dateSet = new Set(
       streakRows.filter(r => r.captured_count > 0).map(r => r.date)
     )
-    const cursor = new Date()
-    while (dateSet.has(cursor.toISOString().slice(0, 10))) {
+    let cursor = today
+    while (dateSet.has(cursor)) {
       streak++
-      cursor.setDate(cursor.getDate() - 1)
+      const [y,m,d] = cursor.split('-').map(Number); const p = new Date(y,m-1,d-1)
+      cursor = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}`
     }
   }
 
@@ -90,7 +92,7 @@ export async function getDashboardStats(language?: string): Promise<DashboardSta
 
 export async function incrementCapturedToday(userId: string): Promise<void> {
   const supabase = createClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getStudyDate()
 
   await supabase.rpc('increment_captured_today', { p_user_id: userId, p_date: today })
 }

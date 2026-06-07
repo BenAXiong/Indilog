@@ -3,6 +3,12 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { computeSimulation } from '@/lib/db/srs/simulation'
 
+function dateStep(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const r = new Date(y, m - 1, d + days)
+  return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, '0')}-${String(r.getDate()).padStart(2, '0')}`
+}
+
 export type DashboardStats = {
   // SRS widgets
   streak: number
@@ -158,24 +164,20 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     dailyRows.filter(r => (r.reviewed_count ?? 0) > 0).map(r => r.date)
   )
   let streak = 0
-  const cursor = new Date()
-  while (reviewSet.has(cursor.toISOString().slice(0, 10))) {
+  let streakCursor = today
+  while (reviewSet.has(streakCursor)) {
     streak++
-    cursor.setDate(cursor.getDate() - 1)
+    streakCursor = dateStep(streakCursor, -1)
   }
 
   // 7-day chain
   const chain: boolean[] = []
   for (let i = 6; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    chain.push(reviewSet.has(d.toISOString().slice(0, 10)))
+    chain.push(reviewSet.has(dateStep(today, -i)))
   }
 
   // This week (last 7 days)
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 6)
-  const weekAgoStr = weekAgo.toISOString().slice(0, 10)
+  const weekAgoStr = dateStep(today, -6)
   const thisWeek = dailyRows
     .filter(r => r.date >= weekAgoStr)
     .reduce((sum, r) => sum + (r.reviewed_count ?? 0), 0)
@@ -189,16 +191,14 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     const week: number[] = []
     for (let d = 0; d < 7; d++) {
       const daysAgo = 111 - (w * 7 + d)   // 111 = oldest, 0 = today
-      const date = new Date()
-      date.setDate(date.getDate() - daysAgo)
-      const dateStr = date.toISOString().slice(0, 10)
+      const dateStr = dateStep(today, -daysAgo)
       week.push(reviewLevel(statsMap.get(dateStr)?.reviewed ?? 0))
     }
     heatmap.push(week)
 
     // Month label: first week of each new month
-    const firstDayOfWeek = new Date()
-    firstDayOfWeek.setDate(firstDayOfWeek.getDate() - (111 - w * 7))
+    const firstDayOfWeekStr = dateStep(today, -(111 - w * 7))
+    const firstDayOfWeek = new Date(firstDayOfWeekStr + 'T12:00:00')
     const month = firstDayOfWeek.getMonth()
     if (month === lastMonth) {
       monthLabels.push(null)

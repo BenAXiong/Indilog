@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getDeckGoalStats } from '@/lib/db/profile/goal'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { getStudyDate } from '@/lib/db/srs/flashcards'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ async function loadSessionContext(): Promise<SessionContext> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null }
 
-  const today   = new Date().toISOString().slice(0, 10)
+  const today   = getStudyDate()
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
   const fromStr = from30.toISOString().slice(0, 10)
 
@@ -59,8 +60,8 @@ async function loadSessionContext(): Promise<SessionContext> {
     (dailyRes.data ?? []).filter(r => (r.reviewed_count ?? 0) > 0).map(r => r.date)
   )
   let streak = 0
-  const cur = new Date()
-  while (reviewSet.has(cur.toISOString().slice(0, 10))) { streak++; cur.setDate(cur.getDate() - 1) }
+  let cur = today
+  while (reviewSet.has(cur)) { streak++; const [y,m,d] = cur.split('-').map(Number); const p = new Date(y,m-1,d-1); cur = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}` }
 
   const prefs = profileRes.data?.preferences as Record<string, unknown> | null
   const dailyCap = typeof prefs?.review_cap === 'number' ? prefs.review_cap : 100

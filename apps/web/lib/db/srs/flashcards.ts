@@ -107,7 +107,7 @@ export function localDateStr(date: Date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function getStudyDate(): string {
+export function getStudyDate(): string {
   const resetHour = typeof window !== 'undefined'
     ? parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     : 4
