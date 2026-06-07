@@ -350,10 +350,7 @@ function LearnSession({ cards, ctx, onExit }: {
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
           <div style={{ width: `${(graduatedCount / Math.max(totalInitial, 1)) * 100}%`, height: '100%', background: T.sage, borderRadius: 999, transition: 'width .4s' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {!exposureDone ? 'exposure' : 'test'}
-          </span>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 5 }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600 }}>
             {graduatedCount} / {totalInitial}
           </span>
