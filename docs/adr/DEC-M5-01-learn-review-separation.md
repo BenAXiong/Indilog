@@ -10,11 +10,15 @@ Two separate SRS entry points replace the single "Review" CTA. Architectural dec
 
 Each card progresses through three stages:
 
-1. **Exposure pass** — card shown fully revealed; user taps OK or swipes right; no rating recorded.
+1. **Exposure pass** — card shown fully revealed; user taps OK (→) or swipes right to confirm; swipe up / ArrowUp → **Easy** (direct graduation at 4d, bypasses test entirely); swipe down / ArrowDown → Suspend; no other rating recorded.
 2. **Test passes** — card shown front-only; rated Again / Good / Easy.
    - Two consecutive Good responses → **graduate at 12h** (`repetitions = 1, interval_days = 0.5`)
    - Easy → **graduate at 4d** (`repetitions = 1, interval_days = 4`); skips the two-pass requirement
    - Again → resets the consecutive-Good counter; card re-queues for Test passes (not re-exposed)
+
+### Open question: Easy in test pass
+
+Easy is currently available in both the exposure pass and the test pass. The exposure-pass Easy is clearly justified (you recognised it immediately — no test needed). The **test-pass Easy is less clear**: if the card is in the test pass, the user already confirmed they didn't instantly recognise it (they didn't use exposure-Easy), so a 4d interval may be overconfident. Consider removing Easy from the test pass and routing "easy" responses to the 2× Good graduation path instead (keeping only Again / Good). Deferred — needs more real-world session data before deciding.
 
 Learn session cap defaults to 10, maximum 20 (configurable in GoalSheet). Default of 10 keeps the Exposure → Test gap short enough that per-card inline exposure remains effective.
 

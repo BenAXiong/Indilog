@@ -319,6 +319,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     function onKey(e: KeyboardEvent) {
       if (!exposureDone) {
         if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); handleExposureOK() }
+        else if (e.key === 'ArrowUp')   handleGraduate('easy')
         else if (e.key === 'ArrowDown') handleSuspend()
         return
       }
@@ -417,7 +418,9 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     const THRESH = 70
     if (!exposureDone) {
       if (absX > absY && absX > THRESH && dx > 0) handleExposureOK()
-      else if (absY > absX && absY > THRESH && dy > 0) handleSuspend()
+      else if (absY > absX && absY > THRESH) {
+        if (dy < 0) handleGraduate('easy'); else handleSuspend()
+      }
       return
     }
     if (!revealed) {
@@ -544,8 +547,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       {/* Card area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 16px 0' }}>
 
-        {/* ↑ easy hint — test pass only */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: exposureDone ? 0.42 : 0 }}>
+        {/* ↑ easy hint */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.65 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.amber }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>easy</span>
             <Icon name="chevron" size={13} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
