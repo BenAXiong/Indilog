@@ -774,11 +774,6 @@ function LearnEnd({ learnedCount, onDone }: {
 }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '10px 16px 0', display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onDone} style={{ width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft, cursor: 'pointer' }}>
-          <Icon name="close" size={16} strokeWidth={2} />
-        </button>
-      </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 28px' }}>
         <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 88, fontWeight: 600, color: T.ink, letterSpacing: '-0.04em', lineHeight: 0.9 }}>
           {learnedCount}
