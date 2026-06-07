@@ -9,9 +9,10 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  listLearnFlashcards, graduateLearnCard, suspendCard, cardMeta, cardAudio,
+  listLearnFlashcards, graduateLearnCard, suspendCard, listUserLanguages, cardMeta, cardAudio,
   type FlashcardWithItem,
 } from '@/lib/db/srs/flashcards'
+import { patchPreferences } from '@/lib/db/profile/preferences'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { createClient } from '@/lib/supabase/client'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
@@ -81,19 +82,152 @@ function renderHighlighted(sentence: string, target: string) {
   )
 }
 
+// ─── LearnOptionsSheet ───────────────────────────────────────────────────────
+
+function LearnOptionsSheet({
+  reviewMode, setReviewMode,
+  showAllLangs, setShowAllLangs,
+  excludedLangs, setExcludedLangs,
+  onReloadNeeded,
+  onClose,
+}: {
+  reviewMode:   string;  setReviewMode:   (v: string) => void
+  showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
+  excludedLangs: string[]; setExcludedLangs: (v: string[]) => void
+  onReloadNeeded: () => void
+  onClose: () => void
+}) {
+  const [availLangs, setAvailLangs] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    if (!showAllLangs && availLangs === null) listUserLanguages().then(setAvailLangs)
+  }, [showAllLangs, availLangs])
+
+  function handleToggleShowAll(v: boolean) {
+    setShowAllLangs(v)
+    localStorage.setItem('srs_show_all_langs', String(v))
+    if (v) {
+      setExcludedLangs([]); localStorage.setItem('srs_excluded_langs', '[]')
+      patchPreferences({ show_all_langs: v, excluded_langs: [] })
+    } else {
+      patchPreferences({ show_all_langs: v })
+    }
+    onReloadNeeded()
+  }
+
+  function handleToggleLang(code: string) {
+    const next = excludedLangs.includes(code)
+      ? excludedLangs.filter(l => l !== code)
+      : [...excludedLangs, code]
+    setExcludedLangs(next)
+    localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
+    patchPreferences({ excluded_langs: next })
+    onReloadNeeded()
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(30,22,16,0.32)', zIndex: 20 }} />
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 21,
+        background: T.cream, borderRadius: '22px 22px 0 0',
+        padding: '10px 0 32px', boxShadow: '0 -12px 36px rgba(40,30,20,0.2)',
+      }}>
+        <div style={{ width: 40, height: 5, borderRadius: 999, background: T.line, margin: '0 auto 14px' }} />
+        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, padding: '0 16px 10px' }}>
+          Session options
+        </div>
+
+        {/* Review mode */}
+        <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>Review mode</div>
+              <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 1 }}>How cards are presented</div>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(['forward', 'reverse', 'audio', 'sts'] as const).map(m => (
+                <button key={m} onClick={() => { setReviewMode(m); localStorage.setItem('srs_review_mode', m); patchPreferences({ review_mode: m }) }} style={{
+                  padding: '4px 9px', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.04em',
+                  background: reviewMode === m ? T.crimsonBg : T.paper,
+                  border: `1.5px solid ${reviewMode === m ? T.crimson : T.lineSoft}`,
+                  color: reviewMode === m ? T.crimson : T.inkMute,
+                }}>{m}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Show all languages */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: showAllLangs ? 'none' : `1px solid ${T.lineSoft}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>Show all languages</div>
+              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Include all languages in this session</div>
+            </div>
+            <button onClick={() => handleToggleShowAll(!showAllLangs)} aria-label="Toggle show all languages" style={{
+              width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
+              background: showAllLangs ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
+            }}>
+              <span style={{
+                position: 'absolute', top: 3, left: showAllLangs ? 21 : 3, width: 20, height: 20,
+                borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
+              }} />
+            </button>
+          </div>
+
+          {/* Language list */}
+          {!showAllLangs && (
+            <div style={{ padding: '4px 16px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 0 8px' }}>
+                Languages
+              </div>
+              {availLangs === null ? (
+                <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
+              ) : availLangs.map(code => {
+                const included = !excludedLangs.includes(code)
+                return (
+                  <button key={code} onClick={() => handleToggleLang(code)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    width: '100%', padding: '8px 0', background: 'none', border: 'none',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                      background: included ? T.crimson : 'transparent',
+                      border: `1.5px solid ${included ? T.crimson : T.line}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
+                    </div>
+                    <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── LearnSession ─────────────────────────────────────────────────────────────
 
-function LearnSession({ cards, ctx, onExit }: {
+function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
   cards: FlashcardWithItem[]
   ctx:   LearnContext
   onExit: (count: number) => void
+  onReloadNeeded: () => void
 }) {
   const [queue, setQueue] = useState<LearnEntry[]>(() =>
     cards.map(c => ({ card: c, exposureDone: false, goodCount: 0 }))
   )
-  const [qIdx,     setQIdx]    = useState(0)
-  const [revealed, setRevealed] = useState(false)
-  const [reviewMode, setReviewMode] = useState('forward')
+  const [qIdx,          setQIdx]          = useState(0)
+  const [revealed,      setRevealed]      = useState(false)
+  const [reviewMode,    setReviewModeRaw] = useState('forward')
+  const [showOptions,   setShowOptions]   = useState(false)
+  const [showAllLangs,  setShowAllLangsRaw]  = useState(true)
+  const [excludedLangs, setExcludedLangsRaw] = useState<string[]>([])
   const [showPriorityToast, setShowPriorityToast] = useState(false)
   const graduatedRef       = useRef(new Set<string>())
   const priorityToastRef   = useRef(false)
@@ -104,8 +238,14 @@ function LearnSession({ cards, ctx, onExit }: {
   useEffect(() => { onExitRef.current = onExit })
 
   useEffect(() => {
-    setReviewMode(localStorage.getItem('srs_review_mode') ?? 'forward')
+    setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
+    setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
+    try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
+
+  function setReviewMode(v: string)      { setReviewModeRaw(v);    localStorage.setItem('srs_review_mode',    v); patchPreferences({ review_mode: v }) }
+  function setShowAllLangs(v: boolean)   { setShowAllLangsRaw(v) }
+  function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
   useEffect(() => { audioRef.current?.pause() }, [qIdx])
 
@@ -340,9 +480,13 @@ function LearnSession({ cards, ctx, onExit }: {
             {getLangName(lang.language)}{lang.dialect ? ` · ${lang.dialect}` : ''}
           </div>
         </div>
-        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
-          Learn
-        </div>
+        <button onClick={() => setShowOptions(true)} aria-label="Session options" style={{
+          width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
+        }}>
+          <Icon name="settings" size={16} strokeWidth={1.7} />
+        </button>
       </div>
 
       {/* Progress bar */}
@@ -494,6 +638,17 @@ function LearnSession({ cards, ctx, onExit }: {
           </div>
         ) : null}
       </div>
+
+      {/* Options sheet */}
+      {showOptions && (
+        <LearnOptionsSheet
+          reviewMode={reviewMode}       setReviewMode={setReviewMode}
+          showAllLangs={showAllLangs}   setShowAllLangs={setShowAllLangs}
+          excludedLangs={excludedLangs} setExcludedLangs={setExcludedLangs}
+          onReloadNeeded={onReloadNeeded}
+          onClose={() => setShowOptions(false)}
+        />
+      )}
     </div>
   )
 }
@@ -553,8 +708,14 @@ function LearnPage() {
 
   async function reload() {
     const [allCards, context] = await Promise.all([listLearnFlashcards(), loadLearnContext()])
+    const excludeLangs: string[] = localStorage.getItem('srs_show_all_langs') === 'false'
+      ? (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
+      : []
+    const filtered = excludeLangs.length
+      ? allCards.filter(c => !excludeLangs.includes(c.ind_items?.language ?? ''))
+      : allCards
     const toLearn = Math.max(0, context.learnCap - context.learnedToday)
-    const sessionCards = allCards.slice(0, toLearn)
+    const sessionCards = filtered.slice(0, toLearn)
     setCards(sessionCards)
     setCtx(context)
     setLoading(false)
@@ -581,8 +742,13 @@ function LearnPage() {
 
   const capReached  = ctx.learnedToday >= ctx.learnCap
 
+  async function handleReloadNeeded() {
+    await reload()
+    setSessionKey(k => k + 1)
+  }
+
   if (mode === 'learning' && cards.length > 0) {
-    return <LearnSession key={sessionKey} cards={cards} ctx={ctx} onExit={handleSessionExit} />
+    return <LearnSession key={sessionKey} cards={cards} ctx={ctx} onExit={handleSessionExit} onReloadNeeded={handleReloadNeeded} />
   }
 
   if (mode === 'done') {
