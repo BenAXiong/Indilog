@@ -99,9 +99,13 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [simResult,    setSimResult]    = useState<SimulationCurve | null>(null)
   const [simRunning,   setSimRunning]   = useState(false)
 
-  // Lock body scroll while sheet is open
+  const [topOffset, setTopOffset] = useState<number | null>(null)
+
+  // Lock body scroll + measure header bottom on open
   useEffect(() => {
     if (!open) return
+    const header = document.querySelector('[data-id="dashboard-header"]')
+    if (header) setTopOffset(header.getBoundingClientRect().bottom)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
@@ -547,7 +551,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,10,0.35)', zIndex: 70 }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        top: 'env(safe-area-inset-top)',
+        top: topOffset ?? 'env(safe-area-inset-top)',
         background: T.paper, borderRadius: '20px 20px 0 0',
         border: `1px solid ${T.line}`, zIndex: 71,
         display: 'flex', flexDirection: 'column',

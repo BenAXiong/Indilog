@@ -262,7 +262,7 @@ export default async function DashboardPage() {
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
+      <div data-id="dashboard-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
         <Wordmark size={22} />
         <SettingsButton />
       </div>
