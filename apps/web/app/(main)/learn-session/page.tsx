@@ -236,10 +236,11 @@ function LearnOptionsSheet({
 
 // ─── LearnSession ─────────────────────────────────────────────────────────────
 
-function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
-  cards: FlashcardWithItem[]
-  ctx:   LearnContext
-  onExit: (count: number) => void
+function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadNeeded }: {
+  cards:    FlashcardWithItem[]
+  overflow: FlashcardWithItem[]
+  ctx:      LearnContext
+  onExit:   (count: number) => void
   onReloadNeeded: () => void
 }) {
   const [queue, setQueue] = useState<LearnEntry[]>(() =>
@@ -251,6 +252,7 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
   const [showOptions,   setShowOptions]   = useState(false)
   const [showAllLangs,  setShowAllLangsRaw]  = useState(true)
   const [excludedLangs, setExcludedLangsRaw] = useState<string[]>([])
+  const [overflow,      setOverflow]      = useState<FlashcardWithItem[]>(initialOverflow)
   const [showPriorityToast, setShowPriorityToast] = useState(false)
   const [cardFlags,     setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
@@ -363,6 +365,13 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
   async function handleSuspend() {
     await suspendCard(card.id)
     setRevealed(false)
+    // Replace the suspended card with the next overflow card (if any) to keep count stable
+    setOverflow(prev => {
+      if (!prev.length) return prev
+      const [next, ...rest] = prev
+      setQueue(q => [...q, { card: next, exposureDone: false, goodCount: 0 }])
+      return rest
+    })
     setQIdx(qi => qi + 1)
   }
 
@@ -782,6 +791,7 @@ function LearnPage() {
 
   const [mode,         setMode]         = useState<'landing' | 'learning' | 'done'>('landing')
   const [cards,        setCards]        = useState<FlashcardWithItem[]>([])
+  const [overflow,     setOverflow]     = useState<FlashcardWithItem[]>([])
   const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnCap: 10, priorityCollectionIds: [] })
   const [loading,      setLoading]      = useState(true)
   const [learnedCount, setLearnedCount] = useState(0)
@@ -799,6 +809,7 @@ function LearnPage() {
     const toLearn = Math.max(0, context.learnCap - context.learnedToday)
     const sessionCards = filtered.slice(0, toLearn)
     setCards(sessionCards)
+    setOverflow(filtered.slice(toLearn))
     setCtx(context)
     setLoading(false)
     if (autostart && !autostartedRef.current && sessionCards.length > 0) {
@@ -830,7 +841,7 @@ function LearnPage() {
   }
 
   if (mode === 'learning' && cards.length > 0) {
-    return <LearnSession key={sessionKey} cards={cards} ctx={ctx} onExit={handleSessionExit} onReloadNeeded={handleReloadNeeded} />
+    return <LearnSession key={sessionKey} cards={cards} overflow={overflow} ctx={ctx} onExit={handleSessionExit} onReloadNeeded={handleReloadNeeded} />
   }
 
   if (mode === 'done') {
