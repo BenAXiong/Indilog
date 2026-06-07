@@ -642,17 +642,17 @@ function ReviewSession({
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >
-          {/* Top-left: flag + grade badge */}
-          <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 6, alignItems: 'center' }}
+          {/* Bottom-left: flag button + picker */}
+          <div style={{ position: 'absolute', bottom: 10, left: 12, display: 'flex', gap: 5, alignItems: 'center' }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
               width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: currentFlagHex ?? T.inkFaint,
             }}>
-              <Icon name={currentFlag ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
+              <Icon name={currentFlag ? 'flagF' : 'flag'} size={15} strokeWidth={1.8} />
             </button>
-            {showFlagPicker ? (
+            {showFlagPicker && (
               <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                 {FLAG_COLORS.map(fc => (
                   <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
@@ -668,25 +668,30 @@ function ReviewSession({
                   fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
                 }}>×</button>
               </div>
-            ) : (() => {
-              const grade = computeMasteryGrade(card)
-              const GS: Record<string, { color: string; bg: string; border: string }> = {
-                seed:     { color: T.amber,    bg: T.amberBg,  border: '#EBD49A' },
-                planted:  { color: T.inkSoft,  bg: T.paperHi,  border: T.lineSoft },
-                rooted:   { color: '#566234',  bg: '#E4E7CC',  border: '#D2D8AE' },
-                blooming: { color: '#3a601a',  bg: '#cfe8b8',  border: '#b2d895' },
-              }
-              const gs = GS[grade]
-              return (
+            )}
+          </div>
+
+          {/* Top-left: grade badge */}
+          {(() => {
+            const grade = computeMasteryGrade(card)
+            const GS: Record<string, { color: string; bg: string; border: string }> = {
+              seed:     { color: T.amber,    bg: T.amberBg,  border: '#EBD49A' },
+              planted:  { color: T.inkSoft,  bg: T.paperHi,  border: T.lineSoft },
+              rooted:   { color: '#566234',  bg: '#E4E7CC',  border: '#D2D8AE' },
+              blooming: { color: '#3a601a',  bg: '#cfe8b8',  border: '#b2d895' },
+            }
+            const gs = GS[grade]
+            return (
+              <div style={{ position: 'absolute', top: 14, left: 12 }}>
                 <span style={{
                   fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '0.06em',
                   color: gs.color, background: gs.bg, border: `1px solid ${gs.border}`,
                   padding: '2px 7px', borderRadius: 5,
                 }}>{grade}</span>
-              )
-            })()}
-          </div>
+              </div>
+            )
+          })()}
 
           {/* Top-right: suspend */}
           <div style={{ position: 'absolute', top: 10, right: 12 }}

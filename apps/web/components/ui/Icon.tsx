@@ -9,6 +9,7 @@ export type IconName =
   | 'play' | 'stop' | 'card' | 'note' | 'word' | 'logout' | 'library'
   | 'layers' | 'globe' | 'archive' | 'share' | 'download' | 'trash' | 'tag' | 'more-v'
   | 'rotate-ccw' | 'skip-fwd' | 'pause'
+  | 'flag' | 'flagF'
 
 type IconProps = {
   name: IconName
@@ -81,6 +82,8 @@ const ICONS: Record<IconName, (p: SVGProps) => ReactNode> = {
   'rotate-ccw': p => S(p, <><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 101.85-5.53"/></>),
   'skip-fwd':   p => S(p, <><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/><path d="M21 6v12"/></>),
   'pause':      p => S(p, <><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></>),
+  'flag':       p => S(p, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
+  'flagF':      p => S({ ...p, fill: p.stroke }, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
 }
 
 export default function Icon({ name, size = 22, color = 'currentColor', strokeWidth = 1.6, style, className }: IconProps) {
