@@ -2,13 +2,13 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-07 | FEATURE | Simulation: proper FormoSRS-1 day-by-day forward projection (projectSimulation + advanceGood + reviewDaysFrom); server-side reviewTarget de-inflated; see DEC-SRS10 |
-| 2026-06-07 | FEATURE | GoalSheet: 60vh height, body scroll lock while open |
-| 2026-06-07 | FEATURE | Learn session: settings gear button + LearnOptionsSheet (review mode + language filter); language filter syncs with Review session keys |
-| 2026-06-07 | FIX | Learn: exposure OK requeues card at back — all exposures sweep first, then test passes |
-| 2026-06-07 | FIX | Learn: suspend available in test pass (pause button, swipe-down, ArrowDown); ↓ hint always visible |
-| 2026-06-07 | FIX | Learn: suspend button uses card-internal style (30×30 borderless, matches Review) |
-| 2026-06-07 | FIX | Learn: remove exposure/test phase label from progress bar row |
+| 2026-06-07 19:04 | FEATURE | Simulation: proper FormoSRS-1 day-by-day forward projection (projectSimulation + advanceGood + reviewDaysFrom); server-side reviewTarget de-inflated; see DEC-SRS10 |
+| 2026-06-07 20:50 | FEATURE | GoalSheet: 60vh height, body scroll lock while open |
+| 2026-06-07 20:40 | FEATURE | Learn session: settings gear button + LearnOptionsSheet (review mode + language filter); language filter syncs with Review session keys |
+| 2026-06-07 20:30 | FIX | Learn: exposure OK requeues card at back — all exposures sweep first, then test passes |
+| 2026-06-07 20:20 | FIX | Learn: suspend available in test pass (pause button, swipe-down, ArrowDown); ↓ hint always visible |
+| 2026-06-07 20:10 | FIX | Learn: suspend button uses card-internal style (30×30 borderless, matches Review) |
+| 2026-06-07 20:00 | FIX | Learn: remove exposure/test phase label from progress bar row |
 | 2026-06-06 21:05 | FIX | GoalSheet height fixed at 50vh (was maxHeight: 88vh) |
 | 2026-06-06 20:53 | FEATURE | M5-B Phase 6: GoalSheet 3-tab rewrite (Goals/Priority/Simulate); GoalWidget shows top priority deck + rooted%; getDeckRootedStats; simulation-client.ts (runSimulation + buildCurve) |
 | 2026-06-06 20:48 | FEATURE | M5-B Phase 7: computeMasteryGrade (Seed/Planted/Rooted/Blooming); grade badge in Browser expanded card; Stats subtab Mastered→Rooted+Blooming; Dashboard "Rooted" label |
