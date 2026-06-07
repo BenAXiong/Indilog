@@ -333,9 +333,10 @@ function ReviewSession({
   const onExitRef = useRef(onExit)
   useEffect(() => { onExitRef.current = onExit })
   const sessionEndFiredRef = useRef(false)
+  const pendingRef         = useRef(false)
 
-  // Stop audio + close kebab when card advances
-  useEffect(() => { audioRef.current?.pause(); setShowKebab(false) }, [qIdx])
+  // Stop audio + close kebab when card advances; reset action gate
+  useEffect(() => { audioRef.current?.pause(); setShowKebab(false); pendingRef.current = false }, [qIdx])
 
   // Autoplay in audio mode when card changes
   useEffect(() => {
@@ -450,6 +451,8 @@ function ReviewSession({
   const stsSentence = card.ind_items?.ab ?? ''
 
   async function submit(rating: Rating) {
+    if (pendingRef.current) return
+    pendingRef.current = true
     lastRatedRef.current = null
     setCanUndo(false)
     const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
@@ -463,6 +466,8 @@ function ReviewSession({
   }
 
   async function handleDefer() {
+    if (pendingRef.current) return
+    pendingRef.current = true
     await deferCard(card.id)
     lastRatedRef.current = null
     setCanUndo(false)
@@ -472,8 +477,10 @@ function ReviewSession({
   }
 
   async function handleUndo() {
+    if (pendingRef.current) return
+    pendingRef.current = true
     const last = lastRatedRef.current
-    if (!last) return
+    if (!last) { pendingRef.current = false; return }
     await undoRating(last.cardId, last.prevState)
     completedRef.current.delete(last.cardId)
     lastRatedRef.current = null
@@ -483,6 +490,8 @@ function ReviewSession({
   }
 
   async function handleSuspend() {
+    if (pendingRef.current) return
+    pendingRef.current = true
     await suspendCard(card.id)
     setShowFlagPicker(false)
     setRevealed(false)
