@@ -176,16 +176,19 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Mastery grades — Seed/Planted/Rooted/Blooming; see DEC-SRS09; rename "mastered" stat to "Rooted"
 - [x] ind_daily_stats: add learned_count column; add increment_learned_today RPC
 - [x] Revamp GoalSheet UI — 3 tabs: Goals (manual/calculated toggle), Priority (ordered deck list), Simulate (deadline + deck selection + curve)
-- [ ] Refine Cards UI (rewind, skip, gestures, scores buttons, info, etc)
-- [ ] Add visual grading feedback
+- [ ] Fix: SRS workflow bugs
+- [ ] Refine Cards UI (rewind, skip, gestures, scores buttons, etc)
+- [ ] Refine Cards UX (visual grading feedback)
 - [ ] Revamp Dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Curriculum content layout options — compact / standard / flashcard view; toggled per-section or globally
+- [ ] Study tab decks: on click, add in sheet review now, open in browser, etc
 
 ### M5-C — Feature refinement
 
 - [x] Instore max reviews/learn per day — daily cap stepper (10–300) in OptionsSheet; srs_daily_cap localStorage
 - [x] Browser zh lookup: enable multi word — lookup also searches sentences, includes sentence zh
 - [x] 2-step review entry — resolved by Learn/Review split + priority list (DEC-M5-01)
+- [x] Refine simulation of dailies from custom goals
 
 
 
@@ -269,8 +272,23 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ---
 
+## Open questions
+
+These are design questions that need real-world data or further thought before deciding. Each links to the ADR where the context lives.
+
+| Question | ADR | Status |
+|---|---|---|
+| Remove Easy from test pass? (exposure-Easy already covers "instant recognise"; test-pass Easy may be overconfident) | DEC-M5-01 | needs session data |
+
+---
+
 ## Next versions
 
+- **SRS analytics:** store `learn_attempts` (total test-pass ratings before graduation) and `learn_avg_ms` (avg ms flip→rating) on `ind_flashcards` at graduation; correlate with review outcomes (first-review rating, ease drift, interval to rooted threshold)
+- **Learn test mode: forward+type** — 5th review mode alongside forward/reverse/audio/STS; user types the target word rather than tapping a rating button; useful for production practice
+- Capture: option or tag to exclude from flashcards (when data undure or incomplete)
+- Advanced SRS modes: first comp then prod (auto-shifts when mature)
+- Advanced SRS tab (beware, modify only if you understand)
 - 3rd dashboard ring for Captures (alongside Learn + Review rings) — deferred until capture goals are designed
 - Configurable streak: hitting any/all/combination of caps selectable per goal type — deferred until 3-ring dashboard exists (E-option; v1 streak = any cap hit)
 - Amis100 - useful fun version
@@ -284,7 +302,11 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - Add ILRDF colloquial corpus
 - TDL to capture: list of things you wanna learn (eg it's my treat, get lost, etc)
 - Video capture — v2 new feature
+- Daily streak push notification
 - Cards swipe animations
+- SRS: consider option to populate 1k reviews from curriculum progress
+    or just extract amap for curri
+- feature for dialogue display and practice
 - Import: stash hash in sessionStorage before login redirect so unauthenticated users land back on /import after sign-up (currently requires re-opening from extension)
 - AI opacity: drop modelId from /api/translate response (currently visible in DevTools network tab despite invisible in UI)
 - AI opacity: proxy TTS audio bytes through /api/tts instead of returning ILRDF file URL to client
@@ -300,7 +322,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - Trilingual
 - OCR capture
 - AI-formatted json from other formats (txt, csv, pdf) for teachers
-- How to tutorial
+- How to tutorial (instructions for SRS, tabs workflow)
 
 ---
 
