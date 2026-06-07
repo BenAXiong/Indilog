@@ -151,12 +151,14 @@ function LearnSession({ cards, ctx, onExit }: {
       }
       if (!revealed) {
         if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRevealed(true) }
-        else if (e.key === 'ArrowUp') handleGraduate('easy')
+        else if (e.key === 'ArrowUp')   handleGraduate('easy')
+        else if (e.key === 'ArrowDown') handleSuspend()
         return
       }
-      if (e.key === '1' || e.key === 'ArrowLeft')                       handleAgain()
-      else if (e.key === '3' || e.key === 'ArrowRight')                  handleGood(goodCount)
-      else if (e.key === '4' || e.key === 'ArrowUp')                     handleGraduate('easy')
+      if (e.key === '1' || e.key === 'ArrowLeft')                        handleAgain()
+      else if (e.key === '3' || e.key === 'ArrowRight')                   handleGood(goodCount)
+      else if (e.key === '4' || e.key === 'ArrowUp')                      handleGraduate('easy')
+      else if (e.key === 'ArrowDown')                                     handleSuspend()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -239,13 +241,15 @@ function LearnSession({ cards, ctx, onExit }: {
       return
     }
     if (!revealed) {
-      if (absY > absX && absY > THRESH && dy < 0) handleGraduate('easy')
+      if (absY > absX && absY > THRESH) {
+        if (dy < 0) handleGraduate('easy'); else handleSuspend()
+      }
       return
     }
     if (absX > absY && absX > THRESH) {
       if (dx < 0) handleAgain(); else handleGood(goodCount)
-    } else if (absY > absX && absY > THRESH && dy < 0) {
-      handleGraduate('easy')
+    } else if (absY > absX && absY > THRESH) {
+      if (dy < 0) handleGraduate('easy'); else handleSuspend()
     }
   }
 
@@ -383,18 +387,16 @@ function LearnSession({ cards, ctx, onExit }: {
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >
-          {/* Suspend button — top-left, exposure pass only */}
-          {!exposureDone && (
-            <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
-              <button onClick={handleSuspend} aria-label="Suspend card" style={{
-                width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: T.inkFaint,
-              }}>
-                <Icon name="pause" size={15} strokeWidth={1.8} />
-              </button>
-            </div>
-          )}
+          {/* Suspend button — top-left, always available */}
+          <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
+            <button onClick={handleSuspend} aria-label="Suspend card" style={{
+              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: T.inkFaint,
+            }}>
+              <Icon name="pause" size={15} strokeWidth={1.8} />
+            </button>
+          </div>
 
           {/* Phase label */}
           <div style={{ position: 'absolute', top: 14, right: 16 }}>
@@ -437,8 +439,8 @@ function LearnSession({ cards, ctx, onExit }: {
           )}
         </div>
 
-        {/* ↓ suspend hint — exposure pass only */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: exposureDone ? 0 : 0.38 }}>
+        {/* ↓ suspend hint */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.38 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.inkFaint }}>
             <Icon name="chev-d" size={13} strokeWidth={2} />
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>suspend</span>
