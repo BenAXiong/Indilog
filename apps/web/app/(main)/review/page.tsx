@@ -16,7 +16,7 @@ import {
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
-import { estimateInterval, formatDays, type SMState } from '@/lib/db/srs/schedule'
+import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 import { getDeckGoalStats } from '@/lib/db/profile/goal'
 import { patchPreferences } from '@/lib/db/profile/preferences'
@@ -620,7 +620,7 @@ function ReviewSession({
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 16px 0' }}>
 
         {/* ↑ easy hint — outside card, above */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.42 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, opacity: 0.65 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.amber }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>easy</span>
             <Icon name="chevron" size={13} strokeWidth={2} style={{ transform: 'rotate(-90deg)' }} />
@@ -642,15 +642,8 @@ function ReviewSession({
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >
-          {/* Phase label */}
-          <div style={{ position: 'absolute', top: 14, right: 16 }}>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {phaseLabel}
-            </span>
-          </div>
-
-          {/* Flag + suspend */}
-          <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 2, alignItems: 'center' }}
+          {/* Top-left: flag + grade badge */}
+          <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 6, alignItems: 'center' }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
               width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
@@ -659,15 +652,8 @@ function ReviewSession({
             }}>
               <Icon name={currentFlag ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
             </button>
-            <button onClick={handleSuspend} aria-label="Suspend card" style={{
-              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: T.inkFaint,
-            }}>
-              <Icon name="pause" size={15} strokeWidth={1.8} />
-            </button>
-            {showFlagPicker && (
-              <div style={{ display: 'flex', gap: 5, alignItems: 'center', paddingLeft: 4 }}>
+            {showFlagPicker ? (
+              <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                 {FLAG_COLORS.map(fc => (
                   <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
                     width: 22, height: 22, borderRadius: 999, border: 'none',
@@ -682,17 +668,46 @@ function ReviewSession({
                   fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
                 }}>×</button>
               </div>
-            )}
+            ) : (() => {
+              const grade = computeMasteryGrade(card)
+              const GS: Record<string, { color: string; bg: string; border: string }> = {
+                seed:     { color: T.amber,    bg: T.amberBg,  border: '#EBD49A' },
+                planted:  { color: T.inkSoft,  bg: T.paperHi,  border: T.lineSoft },
+                rooted:   { color: '#566234',  bg: '#E4E7CC',  border: '#D2D8AE' },
+                blooming: { color: '#3a601a',  bg: '#cfe8b8',  border: '#b2d895' },
+              }
+              const gs = GS[grade]
+              return (
+                <span style={{
+                  fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  color: gs.color, background: gs.bg, border: `1px solid ${gs.border}`,
+                  padding: '2px 7px', borderRadius: 5,
+                }}>{grade}</span>
+              )
+            })()}
+          </div>
+
+          {/* Top-right: suspend */}
+          <div style={{ position: 'absolute', top: 10, right: 12 }}
+            onClick={e => e.stopPropagation()}>
+            <button onClick={handleSuspend} aria-label="Suspend card" style={{
+              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: T.inkFaint,
+            }}>
+              <Icon name="pause" size={15} strokeWidth={1.8} />
+            </button>
           </div>
 
           {/* Left/right swipe hints — inside card, visible only after flip */}
           {revealed && (
             <>
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
+              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.65 }}>
                 <Icon name="arrow-l" size={17} strokeWidth={2} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
               </div>
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.5 }}>
+              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.65 }}>
                 <Icon name="arrow-r" size={17} strokeWidth={2} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>good</span>
               </div>
@@ -783,7 +798,7 @@ function ReviewSession({
         </div>
 
         {/* ↓ suspend hint — outside card, below */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.38 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.65 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.inkFaint }}>
             <Icon name="chev-d" size={13} strokeWidth={2} />
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>suspend</span>

@@ -9,9 +9,11 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  listLearnFlashcards, graduateLearnCard, suspendCard, listUserLanguages, cardMeta, cardAudio,
+  listLearnFlashcards, graduateLearnCard, suspendCard, setFlagColor, listUserLanguages, cardMeta, cardAudio,
   type FlashcardWithItem,
 } from '@/lib/db/srs/flashcards'
+import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
+import { computeMasteryGrade } from '@/lib/db/srs/schedule'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { createClient } from '@/lib/supabase/client'
@@ -250,6 +252,14 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
   const [showAllLangs,  setShowAllLangsRaw]  = useState(true)
   const [excludedLangs, setExcludedLangsRaw] = useState<string[]>([])
   const [showPriorityToast, setShowPriorityToast] = useState(false)
+  const [cardFlags,     setCardFlags]     = useState<Record<string, string | null>>({})
+  const [showFlagPicker, setShowFlagPicker] = useState(false)
+
+  async function handleSetFlag(color: string | null) {
+    await setFlagColor(card.id, color)
+    setCardFlags(prev => ({ ...prev, [card.id]: color }))
+    setShowFlagPicker(false)
+  }
   const graduatedRef       = useRef(new Set<string>())
   const priorityToastRef   = useRef(false)
   const sessionEndFiredRef = useRef(false)
@@ -268,7 +278,7 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
   function setShowAllLangs(v: boolean)   { setShowAllLangsRaw(v) }
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
-  useEffect(() => { audioRef.current?.pause() }, [qIdx])
+  useEffect(() => { audioRef.current?.pause(); setShowFlagPicker(false) }, [qIdx])
 
   // Session end
   useEffect(() => {
@@ -537,6 +547,7 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
           onClick={() => {
+            if (showFlagPicker) { setShowFlagPicker(false); return }
             if (!exposureDone) { handleExposureOK(); return }
             if (!revealed) setRevealed(true)
           }}
@@ -549,8 +560,58 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >
-          {/* Suspend button — top-left, always available */}
-          <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
+          {/* Top-left: flag + grade badge */}
+          {(() => {
+            const currentFlag    = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
+            const currentFlagHex = flagColorHex(currentFlag)
+            const grade = computeMasteryGrade(card)
+            const GS: Record<string, { color: string; bg: string; border: string }> = {
+              seed:     { color: T.amber,    bg: T.amberBg,  border: '#EBD49A' },
+              planted:  { color: T.inkSoft,  bg: T.paperHi,  border: T.lineSoft },
+              rooted:   { color: '#566234',  bg: '#E4E7CC',  border: '#D2D8AE' },
+              blooming: { color: '#3a601a',  bg: '#cfe8b8',  border: '#b2d895' },
+            }
+            const gs = GS[grade]
+            return (
+              <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', gap: 6, alignItems: 'center' }}
+                onClick={e => e.stopPropagation()}>
+                <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
+                  width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: currentFlagHex ?? T.inkFaint,
+                }}>
+                  <Icon name={currentFlag ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
+                </button>
+                {showFlagPicker ? (
+                  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                    {FLAG_COLORS.map(fc => (
+                      <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
+                        width: 22, height: 22, borderRadius: 999, border: 'none',
+                        background: fc.color, cursor: 'pointer', flexShrink: 0,
+                        boxShadow: currentFlag === fc.key ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}` : 'none',
+                      }} />
+                    ))}
+                    <button onClick={() => handleSetFlag(null)} style={{
+                      width: 22, height: 22, borderRadius: 999,
+                      border: `1.5px solid ${T.lineSoft}`, background: T.paper,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
+                    }}>×</button>
+                  </div>
+                ) : (
+                  <span style={{
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    color: gs.color, background: gs.bg, border: `1px solid ${gs.border}`,
+                    padding: '2px 7px', borderRadius: 5,
+                  }}>{grade}</span>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Top-right: suspend */}
+          <div style={{ position: 'absolute', top: 10, right: 12 }} onClick={e => e.stopPropagation()}>
             <button onClick={handleSuspend} aria-label="Suspend card" style={{
               width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -560,17 +621,10 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
             </button>
           </div>
 
-          {/* Phase label */}
-          <div style={{ position: 'absolute', top: 14, right: 16 }}>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: !exposureDone ? T.sage : T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {!exposureDone ? 'new' : lang.type}
-            </span>
-          </div>
-
           {/* Swipe hints — after reveal on test pass */}
           {exposureDone && revealed && (
             <>
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.45 }}>
+              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.65 }}>
                 <Icon name="arrow-l" size={17} strokeWidth={2} />
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
               </div>
@@ -602,7 +656,7 @@ function LearnSession({ cards, ctx, onExit, onReloadNeeded }: {
         </div>
 
         {/* ↓ suspend hint */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.38 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.65 }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: T.inkFaint }}>
             <Icon name="chev-d" size={13} strokeWidth={2} />
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>suspend</span>
