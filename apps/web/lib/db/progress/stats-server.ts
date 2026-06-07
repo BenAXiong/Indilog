@@ -159,6 +159,19 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     })
   }
 
+  const profileData = profileRes.data
+  const prefs       = (profileData?.preferences as Record<string, unknown>) ?? {}
+
+  // Use client-set srs_study_date cookie as source of truth
+  const cookieStore = await cookies()
+  const cookieDate  = cookieStore.get('srs_study_date')?.value
+  const resetHour   = (prefs.reset_hour as number) ?? 4
+  const today       = cookieDate ?? (() => {
+    const d = new Date()
+    if (d.getHours() < resetHour) d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+  })()
+
   // Streak — based on reviewed_count (not captured)
   const reviewSet = new Set(
     dailyRows.filter(r => (r.reviewed_count ?? 0) > 0).map(r => r.date)
@@ -208,20 +221,6 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     }
   }
 
-  const profileData = profileRes.data
-  const prefs       = (profileData?.preferences as Record<string, unknown>) ?? {}
-
-  // Use client-set srs_study_date cookie as source of truth (the client knows the local
-  // timezone; server runs in UTC and would compute a different date for UTC+N users).
-  // Falls back to UTC-based formula if the cookie is absent (e.g. first visit).
-  const cookieStore = await cookies()
-  const cookieDate  = cookieStore.get('srs_study_date')?.value
-  const resetHour   = (prefs.reset_hour as number) ?? 4
-  const today       = cookieDate ?? (() => {
-    const d = new Date()
-    if (d.getHours() < resetHour) d.setDate(d.getDate() - 1)
-    return d.toISOString().slice(0, 10)
-  })()
 
   const todayStats    = statsMap.get(today)
   const reviewedToday = todayStats?.reviewed ?? 0
