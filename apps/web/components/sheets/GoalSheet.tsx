@@ -547,12 +547,12 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,10,0.35)', zIndex: 70 }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
+        top: 'env(safe-area-inset-top)',
         background: T.paper, borderRadius: '20px 20px 0 0',
         border: `1px solid ${T.line}`, zIndex: 71,
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 -8px 32px rgba(40,20,10,0.12)',
         paddingBottom: 'env(safe-area-inset-bottom)',
-        height: '95vh',
       }}>
         {/* Handle */}
         <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
