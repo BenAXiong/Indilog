@@ -265,6 +265,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const graduatedRef       = useRef(new Set<string>())
   const priorityToastRef   = useRef(false)
   const sessionEndFiredRef = useRef(false)
+  const pendingRef         = useRef(false)   // blocks re-entrant actions during async operations
   const audioRef           = useRef<HTMLAudioElement | null>(null)
   const swipeStart         = useRef({ x: 0, y: 0 })
   const onExitRef          = useRef(onExit)
@@ -280,7 +281,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function setShowAllLangs(v: boolean)   { setShowAllLangsRaw(v) }
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
-  useEffect(() => { audioRef.current?.pause(); setShowFlagPicker(false) }, [qIdx])
+  useEffect(() => { audioRef.current?.pause(); setShowFlagPicker(false); pendingRef.current = false }, [qIdx])
 
   // Session end
   useEffect(() => {
@@ -364,6 +365,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   // ── Actions ───────────────────────────────────────────────────────────────
 
   async function handleSuspend() {
+    if (pendingRef.current) return
+    pendingRef.current = true
     await suspendCard(card.id)
     setRevealed(false)
     // Replace the suspended card with the next overflow card (if any) to keep count stable
@@ -377,13 +380,16 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   }
 
   function handleExposureOK() {
-    // Requeue at back for the test pass, then advance — all exposures come before any tests
+    if (pendingRef.current) return
+    pendingRef.current = true
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
     setRevealed(false)
     setQIdx(qi => qi + 1)
   }
 
   async function handleGraduate(type: 'good' | 'easy') {
+    if (pendingRef.current) return
+    pendingRef.current = true
     await graduateLearnCard(card.id, type)
     graduatedRef.current.add(card.id)
     setRevealed(false)
@@ -391,15 +397,19 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   }
 
   function handleAgain() {
+    if (pendingRef.current) return
+    pendingRef.current = true
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
     setRevealed(false)
     setQIdx(qi => qi + 1)
   }
 
   function handleGood(currentGoodCount: number) {
+    if (pendingRef.current) return
     if (currentGoodCount >= 1) {
-      handleGraduate('good')
+      handleGraduate('good')  // handleGraduate sets the guard itself
     } else {
+      pendingRef.current = true
       setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 1 }])
       setRevealed(false)
       setQIdx(qi => qi + 1)
