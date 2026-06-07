@@ -369,22 +369,22 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     pendingRef.current = true
     await suspendCard(card.id)
     setRevealed(false)
-    // Replace suspended card from overflow; insert after the last remaining exposure entry
-    // so all exposures stay grouped before tests (appending to tail would interleave them).
-    setOverflow(prev => {
-      if (!prev.length) return prev
-      const [next, ...rest] = prev
+    // Replace suspended card from overflow; insert before test entries so all exposures
+    // stay grouped. Read overflow from render scope (safe — pendingRef blocks concurrent
+    // mutations). Avoid calling setQueue inside setOverflow: StrictMode invokes updaters
+    // twice, which would insert the replacement card twice.
+    if (overflow.length > 0) {
+      const [next, ...rest] = overflow
+      setOverflow(rest)
       setQueue(q => {
         const newEntry = { card: next, exposureDone: false, goodCount: 0 }
-        // Find rightmost exposure entry still ahead in the queue
         let insertAt = q.length
         for (let i = q.length - 1; i > qIdx; i--) {
           if (!q[i].exposureDone) { insertAt = i + 1; break }
         }
         return [...q.slice(0, insertAt), newEntry, ...q.slice(insertAt)]
       })
-      return rest
-    })
+    }
     setQIdx(qi => qi + 1)
   }
 
