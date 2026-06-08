@@ -123,6 +123,12 @@ function OptionsSheet({
     if (!showAllLangs && availLangs === null) listUserLanguages().then(setAvailLangs)
   }, [showAllLangs, availLangs])
 
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
   function handleToggleShowAll(v: boolean) {
     setShowAllLangs(v)
     localStorage.setItem('srs_show_all_langs', String(v))
