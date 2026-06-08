@@ -115,6 +115,12 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   }, [])
 
   useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  useEffect(() => {
     function onOutside(e: MouseEvent) {
       if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node))
         setAccountMenuOpen(false)
