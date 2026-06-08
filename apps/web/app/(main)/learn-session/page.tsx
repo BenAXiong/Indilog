@@ -110,15 +110,17 @@ function renderHighlighted(sentence: string, target: string) {
 function LearnOptionsSheet({
   reviewMode, setReviewMode,
   shuffleTests, setShuffleTests,
+  shuffleExposure, setShuffleExposure,
   showAllLangs, setShowAllLangs,
   excludedLangs, setExcludedLangs,
   onReloadNeeded,
   onClose,
 }: {
-  reviewMode:   string;  setReviewMode:   (v: string) => void
-  shuffleTests:  boolean; setShuffleTests:  (v: boolean) => void
-  showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
-  excludedLangs: string[]; setExcludedLangs: (v: string[]) => void
+  reviewMode:      string;   setReviewMode:      (v: string) => void
+  shuffleTests:    boolean;  setShuffleTests:    (v: boolean) => void
+  shuffleExposure: boolean;  setShuffleExposure: (v: boolean) => void
+  showAllLangs:    boolean;  setShowAllLangs:    (v: boolean) => void
+  excludedLangs:   string[]; setExcludedLangs:   (v: string[]) => void
   onReloadNeeded: () => void
   onClose: () => void
 }) {
@@ -186,12 +188,29 @@ function LearnOptionsSheet({
               <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>Shuffle tests</div>
               <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Randomize test phase order</div>
             </div>
-            <button onClick={() => { const v = !shuffleTests; setShuffleTests(v); localStorage.setItem('srs_shuffle_tests', String(v)); onReloadNeeded() }} aria-label="Toggle shuffle tests" style={{
+            <button onClick={() => { const v = !shuffleTests; setShuffleTests(v); localStorage.setItem('srs_shuffle_tests', String(v)) }} aria-label="Toggle shuffle tests" style={{
               width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
               background: shuffleTests ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
             }}>
               <span style={{
                 position: 'absolute', top: 3, left: shuffleTests ? 21 : 3, width: 20, height: 20,
+                borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
+              }} />
+            </button>
+          </div>
+
+          {/* Shuffle exposure */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>Shuffle exposure</div>
+              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Randomize exposure phase order</div>
+            </div>
+            <button onClick={() => { const v = !shuffleExposure; setShuffleExposure(v); localStorage.setItem('srs_shuffle_exposure', String(v)); onReloadNeeded() }} aria-label="Toggle shuffle exposure" style={{
+              width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
+              background: shuffleExposure ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
+            }}>
+              <span style={{
+                position: 'absolute', top: 3, left: shuffleExposure ? 21 : 3, width: 20, height: 20,
                 borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
               }} />
             </button>
@@ -260,14 +279,16 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   onReloadNeeded: () => void
 }) {
   const [queue, setQueue] = useState<LearnEntry[]>(() => {
-    const shuffle = localStorage.getItem('srs_shuffle_tests') !== 'false'
-    const ordered = shuffle ? [...cards].sort(() => Math.random() - 0.5) : cards
+    const shuffleExp = localStorage.getItem('srs_shuffle_exposure') === 'true'
+    const ordered = shuffleExp ? [...cards].sort(() => Math.random() - 0.5) : cards
     return ordered.map(c => ({ card: c, exposureDone: false, goodCount: 0 }))
   })
-  const [qIdx,          setQIdx]          = useState(0)
-  const [revealed,      setRevealed]      = useState(false)
-  const [reviewMode,    setReviewModeRaw] = useState('forward')
-  const [shuffleTests,  setShuffleTestsRaw] = useState(() => localStorage.getItem('srs_shuffle_tests') !== 'false')
+  const [qIdx,           setQIdx]           = useState(0)
+  const [revealed,       setRevealed]       = useState(false)
+  const [reviewMode,     setReviewModeRaw]  = useState('forward')
+  const [shuffleTests,   setShuffleTestsRaw]   = useState(() => localStorage.getItem('srs_shuffle_tests') !== 'false')
+  const [shuffleExposure, setShuffleExposureRaw] = useState(() => localStorage.getItem('srs_shuffle_exposure') === 'true')
+  const testShuffledRef = useRef(false)
   const [showOptions,   setShowOptions]   = useState(false)
   const [showAllLangs,  setShowAllLangsRaw]  = useState(true)
   const [excludedLangs, setExcludedLangsRaw] = useState<string[]>([])
@@ -301,6 +322,24 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
   useEffect(() => { audioRef.current?.pause(); setShowFlagPicker(false); pendingRef.current = false }, [qIdx])
+
+  // Shuffle test-phase entries once, when the last exposure entry has been processed
+  useEffect(() => {
+    if (testShuffledRef.current || !shuffleTests) return
+    const entry = queue[qIdx]
+    if (!entry?.exposureDone) return
+    if (queue.slice(qIdx).some(e => !e.exposureDone)) return
+    testShuffledRef.current = true
+    setQueue(q => {
+      const before = q.slice(0, qIdx)
+      const rest   = [...q.slice(qIdx)]
+      for (let i = rest.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[rest[i], rest[j]] = [rest[j], rest[i]]
+      }
+      return [...before, ...rest]
+    })
+  }, [qIdx, queue, shuffleTests]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Session end
   useEffect(() => {
@@ -777,10 +816,11 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       {/* Options sheet */}
       {showOptions && (
         <LearnOptionsSheet
-          reviewMode={reviewMode}       setReviewMode={setReviewMode}
-          shuffleTests={shuffleTests}   setShuffleTests={setShuffleTestsRaw}
-          showAllLangs={showAllLangs}   setShowAllLangs={setShowAllLangs}
-          excludedLangs={excludedLangs} setExcludedLangs={setExcludedLangs}
+          reviewMode={reviewMode}             setReviewMode={setReviewMode}
+          shuffleTests={shuffleTests}         setShuffleTests={setShuffleTestsRaw}
+          shuffleExposure={shuffleExposure}   setShuffleExposure={setShuffleExposureRaw}
+          showAllLangs={showAllLangs}         setShowAllLangs={setShowAllLangs}
+          excludedLangs={excludedLangs}       setExcludedLangs={setExcludedLangs}
           onReloadNeeded={onReloadNeeded}
           onClose={() => setShowOptions(false)}
         />
