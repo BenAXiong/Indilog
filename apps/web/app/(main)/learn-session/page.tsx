@@ -378,7 +378,10 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       setOverflow(rest)
       setQueue(q => {
         const newEntry = { card: next, exposureDone: false, goodCount: 0 }
-        let insertAt = q.length
+        // Find last remaining exposure entry ahead of current position.
+        // If none (we're in test phase), insert immediately next so the
+        // replacement is exposed before resuming tests — not appended to tail.
+        let insertAt = qIdx + 1
         for (let i = q.length - 1; i > qIdx; i--) {
           if (!q[i].exposureDone) { insertAt = i + 1; break }
         }
