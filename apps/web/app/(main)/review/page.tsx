@@ -177,11 +177,8 @@ function OptionsSheet({
         </div>
         <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
           {/* Review mode selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>Review mode</div>
-              <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 1 }}>How cards are presented</div>
-            </div>
+          <div style={{ padding: '12px 16px 10px', borderBottom: `1px solid ${T.lineSoft}` }}>
+            <div style={{ fontSize: 14, color: T.ink, fontWeight: 500, marginBottom: 8 }}>Review mode</div>
             <div style={{ display: 'flex', gap: 4 }}>
               {(['forward', 'reverse', 'audio', 'sts'] as const).map(m => (
                 <button key={m} onClick={() => setReviewMode(m)} style={{
