@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-09 | FIX | Learn session: overflow replacement in test phase inserts at qIdx+1 (immediately next) instead of queue tail — prevents seed appearing after tests when suspension happens with no remaining exposures |
 | 2026-06-08 02:40 | FIX | Learn session: overflow replacement card inserted before test entries, not at tail — prevents exposure cards appearing mid-test-phase after a suspend |
 | 2026-06-08 02:35 | FIX | SRS date calculations: switch from toISOString() (UTC) to localDateStr() (local) throughout — getStudyDate, stats-client 2-week range, simulation daysLeft; wrong dates for UTC+8 users crossing midnight |
 | 2026-06-08 02:21 | FIX | Review session: pendingRef gate blocks re-entrant action handlers (rapid keypresses / lag could fire submit/defer/suspend/undo multiple times, advancing qIdx beyond queue) |
