@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 export type SimulationResult = {
   learnTarget: number
   reviewTarget: number
+  tomorrowLearnTarget: number | null  // null when not from simulation
   /** true when targets come from the simulation, false when using manual caps */
   fromSimulation: boolean
 }
@@ -20,7 +21,7 @@ export async function computeSimulation(
     .eq('in_simulation', true)
 
   if (!simDecks?.length) {
-    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, fromSimulation: false }
+    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false }
   }
 
   const collectionIds = simDecks.map(d => d.collection_id as string)
@@ -72,14 +73,18 @@ export async function computeSimulation(
   }
 
   if (minDaysRemaining === Infinity) {
-    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, fromSimulation: false }
+    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false }
   }
 
   const learnTarget = Math.max(1, Math.ceil(totalNewCards / minDaysRemaining))
-  // Use only actually-due reviews from sim decks as today's review target.
-  // The `+ learnTarget * 2` inflation was wrong: newly-graduated cards only
-  // generate reviews from tomorrow onwards, not today.
-  const reviewTarget = Math.max(prefs.review_cap as number ?? 100, existingReviewDue)
+  const reviewTarget = Math.max(prefs.review_cap ?? 100, existingReviewDue)
 
-  return { learnTarget, reviewTarget, fromSimulation: true }
+  // Tomorrow: one day consumed, learnTarget fewer new cards remaining
+  const tomorrowNewCards    = Math.max(0, totalNewCards - learnTarget)
+  const tomorrowDaysLeft    = Math.max(1, minDaysRemaining - 1)
+  const tomorrowLearnTarget = minDaysRemaining > 1
+    ? Math.max(1, Math.ceil(tomorrowNewCards / tomorrowDaysLeft))
+    : 0
+
+  return { learnTarget, reviewTarget, tomorrowLearnTarget, fromSimulation: true }
 }

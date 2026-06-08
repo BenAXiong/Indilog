@@ -21,8 +21,10 @@ export type DashboardStats = {
   totalDue: number
   newCount: number          // repetitions===0, not suspended
   dueTomorrow: number
-  learnTarget: number       // from simulation or learn_cap pref
-  reviewTarget: number      // from simulation or review_cap pref
+  learnTarget: number       // frozen for today, from simulation or learn_cap pref
+  reviewTarget: number      // frozen for today, from simulation or review_cap pref
+  tomorrowLearnTarget: number | null
+  tomorrowReviewTarget: number | null
   simulationActive: boolean
   heatmap: number[][]       // [week 0..15][day 0..6], level 0-4, week 0 = oldest
   monthLabels: (string | null)[]  // label per week column, null if mid-month
@@ -44,7 +46,7 @@ const EMPTY: DashboardStats = {
   streak: 0, chain: new Array(7).fill(false) as boolean[],
   reviewedToday: 0, learnedToday: 0, dailyGoal: 20,
   dueCount: 0, totalDue: 0, newCount: 0, dueTomorrow: 0,
-  learnTarget: 10, reviewTarget: 100, simulationActive: false,
+  learnTarget: 10, reviewTarget: 100, tomorrowLearnTarget: null, tomorrowReviewTarget: null, simulationActive: false,
   heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
   monthLabels: new Array(16).fill(null) as (string | null)[],
   mastered: 0, active: 0, thisWeek: 0,
@@ -87,7 +89,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   ] = await Promise.all([
     supabase
       .from('ind_daily_stats')
-      .select('date, reviewed_count, captured_count, learned_count')
+      .select('date, reviewed_count, captured_count, learned_count, learn_target, review_target')
       .eq('user_id', user.id)
       .gte('date', fromDate)
       .order('date', { ascending: false }),
@@ -234,8 +236,21 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     review_cap: reviewCap,
   })
 
+  // Frozen targets: use stored value if already set for today, otherwise use sim output.
+  // Fire-and-forget freeze so subsequent loads see the same target even after sessions change counts.
+  const frozenLearnTarget  = (todayStats as Record<string, unknown> | undefined)?.learn_target  as number | null ?? null
+  const frozenReviewTarget = (todayStats as Record<string, unknown> | undefined)?.review_target as number | null ?? null
+  const learnTarget  = frozenLearnTarget  ?? sim.learnTarget
+  const reviewTarget = frozenReviewTarget ?? sim.reviewTarget
+  if (frozenLearnTarget === null) {
+    supabase.rpc('freeze_daily_targets', {
+      p_user_id: user.id, p_date: today,
+      p_learn_target: learnTarget, p_review_target: reviewTarget,
+    }).then(() => {})
+  }
+
   // Cards left today: slots remaining in the review target, bounded by what's actually due
-  const dueCount = Math.min(dueRes.count ?? 0, Math.max(0, sim.reviewTarget - reviewedToday))
+  const dueCount = Math.min(dueRes.count ?? 0, Math.max(0, reviewTarget - reviewedToday))
 
   return {
     streak,
@@ -247,8 +262,10 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     totalDue:       dueRes.count      ?? 0,
     newCount:       newCountRes.count ?? 0,
     dueTomorrow:    dueTomorrowRes.count ?? 0,
-    learnTarget:    sim.learnTarget,
-    reviewTarget:   sim.reviewTarget,
+    learnTarget,
+    reviewTarget,
+    tomorrowLearnTarget:  sim.tomorrowLearnTarget,
+    tomorrowReviewTarget: sim.fromSimulation ? sim.reviewTarget : null,
     simulationActive: sim.fromSimulation,
     heatmap,
     monthLabels,
