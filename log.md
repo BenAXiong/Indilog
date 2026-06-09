@@ -3,6 +3,7 @@
 | Timestamp | Type | Description |
 |-----------|------|-------------|
 | 2026-06-09 12:04 | FIX | DualRingCard: move forecast info icon to top-left absolutely positioned (no layout impact), remove "tomorrow" text label |
+| 2026-06-09 12:30 | FEATURE | Settings Study tab: remove "Daily cap", add "Cards per session" (learn_cap ±1), add "Cards per Review session" (review_cap repurposed, pen/edit, smart default All/<30·30/30–89·50/90+, max 999); remove Daily cap from review OptionsSheet |
 | 2026-06-08 12:30 | FIX | Learn session: separate shuffle exposure (default OFF, shuffles initial queue, needs reload) and shuffle tests (default ON, Fisher-Yates shuffles test entries when exposure phase ends, no reload) |
 | 2026-06-08 12:12 | FEATURE | OptionsSheet (Learn + Review): mode buttons stacked below label, description removed. Learn: Shuffle tests toggle (2nd section, default ON) — randomizes initial session queue; persists to srs_shuffle_tests |
 | 2026-06-08 11:32 | FIX | Learn session: overflow replacement in test phase inserts at qIdx+1 (immediately next) instead of queue tail — prevents seed appearing after tests when suspension happens with no remaining exposures |
