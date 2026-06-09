@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon, Card } from '@/components/ui'
@@ -111,7 +111,7 @@ export default function DualRingCard({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 600,
             }}>
-              Learn {learnMoreN} more
+              Learn {learnMoreN} more?
             </Link>
           ) : (
             <div style={{
