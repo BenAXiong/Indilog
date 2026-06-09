@@ -45,7 +45,8 @@ export default function DualRingCard({
 
   const learnPct  = learnTarget  > 0 ? Math.min(learnedToday  / learnTarget,  1) : 0
   const reviewPct = reviewTarget > 0 ? Math.min(reviewedToday / reviewTarget, 1) : 0
-  const learnN = Math.min(newCount, Math.max(0, learnTarget - learnedToday))
+  const learnN     = Math.min(newCount, Math.max(0, learnTarget - learnedToday))
+  const learnMoreN = Math.min(newCount, learnTarget)
 
   return (
     <Card raised pad={16} style={{ position: 'relative' }}>
@@ -110,7 +111,7 @@ export default function DualRingCard({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 600,
             }}>
-              Learn more?
+              Learn {learnMoreN} more
             </Link>
           ) : (
             <div style={{
