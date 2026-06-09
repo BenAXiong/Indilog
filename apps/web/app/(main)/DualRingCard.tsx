@@ -46,45 +46,42 @@ export default function DualRingCard({
   const learnN = Math.min(newCount, Math.max(0, learnTarget - learnedToday))
 
   return (
-    <Card raised pad={16}>
-      {/* Header row with forecast icon */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2, position: 'relative' }}>
-        {(tomorrowLearnTarget !== null || tomorrowReviewTarget !== null) && (
-          <>
-            <button
-              onClick={() => setShowForecast(v => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0 2px 8px', color: T.inkMute, display: 'flex', alignItems: 'center', gap: 3 }}
-            >
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em' }}>tomorrow</span>
-              <Icon name="info" size={13} color={T.inkMute} />
-            </button>
-            {showForecast && (
-              <div style={{
-                position: 'absolute', top: '100%', right: 0, zIndex: 10,
-                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                borderRadius: 10, padding: '10px 14px', minWidth: 160,
-                boxShadow: '0 4px 16px rgba(43,34,26,0.12)',
-              }}>
-                <div style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.07em', color: T.inkMute, marginBottom: 7 }}>
-                  Tomorrow&apos;s forecast
-                </div>
-                {tomorrowLearnTarget !== null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
-                    <span style={{ fontSize: 12.5, color: T.inkSoft }}>Learn</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: T.sage }}>{tomorrowLearnTarget} new</span>
-                  </div>
-                )}
-                {tomorrowReviewTarget !== null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-                    <span style={{ fontSize: 12.5, color: T.inkSoft }}>Review</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: T.crimson }}>~{tomorrowReviewTarget} due</span>
-                  </div>
-                )}
+    <Card raised pad={16} style={{ position: 'relative' }}>
+      {/* Forecast icon — absolutely positioned top-left, no layout impact */}
+      {(tomorrowLearnTarget !== null || tomorrowReviewTarget !== null) && (
+        <>
+          <button
+            onClick={() => setShowForecast(v => !v)}
+            style={{ position: 'absolute', top: 8, left: 10, zIndex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0 }}
+          >
+            <Icon name="info" size={13} color={T.inkMute} />
+          </button>
+          {showForecast && (
+            <div style={{
+              position: 'absolute', top: 30, left: 10, zIndex: 10,
+              background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+              borderRadius: 10, padding: '10px 14px', minWidth: 160,
+              boxShadow: '0 4px 16px rgba(43,34,26,0.12)',
+            }}>
+              <div style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.07em', color: T.inkMute, marginBottom: 7 }}>
+                Tomorrow&apos;s forecast
               </div>
-            )}
-          </>
-        )}
-      </div>
+              {tomorrowLearnTarget !== null && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+                  <span style={{ fontSize: 12.5, color: T.inkSoft }}>Learn</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: T.sage }}>{tomorrowLearnTarget} new</span>
+                </div>
+              )}
+              {tomorrowReviewTarget !== null && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+                  <span style={{ fontSize: 12.5, color: T.inkSoft }}>Review</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: T.crimson }}>~{tomorrowReviewTarget} due</span>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       <div style={{ display: 'flex', gap: 12 }}>
         {/* ── Learn half ── */}
