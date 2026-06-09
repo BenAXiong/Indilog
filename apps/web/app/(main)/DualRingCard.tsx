@@ -41,6 +41,8 @@ export default function DualRingCard({
 }) {
   const [showForecast, setShowForecast] = useState(false)
 
+  useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
+
   const learnPct  = learnTarget  > 0 ? Math.min(learnedToday  / learnTarget,  1) : 0
   const reviewPct = reviewTarget > 0 ? Math.min(reviewedToday / reviewTarget, 1) : 0
   const learnN = Math.min(newCount, Math.max(0, learnTarget - learnedToday))

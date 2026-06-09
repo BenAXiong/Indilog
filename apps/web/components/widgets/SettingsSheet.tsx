@@ -56,7 +56,10 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [autoLookup,       setAutoLookup]       = useState(true)
   const [dictSources,      setDictSources]      = useState<string[]>(['moe'])
   const [resetHour,        setResetHourRaw]     = useState(4)
-  const [dailyCap,         setDailyCapRaw]      = useState(100)
+  const [dailyCap,            setDailyCapRaw]         = useState(100)
+  const [learnSessionSize,    setLearnSessionSizeRaw]  = useState(10)
+  const [editingReviewSession,setEditingReviewSession] = useState(false)
+  const [reviewTargetHint,    setReviewTargetHint]     = useState(100)
   const [reviewMode,       setReviewModeRaw]    = useState('forward')
   const [translateDialect, setTranslateDialect] = useState('ami_Coas')
   const [showHardEasy,    setShowHardEasyRaw]   = useState(true)
@@ -76,7 +79,11 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
     const cap = parseInt(localStorage.getItem('srs_review_cap') ?? '100')
-    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
+    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(999, Math.max(5, cap)))
+    const lc = parseInt(localStorage.getItem('srs_learn_cap') ?? '10')
+    setLearnSessionSizeRaw(isNaN(lc) ? 10 : Math.min(50, Math.max(1, lc)))
+    const rt = parseInt(localStorage.getItem('srs_review_target') ?? '100')
+    setReviewTargetHint(isNaN(rt) ? 100 : rt)
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setTranslateDialect(localStorage.getItem('translate_ami_dialect') ?? 'ami_Coas')
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
@@ -98,7 +105,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
           if (!data) return
           if (data.ui_locale) setLocale(data.ui_locale)
           const p = { ...DEFAULT_PREFERENCES, ...(data.preferences ?? {}) } as UserPreferences
-          setDailyCapRaw(p.review_cap);        localStorage.setItem('srs_review_cap',     String(p.review_cap))
+          setDailyCapRaw(p.review_cap);          localStorage.setItem('srs_review_cap',     String(p.review_cap))
+          setLearnSessionSizeRaw(p.learn_cap); localStorage.setItem('srs_learn_cap',      String(p.learn_cap))
           setReviewModeRaw(p.review_mode);     localStorage.setItem('srs_review_mode',     p.review_mode)
           setResetHourRaw(p.reset_hour);       localStorage.setItem('srs_reset_hour',      String(p.reset_hour))
           setShowHardEasyRaw(p.show_hard_easy);localStorage.setItem('srs_show_hard_easy',  String(p.show_hard_easy))
@@ -174,10 +182,15 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     })
   }
 
+  function setLearnSessionSize(n: number) {
+    const v = Math.min(50, Math.max(1, n))
+    setLearnSessionSizeRaw(v); localStorage.setItem('srs_learn_cap', String(v)); saveToCloud({ learn_cap: v })
+  }
+
   function buildPrefs(patch: Partial<UserPreferences> = {}): UserPreferences {
     return {
       review_cap:        dailyCap,
-      learn_cap:         10,
+      learn_cap:         learnSessionSize,
       review_more_size:  null,
       review_mode:      reviewMode,
       reset_hour:       resetHour,
@@ -382,34 +395,64 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
               {/* Study subtab */}
               {studySubtab === 'study' && (
                 <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
-                  {/* Daily cap */}
+                  {/* Cards per session (learn) */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Daily cap</div>
-                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Max reviews per day</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Cards per session</div>
+                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>New cards learned per Learn session</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {[{ delta: -10, disabled: dailyCap <= 1 }, { delta: 10, disabled: dailyCap >= 300 }].map(({ delta, disabled }, i) => (
+                      {[{ delta: -1, disabled: learnSessionSize <= 1 }, { delta: 1, disabled: learnSessionSize >= 50 }].map(({ delta, disabled }, i) => (
                         <button key={i} disabled={disabled}
-                          onClick={() => { const n = Math.min(300, Math.max(1,dailyCap + delta)); setDailyCapRaw(n); localStorage.setItem('srs_review_cap', String(n)); saveToCloud({ review_cap: n }) }}
+                          onClick={() => setLearnSessionSize(learnSessionSize + delta)}
                           style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
                           {delta < 0 ? '−' : '+'}
                         </button>
                       ))}
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={dailyCap}
-                        onChange={e => {
-                          const n = parseInt(e.target.value.replace(/\D/g, ''))
-                          if (!isNaN(n)) { const c = Math.min(300, n); setDailyCapRaw(c); if (c >= 1) { localStorage.setItem('srs_review_cap', String(c)); saveToCloud({ review_cap: c }) } }
-                        }}
-                        onBlur={() => { const c = Math.min(300, Math.max(1,dailyCap)); setDailyCapRaw(c); localStorage.setItem('srs_review_cap', String(c)); saveToCloud({ review_cap: c }) }}
-                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                        style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, width: 48, textAlign: 'center', background: T.paper, border: `1px solid ${T.lineSoft}`, borderRadius: 7, padding: '3px 4px', outline: 'none' }}
-                      />
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{learnSessionSize}</span>
                     </div>
                   </div>
+                  {/* Cards per Review session */}
+                  {(() => {
+                    const smartDefault = reviewTargetHint < 30 ? 999 : reviewTargetHint < 90 ? 30 : 50
+                    const displayVal   = dailyCap >= 999 ? 'All' : String(dailyCap)
+                    const smartLabel   = smartDefault >= 999 ? 'All' : String(smartDefault)
+                    function saveReviewSession(n: number) {
+                      const v = Math.min(999, Math.max(5, Math.round(n / 5) * 5))
+                      setDailyCapRaw(v); localStorage.setItem('srs_review_cap', String(v)); saveToCloud({ review_cap: v })
+                    }
+                    return (
+                      <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Cards per Review session</div>
+                            {editingReviewSession && (
+                              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>Recommended: {smartLabel}</div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            {editingReviewSession ? (
+                              <>
+                                <button disabled={dailyCap <= 5} onClick={() => saveReviewSession(dailyCap - 5)}
+                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: dailyCap <= 5 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: dailyCap <= 5 ? 0.35 : 1 }}>−</button>
+                                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>{displayVal}</span>
+                                <button disabled={dailyCap >= 999} onClick={() => saveReviewSession(dailyCap + 5)}
+                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: dailyCap >= 999 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: dailyCap >= 999 ? 0.35 : 1 }}>+</button>
+                              </>
+                            ) : (
+                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>
+                                {displayVal}
+                              </span>
+                            )}
+                            <button onClick={() => setEditingReviewSession(v => !v)}
+                              style={{ width: 26, height: 26, borderRadius: 7, background: editingReviewSession ? T.paperHi : 'none', border: `1px solid ${editingReviewSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkFaint }}>
+                              <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
                   {/* Learning passes */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
                     <div style={{ flex: 1 }}>

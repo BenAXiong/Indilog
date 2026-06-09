@@ -201,31 +201,6 @@ function OptionsSheet({
           <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
           <Toggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
 
-          {/* Daily cap stepper */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>Daily cap</div>
-              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Max cards reviewed per day</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <button onClick={() => setDailyCap(dailyCap - 10)} disabled={dailyCap <= 1} style={{
-                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
-                background: T.paperHi, color: T.inkSoft, cursor: dailyCap <= 1 ? 'default' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 300, opacity: dailyCap <= 1 ? 0.35 : 1,
-              }}>−</button>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>
-                {dailyCap}
-              </span>
-              <button onClick={() => setDailyCap(dailyCap + 10)} disabled={dailyCap >= 300} style={{
-                width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`,
-                background: T.paperHi, color: T.inkSoft, cursor: dailyCap >= 300 ? 'default' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 300, opacity: dailyCap >= 300 ? 0.35 : 1,
-              }}>+</button>
-            </div>
-          </div>
-
           <div style={{ padding: '14px 16px' }}>
             <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
               ← Again · → Good · ↑ Easy · ↓ Suspend
@@ -374,7 +349,7 @@ function ReviewSession({
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)); patchPreferences({ show_hard_easy: v }) }
   function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons',   String(v)); patchPreferences({ show_buttons: v }) }
   function setDailyCap(v: number) {
-    const n = Math.min(300, Math.max(1, v))
+    const n = Math.min(999, Math.max(5, v))
     setDailyCapRaw(n); localStorage.setItem('srs_review_cap', String(n)); patchPreferences({ review_cap: n })
   }
   function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v); patchPreferences({ review_mode: v }) }
