@@ -16,7 +16,7 @@ import type { User } from '@supabase/supabase-js'
 // ── Settings sheet ────────────────────────────────────────────────────────────
 
 export type Tab = 'general' | 'study' | 'capture' | 'dict' | 'translate'
-type StudySubtab = 'study' | 'review'
+type StudySubtab = 'size' | 'ui'
 
 const TABS: { id: Tab; icon: 'home' | 'learn' | 'capture' | 'translate' | 'dict'; label: string }[] = [
   { id: 'general',   icon: 'home',      label: 'General'   },
@@ -45,7 +45,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const { lang, dialect, dialectLabel, setLang, setDialect } = useLang()
 
   const [tab,            setTab]            = useState<Tab>(initialTab)
-  const [studySubtab,    setStudySubtab]    = useState<StudySubtab>('study')
+  const [studySubtab,    setStudySubtab]    = useState<StudySubtab>('size')
   const [user,           setUser]           = useState<User | null>(null)
   const [userId,         setUserId]         = useState<string | null>(null)
   const [locale,         setLocale]         = useState('en')
@@ -60,6 +60,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [learnSessionSize,    setLearnSessionSizeRaw]  = useState(10)
   const [editingLearnSession,  setEditingLearnSession]  = useState(false)
   const [editingReviewSession, setEditingReviewSession] = useState(false)
+  const [sizeInfoOpen,         setSizeInfoOpen]         = useState(false)
   const [learnTargetHint,      setLearnTargetHint]      = useState<number | null>(null)
   const [simActiveHint,        setSimActiveHint]        = useState(false)
   const [reviewTargetHint,    setReviewTargetHint]     = useState(100)
@@ -160,7 +161,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   }
 
   useEffect(() => {
-    if (tab === 'study' && studySubtab === 'review' && !showAllLangs && availLangs === null)
+    if (tab === 'study' && studySubtab === 'ui' && !showAllLangs && availLangs === null)
       listUserLanguages().then(setAvailLangs)
   }, [tab, studySubtab, showAllLangs, availLangs])
 
@@ -243,7 +244,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
             Settings
             <span style={{ color: T.inkMute, fontWeight: 400 }}>
               {' · '}{TABS.find(t => t.id === tab)?.label ?? ''}
-              {tab === 'study' ? ` · ${studySubtab === 'study' ? 'Study' : 'Review'}` : ''}
+              {tab === 'study' ? ` · ${studySubtab === 'size' ? 'Session size' : 'Session UI'}` : ''}
             </span>
           </span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: T.inkSoft }}>
@@ -377,93 +378,122 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
             <>
               {/* Subtab segmented control */}
               <div style={{ display: 'flex', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 11, padding: 3, gap: 3 }}>
-                {(['study', 'review'] as const).map(s => (
-                  <button key={s} onClick={() => setStudySubtab(s)} style={{
+                {([{ id: 'size', label: 'Session size' }, { id: 'ui', label: 'Session UI' }] as const).map(s => (
+                  <button key={s.id} onClick={() => setStudySubtab(s.id)} style={{
                     flex: 1, padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
-                    background: studySubtab === s ? T.paper : 'transparent',
-                    border: `1px solid ${studySubtab === s ? T.lineSoft : 'transparent'}`,
-                    boxShadow: studySubtab === s ? '0 1px 2px rgba(0,0,0,0.07)' : 'none',
-                    color: studySubtab === s ? T.ink : T.inkMute,
-                    fontSize: 13, fontWeight: studySubtab === s ? 600 : 400,
+                    background: studySubtab === s.id ? T.paper : 'transparent',
+                    border: `1px solid ${studySubtab === s.id ? T.lineSoft : 'transparent'}`,
+                    boxShadow: studySubtab === s.id ? '0 1px 2px rgba(0,0,0,0.07)' : 'none',
+                    color: studySubtab === s.id ? T.ink : T.inkMute,
+                    fontSize: 13, fontWeight: studySubtab === s.id ? 600 : 400,
                     transition: 'all .15s',
                   }}>
-                    {s === 'study' ? 'Study' : 'Review'}
+                    {s.label}
                   </button>
                 ))}
               </div>
 
-              {/* Study subtab */}
-              {studySubtab === 'study' && (
+              {/* Session size subtab */}
+              {studySubtab === 'size' && (
                 <>
-                  {/* Cards in each session label */}
-                  <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Cards in each session
+                  {/* Label row: Cards in each session + reset + info */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1 }}>
+                      Cards in each session
+                    </span>
+                    {/* Reset to defaults */}
+                    <button
+                      onClick={() => {
+                        setLearnSessionSize(10)
+                        const v = 100; setDailyCapRaw(v); localStorage.setItem('srs_review_cap', String(v)); saveToCloud({ review_cap: v })
+                      }}
+                      title="Reset to defaults"
+                      style={{ width: 26, height: 26, borderRadius: 7, background: 'none', border: `1px solid transparent`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Icon name="rotate-ccw" size={13} strokeWidth={1.8} color={T.inkFaint} />
+                    </button>
+                    {/* Info toggle */}
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={() => setSizeInfoOpen(v => !v)}
+                        style={{ width: 26, height: 26, borderRadius: 7, background: sizeInfoOpen ? T.paperHi : 'none', border: `1px solid ${sizeInfoOpen ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Icon name="info" size={13} strokeWidth={1.8} color={sizeInfoOpen ? T.ink : T.inkFaint} />
+                      </button>
+                      {sizeInfoOpen && (
+                        <div style={{
+                          position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 20,
+                          background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                          borderRadius: 12, padding: '12px 14px', width: 240,
+                          boxShadow: '0 4px 16px rgba(43,34,26,0.12)',
+                        }}>
+                          <div style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.07em', color: T.inkMute, marginBottom: 10 }}>
+                            How defaults work
+                          </div>
+                          {[
+                            { label: 'No goal set', sub: 'App defaults — Learn 10, Review 100' },
+                            { label: 'Manual goal', sub: 'Your caps are the daily pace. What you set here = what gets scheduled.' },
+                            { label: 'Simulated goal', sub: 'Learn auto-calculated as daily new-card pace to hit goal by due date. Review auto-calculated as projected daily due count. Manual caps are overridden while simulation is active.' },
+                          ].map((item, i) => (
+                            <div key={i} style={{ marginBottom: i < 2 ? 10 : 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: T.ink }}>{item.label}</div>
+                              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2, lineHeight: 1.45 }}>{item.sub}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Learn session */}
+                  {/* Learn + Review in one card */}
                   {(() => {
-                    const learnGoal = simActiveHint && learnTargetHint !== null ? learnTargetHint : learnSessionSize
-                    const goalMode  = simActiveHint ? 'calculated' : 'manual'
-                    return (
-                      <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Learn session</div>
-                            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
-                              Current {goalMode} goal: {learnGoal} cards/day
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                            {editingLearnSession ? (
-                              <>
-                                <button disabled={learnSessionSize <= 1} onClick={() => setLearnSessionSize(learnSessionSize - 1)}
-                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: learnSessionSize <= 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: learnSessionSize <= 1 ? 0.35 : 1 }}>−</button>
-                                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{learnSessionSize}</span>
-                                <button disabled={learnSessionSize >= 50} onClick={() => setLearnSessionSize(learnSessionSize + 1)}
-                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: learnSessionSize >= 50 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: learnSessionSize >= 50 ? 0.35 : 1 }}>+</button>
-                              </>
-                            ) : (
-                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{learnSessionSize}</span>
-                            )}
-                            <button onClick={() => setEditingLearnSession(v => !v)}
-                              style={{ width: 26, height: 26, borderRadius: 7, background: editingLearnSession ? T.paperHi : 'none', border: `1px solid ${editingLearnSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })()}
-
-                  {/* Review session */}
-                  {(() => {
+                    const learnGoal  = simActiveHint && learnTargetHint !== null ? learnTargetHint : learnSessionSize
                     const goalMode   = simActiveHint ? 'calculated' : 'manual'
                     const displayVal = dailyCap >= 999 ? 'All' : String(dailyCap)
                     function saveReviewSession(n: number) {
                       const v = Math.min(999, Math.max(5, Math.round(n / 5) * 5))
                       setDailyCapRaw(v); localStorage.setItem('srs_review_cap', String(v)); saveToCloud({ review_cap: v })
                     }
+                    const stepBtn = (label: string, disabled: boolean, onClick: () => void) => (
+                      <button disabled={disabled} onClick={onClick}
+                        style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
+                        {label}
+                      </button>
+                    )
                     return (
                       <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                        {/* Learn row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Learn session</div>
+                            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Current {goalMode} goal: {learnGoal} cards/day</div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            {editingLearnSession && (<>
+                              {stepBtn('−', learnSessionSize <= 1,  () => setLearnSessionSize(learnSessionSize - 1))}
+                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{learnSessionSize}</span>
+                              {stepBtn('+', learnSessionSize >= 50, () => setLearnSessionSize(learnSessionSize + 1))}
+                            </>)}
+                            {!editingLearnSession && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{learnSessionSize}</span>}
+                            <button onClick={() => setEditingLearnSession(v => !v)}
+                              style={{ width: 26, height: 26, borderRadius: 7, background: editingLearnSession ? T.paperHi : 'none', border: `1px solid ${editingLearnSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
+                            </button>
+                          </div>
+                        </div>
+                        {/* Review row */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Review session</div>
-                            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
-                              Current {goalMode} goal: {reviewTargetHint} cards/day
-                            </div>
+                            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Current {goalMode} goal: {reviewTargetHint} cards/day</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                            {editingReviewSession ? (
-                              <>
-                                <button disabled={dailyCap <= 5} onClick={() => saveReviewSession(dailyCap - 5)}
-                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: dailyCap <= 5 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: dailyCap <= 5 ? 0.35 : 1 }}>−</button>
-                                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>{displayVal}</span>
-                                <button disabled={dailyCap >= 999} onClick={() => saveReviewSession(dailyCap + 5)}
-                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: dailyCap >= 999 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: dailyCap >= 999 ? 0.35 : 1 }}>+</button>
-                              </>
-                            ) : (
-                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{displayVal}</span>
-                            )}
+                            {editingReviewSession && (<>
+                              {stepBtn('−', dailyCap <= 5,   () => saveReviewSession(dailyCap - 5))}
+                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>{displayVal}</span>
+                              {stepBtn('+', dailyCap >= 999, () => saveReviewSession(dailyCap + 5))}
+                            </>)}
+                            {!editingReviewSession && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{displayVal}</span>}
                             <button onClick={() => setEditingReviewSession(v => !v)}
                               style={{ width: 26, height: 26, borderRadius: 7, background: editingReviewSession ? T.paperHi : 'none', border: `1px solid ${editingReviewSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
@@ -490,8 +520,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                 </>
               )}
 
-              {/* Review subtab */}
-              {studySubtab === 'review' && (
+              {/* Session UI subtab */}
+              {studySubtab === 'ui' && (
                 <>
                   {/* Review mode */}
                   <div>
