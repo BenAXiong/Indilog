@@ -10,7 +10,7 @@ import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
-  rateCard, cardMeta, cardAudio,
+  rateCard, rateCardRelearn, cardMeta, cardAudio,
   suspendCard, setFlagColor, deferCard, undoRating,
   type FlashcardWithItem, type Rating, type ListDueOpts,
 } from '@/lib/db/srs/flashcards'
@@ -258,6 +258,7 @@ function OptionsSheet({
 
 type QueueEntry = {
   card: FlashcardWithItem
+  lapsedInterval?: number  // set when requeued after Again; triggers 50% recovery on re-rating
 }
 
 function renderHighlighted(sentence: string, target: string) {
@@ -432,10 +433,38 @@ function ReviewSession({
   async function submit(rating: Rating) {
     if (pendingRef.current) return
     pendingRef.current = true
+
+    const isLapsed = entry.lapsedInterval !== undefined
+
+    if (rating === 'again' && !isLapsed) {
+      // First failure: requeue +10, no DB write — interval saved for 50% recovery on re-rate
+      const lapsedInterval = card.interval_days ?? 1
+      setQueue(q => {
+        const insertAt = Math.min(qIdx + 11, q.length)
+        const requeued: QueueEntry = { card, lapsedInterval }
+        return [...q.slice(0, insertAt), requeued, ...q.slice(insertAt)]
+      })
+      lastRatedRef.current = null
+      setCanUndo(false)
+      setRevealed(false)
+      setShowFlagPicker(false)
+      setQIdx(qi => qi + 1)
+      return
+    }
+
     lastRatedRef.current = null
     setCanUndo(false)
     const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
-    await rateCard(card.id, rating, state, effectiveMode)
+
+    if (isLapsed && rating !== 'again') {
+      // Requeued card rated Good/Easy/Hard: 50% interval recovery (Hard mapped to Good)
+      const relRating = (rating === 'hard' ? 'good' : rating) as 'good' | 'easy'
+      await rateCardRelearn(card.id, relRating, state, entry.lapsedInterval!, effectiveMode)
+    } else {
+      // Normal rating, or second Again on already-lapsed card (full SM-2 penalty, no further requeue)
+      await rateCard(card.id, rating, state, effectiveMode)
+    }
+
     completedRef.current.add(card.id)
     lastRatedRef.current = { cardId: card.id, prevState }
     setCanUndo(true)

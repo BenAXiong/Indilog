@@ -13,6 +13,7 @@ Implemented in `lib/db/srs/schedule.ts`. Uses SM-2 base + Anki Hard behavior + f
 | Rating | Interval | Ease delta | Reps |
 |---|---|---|---|
 | Again | 1 day | −0.20 | reset to 0 |
+| Again (lapse recovery) | 50% of pre-lapse interval (min 1d) | −0.20 | unchanged |
 | Hard  | max(1, prev × 1.2) | −0.15 | unchanged |
 | Good  | prev × ease (min 1 day on rep 0) | **+0.02** | +1 |
 | Easy  | prev × ease × 1.3 | +0.15 | +1 |
@@ -25,6 +26,10 @@ Min ease factor: 1.3. Initial ease: 2.5.
 
 **Anki Hard behavior:** Hard uses `prev × 1.2` rather than Anki's full SM-2 Hard (which resets interval). Keeps progress while penalizing ease. Hard is not shown by default (toggle in OptionsSheet) because it confuses new users.
 
-**Relearn burst (mature lapse):** Cards with `interval_days ≥ 7` that get Again enter a relearn burst (same learning-steps depth). "Got it!" = 50% interval recovery via `nextRelearn()` + `rateCardRelearn()`. Cap: 3 full restarts, then forced `rateCard('again')` full reset.
+**Review Again — requeue + 50% recovery (all reviewed cards):** Any card rated Again during a Review session is immediately requeued +10 positions in the current session (or at the back if fewer than 10 cards remain). No DB write on the first failure. When the requeued card is re-rated: Good/Easy → `rateCardRelearn` writes 50% of the pre-lapse interval (min 1d), repetitions unchanged; Hard → treated as Good for recovery purposes; Again again → `rateCard('again')` full SM-2 lapse penalty, no further requeue. Rationale: preserves earned interval on near-misses, avoids resetting genuinely known cards to day 1, zombie cards handled by future leech flagging.
+
+**Time-based requeue (deferred):** A time-delay requeue (e.g. 10 min) would survive app close and long card dwell time (dictionary lookup etc). Deferred — adds scheduling complexity not warranted yet. Revisit when leech/lapse analytics are in place.
+
+**Relearn burst spec (original, now superseded for young cards):** The original spec described a "relearn burst" for mature cards (interval ≥ 7d) with a 3-restart cap. Superseded by the simpler uniform requeue above. `nextRelearn()` and `rateCardRelearn()` remain in use for the 50% recovery write.
 
 **Why not FSRS:** Better scheduling quality via Bayesian optimization of forgetting curve. Deferred because it requires meaningful production data (weeks of real reviews) to tune parameters. Revisit after 4+ weeks on prod.
