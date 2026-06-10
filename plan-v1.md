@@ -283,6 +283,7 @@ These are design questions that need real-world data or further thought before d
 | Question | ADR | Status |
 |---|---|---|
 | Remove Easy from test pass? (exposure-Easy already covers "instant recognise"; test-pass Easy may be overconfident) | DEC-M5-01 | needs session data |
+| Again in Review preserves `repetitions` (no reset to 0) — departs from SM-2 where Again resets the streak. Current rationale: "don't erase reps", lapse data captured via `ind_reviews.phase`. Question: does this over-inflate maturity, under-penalise lapses, and drift intervals upward on weak cards? Needs lapse-rate data before deciding. | DEC-SRS03 | needs session data |
 
 ---
 
