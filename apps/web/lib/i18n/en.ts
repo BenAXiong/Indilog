@@ -80,8 +80,6 @@ const en = {
   'settings.preferences': 'Preferences',
   'settings.locale':      'Interface language',
   'settings.localeSoon':  '· soon',
-  'settings.dailyGoal':   'Daily review goal',
-  'settings.goalCards':   'cards',
   'settings.account':     'Account',
   'settings.export':      'Export notebook',
   'settings.about':       'About Indilog',

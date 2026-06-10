@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-10 23:13 | FIX | Review session: fix goalMet to use frozen reviewTarget (not daily_goal); fix counter to show graded/fixed-total (handledCount/cards.length); fix lapsed-card Hard stored as 'good' in ind_reviews; drop ind_profiles.daily_goal column and all dead code |
 | 2026-06-10 22:15 | FEATURE | Simulation learnTarget uses effectiveWindow = max(1, daysLeft - 21) — cards introduced within 21 days of deadline can't reach Rooted; updated simulation.ts, simulation-client.ts, loadLearnContext; ADR DEC-SRS10 updated |
 | 2026-06-10 17:10 | FEATURE | Settings Study subtab: merge L/R rows back into one touching card; rename subtabs to 'Session size' / 'Session UI'; add reset-to-defaults and info tooltip (explains no-goal/manual/simulated cases) next to section label |
 | 2026-06-10 16:50 | FEATURE | Settings Study subtab: remove 'Learning passes' (dead wire); redesign session rows under 'Cards in each session' label — Learn session + Review session each in own card, subtitle shows 'Current manual/calculated goal: N cards/day'; both rows use pen-toggle stepper; DualRingCard now writes srs_learn_target + srs_sim_active to localStorage |

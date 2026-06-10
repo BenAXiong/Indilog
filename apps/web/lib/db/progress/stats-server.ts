@@ -16,7 +16,6 @@ export type DashboardStats = {
   chain: boolean[]          // last 7 days: reviewed_count > 0
   reviewedToday: number
   learnedToday: number
-  dailyGoal: number
   dueCount: number
   totalDue: number
   newCount: number          // repetitions===0, not suspended
@@ -44,7 +43,7 @@ export type DashboardStats = {
 
 const EMPTY: DashboardStats = {
   streak: 0, chain: new Array(7).fill(false) as boolean[],
-  reviewedToday: 0, learnedToday: 0, dailyGoal: 20,
+  reviewedToday: 0, learnedToday: 0,
   dueCount: 0, totalDue: 0, newCount: 0, dueTomorrow: 0,
   learnTarget: 10, reviewTarget: 100, tomorrowLearnTarget: null, tomorrowReviewTarget: null, simulationActive: false,
   heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
@@ -145,7 +144,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
 
     supabase
       .from('ind_profiles')
-      .select('daily_goal, goal_collection_id, goal_due_date, preferences')
+      .select('goal_collection_id, goal_due_date, preferences')
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -257,7 +256,6 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     chain,
     reviewedToday,
     learnedToday,
-    dailyGoal:      profileData?.daily_goal ?? 20,
     dueCount,
     totalDue:       dueRes.count      ?? 0,
     newCount:       newCountRes.count ?? 0,

@@ -18,7 +18,6 @@ import { getLangName } from '@/lib/lang/lang-bridge'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
-import { getDeckGoalStats } from '@/lib/db/profile/goal'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
 import { getStudyDate } from '@/lib/db/srs/flashcards'
@@ -27,7 +26,7 @@ import { getStudyDate } from '@/lib/db/srs/flashcards'
 
 type SessionContext = {
   reviewedToday:         number
-  dailyGoal:             number
+  reviewTarget:          number
   dailyCap:              number
   streak:                number
   priorityCollectionIds: string[]
@@ -43,15 +42,15 @@ function cardSMState(card: FlashcardWithItem): SMState {
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null }
+  if (!user) return { reviewedToday: 0, reviewTarget: 100, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null }
 
   const today   = getStudyDate()
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
   const fromStr = from30.toISOString().slice(0, 10)
 
   const [profileRes, todayRes, dailyRes, priorityDecks] = await Promise.all([
-    supabase.from('ind_profiles').select('daily_goal, preferences').eq('user_id', user.id).maybeSingle(),
-    supabase.from('ind_daily_stats').select('reviewed_count').eq('user_id', user.id).eq('date', today).maybeSingle(),
+    supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle(),
+    supabase.from('ind_daily_stats').select('reviewed_count, review_target').eq('user_id', user.id).eq('date', today).maybeSingle(),
     supabase.from('ind_daily_stats').select('date, reviewed_count').eq('user_id', user.id).gte('date', fromStr).order('date', { ascending: false }),
     listPriorityDecks(user.id),
   ])
@@ -70,7 +69,7 @@ async function loadSessionContext(): Promise<SessionContext> {
 
   return {
     reviewedToday:         todayRes.data?.reviewed_count ?? 0,
-    dailyGoal:             profileRes.data?.daily_goal ?? 20,
+    reviewTarget:          todayRes.data?.review_target ?? dailyCap,
     dailyCap,
     streak,
     priorityCollectionIds: priorityDecks.map(d => d.collection_id),
@@ -292,6 +291,7 @@ function ReviewSession({
   const [queue,    setQueue]    = useState<QueueEntry[]>(() => cards.map(c => ({ card: c })))
   const [overflow, setOverflow] = useState<FlashcardWithItem[]>(initialOverflow)
   const [qIdx,          setQIdx]          = useState(0)
+  const [handledCount,  setHandledCount]  = useState(0)
   const completedRef                       = useRef(new Set<string>())
   const [revealed,       setRevealed]      = useState(false)
   const [showOptions,    setShowOptions]   = useState(false)
@@ -466,12 +466,13 @@ function ReviewSession({
     if (isLapsed) {
       // Requeued card rated Good/Easy/Hard: 50% interval recovery (Hard mapped to Good)
       const relRating = (rating === 'hard' ? 'good' : rating) as 'good' | 'easy'
-      await rateCardRelearn(card.id, relRating, state, entry.lapsedInterval!, effectiveMode)
+      await rateCardRelearn(card.id, relRating, state, entry.lapsedInterval!, effectiveMode, rating)
     } else {
       await rateCard(card.id, rating, state, effectiveMode)
     }
 
     completedRef.current.add(card.id)
+    setHandledCount(c => c + 1)
     lastRatedRef.current = { cardId: card.id, prevState }
     setCanUndo(true)
     setRevealed(false)
@@ -483,6 +484,7 @@ function ReviewSession({
     if (pendingRef.current) return
     pendingRef.current = true
     await deferCard(card.id)
+    setHandledCount(c => c + 1)
     lastRatedRef.current = null
     setCanUndo(false)
     setRevealed(false)
@@ -497,6 +499,7 @@ function ReviewSession({
     if (!last) { pendingRef.current = false; return }
     await undoRating(last.cardId, last.prevState)
     completedRef.current.delete(last.cardId)
+    setHandledCount(c => c - 1)
     lastRatedRef.current = null
     setCanUndo(false)
     setRevealed(false)
@@ -510,7 +513,10 @@ function ReviewSession({
     setShowFlagPicker(false)
     setRevealed(false)
     setOverflow(prev => {
-      if (!prev.length) return prev
+      if (!prev.length) {
+        setHandledCount(c => c + 1)
+        return prev
+      }
       const [next, ...rest] = prev
       setQueue(q => [...q, { card: next }])
       return rest
@@ -626,7 +632,7 @@ function ReviewSession({
       {/* Progress bar + counter / undo row */}
       <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
-          <div style={{ width: `${(qIdx / Math.max(queue.length, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
+          <div style={{ width: `${(handledCount / Math.max(cards.length, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 5, minHeight: 20 }}>
           {/* Left: returning indicator */}
@@ -634,7 +640,7 @@ function ReviewSession({
           {/* Right: counter stacked above undo */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em' }}>
-              {qIdx + 1} / {queue.length}
+              {handledCount} / {cards.length}
             </span>
             {canUndo && (
               <button onClick={handleUndo} style={{
@@ -1122,7 +1128,7 @@ function ReviewPage() {
   const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,    setCards]    = useState<FlashcardWithItem[]>([])
   const [overflow, setOverflow] = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, dailyGoal: 20, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount,    setSessionCount]    = useState(0)
   const [sessionKey,      setSessionKey]      = useState(0)
@@ -1233,7 +1239,7 @@ function ReviewPage() {
     setMode(more.length > 0 ? 'reviewing' : 'landing')
   }
 
-  const goalMet = ctx.reviewedToday + sessionCount >= ctx.dailyGoal
+  const goalMet = ctx.reviewedToday + sessionCount >= ctx.reviewTarget
 
   // Full-screen overlays (reviewing + done)
   if (mode === 'reviewing' && cards.length > 0) {

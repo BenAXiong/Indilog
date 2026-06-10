@@ -414,6 +414,7 @@ export async function rateCardRelearn(
   currentState: SMState,
   lapsedInterval: number,
   mode?: string,
+  storeRating?: string,
 ): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -429,7 +430,7 @@ export async function rateCardRelearn(
       interval_days: new_state.interval_days,
       repetitions:   new_state.repetitions,
     }).eq('id', flashcardId),
-    supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at, mode }),
+    supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating: storeRating ?? rating, due_at, mode }),
     supabase.rpc('increment_reviewed_today', { p_user_id: user.id, p_date: today }),
   ])
 }
