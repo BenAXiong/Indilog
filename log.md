@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-10 23:45 | FIX | Learn landing: remove Daily cap reached gate — load learnCap cards when target already met, user navigates consciously; single No new cards empty state |
 | 2026-06-10 23:28 | FEATURE | ADR DEC-SRS11: document review session counter semantics — handledCount/totalCards, full action table, phantom edge case, undo scope |
 | 2026-06-10 23:40 | FIX | Review session counter: replace fixed cards.length denominator with totalCards state; defer and suspend-no-overflow shrink totalCards, suspend-with-overflow leaves it unchanged; handledCount only increments on Good/Hard/Easy |
 | 2026-06-10 23:13 | FIX | Review session: fix goalMet to use frozen reviewTarget (not daily_goal); fix counter to show graded/fixed-total (handledCount/cards.length); fix lapsed-card Hard stored as 'good' in ind_reviews; drop ind_profiles.daily_goal column and all dead code |

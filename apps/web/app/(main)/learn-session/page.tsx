@@ -902,7 +902,9 @@ function LearnPage() {
     const filtered = excludeLangs.length
       ? allCards.filter(c => !excludeLangs.includes(c.ind_items?.language ?? ''))
       : allCards
-    const toLearn = Math.max(0, context.learnCap - context.learnedToday)
+    const toLearn = Math.max(0, context.learnedToday >= context.learnCap
+      ? context.learnCap
+      : context.learnCap - context.learnedToday)
     const sessionCards = filtered.slice(0, toLearn)
     setCards(sessionCards)
     setOverflow(filtered.slice(toLearn))
@@ -928,8 +930,6 @@ function LearnPage() {
     }
     reload()
   }
-
-  const capReached  = ctx.learnedToday >= ctx.learnCap
 
   async function handleReloadNeeded() {
     await reload()
@@ -985,19 +985,8 @@ function LearnPage() {
         </div>
       ) : (
         <div style={{ padding: '32px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
-          {capReached ? (
-            <>
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>Daily cap reached</div>
-              <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 6 }}>
-                You&apos;ve learned {ctx.learnedToday} new cards today. Come back tomorrow!
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>No new cards</div>
-              <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 6 }}>Add cards to a collection to start learning.</div>
-            </>
-          )}
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>No new cards</div>
+          <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 6 }}>Add cards to a collection to start learning.</div>
         </div>
       )}
     </div>
