@@ -237,10 +237,11 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     review_cap: reviewCap,
   })
 
-  // Frozen targets: use stored value if already set for today, otherwise use sim output.
+  // Frozen targets: read from the raw daily row (statsMap only stores reviewed/captured/learned).
   // Fire-and-forget freeze so subsequent loads see the same target even after sessions change counts.
-  const frozenLearnTarget  = (todayStats as Record<string, unknown> | undefined)?.learn_target  as number | null ?? null
-  const frozenReviewTarget = (todayStats as Record<string, unknown> | undefined)?.review_target as number | null ?? null
+  const todayRow = dailyRows.find(r => r.date === today)
+  const frozenLearnTarget  = (todayRow as Record<string, unknown> | undefined)?.learn_target  as number | null ?? null
+  const frozenReviewTarget = (todayRow as Record<string, unknown> | undefined)?.review_target as number | null ?? null
   const learnTarget  = frozenLearnTarget  ?? sim.learnTarget
   const reviewTarget = frozenReviewTarget ?? sim.reviewTarget
   if (frozenLearnTarget === null) {
