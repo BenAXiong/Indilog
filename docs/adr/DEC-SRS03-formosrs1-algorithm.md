@@ -33,3 +33,5 @@ Min ease factor: 1.3. Initial ease: 2.5.
 **Relearn burst spec (original, now superseded for young cards):** The original spec described a "relearn burst" for mature cards (interval ≥ 7d) with a 3-restart cap. Superseded by the simpler uniform requeue above. `nextRelearn()` and `rateCardRelearn()` remain in use for the 50% recovery write.
 
 **Why not FSRS:** Better scheduling quality via Bayesian optimization of forgetting curve. Deferred because it requires meaningful production data (weeks of real reviews) to tune parameters. Revisit after 4+ weeks on prod.
+
+**Open: Again preserving `repetitions` vs SM-2 reset (deferred):** In vanilla SM-2, Again resets `repetitions` to 0. In FormoSRS-1 as implemented, Again in Review is requeued without any DB write; the card is only written when rated Good/Easy/Hard, at which point `rateCardRelearn` leaves `repetitions` unchanged (or increments it). This departs from SM-2's "reset the streak on failure" logic. Rationale: "don't erase reps", lapse events captured in `ind_reviews.phase`. Risk: maturity scores inflate on weak cards, intervals drift upward without penalty. Revisit when lapse-rate data is available.
