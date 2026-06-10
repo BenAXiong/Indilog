@@ -2,7 +2,7 @@ import { unstable_noStore as noStore } from 'next/cache'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { computeSimulation } from '@/lib/db/srs/simulation'
-import type { LocalDateString } from '@/lib/db/srs/flashcards'
+import { localDateStr, type LocalDateString } from '@/lib/db/srs/flashcards'
 
 function dateStep(dateStr: LocalDateString, days: number): LocalDateString {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -75,7 +75,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   // 120-day window covers 16-week heatmap + streak computation
   const from120 = new Date()
   from120.setDate(from120.getDate() - 119)
-  const fromDate = from120.toISOString().slice(0, 10)
+  const fromDate = localDateStr(from120)
 
   const [
     dailyRes,
@@ -173,7 +173,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const today: LocalDateString = (cookieDate ?? (() => {
     const d = new Date()
     if (d.getHours() < resetHour) d.setDate(d.getDate() - 1)
-    return d.toISOString().slice(0, 10)
+    return localDateStr(d)
   })()) as LocalDateString
 
   // Streak — based on reviewed_count (not captured)

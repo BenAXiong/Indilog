@@ -10,6 +10,7 @@ import {
   type PriorityDeck,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
+import { localDateStr } from '@/lib/db/srs/flashcards'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
 import { projectSimulation, buildCurveFromDays, type SimulationCurve, type TodayTarget } from '@/lib/db/srs/simulation-client'
 import { createClient } from '@/lib/supabase/client'
@@ -173,7 +174,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     const simDecks = decks.filter(d => d.in_simulation)
     if (!simDecks.length) { setSimLoading(false); return }
     const deadline = simDecks.find(d => d.simulation_deadline)?.simulation_deadline
-      ?? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+      ?? localDateStr(new Date(Date.now() + 30 * 86400000))
     const result = await projectSimulation({
       collectionIds: simDecks.map(d => d.collection_id),
       deadline,

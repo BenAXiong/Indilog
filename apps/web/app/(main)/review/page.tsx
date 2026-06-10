@@ -11,7 +11,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
   rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
-  suspendCard, setFlagColor, deferCard, undoRating,
+  suspendCard, setFlagColor, deferCard, undoRating, localDateStr, getStudyDate,
   type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
@@ -20,7 +20,6 @@ import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from 
 import { createClient } from '@/lib/supabase/client'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
-import { getStudyDate } from '@/lib/db/srs/flashcards'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +45,7 @@ async function loadSessionContext(): Promise<SessionContext> {
 
   const today   = getStudyDate()
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
-  const fromStr = from30.toISOString().slice(0, 10)
+  const fromStr = localDateStr(from30)
 
   const [profileRes, todayRes, dailyRes, priorityDecks] = await Promise.all([
     supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle(),
