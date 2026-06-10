@@ -32,16 +32,19 @@ function RingWithCount({ pct, color, count, target }: { pct: number; color: stri
 export default function DualRingCard({
   learnedToday, learnTarget, newCount,
   reviewedToday, reviewTarget, dueCount, totalDue,
-  tomorrowLearnTarget, tomorrowReviewTarget,
+  tomorrowLearnTarget, tomorrowReviewTarget, simActive,
 }: {
   learnedToday: number;  learnTarget: number;  newCount: number
   reviewedToday: number; reviewTarget: number; dueCount: number; totalDue: number
   tomorrowLearnTarget: number | null
   tomorrowReviewTarget: number | null
+  simActive: boolean
 }) {
   const [showForecast, setShowForecast] = useState(false)
 
+  useEffect(() => { localStorage.setItem('srs_learn_target',  String(learnTarget))  }, [learnTarget])
   useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
+  useEffect(() => { localStorage.setItem('srs_sim_active',    String(simActive))    }, [simActive])
 
   const learnPct  = learnTarget  > 0 ? Math.min(learnedToday  / learnTarget,  1) : 0
   const reviewPct = reviewTarget > 0 ? Math.min(reviewedToday / reviewTarget, 1) : 0

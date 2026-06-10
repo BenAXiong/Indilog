@@ -9,7 +9,6 @@ export type UserPreferences = {
   show_hard_easy:    boolean
   show_buttons:      boolean
   shuffle_new:       boolean
-  learning_steps:    number
   show_all_langs:    boolean
   excluded_langs:    string[]
   auto_lookup:       boolean
@@ -26,7 +25,6 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   show_hard_easy:   true,
   show_buttons:     true,
   shuffle_new:      false,
-  learning_steps:   3,
   show_all_langs:   true,
   excluded_langs:   [],
   auto_lookup:      true,

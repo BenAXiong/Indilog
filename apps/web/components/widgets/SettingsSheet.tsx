@@ -58,14 +58,16 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [resetHour,        setResetHourRaw]     = useState(4)
   const [dailyCap,            setDailyCapRaw]         = useState(100)
   const [learnSessionSize,    setLearnSessionSizeRaw]  = useState(10)
-  const [editingReviewSession,setEditingReviewSession] = useState(false)
+  const [editingLearnSession,  setEditingLearnSession]  = useState(false)
+  const [editingReviewSession, setEditingReviewSession] = useState(false)
+  const [learnTargetHint,      setLearnTargetHint]      = useState<number | null>(null)
+  const [simActiveHint,        setSimActiveHint]        = useState(false)
   const [reviewTargetHint,    setReviewTargetHint]     = useState(100)
   const [reviewMode,       setReviewModeRaw]    = useState('forward')
   const [translateDialect, setTranslateDialect] = useState('ami_Coas')
   const [showHardEasy,    setShowHardEasyRaw]   = useState(true)
   const [showButtons,     setShowButtonsRaw]    = useState(true)
   const [shuffleNew,      setShuffleNewRaw]     = useState(false)
-  const [learningSteps,   setLearningStepsRaw]  = useState(3)
   const [showAllLangs,    setShowAllLangsRaw]   = useState(true)
   const [excludedLangs,   setExcludedLangsRaw]  = useState<string[]>([])
   const [availLangs,      setAvailLangs]        = useState<string[] | null>(null)
@@ -84,13 +86,14 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     setLearnSessionSizeRaw(isNaN(lc) ? 10 : Math.min(50, Math.max(1, lc)))
     const rt = parseInt(localStorage.getItem('srs_review_target') ?? '100')
     setReviewTargetHint(isNaN(rt) ? 100 : rt)
+    const lth = localStorage.getItem('srs_learn_target')
+    setLearnTargetHint(lth !== null && !isNaN(parseInt(lth)) ? parseInt(lth) : null)
+    setSimActiveHint(localStorage.getItem('srs_sim_active') === 'true')
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setTranslateDialect(localStorage.getItem('translate_ami_dialect') ?? 'ami_Coas')
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
-    const steps = parseInt(localStorage.getItem('srs_learning_steps') ?? '3')
-    setLearningStepsRaw(isNaN(steps) ? 3 : Math.min(5, Math.max(1, steps)))
     setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
     try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
@@ -112,7 +115,6 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
           setShowHardEasyRaw(p.show_hard_easy);localStorage.setItem('srs_show_hard_easy',  String(p.show_hard_easy))
           setShowButtonsRaw(p.show_buttons);   localStorage.setItem('srs_show_buttons',    String(p.show_buttons))
           setShuffleNewRaw(p.shuffle_new);     localStorage.setItem('srs_shuffle_new',     String(p.shuffle_new))
-          setLearningStepsRaw(p.learning_steps);localStorage.setItem('srs_learning_steps', String(p.learning_steps))
           setShowAllLangsRaw(p.show_all_langs);localStorage.setItem('srs_show_all_langs',  String(p.show_all_langs))
           setExcludedLangsRaw(p.excluded_langs);localStorage.setItem('srs_excluded_langs', JSON.stringify(p.excluded_langs))
           setAutoLookup(p.auto_lookup);        localStorage.setItem('ind_auto_lookup',     String(p.auto_lookup))
@@ -165,9 +167,6 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)); saveToCloud({ show_hard_easy: v }) }
   function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons', String(v));   saveToCloud({ show_buttons: v }) }
   function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new', String(v));    saveToCloud({ shuffle_new: v }) }
-  function setLearningSteps(v: number) {
-    const n = Math.min(5, Math.max(1, v)); setLearningStepsRaw(n); localStorage.setItem('srs_learning_steps', String(n)); saveToCloud({ learning_steps: n })
-  }
   function setShowAllLangs(v: boolean) {
     setShowAllLangsRaw(v); localStorage.setItem('srs_show_all_langs', String(v))
     if (v) { setExcludedLangsRaw([]); localStorage.setItem('srs_excluded_langs', '[]'); saveToCloud({ show_all_langs: v, excluded_langs: [] }) }
@@ -199,7 +198,6 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
       show_hard_easy:   showHardEasy,
       show_buttons:     showButtons,
       shuffle_new:      shuffleNew,
-      learning_steps:   learningSteps,
       show_all_langs:   showAllLangs,
       excluded_langs:   excludedLangs,
       auto_lookup:      autoLookup,
@@ -396,41 +394,63 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
 
               {/* Study subtab */}
               {studySubtab === 'study' && (
-                <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
-                  {/* Cards per session (learn) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Cards per session</div>
-                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>New cards learned per Learn session</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {[{ delta: -1, disabled: learnSessionSize <= 1 }, { delta: 1, disabled: learnSessionSize >= 50 }].map(({ delta, disabled }, i) => (
-                        <button key={i} disabled={disabled}
-                          onClick={() => setLearnSessionSize(learnSessionSize + delta)}
-                          style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
-                          {delta < 0 ? '−' : '+'}
-                        </button>
-                      ))}
-                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{learnSessionSize}</span>
-                    </div>
+                <>
+                  {/* Cards in each session label */}
+                  <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Cards in each session
                   </div>
-                  {/* Cards per Review session */}
+
+                  {/* Learn session */}
                   {(() => {
-                    const smartDefault = reviewTargetHint < 30 ? 999 : reviewTargetHint < 90 ? 30 : 50
-                    const displayVal   = dailyCap >= 999 ? 'All' : String(dailyCap)
-                    const smartLabel   = smartDefault >= 999 ? 'All' : String(smartDefault)
+                    const learnGoal = simActiveHint && learnTargetHint !== null ? learnTargetHint : learnSessionSize
+                    const goalMode  = simActiveHint ? 'calculated' : 'manual'
+                    return (
+                      <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Learn session</div>
+                            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
+                              Current {goalMode} goal: {learnGoal} cards/day
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            {editingLearnSession ? (
+                              <>
+                                <button disabled={learnSessionSize <= 1} onClick={() => setLearnSessionSize(learnSessionSize - 1)}
+                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: learnSessionSize <= 1 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: learnSessionSize <= 1 ? 0.35 : 1 }}>−</button>
+                                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{learnSessionSize}</span>
+                                <button disabled={learnSessionSize >= 50} onClick={() => setLearnSessionSize(learnSessionSize + 1)}
+                                  style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: learnSessionSize >= 50 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: learnSessionSize >= 50 ? 0.35 : 1 }}>+</button>
+                              </>
+                            ) : (
+                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{learnSessionSize}</span>
+                            )}
+                            <button onClick={() => setEditingLearnSession(v => !v)}
+                              style={{ width: 26, height: 26, borderRadius: 7, background: editingLearnSession ? T.paperHi : 'none', border: `1px solid ${editingLearnSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Review session */}
+                  {(() => {
+                    const goalMode   = simActiveHint ? 'calculated' : 'manual'
+                    const displayVal = dailyCap >= 999 ? 'All' : String(dailyCap)
                     function saveReviewSession(n: number) {
                       const v = Math.min(999, Math.max(5, Math.round(n / 5) * 5))
                       setDailyCapRaw(v); localStorage.setItem('srs_review_cap', String(v)); saveToCloud({ review_cap: v })
                     }
                     return (
-                      <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                      <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Cards per Review session</div>
-                            {editingReviewSession && (
-                              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>Recommended: {smartLabel}</div>
-                            )}
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Review session</div>
+                            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
+                              Current {goalMode} goal: {reviewTargetHint} cards/day
+                            </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             {editingReviewSession ? (
@@ -442,12 +462,10 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                                   style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: dailyCap >= 999 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: dailyCap >= 999 ? 0.35 : 1 }}>+</button>
                               </>
                             ) : (
-                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>
-                                {displayVal}
-                              </span>
+                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{displayVal}</span>
                             )}
                             <button onClick={() => setEditingReviewSession(v => !v)}
-                              style={{ width: 26, height: 26, borderRadius: 7, background: editingReviewSession ? T.paperHi : 'none', border: `1px solid ${editingReviewSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkFaint }}>
+                              style={{ width: 26, height: 26, borderRadius: 7, background: editingReviewSession ? T.paperHi : 'none', border: `1px solid ${editingReviewSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
                             </button>
                           </div>
@@ -455,35 +473,21 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                       </div>
                     )
                   })()}
-                  {/* Learning passes */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Learning passes</div>
-                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Times a new card repeats before graduating</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {[{ delta: -1, disabled: learningSteps <= 1 }, { delta: 1, disabled: learningSteps >= 5 }].map(({ delta, disabled }, i) => (
-                        <button key={i} disabled={disabled}
-                          onClick={() => setLearningSteps(learningSteps + delta)}
-                          style={{ width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300, opacity: disabled ? 0.35 : 1 }}>
-                          {delta < 0 ? '−' : '+'}
-                        </button>
-                      ))}
-                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12, fontWeight: 700, color: T.ink, minWidth: 20, textAlign: 'center' }}>{learningSteps}</span>
-                    </div>
-                  </div>
+
                   {/* Shuffle new */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Shuffle new cards</div>
-                      <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Randomise order within each deck level</div>
+                  <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Shuffle new cards</div>
+                        <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Randomise order within each deck level</div>
+                      </div>
+                      <button onClick={() => setShuffleNew(!shuffleNew)} role="switch" aria-checked={shuffleNew}
+                        style={{ width: 44, height: 26, borderRadius: 999, background: shuffleNew ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                        <div style={{ position: 'absolute', top: 3, left: shuffleNew ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </button>
                     </div>
-                    <button onClick={() => setShuffleNew(!shuffleNew)} role="switch" aria-checked={shuffleNew}
-                      style={{ width: 44, height: 26, borderRadius: 999, background: shuffleNew ? T.crimson : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                      <div style={{ position: 'absolute', top: 3, left: shuffleNew ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                    </button>
                   </div>
-                </div>
+                </>
               )}
 
               {/* Review subtab */}
