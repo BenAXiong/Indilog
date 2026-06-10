@@ -5,14 +5,21 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import GoalSheet from '@/components/sheets/GoalSheet'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
-import { getDeckRootedStats } from '@/lib/db/profile/goal'
+import { getDeckMasteryStats, type DeckMasteryStats } from '@/lib/db/profile/goal'
 import { listCollections } from '@/lib/db/progress/collections'
 import { createClient } from '@/lib/supabase/client'
+
+const GRADE_COLORS = {
+  seed:     T.inkFaint,
+  planted:  T.amber,
+  rooted:   T.sage,
+  blooming: T.sageDp,
+}
 
 export default function GoalWidget() {
   const [sheetOpen,  setSheetOpen]  = useState(false)
   const [deckName,   setDeckName]   = useState<string | null>(null)
-  const [rootedPct,  setRootedPct]  = useState<number | null>(null)
+  const [grades,     setGrades]     = useState<DeckMasteryStats | null>(null)
   const [simActive,  setSimActive]  = useState(false)
   const [loaded,     setLoaded]     = useState(false)
 
@@ -25,11 +32,11 @@ export default function GoalWidget() {
       const top = decks[0]
       const [cols, stats] = await Promise.all([
         listCollections(),
-        getDeckRootedStats(top.collection_id),
+        getDeckMasteryStats(top.collection_id),
       ])
       const col = cols.find(c => c.id === top.collection_id)
       setDeckName(col?.name ?? null)
-      setRootedPct(stats.total > 0 ? stats.rooted / stats.total : 0)
+      setGrades(stats)
       setSimActive(decks.some(d => d.in_simulation))
       setLoaded(true)
     })
@@ -78,16 +85,29 @@ export default function GoalWidget() {
               <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {deckName}
               </div>
-              <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>
-                {rootedPct !== null ? `${Math.round(rootedPct * 100)}% rooted` : '…'}
+              <div style={{ fontSize: 11, marginTop: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
+                {grades && grades.total > 0
+                  ? (['seed', 'planted', 'rooted', 'blooming'] as const).map((g, i) => (
+                    <span key={g} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      {i > 0 && <span style={{ color: T.inkFaint }}>·</span>}
+                      <span style={{ color: GRADE_COLORS[g], fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: 10 }}>
+                        {Math.round(grades[g] / grades.total * 100)}%
+                      </span>
+                    </span>
+                  ))
+                  : <span style={{ color: T.inkFaint }}>…</span>
+                }
               </div>
             </div>
-            <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 10, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: 999, background: '#7B8C46',
-                width: `${Math.round((rootedPct ?? 0) * 100)}%`,
-                transition: 'width 0.4s ease',
-              }} />
+            <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 8, overflow: 'hidden', display: 'flex' }}>
+              {grades && grades.total > 0 && (['blooming', 'rooted', 'planted', 'seed'] as const).map(g => (
+                <div key={g} style={{
+                  height: '100%',
+                  width: `${grades[g] / grades.total * 100}%`,
+                  background: GRADE_COLORS[g],
+                  transition: 'width 0.4s ease',
+                }} />
+              ))}
             </div>
           </>
         ) : (
