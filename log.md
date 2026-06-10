@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 02:21 | FIX | learn-session: remove local broken getStudyDate() (used toISOString/UTC, returned wrong date for UTC+ timezones before reset hour); import shared getStudyDate from flashcards; read learn_target from ind_daily_stats and use frozen value as learnCap when available, falling back to live sim — fixes session loading 22 cards while CTA showed 1 |
 | 2026-06-11 02:13 | FIX | getDashboardStats: read frozenLearnTarget/frozenReviewTarget from raw dailyRows instead of statsMap (statsMap only stored reviewed/captured/learned, so frozen targets were always null — dashboard always used live sim values and fired the freeze RPC on every load) |
 | 2026-06-11 01:44 | FIX | Prevent stale CTA after bfcache restore: add BfcacheRefresh client component to main layout, calls router.refresh() when browser restores page from back-forward cache |
 | 2026-06-11 01:06 | FEATURE | Settings Study size subtab: hide review_cap/learn_cap edit controls when simulation is active; add amber "Override simulation caps" toggle to unlock them |

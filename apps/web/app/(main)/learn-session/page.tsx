@@ -10,7 +10,7 @@ import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   listLearnFlashcards, graduateLearnCard, suspendCard, setFlagColor, listUserLanguages, cardMeta, cardAudio,
-  flushReviewEvents,
+  flushReviewEvents, getStudyDate,
   type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
@@ -36,16 +36,6 @@ type LearnContext = {
 
 // ─── Context loader ───────────────────────────────────────────────────────────
 
-function getStudyDate(): string {
-  const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
-  const now = new Date()
-  if (now.getHours() < resetHour) {
-    const d = new Date(now); d.setDate(d.getDate() - 1)
-    return d.toISOString().slice(0, 10)
-  }
-  return now.toISOString().slice(0, 10)
-}
-
 async function loadLearnContext(): Promise<LearnContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -54,33 +44,37 @@ async function loadLearnContext(): Promise<LearnContext> {
   const today = getStudyDate()
   const [profileRes, statsRes, priorityDecks] = await Promise.all([
     supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle(),
-    supabase.from('ind_daily_stats').select('learned_count').eq('user_id', user.id).eq('date', today).maybeSingle(),
+    supabase.from('ind_daily_stats').select('learned_count, learn_target').eq('user_id', user.id).eq('date', today).maybeSingle(),
     listPriorityDecks(user.id),
   ])
 
   const prefs      = profileRes.data?.preferences as Record<string, unknown> | null
   const prefCap    = typeof prefs?.learn_cap === 'number' ? prefs.learn_cap : 10
 
-  // When simulation is active, derive learnCap from target rate (matches dashboard CTA)
-  let learnCap = prefCap
-  const simDecks = priorityDecks.filter(d => d.in_simulation && d.simulation_deadline)
-  if (simDecks.length > 0) {
-    const deadline = simDecks.reduce(
-      (min, d) => (d.simulation_deadline! < min ? d.simulation_deadline! : min),
-      simDecks[0].simulation_deadline!,
-    )
-    const daysLeft = Math.max(1, Math.ceil(
-      (new Date(deadline).getTime() - new Date(today).getTime()) / 86_400_000,
-    ))
-    const { count: newCards } = await supabase
-      .from('ind_flashcards')
-      .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .in('ind_items.collection_id', simDecks.map(d => d.collection_id))
-      .eq('repetitions', 0)
-      .is('suspended_at', null)
-    const effectiveWindow = Math.max(1, daysLeft - 21)
-    learnCap = Math.max(1, Math.ceil((newCards ?? 0) / effectiveWindow))
+  // Use frozen learn_target from ind_daily_stats when available (set by dashboard on first load).
+  // Fall back to live simulation rate, or bare pref cap when no sim is active.
+  const frozenLearnTarget = (statsRes.data as Record<string, unknown> | null)?.learn_target as number | null ?? null
+  let learnCap = frozenLearnTarget ?? prefCap
+  if (frozenLearnTarget === null) {
+    const simDecks = priorityDecks.filter(d => d.in_simulation && d.simulation_deadline)
+    if (simDecks.length > 0) {
+      const deadline = simDecks.reduce(
+        (min, d) => (d.simulation_deadline! < min ? d.simulation_deadline! : min),
+        simDecks[0].simulation_deadline!,
+      )
+      const daysLeft = Math.max(1, Math.ceil(
+        (new Date(deadline).getTime() - new Date(today).getTime()) / 86_400_000,
+      ))
+      const { count: newCards } = await supabase
+        .from('ind_flashcards')
+        .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .in('ind_items.collection_id', simDecks.map(d => d.collection_id))
+        .eq('repetitions', 0)
+        .is('suspended_at', null)
+      const effectiveWindow = Math.max(1, daysLeft - 21)
+      learnCap = Math.max(1, Math.ceil((newCards ?? 0) / effectiveWindow))
+    }
   }
 
   return {
