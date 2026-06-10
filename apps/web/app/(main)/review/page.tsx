@@ -1304,7 +1304,7 @@ function ReviewPage() {
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
     }
 
-    const reviewMoreN  = context.reviewMoreSize ?? Math.max(10, Math.round(context.reviewTarget / 50) * 5)
+    const reviewMoreN  = context.reviewMoreSize ?? Math.max(20, Math.round(context.reviewTarget / 50) * 5)
     const sessionCap   = isCustom ? c.length
       : isMore         ? reviewMoreN
       : Math.max(0, context.reviewTarget - context.reviewedToday)
@@ -1374,7 +1374,7 @@ function ReviewPage() {
       goalMet={goalMet}
       streak={ctx.streak}
       reviewedCards={reviewedCards}
-      reviewMoreN={ctx.reviewMoreSize ?? Math.max(10, Math.round(ctx.reviewTarget / 50) * 5)}
+      reviewMoreN={ctx.reviewMoreSize ?? Math.max(20, Math.round(ctx.reviewTarget / 50) * 5)}
       onReviewMore={handleReviewMore}
       onDone={autostart ? () => router.push('/') : () => setMode('landing')}
     />

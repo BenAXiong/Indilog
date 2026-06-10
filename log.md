@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 03:53 | FIX | reviewMoreN: raise floor to 20 (was 10) — minimum "more" session is always 20 cards |
 | 2026-06-11 03:49 | FIX | reviewMoreN formula: use reviewTarget (frozen daily goal, accounts for simulation) instead of reviewCap (raw pref) in both session and dashboard |
 | 2026-06-11 03:45 | FEATURE | Review "more" CTA: show "Review N more?" with N matching the session size formula (review_more_size pref ?? max(10, round(reviewCap/50)*5), bounded by totalDue) |
 | 2026-06-11 02:39 | FIX | Replace remaining toISOString().slice(0,10) with localDateStr() in stats-server.ts, review/page.tsx, GoalSheet.tsx — all were low-severity (history bounds, server fallback, deadline default) but consistent with the UTC-safety rule |

@@ -246,7 +246,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const frozenReviewTarget = (todayRow as Record<string, unknown> | undefined)?.review_target as number | null ?? null
   const learnTarget  = frozenLearnTarget  ?? sim.learnTarget
   const reviewTarget = frozenReviewTarget ?? sim.reviewTarget
-  const reviewMoreN  = (prefs.review_more_size as number | undefined) ?? Math.max(10, Math.round(reviewTarget / 50) * 5)
+  const reviewMoreN  = (prefs.review_more_size as number | undefined) ?? Math.max(20, Math.round(reviewTarget / 50) * 5)
   if (frozenLearnTarget === null) {
     supabase.rpc('freeze_daily_targets', {
       p_user_id: user.id, p_date: today,
