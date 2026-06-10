@@ -712,8 +712,8 @@ function ReviewSession({
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
           }}
         >
-          {/* Bottom-left: flag button + picker */}
-          <div style={{ position: 'absolute', bottom: 10, left: 12, display: 'flex', gap: 5, alignItems: 'center' }}
+          {/* Top-right: flag button + picker */}
+          <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'row-reverse', gap: 5, alignItems: 'center' }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
               width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
@@ -741,7 +741,7 @@ function ReviewSession({
             )}
           </div>
 
-          {/* Top-left: grade badge */}
+          {/* Bottom-center: grade badge */}
           {(() => {
             const grade = computeMasteryGrade(card)
             const GS: Record<string, { color: string; bg: string; border: string }> = {
@@ -752,7 +752,7 @@ function ReviewSession({
             }
             const gs = GS[grade]
             return (
-              <div style={{ position: 'absolute', top: 14, left: 12 }}>
+              <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)' }}>
                 <span style={{
                   fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -763,8 +763,8 @@ function ReviewSession({
             )
           })()}
 
-          {/* Top-right: suspend */}
-          <div style={{ position: 'absolute', top: 10, right: 12 }}
+          {/* Top-left: suspend */}
+          <div style={{ position: 'absolute', top: 10, left: 12 }}
             onClick={e => e.stopPropagation()}>
             <button onClick={handleSuspend} aria-label="Suspend card" style={{
               width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
@@ -1304,8 +1304,7 @@ function ReviewPage() {
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
     }
 
-    const cap          = context.dailyCap
-    const reviewMoreN  = context.reviewMoreSize ?? Math.max(10, Math.round(cap / 50) * 5)
+    const reviewMoreN  = context.reviewMoreSize ?? Math.max(10, Math.round(context.reviewTarget / 50) * 5)
     const sessionCap   = isCustom ? c.length
       : isMore         ? reviewMoreN
       : Math.max(0, context.reviewTarget - context.reviewedToday)
@@ -1375,7 +1374,7 @@ function ReviewPage() {
       goalMet={goalMet}
       streak={ctx.streak}
       reviewedCards={reviewedCards}
-      reviewMoreN={ctx.reviewMoreSize ?? Math.max(10, Math.round(ctx.dailyCap / 50) * 5)}
+      reviewMoreN={ctx.reviewMoreSize ?? Math.max(10, Math.round(ctx.reviewTarget / 50) * 5)}
       onReviewMore={handleReviewMore}
       onDone={autostart ? () => router.push('/') : () => setMode('landing')}
     />
