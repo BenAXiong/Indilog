@@ -3,6 +3,9 @@
 > v0 plan (all phases 0–10 + Architecture Baseline) lives in `plan-v0.md`.
 > This document tracks v1 milestones.
 
+> See [design-questions.md](design-questions.md) for open cross-cutting design questions.
+> See [plan-v+.md](plan-v+.md) for beyond-v1 ideas and deferred features.
+
 > Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 
 ---
@@ -273,12 +276,6 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - **Dummy user profile for testing (stats)** — dev tooling, not user-facing; separate dev track.
 - consider tab split for curriculum & collections (captures + custom)
 
-
----
-
-See [design-questions.md](design-questions.md) for open cross-cutting design questions.
-
-See [plan-v+.md](plan-v+.md) for beyond-v1 ideas and deferred features.
 
 ---
 

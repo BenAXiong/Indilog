@@ -3,6 +3,7 @@
 Ideas, deferred features, and future directions not yet scoped into a milestone. Nothing here is committed or prioritised.
 
 - Refactor (see skill)
+
 - GoalsSheet revamps: especially calculated display, add charts
 - Capture: option or tag to exclude from flashcards (when data undure or incomplete)
 - Advanced SRS modes: first comp then prod (auto-shifts when mature)
