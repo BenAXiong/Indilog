@@ -4,6 +4,10 @@ Ideas, deferred features, and future directions not yet scoped into a milestone.
 
 - Refactor (see skill)
 
+- **SRS test suite (two-layer):**
+  - *Pure-function layer* (Vitest, no DB): unit tests per grade/edge-case + 90-day population simulations with a fixed seed to catch algo regressions and long-term curve health (ease collapse, due-count growth, blooming rate)
+  - *In-vivo integration layer* (Vitest + dedicated Supabase test project): call real service functions (`rateCard`, `graduateLearnCard`, `flushReviewEvents`) against a seeded test DB, query actual rows, assert correct `interval_days / ease_factor / due_at / phase`; catches DB-layer bugs (missing `.eq('user_id')`, RLS failures, wrong column writes) that pure tests miss; ~20–30 key scenarios, test user cleaned up in teardown
+
 - GoalsSheet revamps: especially calculated display, add charts
 - Capture: option or tag to exclude from flashcards (when data undure or incomplete)
 - Advanced SRS modes: first comp then prod (auto-shifts when mature)
