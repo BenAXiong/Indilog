@@ -300,7 +300,7 @@ These are design questions that need real-world data or further thought before d
 - generate IP-stable manga images
 - Dialogue 001
 - Find how many gaoji vocab have exsent in ePark
-- Avoid need for signal during review
+- **Offline / no-signal review**: every scheduled rating (`rateCard`, `rateCardRelearn`, `graduateLearnCard`) is a live `await supabase.update()` — no queue, no cache. Network failure silently drops the write; card resets to pre-session state on next load. Fix requires local-first layer: optimistic in-memory state + background sync queue (e.g. IndexedDB write-ahead log or Supabase offline mode). Buffered non-algo events (`flushReviewEvents`) are already fire-and-forget and acceptable to lose, but scheduled algo writes are not.
 - Use disctionary to explore affixes (examples)
 - Icons: capture = fish net, dash = stone house, study = ?, trans = stars, dict = ?
 - Add MoE dict roots + affix drill (V2 of MoE expansion above)
@@ -331,6 +331,7 @@ These are design questions that need real-world data or further thought before d
 - How to tutorial (instructions for SRS, tabs workflow)
 - streak freeze: get one free "rest day" after streak=6
 - leeches: can derived a lapse_count from ind_reviews
+- UX idea: flashcard session are empty until the user DnDs their selected decks in a box
 
 ---
 
