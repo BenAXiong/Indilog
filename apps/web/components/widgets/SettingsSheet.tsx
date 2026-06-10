@@ -60,6 +60,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [learnSessionSize,    setLearnSessionSizeRaw]  = useState(10)
   const [editingLearnSession,  setEditingLearnSession]  = useState(false)
   const [editingReviewSession, setEditingReviewSession] = useState(false)
+  const [overrideSim,          setOverrideSim]          = useState(false)
   const [sizeInfoOpen,         setSizeInfoOpen]         = useState(false)
   const [learnTargetHint,      setLearnTargetHint]      = useState<number | null>(null)
   const [simActiveHint,        setSimActiveHint]        = useState(false)
@@ -460,6 +461,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                         {label}
                       </button>
                     )
+                    const canEdit = !simActiveHint || overrideSim
                     return (
                       <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
                         {/* Learn row */}
@@ -469,16 +471,18 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                             <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Current {goalMode} goal: {learnGoal} cards/day</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                            {editingLearnSession && (<>
+                            {editingLearnSession && canEdit && (<>
                               {stepBtn('−', learnSessionSize <= 1,  () => setLearnSessionSize(learnSessionSize - 1))}
                               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{learnSessionSize}</span>
                               {stepBtn('+', learnSessionSize >= 50, () => setLearnSessionSize(learnSessionSize + 1))}
                             </>)}
-                            {!editingLearnSession && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{learnSessionSize}</span>}
-                            <button onClick={() => setEditingLearnSession(v => !v)}
-                              style={{ width: 26, height: 26, borderRadius: 7, background: editingLearnSession ? T.paperHi : 'none', border: `1px solid ${editingLearnSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
-                            </button>
+                            {(!editingLearnSession || !canEdit) && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{learnSessionSize}</span>}
+                            {canEdit && (
+                              <button onClick={() => setEditingLearnSession(v => !v)}
+                                style={{ width: 26, height: 26, borderRadius: 7, background: editingLearnSession ? T.paperHi : 'none', border: `1px solid ${editingLearnSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
+                              </button>
+                            )}
                           </div>
                         </div>
                         {/* Review row */}
@@ -488,21 +492,53 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                             <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>Current {goalMode} goal: {reviewTargetHint} cards/day</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                            {editingReviewSession && (<>
+                            {editingReviewSession && canEdit && (<>
                               {stepBtn('−', dailyCap <= 5,   () => saveReviewSession(dailyCap - 5))}
                               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>{displayVal}</span>
                               {stepBtn('+', dailyCap >= 999, () => saveReviewSession(dailyCap + 5))}
                             </>)}
-                            {!editingReviewSession && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{displayVal}</span>}
-                            <button onClick={() => setEditingReviewSession(v => !v)}
-                              style={{ width: 26, height: 26, borderRadius: 7, background: editingReviewSession ? T.paperHi : 'none', border: `1px solid ${editingReviewSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
-                            </button>
+                            {(!editingReviewSession || !canEdit) && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{displayVal}</span>}
+                            {canEdit && (
+                              <button onClick={() => setEditingReviewSession(v => !v)}
+                                style={{ width: 26, height: 26, borderRadius: 7, background: editingReviewSession ? T.paperHi : 'none', border: `1px solid ${editingReviewSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Icon name="pen" size={12} strokeWidth={2} color={T.inkFaint} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
                     )
                   })()}
+
+                  {/* Override simulation caps — only shown when simulation is active */}
+                  {simActiveHint && (
+                    <div style={{
+                      background: overrideSim ? T.amberBg : T.paperHi,
+                      border: `1px solid ${overrideSim ? T.amber : T.lineSoft}`,
+                      borderRadius: 14, padding: '10px 14px',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>Override simulation caps</div>
+                        <div style={{ fontSize: 12, color: overrideSim ? T.amber : T.inkMute, marginTop: 2 }}>
+                          {overrideSim
+                            ? 'Manual caps active — simulation pacing will be affected'
+                            : 'Simulation sets session sizes automatically'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setOverrideSim(v => {
+                            if (v) { setEditingLearnSession(false); setEditingReviewSession(false) }
+                            return !v
+                          })
+                        }}
+                        role="switch" aria-checked={overrideSim}
+                        style={{ width: 44, height: 26, borderRadius: 999, background: overrideSim ? T.amber : T.lineSoft, border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                        <div style={{ position: 'absolute', top: 3, left: overrideSim ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Shuffle new */}
                   <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>

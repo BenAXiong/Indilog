@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 01:06 | FEATURE | Settings Study size subtab: hide review_cap/learn_cap edit controls when simulation is active; add amber "Override simulation caps" toggle to unlock them |
 | 2026-06-11 00:53 | FEATURE | Add temporary x/y counter below review CTA (x=totalDue, y=simGoalRemaining); extend simulation.ts to return simTotalActive+simRootedCount; add simGoalRemaining to DashboardStats |
 | 2026-06-10 23:55 | FIX | Review session cap: use frozen reviewTarget (not dailyCap pref) so session loads match the CTA count |
 | 2026-06-10 23:46 | FEATURE | DEV: card inspector panel in review session — DEV chip button opens bottom sheet with SRS state (grade, reps, ease, interval, due_at) and live review history from ind_reviews |
