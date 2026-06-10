@@ -9,9 +9,8 @@ import type { IconName } from '@/components/ui/Icon'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { listCollections, pinCollection, setIncludeInReview, type CollectionMeta } from '@/lib/db/progress/collections'
-import { ensureFlashcards, getDueStats, getExcludeFromReview, listUserLanguages, type DueStats } from '@/lib/db/srs/flashcards'
+import { ensureFlashcards, getDueStats, getExcludeFromReview, type DueStats } from '@/lib/db/srs/flashcards'
 import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
-import { getLangName } from '@/lib/lang/lang-bridge'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
 import BrowserView from '@/components/study/BrowserView'
@@ -407,7 +406,6 @@ export default function StudyPage() {
   const [statsLoading, setStatsLoading]   = useState(false)
   const [actionDeck,        setActionDeck]        = useState<CollectionMeta | null>(null)
   const [capturesIncluded,  setCapturesIncluded]  = useState(true)
-  const [settingsOpen, setSettingsOpen]     = useState(false)
   const [customOpen,   setCustomOpen]       = useState(false)
   const [showAllLangs, setShowAllLangs]     = useState<boolean>(() =>
     typeof window === 'undefined' ? true : localStorage.getItem('srs_show_all_langs') !== 'false'
@@ -416,7 +414,6 @@ export default function StudyPage() {
     if (typeof window === 'undefined') return []
     try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] }
   })
-  const [availLangs, setAvailLangs]         = useState<string[] | null>(null)
   const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     const base: Record<string, boolean> = { curriculum: false, captures: false, collections: false }
@@ -473,8 +470,10 @@ export default function StudyPage() {
     })
   }
 
-  async function refreshDue(overrideExcludedLangs?: string[]) {
-    const excludeLangs = showAllLangs ? [] : (overrideExcludedLangs ?? excludedLangs)
+  async function refreshDue() {
+    const currentShowAll = localStorage.getItem('srs_show_all_langs') !== 'false'
+    const currentExcluded: string[] = (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
+    const excludeLangs = currentShowAll ? [] : currentExcluded
     const excludeCollections = collections.filter(c => !c.include_in_review).map(c => c.id)
     const stats = await getDueStats({ excludeLangs, excludeCollections, excludeCaptures: !capturesIncluded })
     setDue(stats)
@@ -483,7 +482,9 @@ export default function StudyPage() {
   async function handleReset() { await refreshDue() }
 
   async function handleIncludeToggled(id: string, include: boolean) {
-    const excludeLangs = showAllLangs ? [] : excludedLangs
+    const currentShowAll = localStorage.getItem('srs_show_all_langs') !== 'false'
+    const currentExcluded: string[] = (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
+    const excludeLangs = currentShowAll ? [] : currentExcluded
     if (id === CAPTURES_DECK_ID) {
       setCapturesIncluded(include)
       const excludeCollections = collections.filter(c => !c.include_in_review).map(c => c.id)
@@ -518,32 +519,18 @@ export default function StudyPage() {
     })
   }
 
-  // Lazy-load language list when settings sheet opens with filter active
+  // Sync language filter state when SettingsSheet changes prefs
   useEffect(() => {
-    if (settingsOpen && !showAllLangs && availLangs === null) {
-      listUserLanguages().then(setAvailLangs)
+    function onPrefsChanged() {
+      const v = localStorage.getItem('srs_show_all_langs') !== 'false'
+      const excl: string[] = (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
+      setShowAllLangs(v)
+      setExcludedLangs(excl)
+      refreshDue()
     }
-  }, [settingsOpen, showAllLangs, availLangs])
-
-  function handleToggleShowAll(v: boolean) {
-    setShowAllLangs(v)
-    localStorage.setItem('srs_show_all_langs', String(v))
-    if (v) {
-      setExcludedLangs([])
-      localStorage.setItem('srs_excluded_langs', '[]')
-      refreshDue([])
-    }
-  }
-
-  function handleToggleLang(lang: string) {
-    const nowExcluded = !excludedLangs.includes(lang)
-    const next = nowExcluded
-      ? [...excludedLangs, lang]
-      : excludedLangs.filter(l => l !== lang)
-    setExcludedLangs(next)
-    localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
-    refreshDue(next)
-  }
+    window.addEventListener('srs-prefs-changed', onPrefsChanged)
+    return () => window.removeEventListener('srs-prefs-changed', onPrefsChanged)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ paddingBottom: 110, display: 'flex', flexDirection: 'column' }}>
@@ -554,15 +541,7 @@ export default function StudyPage() {
           title="Study"
           langName={lang.name}
           langDialect={dialectLabel}
-          right={
-            <button
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Study settings"
-              style={{ ...btnStyle, cursor: 'pointer' }}
-            >
-              <Icon name="settings" size={17} strokeWidth={1.6} />
-            </button>
-          }
+          settingsTab="study"
         />
       </div>
 
@@ -735,103 +714,6 @@ export default function StudyPage() {
           : <StudyStatsView stats={studyStats} />
       )}
 
-      {settingsOpen && (
-        <>
-          <div
-            onClick={() => setSettingsOpen(false)}
-            onKeyDown={e => { if (e.key === 'Escape') setSettingsOpen(false) }}
-            role="button" tabIndex={-1} aria-label="Close"
-            style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,10,0.35)', zIndex: 70 }}
-          />
-          <div style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0,
-            background: T.paper, borderRadius: '20px 20px 0 0',
-            border: `1px solid ${T.line}`, zIndex: 71,
-            boxShadow: '0 -8px 32px rgba(40,20,10,0.12)',
-            paddingBottom: 'env(safe-area-inset-bottom)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 0' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineSoft }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 18px 0' }}>
-              <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink }}>
-                Study settings
-              </span>
-              <button onClick={() => setSettingsOpen(false)} style={{
-                width: 28, height: 28, borderRadius: 999,
-                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: T.inkMute,
-              }}>
-                <Icon name="x" size={14} strokeWidth={2} />
-              </button>
-            </div>
-            <div style={{ height: 1, background: T.lineSoft, margin: '10px 18px 0' }} />
-            <div style={{ padding: '16px 18px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <button
-                onClick={() => handleToggleShowAll(!showAllLangs)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '13px 0', background: 'none', border: 'none', cursor: 'pointer', width: '100%',
-                }}
-              >
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: 15, fontWeight: 500, color: T.ink }}>Show all languages</div>
-                  <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
-                    Include all languages in Review all
-                  </div>
-                </div>
-                <div style={{
-                  width: 44, height: 26, borderRadius: 999, flexShrink: 0, marginLeft: 16,
-                  background: showAllLangs ? T.crimson : T.lineSoft,
-                  position: 'relative', transition: 'background 0.2s',
-                }}>
-                  <div style={{
-                    position: 'absolute', top: 3, left: showAllLangs ? 21 : 3,
-                    width: 20, height: 20, borderRadius: 999, background: '#fff',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
-                    transition: 'left 0.2s',
-                  }} />
-                </div>
-              </button>
-
-              {!showAllLangs && (
-                <div style={{ paddingTop: 4 }}>
-                  <div style={{
-                    fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute,
-                    textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10,
-                  }}>Languages</div>
-                  {availLangs === null ? (
-                    <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
-                  ) : availLangs.map(code => {
-                    const included = !excludedLangs.includes(code)
-                    return (
-                      <button key={code} onClick={() => handleToggleLang(code)} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        width: '100%', padding: '9px 0', background: 'none', border: 'none',
-                        cursor: 'pointer', textAlign: 'left',
-                      }}>
-                        <div style={{
-                          width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                          background: included ? T.crimson : 'transparent',
-                          border: `1.5px solid ${included ? T.crimson : T.line}`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
-                        </div>
-                        <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
-                      </button>
-                    )
-                  })}
-                  <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 8, lineHeight: 1.5 }}>
-                    Excluded languages still accumulate due cards.
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
 
       <CustomSessionSheet open={customOpen} onClose={() => setCustomOpen(false)} />
 

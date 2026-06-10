@@ -172,12 +172,14 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     setShowAllLangsRaw(v); localStorage.setItem('srs_show_all_langs', String(v))
     if (v) { setExcludedLangsRaw([]); localStorage.setItem('srs_excluded_langs', '[]'); saveToCloud({ show_all_langs: v, excluded_langs: [] }) }
     else   { saveToCloud({ show_all_langs: v }) }
+    window.dispatchEvent(new CustomEvent('srs-prefs-changed'))
   }
   function toggleLang(code: string) {
     setExcludedLangsRaw(prev => {
       const next = prev.includes(code) ? prev.filter(l => l !== code) : [...prev, code]
       localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
       saveToCloud({ excluded_langs: next })
+      window.dispatchEvent(new CustomEvent('srs-prefs-changed'))
       return next
     })
   }
