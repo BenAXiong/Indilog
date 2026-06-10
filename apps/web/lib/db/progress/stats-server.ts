@@ -27,6 +27,7 @@ export type DashboardStats = {
   simulationActive: boolean
   heatmap: number[][]       // [week 0..15][day 0..6], level 0-4, week 0 = oldest
   monthLabels: (string | null)[]  // label per week column, null if mid-month
+  simGoalRemaining: number   // non-Rooted active cards in sim decks (temporary x/y counter)
   mastered: number          // ease_factor >= 2.5 AND interval_days >= 21
   active: number            // total flashcards
   thisWeek: number          // sum reviewed_count last 7 days
@@ -48,6 +49,7 @@ const EMPTY: DashboardStats = {
   learnTarget: 10, reviewTarget: 100, tomorrowLearnTarget: null, tomorrowReviewTarget: null, simulationActive: false,
   heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
   monthLabels: new Array(16).fill(null) as (string | null)[],
+  simGoalRemaining: 0,
   mastered: 0, active: 0, thisWeek: 0,
   goalCollectionId: null, goalDueDate: null,
   capturedTotal: 0, capturedToday: 0, recentItems: [],
@@ -257,7 +259,8 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     reviewedToday,
     learnedToday,
     dueCount,
-    totalDue:       dueRes.count      ?? 0,
+    totalDue:          dueRes.count      ?? 0,
+    simGoalRemaining:  sim.simTotalActive - sim.simRootedCount,
     newCount:       newCountRes.count ?? 0,
     dueTomorrow:    dueTomorrowRes.count ?? 0,
     learnTarget,

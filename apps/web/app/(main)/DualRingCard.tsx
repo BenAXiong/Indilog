@@ -33,12 +33,14 @@ export default function DualRingCard({
   learnedToday, learnTarget, newCount,
   reviewedToday, reviewTarget, dueCount, totalDue,
   tomorrowLearnTarget, tomorrowReviewTarget, simActive,
+  simGoalRemaining,
 }: {
   learnedToday: number;  learnTarget: number;  newCount: number
   reviewedToday: number; reviewTarget: number; dueCount: number; totalDue: number
   tomorrowLearnTarget: number | null
   tomorrowReviewTarget: number | null
   simActive: boolean
+  simGoalRemaining: number
 }) {
   const [showForecast, setShowForecast] = useState(false)
 
@@ -136,36 +138,49 @@ export default function DualRingCard({
             Review
           </div>
           <RingWithCount pct={reviewPct} color={T.crimson} count={reviewedToday} target={reviewTarget} />
-          {dueCount > 0 && reviewedToday < reviewTarget ? (
-            <Link href="/review?start=1" style={{
-              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
-              background: T.crimson, color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              fontSize: 13.5, fontWeight: 600,
-              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
-            }}>
-              <Icon name="play" size={12} color="#fff" />
-              Review {dueCount}
-            </Link>
-          ) : reviewedToday >= reviewTarget && totalDue > 0 ? (
-            <Link href="/review?start=1&more=1" style={{
-              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
-              background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, fontWeight: 600,
-            }}>
-              Review more
-            </Link>
-          ) : (
-            <div style={{
-              width: '100%', height: 44, borderRadius: 12,
-              background: T.sageBg, border: `1px solid #D2D8AE`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}>
-              <Icon name="check" size={14} color={T.sageDp} strokeWidth={2.2} />
-              <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>All caught up!</span>
-            </div>
-          )}
+          <div style={{ position: 'relative', width: '100%' }}>
+            {dueCount > 0 && reviewedToday < reviewTarget ? (
+              <Link href="/review?start=1" style={{
+                width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+                background: T.crimson, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                fontSize: 13.5, fontWeight: 600,
+                boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
+              }}>
+                <Icon name="play" size={12} color="#fff" />
+                Review {dueCount}
+              </Link>
+            ) : reviewedToday >= reviewTarget && totalDue > 0 ? (
+              <Link href="/review?start=1&more=1" style={{
+                width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+                background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 600,
+              }}>
+                Review more
+              </Link>
+            ) : (
+              <div style={{
+                width: '100%', height: 44, borderRadius: 12,
+                background: T.sageBg, border: `1px solid #D2D8AE`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}>
+                <Icon name="check" size={14} color={T.sageDp} strokeWidth={2.2} />
+                <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>All caught up!</span>
+              </div>
+            )}
+            {simActive && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                textAlign: 'center',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: 9, color: T.inkMute,
+                pointerEvents: 'none',
+              }}>
+                {totalDue} / {simGoalRemaining}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Card>

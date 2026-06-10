@@ -6,6 +6,8 @@ export type SimulationResult = {
   tomorrowLearnTarget: number | null  // null when not from simulation
   /** true when targets come from the simulation, false when using manual caps */
   fromSimulation: boolean
+  simTotalActive: number   // non-suspended cards in sim decks
+  simRootedCount: number   // sim deck cards meeting Rooted threshold (interval≥21, reps≥5, ease≥2.5)
 }
 
 export async function computeSimulation(
@@ -21,7 +23,7 @@ export async function computeSimulation(
     .eq('in_simulation', true)
 
   if (!simDecks?.length) {
-    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false }
+    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false, simTotalActive: 0, simRootedCount: 0 }
   }
 
   const collectionIds = simDecks.map(d => d.collection_id as string)
@@ -31,6 +33,8 @@ export async function computeSimulation(
   const PAGE = 1000
   type CardRow = {
     repetitions: number
+    interval_days: number | null
+    ease_factor: number | null
     suspended_at: string | null
     due_at: string | null
     ind_items: { collection_id: string | null } | null
@@ -40,7 +44,7 @@ export async function computeSimulation(
   while (true) {
     const { data: page } = await supabase
       .from('ind_flashcards')
-      .select('repetitions, suspended_at, due_at, ind_items!inner(collection_id)')
+      .select('repetitions, interval_days, ease_factor, suspended_at, due_at, ind_items!inner(collection_id)')
       .eq('user_id', userId)
       .in('ind_items.collection_id', collectionIds)
       .range(from, from + PAGE - 1)
@@ -48,6 +52,12 @@ export async function computeSimulation(
     if (!page?.length || page.length < PAGE) break
     from += PAGE
   }
+
+  const activeCards   = allCards.filter(c => !c.suspended_at)
+  const simTotalActive = activeCards.length
+  const simRootedCount = activeCards.filter(c =>
+    (c.interval_days ?? 0) >= 21 && c.repetitions >= 5 && (c.ease_factor ?? 0) >= 2.5
+  ).length
 
   let totalNewCards = 0
   let existingReviewDue = 0
@@ -73,7 +83,7 @@ export async function computeSimulation(
   }
 
   if (minDaysRemaining === Infinity) {
-    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false }
+    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false, simTotalActive, simRootedCount }
   }
 
   // Subtract the minimum ripening window (21d = Rooted threshold) so we only
@@ -91,5 +101,5 @@ export async function computeSimulation(
     ? Math.max(1, Math.ceil(tomorrowNewCards / tomorrowEffectiveWindow))
     : 0
 
-  return { learnTarget, reviewTarget, tomorrowLearnTarget, fromSimulation: true }
+  return { learnTarget, reviewTarget, tomorrowLearnTarget, fromSimulation: true, simTotalActive, simRootedCount }
 }
