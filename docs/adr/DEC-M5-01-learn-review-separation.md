@@ -77,3 +77,5 @@ Priority sorting is always-on when the list is non-empty — no toggle. Shuffle 
 - `dueCount > 0` and `reviewedToday < reviewTarget` → "Review N due"
 - `reviewedToday >= reviewTarget` and `totalDue > 0` → "Review N more" [✏] where N = `Math.max(10, Math.round(reviewTarget / 50) * 5)`; edit icon persists custom value to `preferences.review_more_size`
 - `totalDue === 0` → "All caught up!"
+
+**Open question:** Should Easy be removed from test-pass ratings? See [design-questions.md](../../design-questions.md).
