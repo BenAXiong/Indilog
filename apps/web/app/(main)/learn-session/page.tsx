@@ -10,7 +10,8 @@ import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   listLearnFlashcards, graduateLearnCard, suspendCard, setFlagColor, listUserLanguages, cardMeta, cardAudio,
-  type FlashcardWithItem,
+  flushReviewEvents,
+  type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { computeMasteryGrade } from '@/lib/db/srs/schedule'
@@ -312,6 +313,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const priorityToastRef   = useRef(false)
   const sessionEndFiredRef = useRef(false)
   const pendingRef         = useRef(false)   // blocks re-entrant actions during async operations
+  const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
   const audioRef           = useRef<HTMLAudioElement | null>(null)
   const swipeStart         = useRef({ x: 0, y: 0 })
   const onExitRef          = useRef(onExit)
@@ -351,6 +353,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   useEffect(() => {
     if (queue.length > 0 && qIdx >= queue.length && !sessionEndFiredRef.current) {
       sessionEndFiredRef.current = true
+      flushReviewEvents(pendingEventsRef.current).then(() => {})
+      pendingEventsRef.current = []
       onExitRef.current(graduatedRef.current.size)
     }
   }, [qIdx, queue.length])
@@ -475,6 +479,11 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function handleAgain() {
     if (pendingRef.current) return
     pendingRef.current = true
+    pendingEventsRef.current.push({
+      flashcard_id: card.id, rating: 'again',
+      due_at: card.due_at ?? null, mode: null,
+      phase: 'learn', reviewed_at: new Date().toISOString(),
+    })
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
     setRevealed(false)
     setQIdx(qi => qi + 1)
@@ -600,7 +609,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 0', flexShrink: 0 }}>
-        <button onClick={() => onExit(graduatedRef.current.size)} aria-label="Exit"
+        <button onClick={() => { flushReviewEvents(pendingEventsRef.current).then(() => {}); pendingEventsRef.current = []; onExit(graduatedRef.current.size) }} aria-label="Exit"
           style={{ width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft, flexShrink: 0, cursor: 'pointer' }}>
           <Icon name="close" size={16} strokeWidth={2} />
         </button>

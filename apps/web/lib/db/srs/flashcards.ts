@@ -4,6 +4,23 @@ import { listPriorityDecks } from './priority'
 
 export type { Rating } from './schedule'
 
+export type PendingReviewEvent = {
+  flashcard_id: string
+  rating: string
+  due_at: string | null
+  mode: string | null
+  phase: string
+  reviewed_at: string
+}
+
+export async function flushReviewEvents(events: PendingReviewEvent[]): Promise<void> {
+  if (!events.length) return
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('ind_reviews').insert(events.map(e => ({ ...e, user_id: user.id })))
+}
+
 export type Flashcard = {
   id: string
   note_id: string

@@ -2,7 +2,9 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-10 14:22 | FEATURE | Review session: Again requeues card +10 positions (no DB write); re-rate Good/Easy writes 50% of pre-lapse interval via rateCardRelearn; second Again = full SM-2 lapse; Hard on lapsed card = Good recovery |
+| 2026-06-10 15:00 | SCHEMA | ind_reviews: add nullable `phase` TEXT column (NULL=scheduled algo event, 'review_requeue'=Review Again requeue, 'learn'=Learn Again) |
+| 2026-06-10 15:00 | FEATURE | Data buffering: buffer non-scheduled review events (Review Again, Learn Again) in useRef during session; batch INSERT via flushReviewEvents at session end (both review and learn); PendingReviewEvent type + flushReviewEvents in flashcards.ts |
+| 2026-06-10 15:00 | FEATURE | Review session: Again requeues card +10 positions; 50% interval recovery via rateCardRelearn on Good/Easy; all subsequent Again on same card preserves original lapsedInterval and requeues; Hard on lapsed = Good recovery |
 | 2026-06-10 14:22 | FIX | DualRingCard: "Learn more?" CTA now shows count — "Learn N more" (N = min(newCount, learnTarget)) |
 | 2026-06-10 14:22 | FEATURE | Settings Study tab: remove "Daily cap", add "Cards per session" (learn_cap ±1), add "Cards per Review session" (review_cap repurposed, pen/edit, smart default All/<30·30/30–89·50/90+, max 999); remove Daily cap from review OptionsSheet |
 | 2026-06-10 14:22 | FIX | DualRingCard: move forecast info icon to top-left absolutely positioned (no layout impact), remove "tomorrow" text label |

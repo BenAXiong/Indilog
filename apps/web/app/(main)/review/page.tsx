@@ -10,9 +10,9 @@ import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
-  rateCard, rateCardRelearn, cardMeta, cardAudio,
+  rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
   suspendCard, setFlagColor, deferCard, undoRating,
-  type FlashcardWithItem, type Rating, type ListDueOpts,
+  type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
@@ -314,6 +314,7 @@ function ReviewSession({
   useEffect(() => { onExitRef.current = onExit })
   const sessionEndFiredRef = useRef(false)
   const pendingRef         = useRef(false)
+  const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
 
   // Stop audio + close kebab when card advances; reset action gate
   useEffect(() => { audioRef.current?.pause(); setShowKebab(false); pendingRef.current = false }, [qIdx])
@@ -363,6 +364,8 @@ function ReviewSession({
   useEffect(() => {
     if (queue.length > 0 && qIdx >= queue.length && !sessionEndFiredRef.current) {
       sessionEndFiredRef.current = true
+      flushReviewEvents(pendingEventsRef.current).then(() => {})
+      pendingEventsRef.current = []
       onExitRef.current(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)))
     }
   }, [qIdx, queue.length])
@@ -436,13 +439,17 @@ function ReviewSession({
 
     const isLapsed = entry.lapsedInterval !== undefined
 
-    if (rating === 'again' && !isLapsed) {
-      // First failure: requeue +10, no DB write — interval saved for 50% recovery on re-rate
-      const lapsedInterval = card.interval_days ?? 1
+    if (rating === 'again') {
+      // Any Again: buffer event + requeue +10; preserve original pre-lapse interval across retries
+      const lapsedInterval = entry.lapsedInterval ?? card.interval_days ?? 1
+      pendingEventsRef.current.push({
+        flashcard_id: card.id, rating: 'again',
+        due_at: card.due_at ?? null, mode: effectiveMode,
+        phase: 'review_requeue', reviewed_at: new Date().toISOString(),
+      })
       setQueue(q => {
         const insertAt = Math.min(qIdx + 11, q.length)
-        const requeued: QueueEntry = { card, lapsedInterval }
-        return [...q.slice(0, insertAt), requeued, ...q.slice(insertAt)]
+        return [...q.slice(0, insertAt), { card, lapsedInterval }, ...q.slice(insertAt)]
       })
       lastRatedRef.current = null
       setCanUndo(false)
@@ -456,12 +463,11 @@ function ReviewSession({
     setCanUndo(false)
     const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
 
-    if (isLapsed && rating !== 'again') {
+    if (isLapsed) {
       // Requeued card rated Good/Easy/Hard: 50% interval recovery (Hard mapped to Good)
       const relRating = (rating === 'hard' ? 'good' : rating) as 'good' | 'easy'
       await rateCardRelearn(card.id, relRating, state, entry.lapsedInterval!, effectiveMode)
     } else {
-      // Normal rating, or second Again on already-lapsed card (full SM-2 penalty, no further requeue)
       await rateCard(card.id, rating, state, effectiveMode)
     }
 
@@ -551,6 +557,8 @@ function ReviewSession({
       {/* Session header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 0', flexShrink: 0 }}>
         <button onClick={() => {
+          flushReviewEvents(pendingEventsRef.current).then(() => {})
+          pendingEventsRef.current = []
           onExit(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)))
         }} aria-label="Exit session" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
