@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense } from 'react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -309,6 +309,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const sessionEndFiredRef = useRef(false)
   const pendingRef         = useRef(false)   // blocks re-entrant actions during async operations
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
+  const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
+  const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string } | null>(null)
   const audioRef           = useRef<HTMLAudioElement | null>(null)
   const swipeStart         = useRef({ x: 0, y: 0 })
   const onExitRef          = useRef(onExit)
@@ -427,10 +429,24 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
+  const FLY = {
+    next:  { x:  700, y:  -80, color: T.sage,    label: 'NEXT'  },
+    good:  { x:  700, y:  -80, color: T.sage,    label: 'GOOD'  },
+    again: { x: -700, y:  -80, color: T.crimson, label: 'AGAIN' },
+    easy:  { x:   60, y: -700, color: T.amber,   label: 'EASY'  },
+    pause: { x:    0, y:  700, color: T.inkSoft,  label: 'PAUSE' },
+  }
+
   async function handleSuspend() {
     if (pendingRef.current) return
     pendingRef.current = true
-    await suspendCard(card.id)
+    setGradingFly(FLY.pause)
+    setDrag(null)
+    await Promise.all([
+      suspendCard(card.id),
+      new Promise<void>(r => setTimeout(r, 350)),
+    ])
+    setGradingFly(null)
     setRevealed(false)
     // Replace suspended card from overflow; insert before test entries so all exposures
     // stay grouped. Read overflow from render scope (safe — pendingRef blocks concurrent
@@ -457,15 +473,22 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function handleExposureOK() {
     if (pendingRef.current) return
     pendingRef.current = true
+    setGradingFly(FLY.next)
+    setDrag(null)
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
-    setRevealed(false)
-    setQIdx(qi => qi + 1)
+    setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
   }
 
   async function handleGraduate(type: 'good' | 'easy') {
     if (pendingRef.current) return
     pendingRef.current = true
-    await graduateLearnCard(card.id, type)
+    setGradingFly(type === 'easy' ? FLY.easy : FLY.good)
+    setDrag(null)
+    await Promise.all([
+      graduateLearnCard(card.id, type),
+      new Promise<void>(r => setTimeout(r, 350)),
+    ])
+    setGradingFly(null)
     graduatedRef.current.add(card.id)
     setRevealed(false)
     setQIdx(qi => qi + 1)
@@ -474,14 +497,15 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function handleAgain() {
     if (pendingRef.current) return
     pendingRef.current = true
+    setGradingFly(FLY.again)
+    setDrag(null)
     pendingEventsRef.current.push({
       flashcard_id: card.id, rating: 'again',
       due_at: card.due_at ?? null, mode: null,
       phase: 'learn', reviewed_at: new Date().toISOString(),
     })
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
-    setRevealed(false)
-    setQIdx(qi => qi + 1)
+    setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
   }
 
   function handleGood(currentGoodCount: number) {
@@ -490,9 +514,10 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       handleGraduate('good')  // handleGraduate sets the guard itself
     } else {
       pendingRef.current = true
+      setGradingFly(FLY.good)
+      setDrag(null)
       setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 1 }])
-      setRevealed(false)
-      setQIdx(qi => qi + 1)
+      setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
     }
   }
 
@@ -501,11 +526,18 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function onTouchStart(e: React.TouchEvent) {
     swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
   }
+  function onTouchMove(e: React.TouchEvent) {
+    if (gradingFly) return
+    const dx = e.touches[0].clientX - swipeStart.current.x
+    const dy = e.touches[0].clientY - swipeStart.current.y
+    setDrag({ x: dx, y: dy })
+  }
   function onTouchEnd(e: React.TouchEvent) {
     const dx = e.changedTouches[0].clientX - swipeStart.current.x
     const dy = e.changedTouches[0].clientY - swipeStart.current.y
     const absX = Math.abs(dx), absY = Math.abs(dy)
     const THRESH = 70
+    setDrag(null)
     if (!exposureDone) {
       if (absX > absY && absX > THRESH && dx > 0) handleExposureOK()
       else if (absY > absX && absY > THRESH) {
@@ -588,6 +620,18 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     )
   }
 
+  // ── Tinder swipe visuals ──────────────────────────────────────────────────
+  const swipeDx = drag?.x ?? gradingFly?.x ?? 0
+  const swipeDy = drag?.y ?? gradingFly?.y ?? 0
+  const swipeRot = Math.max(-15, Math.min(15, swipeDx * 0.04))
+  const cardTransform = `translate(${swipeDx}px, ${swipeDy}px) rotate(${swipeRot}deg)`
+  const cardTransition = drag
+    ? 'none'
+    : gradingFly
+    ? 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
+    : 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)'
+  const cardOpacity = gradingFly ? 0.5 : 1
+
   const showBack = !exposureDone || (exposureDone && revealed)
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -647,6 +691,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
         <div
           onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onClick={() => {
             if (showFlagPicker) { setShowFlagPicker(false); return }
@@ -660,9 +705,67 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             display: 'flex', flexDirection: 'column', cursor: 'pointer',
             touchAction: 'none',
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
+            transform: cardTransform,
+            transition: cardTransition,
+            opacity: cardOpacity,
+            willChange: 'transform',
           }}
         >
-          {/* Top-left: grade badge */}
+          {/* Swipe color overlay + stamp */}
+          {(drag || gradingFly) && (() => {
+            const dx = drag?.x ?? gradingFly?.x ?? 0
+            const dy = drag?.y ?? gradingFly?.y ?? 0
+            const absX = Math.abs(dx), absY = Math.abs(dy)
+
+            let color = '', label = ''
+            if (gradingFly) {
+              color = gradingFly.color; label = gradingFly.label
+            } else if (absX > absY) {
+              if (!exposureDone) {
+                if (dx > 0) { color = T.sage; label = 'NEXT' }
+              } else if (revealed) {
+                color = dx < 0 ? T.crimson : T.sage
+                label = dx < 0 ? 'AGAIN' : 'GOOD'
+              }
+            } else {
+              color = dy < 0 ? T.amber : T.inkSoft; label = dy < 0 ? 'EASY' : 'PAUSE'
+            }
+            if (!color) return null
+
+            const intensity = gradingFly ? 1 : Math.min(Math.max(absX, absY) / 90, 1)
+            const isH = absX >= absY
+            const stampPos: CSSProperties = isH
+              ? (dx > 0
+                ? { top: 20, left: 20, transform: 'rotate(-10deg)' }
+                : { top: 20, right: 20, transform: 'rotate(10deg)' })
+              : (dy < 0
+                ? { bottom: 20, left: '50%', transform: 'translateX(-50%)' }
+                : { top: 20, left: '50%', transform: 'translateX(-50%)' })
+
+            return (
+              <>
+                <div style={{
+                  position: 'absolute', inset: 0, borderRadius: 22, pointerEvents: 'none', zIndex: 5,
+                  background: color, opacity: intensity * 0.22,
+                }} />
+                {intensity > 0.15 && (
+                  <div style={{
+                    position: 'absolute', pointerEvents: 'none', zIndex: 6,
+                    opacity: Math.min((intensity - 0.15) / 0.35, 1),
+                    ...stampPos,
+                  }}>
+                    <span style={{
+                      display: 'block', fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: 18, fontWeight: 800, letterSpacing: '0.1em',
+                      color, border: `2.5px solid ${color}`, borderRadius: 6, padding: '3px 10px',
+                    }}>{label}</span>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+
+          {/* Bottom-center: grade badge */}
           {(() => {
             const grade = computeMasteryGrade(card)
             const GS: Record<string, { color: string; bg: string; border: string }> = {
@@ -673,7 +776,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             }
             const gs = GS[grade]
             return (
-              <div style={{ position: 'absolute', top: 14, left: 12 }}>
+              <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)' }}>
                 <span style={{
                   fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -684,12 +787,12 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             )
           })()}
 
-          {/* Bottom-left: flag button + picker */}
+          {/* Top-right: flag button + picker */}
           {(() => {
             const currentFlag    = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
             const currentFlagHex = flagColorHex(currentFlag)
             return (
-              <div style={{ position: 'absolute', bottom: 10, left: 12, display: 'flex', gap: 5, alignItems: 'center' }}
+              <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'row-reverse', gap: 5, alignItems: 'center' }}
                 onClick={e => e.stopPropagation()}>
                 <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
                   width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
@@ -719,8 +822,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             )
           })()}
 
-          {/* Top-right: suspend */}
-          <div style={{ position: 'absolute', top: 10, right: 12 }} onClick={e => e.stopPropagation()}>
+          {/* Top-left: suspend */}
+          <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
             <button onClick={handleSuspend} aria-label="Suspend card" style={{
               width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',

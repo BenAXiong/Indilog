@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 04:35 | FEATURE | Learn session card UI: same Tinder-style swipe feedback + button repositioning as review cards; exposure phase right-swipe shows "NEXT" stamp
 | 2026-06-11 04:13 | FEATURE | Review card UI: Tinder-style swipe feedback — live drag with rotation, color overlay (crimson/sage/amber/grey) that intensifies with distance, stamp label past 15% threshold, fly-out animation on grade (network + 350ms timer run concurrently) |
 | 2026-06-11 04:13 | FEATURE | Review card UI: move flags to top-right, suspend to top-left, grade badge (status pill) to bottom-center |
 | 2026-06-11 03:53 | FIX | reviewMoreN: raise floor to 20 (was 10) — minimum "more" session is always 20 cards |
