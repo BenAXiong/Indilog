@@ -176,9 +176,13 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Mastery grades — Seed/Planted/Rooted/Blooming; see DEC-SRS09; rename "mastered" stat to "Rooted"
 - [x] ind_daily_stats: add learned_count column; add increment_learned_today RPC
 - [x] Revamp GoalSheet UI — 3 tabs: Goals (manual/calculated toggle), Priority (ordered deck list), Simulate (deadline + deck selection + curve)
-- [ ] Fix: SRS workflow bugs
-- [ ] Refine Cards UI (rewind, skip, gestures, scores buttons, etc)
+- [~] Fix: SRS workflow bugs - Learn
+- [~] Fix: SRS workflow bugs - Review (again not requeed, bottom bar jiggle, see ss)
+- [x] Refine Cards UI - Learn (rewind, skip, gestures, scores buttons, etc)
+- [~] Refine Cards UI - Review (rewind, skip, gestures, scores buttons, etc)
 - [ ] Refine Cards UX (visual grading feedback)
+- [ ] Add motivation stats/progression to Learn session end
+- [~] Fix: dailies recalc after session on same day
 - [ ] Revamp Dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
 - [ ] Curriculum content layout options — compact / standard / flashcard view; toggled per-section or globally
 - [ ] Study tab decks: on click, add in sheet review now, open in browser, etc
@@ -286,12 +290,14 @@ These are design questions that need real-world data or further thought before d
 
 - **SRS analytics:** store `learn_attempts` (total test-pass ratings before graduation) and `learn_avg_ms` (avg ms flip→rating) on `ind_flashcards` at graduation; correlate with review outcomes (first-review rating, ease drift, interval to rooted threshold)
 - **Learn test mode: forward+type** — 5th review mode alongside forward/reverse/audio/STS; user types the target word rather than tapping a rating button; useful for production practice
+- GoalsSheet revamps: especially calculated display, add charts
 - Capture: option or tag to exclude from flashcards (when data undure or incomplete)
 - Advanced SRS modes: first comp then prod (auto-shifts when mature)
 - Advanced SRS tab (beware, modify only if you understand)
 - 3rd dashboard ring for Captures (alongside Learn + Review rings) — deferred until capture goals are designed
 - Configurable streak: hitting any/all/combination of caps selectable per goal type — deferred until 3-ring dashboard exists (E-option; v1 streak = any cap hit)
 - Amis100 - useful fun version
+- generate IP-stable manga images
 - Dialogue 001
 - Find how many gaoji vocab have exsent in ePark
 - Avoid need for signal during review
@@ -323,6 +329,8 @@ These are design questions that need real-world data or further thought before d
 - OCR capture
 - AI-formatted json from other formats (txt, csv, pdf) for teachers
 - How to tutorial (instructions for SRS, tabs workflow)
+- streak freeze: get one free "rest day" after streak=6
+- leeches: can derived a lapse_count from ind_reviews
 
 ---
 
