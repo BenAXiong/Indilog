@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-10 17:10 | FEATURE | Settings Study subtab: merge L/R rows back into one touching card; rename subtabs to 'Session size' / 'Session UI'; add reset-to-defaults and info tooltip (explains no-goal/manual/simulated cases) next to section label |
 | 2026-06-10 16:50 | FEATURE | Settings Study subtab: remove 'Learning passes' (dead wire); redesign session rows under 'Cards in each session' label — Learn session + Review session each in own card, subtitle shows 'Current manual/calculated goal: N cards/day'; both rows use pen-toggle stepper; DualRingCard now writes srs_learn_target + srs_sim_active to localStorage |
 | 2026-06-10 16:50 | REFACTOR | Remove learning_steps from UserPreferences type + DEFAULT_PREFERENCES (was never read by learn-session) |
 | 2026-06-10 15:00 | SCHEMA | ind_reviews: add nullable `phase` TEXT column (NULL=scheduled algo event, 'review_requeue'=Review Again requeue, 'learn'=Learn Again) |
