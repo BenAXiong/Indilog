@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-10 22:15 | FEATURE | Simulation learnTarget uses effectiveWindow = max(1, daysLeft - 21) — cards introduced within 21 days of deadline can't reach Rooted; updated simulation.ts, simulation-client.ts, loadLearnContext; ADR DEC-SRS10 updated |
 | 2026-06-10 17:10 | FEATURE | Settings Study subtab: merge L/R rows back into one touching card; rename subtabs to 'Session size' / 'Session UI'; add reset-to-defaults and info tooltip (explains no-goal/manual/simulated cases) next to section label |
 | 2026-06-10 16:50 | FEATURE | Settings Study subtab: remove 'Learning passes' (dead wire); redesign session rows under 'Cards in each session' label — Learn session + Review session each in own card, subtitle shows 'Current manual/calculated goal: N cards/day'; both rows use pen-toggle stepper; DualRingCard now writes srs_learn_target + srs_sim_active to localStorage |
 | 2026-06-10 16:50 | REFACTOR | Remove learning_steps from UserPreferences type + DEFAULT_PREFERENCES (was never read by learn-session) |
@@ -360,3 +361,4 @@
 | 2026-05-28 01:30 | CONFIG | Regenerate all icons from modified Book_1_nocirc_nobg source — icon.png 512×512, apple-icon.png 180×180, icon-192.png 192×192, icon-512.png 512×512 |
 | 2026-05-28 01:37 | FIX | cross-env for Windows-compatible NODE_OPTIONS in build script; Toast position:fixed (was absolute, clipped by scroll containers); flashcards use meaning column for card back with notes fallback; commit previously untracked meaning + audio_url migration files |
  
+| 2026-06-10 22:15 | FEATURE | Simulation learnTarget now uses effectiveWindow = max(1, daysLeft - 21) — cards introduced within 21 days of deadline can't reach Rooted; updated simulation.ts, simulation-client.ts, loadLearnContext; ADR DEC-SRS10 updated |
