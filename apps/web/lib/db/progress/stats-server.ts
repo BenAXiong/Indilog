@@ -28,6 +28,7 @@ export type DashboardStats = {
   heatmap: number[][]       // [week 0..15][day 0..6], level 0-4, week 0 = oldest
   monthLabels: (string | null)[]  // label per week column, null if mid-month
   simGoalRemaining: number   // non-Rooted active cards in sim decks (temporary x/y counter)
+  reviewMoreN: number        // session size for "Review more" — matches session formula
   mastered: number          // ease_factor >= 2.5 AND interval_days >= 21
   active: number            // total flashcards
   thisWeek: number          // sum reviewed_count last 7 days
@@ -50,6 +51,7 @@ const EMPTY: DashboardStats = {
   heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
   monthLabels: new Array(16).fill(null) as (string | null)[],
   simGoalRemaining: 0,
+  reviewMoreN: 10,
   mastered: 0, active: 0, thisWeek: 0,
   goalCollectionId: null, goalDueDate: null,
   capturedTotal: 0, capturedToday: 0, recentItems: [],
@@ -230,6 +232,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const reviewedToday = todayStats?.reviewed ?? 0
   const learnedToday  = todayStats?.learned  ?? 0
   const reviewCap     = (prefs.review_cap as number) ?? 100
+  const reviewMoreN   = (prefs.review_more_size as number | undefined) ?? Math.max(10, Math.round(reviewCap / 50) * 5)
 
   // 2E: simulation targets (falls back to pref caps when no sim decks)
   const sim = await computeSimulation(user.id, {
@@ -262,6 +265,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     dueCount,
     totalDue:          dueRes.count      ?? 0,
     simGoalRemaining:  sim.simTotalActive - sim.simRootedCount,
+    reviewMoreN,
     newCount:       newCountRes.count ?? 0,
     dueTomorrow:    dueTomorrowRes.count ?? 0,
     learnTarget,

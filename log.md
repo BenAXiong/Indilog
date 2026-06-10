@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 03:45 | FEATURE | Review "more" CTA: show "Review N more?" with N matching the session size formula (review_more_size pref ?? max(10, round(reviewCap/50)*5), bounded by totalDue) |
 | 2026-06-11 02:39 | FIX | Replace remaining toISOString().slice(0,10) with localDateStr() in stats-server.ts, review/page.tsx, GoalSheet.tsx — all were low-severity (history bounds, server fallback, deadline default) but consistent with the UTC-safety rule |
 | 2026-06-11 02:21 | FIX | learn-session: remove local broken getStudyDate() (used toISOString/UTC, returned wrong date for UTC+ timezones before reset hour); import shared getStudyDate from flashcards; read learn_target from ind_daily_stats and use frozen value as learnCap when available, falling back to live sim — fixes session loading 22 cards while CTA showed 1 |
 | 2026-06-11 02:13 | FIX | getDashboardStats: read frozenLearnTarget/frozenReviewTarget from raw dailyRows instead of statsMap (statsMap only stored reviewed/captured/learned, so frozen targets were always null — dashboard always used live sim values and fired the freeze RPC on every load) |

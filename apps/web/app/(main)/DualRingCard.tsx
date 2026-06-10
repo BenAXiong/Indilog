@@ -33,7 +33,7 @@ export default function DualRingCard({
   learnedToday, learnTarget, newCount,
   reviewedToday, reviewTarget, dueCount, totalDue,
   tomorrowLearnTarget, tomorrowReviewTarget, simActive,
-  simGoalRemaining,
+  simGoalRemaining, reviewMoreN,
 }: {
   learnedToday: number;  learnTarget: number;  newCount: number
   reviewedToday: number; reviewTarget: number; dueCount: number; totalDue: number
@@ -41,6 +41,7 @@ export default function DualRingCard({
   tomorrowReviewTarget: number | null
   simActive: boolean
   simGoalRemaining: number
+  reviewMoreN: number
 }) {
   const [showForecast, setShowForecast] = useState(false)
 
@@ -157,7 +158,7 @@ export default function DualRingCard({
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 13, fontWeight: 600,
               }}>
-                Review more
+                Review {Math.min(totalDue, reviewMoreN)} more?
               </Link>
             ) : (
               <div style={{

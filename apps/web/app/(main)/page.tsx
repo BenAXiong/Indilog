@@ -169,6 +169,7 @@ export default async function DashboardPage() {
         tomorrowReviewTarget={stats.tomorrowReviewTarget}
         simActive={stats.simulationActive}
         simGoalRemaining={stats.simGoalRemaining}
+        reviewMoreN={stats.reviewMoreN}
       />
 
       {/* Heatmap */}
