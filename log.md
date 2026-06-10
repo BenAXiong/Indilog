@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-10 16:50 | FEATURE | Settings Study subtab: remove 'Learning passes' (dead wire); redesign session rows under 'Cards in each session' label — Learn session + Review session each in own card, subtitle shows 'Current manual/calculated goal: N cards/day'; both rows use pen-toggle stepper; DualRingCard now writes srs_learn_target + srs_sim_active to localStorage |
+| 2026-06-10 16:50 | REFACTOR | Remove learning_steps from UserPreferences type + DEFAULT_PREFERENCES (was never read by learn-session) |
 | 2026-06-10 15:00 | SCHEMA | ind_reviews: add nullable `phase` TEXT column (NULL=scheduled algo event, 'review_requeue'=Review Again requeue, 'learn'=Learn Again) |
 | 2026-06-10 15:00 | FEATURE | Data buffering: buffer non-scheduled review events (Review Again, Learn Again) in useRef during session; batch INSERT via flushReviewEvents at session end (both review and learn); PendingReviewEvent type + flushReviewEvents in flashcards.ts |
 | 2026-06-10 15:00 | FEATURE | Review session: Again requeues card +10 positions; 50% interval recovery via rateCardRelearn on Good/Easy; all subsequent Again on same card preserves original lapsedInterval and requeues; Hard on lapsed = Good recovery |
