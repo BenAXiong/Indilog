@@ -86,8 +86,11 @@ export async function projectSimulation(params: {
   const newCards  = active.filter(c => c.repetitions === 0)
   const graduated = active.filter(c => c.repetitions > 0)
 
-  // Daily learn rate needed to graduate all new cards by the deadline
-  const learnTarget = Math.max(1, Math.min(learnCap, Math.ceil(newCards.length / daysLeft)))
+  // Subtract the minimum ripening window so we only count days where a card
+  // introduced today can still reach Rooted (interval >= 21d) by the deadline.
+  const TIME_TO_ROOTED  = 21
+  const effectiveWindow = Math.max(1, daysLeft - TIME_TO_ROOTED)
+  const learnTarget = Math.max(1, Math.min(learnCap, Math.ceil(newCards.length / effectiveWindow)))
 
   // Per-day counters
   const learnLoad  = new Array<number>(daysLeft).fill(0)

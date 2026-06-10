@@ -79,7 +79,8 @@ async function loadLearnContext(): Promise<LearnContext> {
       .in('ind_items.collection_id', simDecks.map(d => d.collection_id))
       .eq('repetitions', 0)
       .is('suspended_at', null)
-    learnCap = Math.max(1, Math.ceil((newCards ?? 0) / daysLeft))
+    const effectiveWindow = Math.max(1, daysLeft - 21)
+    learnCap = Math.max(1, Math.ceil((newCards ?? 0) / effectiveWindow))
   }
 
   return {

@@ -76,14 +76,19 @@ export async function computeSimulation(
     return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false }
   }
 
-  const learnTarget = Math.max(1, Math.ceil(totalNewCards / minDaysRemaining))
+  // Subtract the minimum ripening window (21d = Rooted threshold) so we only
+  // count days where a newly-introduced card can still reach Rooted by the deadline.
+  const TIME_TO_ROOTED = 21
+  const effectiveWindow       = Math.max(1, minDaysRemaining - TIME_TO_ROOTED)
+  const learnTarget = Math.max(1, Math.ceil(totalNewCards / effectiveWindow))
   const reviewTarget = Math.max(prefs.review_cap ?? 100, existingReviewDue)
 
   // Tomorrow: one day consumed, learnTarget fewer new cards remaining
-  const tomorrowNewCards    = Math.max(0, totalNewCards - learnTarget)
-  const tomorrowDaysLeft    = Math.max(1, minDaysRemaining - 1)
+  const tomorrowNewCards        = Math.max(0, totalNewCards - learnTarget)
+  const tomorrowDaysLeft        = Math.max(1, minDaysRemaining - 1)
+  const tomorrowEffectiveWindow = Math.max(1, tomorrowDaysLeft - TIME_TO_ROOTED)
   const tomorrowLearnTarget = minDaysRemaining > 1
-    ? Math.max(1, Math.ceil(tomorrowNewCards / tomorrowDaysLeft))
+    ? Math.max(1, Math.ceil(tomorrowNewCards / tomorrowEffectiveWindow))
     : 0
 
   return { learnTarget, reviewTarget, tomorrowLearnTarget, fromSimulation: true }
