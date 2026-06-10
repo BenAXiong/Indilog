@@ -317,8 +317,28 @@ function ReviewSession({
   const pendingRef         = useRef(false)
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
 
+  // ── DEV inspect ──────────────────────────────────────────────────────────────
+  const [showInspect,    setShowInspect]    = useState(false)
+  type ReviewRow = { id: string; rating: string; mode: string | null; phase: string; reviewed_at: string; due_at: string | null }
+  const [inspectHistory, setInspectHistory] = useState<ReviewRow[] | null>(null)
+  useEffect(() => {
+    const cardId = queue[qIdx]?.card?.id
+    if (!showInspect || !cardId) return
+    setInspectHistory(null)
+    const sb = createClient()
+    sb.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      sb.from('ind_reviews')
+        .select('id, rating, mode, phase, reviewed_at, due_at')
+        .eq('flashcard_id', cardId)
+        .order('reviewed_at', { ascending: false })
+        .limit(20)
+        .then(({ data }) => setInspectHistory((data ?? []) as ReviewRow[]))
+    })
+  }, [showInspect, qIdx]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Stop audio + close kebab when card advances; reset action gate
-  useEffect(() => { audioRef.current?.pause(); setShowKebab(false); pendingRef.current = false }, [qIdx])
+  useEffect(() => { audioRef.current?.pause(); setShowKebab(false); setShowInspect(false); pendingRef.current = false }, [qIdx])
 
   // Autoplay in audio mode when card changes
   useEffect(() => {
@@ -588,6 +608,16 @@ function ReviewSession({
         }}>
           <Icon name="settings" size={16} strokeWidth={1.7} />
         </button>
+
+        {/* DEV inspect — temporary */}
+        <button onClick={() => setShowInspect(p => !p)} style={{
+          height: 26, padding: '0 8px', borderRadius: 6, flexShrink: 0,
+          background: showInspect ? '#1a1a1a' : T.paperHi,
+          border: `1px solid ${showInspect ? '#333' : T.line}`,
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.06em', color: showInspect ? '#fff' : T.inkMute,
+          cursor: 'pointer', textTransform: 'uppercase',
+        }}>DEV</button>
 
         {/* Kebab — skip + suspend */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -877,6 +907,99 @@ function ReviewSession({
           </div>
         ) : null}
       </div>
+
+      {/* DEV inspect sheet — temporary */}
+      {showInspect && (() => {
+        const grade = computeMasteryGrade(card)
+        const gradeColors: Record<string, string> = { seed: '#C89A20', planted: '#888', rooted: '#566234', blooming: '#3a601a' }
+        function fmt(iso: string | null) {
+          if (!iso) return '—'
+          const d = new Date(iso)
+          const diff = d.getTime() - Date.now()
+          const abs = Math.abs(diff), sign = diff < 0 ? '-' : '+'
+          const rel = abs < 60_000 ? 'now'
+            : abs < 3_600_000 ? `${sign}${Math.round(abs/60_000)}m`
+            : abs < 86_400_000 ? `${sign}${Math.round(abs/3_600_000)}h`
+            : `${sign}${Math.round(abs/86_400_000)}d`
+          return `${d.toISOString().slice(0, 16).replace('T', ' ')} (${rel})`
+        }
+        const rows: [string, string][] = [
+          ['id',           card.id],
+          ['note_id',      card.note_id],
+          ['collection',   card.ind_items?.collection_id ?? '—'],
+          ['type',         card.ind_items?.type ?? '—'],
+          ['grade',        grade],
+          ['repetitions',  String(card.repetitions)],
+          ['ease_factor',  card.ease_factor.toFixed(2)],
+          ['interval_days', card.interval_days % 1 === 0 ? String(card.interval_days) : card.interval_days.toFixed(2)],
+          ['due_at',       fmt(card.due_at)],
+          ['suspended_at', fmt(card.suspended_at)],
+          ['created_at',   fmt(card.created_at)],
+          ...(entry.lapsedInterval !== undefined ? [['lapsed_interval', String(entry.lapsedInterval)] as [string, string]] : []),
+        ]
+        return (
+          <>
+            <div onClick={() => setShowInspect(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 30 }} />
+            <div style={{
+              position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 31,
+              background: '#1a1a1a', borderRadius: '18px 18px 0 0',
+              maxHeight: '72vh', display: 'flex', flexDirection: 'column',
+              boxShadow: '0 -8px 32px rgba(0,0,0,0.4)',
+            }}>
+              <div style={{ padding: '10px 16px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
+                  Card Inspector · DEV
+                </span>
+                <button onClick={() => setShowInspect(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4 }}>
+                  <Icon name="close" size={14} strokeWidth={2} />
+                </button>
+              </div>
+              <div style={{ overflowY: 'auto', padding: '0 16px 24px' }}>
+                {/* SRS fields */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: '"JetBrains Mono", monospace', fontSize: 11 }}>
+                  <tbody>
+                    {rows.map(([k, v]) => (
+                      <tr key={k} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                        <td style={{ padding: '5px 8px 5px 0', color: '#666', whiteSpace: 'nowrap', width: 130, verticalAlign: 'top' }}>{k}</td>
+                        <td style={{ padding: '5px 0', color: k === 'grade' ? gradeColors[v] ?? '#ccc' : '#ccc', wordBreak: 'break-all' }}>{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {/* Review history */}
+                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '14px 0 6px', fontWeight: 700 }}>
+                  Review history
+                </div>
+                {inspectHistory === null ? (
+                  <div style={{ fontSize: 11, color: '#555', fontFamily: '"JetBrains Mono", monospace' }}>loading…</div>
+                ) : inspectHistory.length === 0 ? (
+                  <div style={{ fontSize: 11, color: '#555', fontFamily: '"JetBrains Mono", monospace' }}>no reviews yet</div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: '"JetBrains Mono", monospace', fontSize: 11 }}>
+                    <thead>
+                      <tr>
+                        {['reviewed_at', 'rating', 'mode', 'phase'].map(h => (
+                          <td key={h} style={{ padding: '3px 6px 3px 0', color: '#444', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</td>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inspectHistory.map(r => (
+                        <tr key={r.id} style={{ borderBottom: '1px solid #222' }}>
+                          <td style={{ padding: '4px 6px 4px 0', color: '#888', whiteSpace: 'nowrap' }}>{r.reviewed_at.slice(0, 16).replace('T', ' ')}</td>
+                          <td style={{ padding: '4px 6px 4px 0', color: r.rating === 'again' ? '#e06c6c' : r.rating === 'easy' ? '#C89A20' : r.rating === 'good' ? '#7bab4a' : '#c8844a', whiteSpace: 'nowrap' }}>{r.rating}</td>
+                          <td style={{ padding: '4px 6px 4px 0', color: '#666', whiteSpace: 'nowrap' }}>{r.mode ?? '—'}</td>
+                          <td style={{ padding: '4px 0', color: '#555', whiteSpace: 'nowrap' }}>{r.phase}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* Options sheet */}
       {showOptions && (

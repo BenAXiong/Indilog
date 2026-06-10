@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-10 23:46 | FEATURE | DEV: card inspector panel in review session — DEV chip button opens bottom sheet with SRS state (grade, reps, ease, interval, due_at) and live review history from ind_reviews |
 | 2026-06-10 23:45 | FIX | Learn landing: remove Daily cap reached gate — load learnCap cards when target already met, user navigates consciously; single No new cards empty state |
 | 2026-06-10 23:28 | FEATURE | ADR DEC-SRS11: document review session counter semantics — handledCount/totalCards, full action table, phantom edge case, undo scope |
 | 2026-06-10 23:40 | FIX | Review session counter: replace fixed cards.length denominator with totalCards state; defer and suspend-no-overflow shrink totalCards, suspend-with-overflow leaves it unchanged; handledCount only increments on Good/Hard/Easy |
