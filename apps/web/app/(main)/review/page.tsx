@@ -292,6 +292,7 @@ function ReviewSession({
   const [overflow, setOverflow] = useState<FlashcardWithItem[]>(initialOverflow)
   const [qIdx,          setQIdx]          = useState(0)
   const [handledCount,  setHandledCount]  = useState(0)
+  const [totalCards,    setTotalCards]    = useState(cards.length)
   const completedRef                       = useRef(new Set<string>())
   const [revealed,       setRevealed]      = useState(false)
   const [showOptions,    setShowOptions]   = useState(false)
@@ -484,7 +485,7 @@ function ReviewSession({
     if (pendingRef.current) return
     pendingRef.current = true
     await deferCard(card.id)
-    setHandledCount(c => c + 1)
+    setTotalCards(n => n - 1)
     lastRatedRef.current = null
     setCanUndo(false)
     setRevealed(false)
@@ -514,7 +515,7 @@ function ReviewSession({
     setRevealed(false)
     setOverflow(prev => {
       if (!prev.length) {
-        setHandledCount(c => c + 1)
+        setTotalCards(n => n - 1)
         return prev
       }
       const [next, ...rest] = prev
@@ -632,7 +633,7 @@ function ReviewSession({
       {/* Progress bar + counter / undo row */}
       <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
-          <div style={{ width: `${(handledCount / Math.max(cards.length, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
+          <div style={{ width: `${(handledCount / Math.max(totalCards, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 5, minHeight: 20 }}>
           {/* Left: returning indicator */}
@@ -640,7 +641,7 @@ function ReviewSession({
           {/* Right: counter stacked above undo */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em' }}>
-              {handledCount} / {cards.length}
+              {handledCount} / {totalCards}
             </span>
             {canUndo && (
               <button onClick={handleUndo} style={{
