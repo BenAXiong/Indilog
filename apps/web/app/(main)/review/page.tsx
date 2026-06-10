@@ -1309,7 +1309,7 @@ function ReviewPage() {
     const reviewMoreN  = context.reviewMoreSize ?? Math.max(10, Math.round(cap / 50) * 5)
     const sessionCap   = isCustom ? c.length
       : isMore         ? reviewMoreN
-      : Math.max(0, cap - context.reviewedToday)
+      : Math.max(0, context.reviewTarget - context.reviewedToday)
     setCards(c.slice(0, sessionCap))
     setOverflow(isCustom ? [] : c.slice(sessionCap))
     setCtx(context)
