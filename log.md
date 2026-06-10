@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 04:13 | FEATURE | Review card UI: Tinder-style swipe feedback — live drag with rotation, color overlay (crimson/sage/amber/grey) that intensifies with distance, stamp label past 15% threshold, fly-out animation on grade (network + 350ms timer run concurrently) |
+| 2026-06-11 04:13 | FEATURE | Review card UI: move flags to top-right, suspend to top-left, grade badge (status pill) to bottom-center |
 | 2026-06-11 03:53 | FIX | reviewMoreN: raise floor to 20 (was 10) — minimum "more" session is always 20 cards |
 | 2026-06-11 03:49 | FIX | reviewMoreN formula: use reviewTarget (frozen daily goal, accounts for simulation) instead of reviewCap (raw pref) in both session and dashboard |
 | 2026-06-11 03:45 | FEATURE | Review "more" CTA: show "Review N more?" with N matching the session size formula (review_more_size pref ?? max(10, round(reviewCap/50)*5), bounded by totalDue) |
