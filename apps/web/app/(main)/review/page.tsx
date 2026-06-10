@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense } from 'react'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -315,6 +315,8 @@ function ReviewSession({
   const sessionEndFiredRef = useRef(false)
   const pendingRef         = useRef(false)
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
+  const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
+  const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string } | null>(null)
 
   // ── DEV inspect ──────────────────────────────────────────────────────────────
   const [showInspect,    setShowInspect]    = useState(false)
@@ -453,10 +455,22 @@ function ReviewSession({
   const stsWord     = targetWord ?? ''
   const stsSentence = card.ind_items?.ab ?? ''
 
+  function ratingToFly(r: Rating): { x: number; y: number; color: string; label: string } {
+    if (r === 'again') return { x: -700, y: -80,  color: T.crimson, label: 'AGAIN' }
+    if (r === 'hard')  return { x:  300, y: -650,  color: T.terra,   label: 'HARD'  }
+    if (r === 'easy')  return { x:   60, y: -700,  color: T.amber,   label: 'EASY'  }
+    return                     { x:  700, y: -80,  color: T.sage,    label: 'GOOD'  }
+  }
+
   async function submit(rating: Rating) {
     if (pendingRef.current) return
     pendingRef.current = true
 
+    const fly = ratingToFly(rating)
+    setGradingFly(fly)
+    setDrag(null)
+
+    const ANIM_MS = 350
     const isLapsed = entry.lapsedInterval !== undefined
 
     if (rating === 'again') {
@@ -471,6 +485,8 @@ function ReviewSession({
         const insertAt = Math.min(qIdx + 11, q.length)
         return [...q.slice(0, insertAt), { card, lapsedInterval }, ...q.slice(insertAt)]
       })
+      await new Promise<void>(r => setTimeout(r, ANIM_MS))
+      setGradingFly(null)
       lastRatedRef.current = null
       setCanUndo(false)
       setRevealed(false)
@@ -483,14 +499,15 @@ function ReviewSession({
     setCanUndo(false)
     const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
 
-    if (isLapsed) {
-      // Requeued card rated Good/Easy/Hard: 50% interval recovery (Hard mapped to Good)
-      const relRating = (rating === 'hard' ? 'good' : rating) as 'good' | 'easy'
-      await rateCardRelearn(card.id, relRating, state, entry.lapsedInterval!, effectiveMode, rating)
-    } else {
-      await rateCard(card.id, rating, state, effectiveMode)
-    }
+    await Promise.all([
+      isLapsed
+        // Requeued card rated Good/Easy/Hard: 50% interval recovery (Hard mapped to Good)
+        ? rateCardRelearn(card.id, (rating === 'hard' ? 'good' : rating) as 'good' | 'easy', state, entry.lapsedInterval!, effectiveMode, rating)
+        : rateCard(card.id, rating, state, effectiveMode),
+      new Promise<void>(r => setTimeout(r, ANIM_MS)),
+    ])
 
+    setGradingFly(null)
     completedRef.current.add(card.id)
     setHandledCount(c => c + 1)
     lastRatedRef.current = { cardId: card.id, prevState }
@@ -529,7 +546,13 @@ function ReviewSession({
   async function handleSuspend() {
     if (pendingRef.current) return
     pendingRef.current = true
-    await suspendCard(card.id)
+    setGradingFly({ x: 0, y: 700, color: T.inkSoft, label: 'PAUSE' })
+    setDrag(null)
+    await Promise.all([
+      suspendCard(card.id),
+      new Promise<void>(r => setTimeout(r, 350)),
+    ])
+    setGradingFly(null)
     setShowFlagPicker(false)
     setRevealed(false)
     setOverflow(prev => {
@@ -556,11 +579,18 @@ function ReviewSession({
   function onTouchStart(e: React.TouchEvent) {
     swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
   }
+  function onTouchMove(e: React.TouchEvent) {
+    if (gradingFly) return
+    const dx = e.touches[0].clientX - swipeStart.current.x
+    const dy = e.touches[0].clientY - swipeStart.current.y
+    setDrag({ x: dx, y: dy })
+  }
   function onTouchEnd(e: React.TouchEvent) {
     const dx = e.changedTouches[0].clientX - swipeStart.current.x
     const dy = e.changedTouches[0].clientY - swipeStart.current.y
     const absX = Math.abs(dx), absY = Math.abs(dy)
     const THRESH = 70
+    setDrag(null)
     if (!revealed) {
       if (absX < 10 && absY < 10) { setRevealed(true); return }
       if (absY > absX && absY > THRESH) {
@@ -575,6 +605,18 @@ function ReviewSession({
   }
 
   const visibleRatings = showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
+
+  // ── Tinder swipe visuals ──────────────────────────────────────────────────────
+  const swipeDx = drag?.x ?? gradingFly?.x ?? 0
+  const swipeDy = drag?.y ?? gradingFly?.y ?? 0
+  const swipeRot = Math.max(-15, Math.min(15, swipeDx * 0.04))
+  const cardTransform = `translate(${swipeDx}px, ${swipeDy}px) rotate(${swipeRot}deg)`
+  const cardTransition = drag
+    ? 'none'
+    : gradingFly
+    ? 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
+    : 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)'
+  const cardOpacity = gradingFly ? 0.5 : 1
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
@@ -699,6 +741,7 @@ function ReviewSession({
 
         <div
           onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onClick={() => {
             if (showFlagPicker) { setShowFlagPicker(false); return }
@@ -710,8 +753,61 @@ function ReviewSession({
             display: 'flex', flexDirection: 'column', cursor: revealed ? 'default' : 'pointer',
             touchAction: 'none',
             boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
+            transform: cardTransform,
+            transition: cardTransition,
+            opacity: cardOpacity,
+            willChange: 'transform',
           }}
         >
+          {/* Swipe color overlay + stamp */}
+          {(drag || gradingFly) && (() => {
+            const dx = drag?.x ?? gradingFly?.x ?? 0
+            const dy = drag?.y ?? gradingFly?.y ?? 0
+            const absX = Math.abs(dx), absY = Math.abs(dy)
+
+            let color = '', label = ''
+            if (gradingFly) {
+              color = gradingFly.color; label = gradingFly.label
+            } else if (absX > absY) {
+              if (revealed) { color = dx < 0 ? T.crimson : T.sage; label = dx < 0 ? 'AGAIN' : 'GOOD' }
+            } else {
+              color = dy < 0 ? T.amber : T.inkSoft; label = dy < 0 ? 'EASY' : 'PAUSE'
+            }
+            if (!color) return null
+
+            const intensity = gradingFly ? 1 : Math.min(Math.max(absX, absY) / 90, 1)
+            const isH = absX >= absY
+            const stampPos: CSSProperties = isH
+              ? (dx > 0
+                ? { top: 20, left: 20, transform: 'rotate(-10deg)' }
+                : { top: 20, right: 20, transform: 'rotate(10deg)' })
+              : (dy < 0
+                ? { bottom: 20, left: '50%', transform: 'translateX(-50%)' }
+                : { top: 20, left: '50%', transform: 'translateX(-50%)' })
+
+            return (
+              <>
+                <div style={{
+                  position: 'absolute', inset: 0, borderRadius: 22, pointerEvents: 'none', zIndex: 5,
+                  background: color, opacity: intensity * 0.22,
+                }} />
+                {intensity > 0.15 && (
+                  <div style={{
+                    position: 'absolute', pointerEvents: 'none', zIndex: 6,
+                    opacity: Math.min((intensity - 0.15) / 0.35, 1),
+                    ...stampPos,
+                  }}>
+                    <span style={{
+                      display: 'block', fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: 18, fontWeight: 800, letterSpacing: '0.1em',
+                      color, border: `2.5px solid ${color}`, borderRadius: 6, padding: '3px 10px',
+                    }}>{label}</span>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+
           {/* Top-right: flag button + picker */}
           <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'row-reverse', gap: 5, alignItems: 'center' }}
             onClick={e => e.stopPropagation()}>
