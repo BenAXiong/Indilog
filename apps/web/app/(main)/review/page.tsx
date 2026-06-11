@@ -1283,14 +1283,21 @@ function ReviewEnd({
           <div style={{ fontSize: 17, color: T.inkSoft, marginTop: 8, fontWeight: 500 }}>cards reviewed</div>
 
           {dueTomorrow !== null && (
-            <div style={{
-              marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 16px', borderRadius: 14, background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-            }}>
-              <Icon name="card" size={16} color={T.amber} strokeWidth={1.8} />
-              <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.02em' }}>{dueTomorrow}</span>
-              <span style={{ fontSize: 13, color: T.inkSoft }}>due tomorrow</span>
-            </div>
+            <>
+              <div style={{
+                marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 16px', borderRadius: 14, background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+              }}>
+                <Icon name="card" size={16} color={T.amber} strokeWidth={1.8} />
+                <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.02em' }}>{dueTomorrow}</span>
+                <span style={{ fontSize: 13, color: T.inkSoft }}>due tomorrow</span>
+              </div>
+              {dueTomorrow > 0 && (
+                <div style={{ marginTop: 8, fontSize: 13, color: T.inkMute }}>
+                  {dueTomorrow} additional review{dueTomorrow !== 1 ? 's' : ''} will be ready before tomorrow&apos;s reset.
+                </div>
+              )}
+            </>
           )}
 
           {!goalMet && dueTomorrow !== null && dueTomorrow < 5 && (
