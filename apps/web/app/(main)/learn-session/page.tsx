@@ -311,6 +311,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
   const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
   const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string; opacity?: number } | null>(null)
+  const [entering,   setEntering]   = useState(true)
   const audioRef           = useRef<HTMLAudioElement | null>(null)
   const swipeStart         = useRef({ x: 0, y: 0 })
   const onExitRef          = useRef(onExit)
@@ -327,6 +328,13 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
   useEffect(() => { audioRef.current?.pause(); setShowFlagPicker(false); pendingRef.current = false }, [qIdx])
+
+  useEffect(() => {
+    setEntering(true)
+    let cancelled = false
+    requestAnimationFrame(() => { requestAnimationFrame(() => { if (!cancelled) setEntering(false) }) })
+    return () => { cancelled = true }
+  }, [qIdx])
 
   // Shuffle test-phase entries once, when the last exposure entry has been processed
   useEffect(() => {
@@ -624,13 +632,17 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const swipeDx = drag?.x ?? gradingFly?.x ?? 0
   const swipeDy = drag?.y ?? gradingFly?.y ?? 0
   const swipeRot = Math.max(-15, Math.min(15, swipeDx * 0.04))
-  const cardTransform = `translate(${swipeDx}px, ${swipeDy}px) rotate(${swipeRot}deg)`
+  const cardTransform = (drag || gradingFly)
+    ? `translate(${swipeDx}px, ${swipeDy}px) rotate(${swipeRot}deg)`
+    : entering ? 'translateY(70px)' : 'translate(0px,0px) rotate(0deg)'
   const cardTransition = drag
     ? 'none'
     : gradingFly
     ? 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
-    : 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)'
-  const cardOpacity = gradingFly ? (gradingFly.opacity ?? 0.5) : 1
+    : entering
+    ? 'none'
+    : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
+  const cardOpacity = gradingFly ? (gradingFly.opacity ?? 0.5) : entering ? 0 : 1
 
   const showBack = !exposureDone || (exposureDone && revealed)
 
