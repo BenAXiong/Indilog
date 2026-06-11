@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 15:35 | FEATURE | Review + learn session: flag picker opens downward (column layout); status pill moved to top-center
 | 2026-06-11 15:27 | FEATURE | Review + learn session: new card slides up from below on entrance (double-RAF entering state, opacity 0→1 + translateY 70px→0)
 | 2026-06-11 15:13 | FEATURE | Learn exposure card: fly up + fade to transparent instead of sliding right; rename button "Got it, next!" (no checkmark)
 | 2026-06-11 04:35 | FEATURE | Learn session card UI: same Tinder-style swipe feedback + button repositioning as review cards; exposure phase right-swipe shows "NEXT" stamp

@@ -777,7 +777,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             )
           })()}
 
-          {/* Bottom-center: grade badge */}
+          {/* Top-center: grade badge */}
           {(() => {
             const grade = computeMasteryGrade(card)
             const GS: Record<string, { color: string; bg: string; border: string }> = {
@@ -788,7 +788,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             }
             const gs = GS[grade]
             return (
-              <div style={{ position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)' }}>
+              <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)' }}>
                 <span style={{
                   fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -799,12 +799,12 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             )
           })()}
 
-          {/* Top-right: flag button + picker */}
+          {/* Top-right: flag button + picker (opens downward) */}
           {(() => {
             const currentFlag    = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
             const currentFlagHex = flagColorHex(currentFlag)
             return (
-              <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'row-reverse', gap: 5, alignItems: 'center' }}
+              <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}
                 onClick={e => e.stopPropagation()}>
                 <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
                   width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
