@@ -2,7 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
-| 2026-06-11 16:00 | FIX | Dashboard sim tooltip: render below counter, centered on page |
+| 2026-06-11 16:08 | FIX | Dashboard sim tooltip: position:fixed + getBoundingClientRect for true horizontal centering |
 | 2026-06-11 15:53 | FEATURE | Dashboard: hover tooltip on sim x/y counter explaining totalDue and simGoalRemaining formulas |
 | 2026-06-11 15:35 | FEATURE | DEV inspect: click any value cell to copy to clipboard |
 | 2026-06-11 15:35 | FIX | DEV inspect: rename 'grade' row to 'mastery' to avoid confusion with session rating |

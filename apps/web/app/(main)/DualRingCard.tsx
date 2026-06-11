@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon, Card } from '@/components/ui'
@@ -45,6 +45,8 @@ export default function DualRingCard({
 }) {
   const [showForecast, setShowForecast] = useState(false)
   const [showSimTip, setShowSimTip] = useState(false)
+  const [simTipY,    setSimTipY]    = useState(0)
+  const counterRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem('srs_learn_target',  String(learnTarget))  }, [learnTarget])
   useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
@@ -173,8 +175,12 @@ export default function DualRingCard({
             )}
             {simActive && (
               <div
+                ref={counterRef}
                 role="presentation"
-                onMouseEnter={() => setShowSimTip(true)}
+                onMouseEnter={() => {
+                  setSimTipY(counterRef.current?.getBoundingClientRect().bottom ?? 0)
+                  setShowSimTip(true)
+                }}
                 onMouseLeave={() => setShowSimTip(false)}
                 style={{
                   position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
@@ -187,7 +193,7 @@ export default function DualRingCard({
                 {totalDue} / {simGoalRemaining}
                 {showSimTip && (
                   <div style={{
-                    position: 'absolute', top: 'calc(100% + 4px)', left: '50%',
+                    position: 'fixed', top: simTipY + 4, left: '50%',
                     transform: 'translateX(-50%)',
                     background: '#1e1e1e', border: '1px solid #333',
                     borderRadius: 8, padding: '8px 10px',
