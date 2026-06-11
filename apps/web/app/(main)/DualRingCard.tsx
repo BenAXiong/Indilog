@@ -44,6 +44,7 @@ export default function DualRingCard({
   reviewMoreN: number
 }) {
   const [showForecast, setShowForecast] = useState(false)
+  const [showSimTip, setShowSimTip] = useState(false)
 
   useEffect(() => { localStorage.setItem('srs_learn_target',  String(learnTarget))  }, [learnTarget])
   useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
@@ -171,14 +172,35 @@ export default function DualRingCard({
               </div>
             )}
             {simActive && (
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                textAlign: 'center',
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: 9, color: T.inkMute,
-                pointerEvents: 'none',
-              }}>
+              <div
+                role="presentation"
+                onMouseEnter={() => setShowSimTip(true)}
+                onMouseLeave={() => setShowSimTip(false)}
+                style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                  textAlign: 'center',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: 9, color: T.inkMute,
+                  cursor: 'default',
+                }}
+              >
                 {totalDue} / {simGoalRemaining}
+                {showSimTip && (
+                  <div style={{
+                    position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#1e1e1e', border: '1px solid #333',
+                    borderRadius: 8, padding: '8px 10px',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 10, color: '#bbb', lineHeight: 1.6,
+                    whiteSpace: 'nowrap', textAlign: 'left',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                    pointerEvents: 'none', zIndex: 50,
+                  }}>
+                    <div><span style={{ color: '#888' }}>x</span> = totalDue — cards with due_at ≤ now (no cap)</div>
+                    <div><span style={{ color: '#888' }}>y</span> = simTotalActive − simRootedCount</div>
+                  </div>
+                )}
               </div>
             )}
           </div>
