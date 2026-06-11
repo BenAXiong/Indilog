@@ -81,7 +81,10 @@ async function countDueTomorrow(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
   const now = new Date().toISOString()
-  const nextReset = new Date(); nextReset.setDate(nextReset.getDate() + 1); nextReset.setHours(0, 0, 0, 0)
+  const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+  const nextReset = new Date()
+  if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
+  nextReset.setHours(resetHour, 0, 0, 0)
   const { count } = await supabase
     .from('ind_flashcards')
     .select('id', { count: 'exact', head: true })
