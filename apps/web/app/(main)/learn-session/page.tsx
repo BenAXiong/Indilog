@@ -956,8 +956,9 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
 // ─── LearnEnd ─────────────────────────────────────────────────────────────────
 
-function LearnEnd({ learnedCount, onDone }: {
+function LearnEnd({ learnedCount, tomorrowTarget, onDone }: {
   learnedCount: number
+  tomorrowTarget: number
   onDone: () => void
 }) {
   return (
@@ -973,6 +974,9 @@ function LearnEnd({ learnedCount, onDone }: {
           {learnedCount > 0
             ? 'These will appear in your review queue soon.'
             : 'Exit whenever you\'re ready.'}
+        </div>
+        <div style={{ marginTop: 10, fontSize: 13, color: T.inkMute }}>
+          Estimated for tomorrow: {tomorrowTarget} new cards.
         </div>
       </div>
       <div style={{ padding: '0 16px 40px' }}>
@@ -1052,6 +1056,7 @@ function LearnPage() {
   if (mode === 'done') {
     return <LearnEnd
       learnedCount={learnedCount}
+      tomorrowTarget={ctx.learnCap}
       onDone={autostart ? () => router.push('/') : () => setMode('landing')}
     />
   }
