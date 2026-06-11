@@ -71,8 +71,22 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return EMPTY
 
-  const now   = new Date().toISOString()
-  const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  // Pre-fetch profile so resetHour is known before building parallel queries
+  const profileRes = await supabase
+    .from('ind_profiles')
+    .select('goal_collection_id, goal_due_date, preferences')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const profileData = profileRes.data
+  const prefs       = (profileData?.preferences as Record<string, unknown>) ?? {}
+  const resetHour   = (prefs.reset_hour as number) ?? 4
+
+  const now = new Date().toISOString()
+  const nextResetDate = new Date()
+  if (nextResetDate.getHours() >= resetHour) nextResetDate.setDate(nextResetDate.getDate() + 1)
+  nextResetDate.setHours(resetHour, 0, 0, 0)
+  const nextReset = nextResetDate.toISOString()
 
   // 120-day window covers 16-week heatmap + streak computation
   const from120 = new Date()
@@ -88,7 +102,6 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     newCountRes,
     totalItemsRes,
     recentRes,
-    profileRes,
   ] = await Promise.all([
     supabase
       .from('ind_daily_stats')
@@ -111,7 +124,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .gt('due_at', now)
-      .lte('due_at', in24h)
+      .lte('due_at', nextReset)
       .is('suspended_at', null),
 
     supabase
@@ -145,12 +158,6 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5),
-
-    supabase
-      .from('ind_profiles')
-      .select('goal_collection_id, goal_due_date, preferences')
-      .eq('user_id', user.id)
-      .maybeSingle(),
   ])
 
   const dailyRows = dailyRes.data ?? []
@@ -165,13 +172,9 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     })
   }
 
-  const profileData = profileRes.data
-  const prefs       = (profileData?.preferences as Record<string, unknown>) ?? {}
-
   // Use client-set srs_study_date cookie as source of truth
   const cookieStore = await cookies()
   const cookieDate  = cookieStore.get('srs_study_date')?.value
-  const resetHour   = (prefs.reset_hour as number) ?? 4
   const today: LocalDateString = (cookieDate ?? (() => {
     const d = new Date()
     if (d.getHours() < resetHour) d.setDate(d.getDate() - 1)

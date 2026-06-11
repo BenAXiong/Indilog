@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 17:15 | FIX | Dashboard dueTomorrow: pre-fetch profile to get user reset_hour, use next reset boundary not rolling 24h |
 | 2026-06-11 17:05 | FIX | Review end screen: countDueTomorrow uses next midnight reset boundary, not rolling 24h |
 | 2026-06-11 17:00 | FEATURE | Learn end screen: show estimated tomorrow learn target |
 | 2026-06-11 16:25 | FIX | Dashboard sim tooltip: cleaner x/y descriptions — drop redundant formula noise, add (priority decks) to y |
