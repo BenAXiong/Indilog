@@ -438,7 +438,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const FLY = {
-    next:  { x:    0, y: -380, color: T.sage,    label: 'NEXT', opacity: 0 },
+    next:  { x:    0, y:  -70, color: T.sage,    label: 'NEXT', opacity: 0 },
     good:  { x:  700, y:  -80, color: T.sage,    label: 'GOOD'  },
     again: { x: -700, y:  -80, color: T.crimson, label: 'AGAIN' },
     easy:  { x:   60, y: -700, color: T.amber,   label: 'EASY'  },
@@ -644,7 +644,9 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const cardTransition = drag
     ? 'none'
     : gradingFly
-    ? 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
+    ? gradingFly.opacity === 0
+      ? 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
+      : 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
     : entering
     ? 'none'
     : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
