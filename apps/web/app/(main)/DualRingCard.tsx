@@ -187,13 +187,13 @@ export default function DualRingCard({
                 {totalDue} / {simGoalRemaining}
                 {showSimTip && (
                   <div style={{
-                    position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
+                    position: 'absolute', top: 'calc(100% + 4px)', left: '50%',
                     transform: 'translateX(-50%)',
                     background: '#1e1e1e', border: '1px solid #333',
                     borderRadius: 8, padding: '8px 10px',
                     fontFamily: '"JetBrains Mono", monospace',
                     fontSize: 10, color: '#bbb', lineHeight: 1.6,
-                    whiteSpace: 'nowrap', textAlign: 'left',
+                    whiteSpace: 'nowrap', textAlign: 'left', width: 'max-content',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
                     pointerEvents: 'none', zIndex: 50,
                   }}>
