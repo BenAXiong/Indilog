@@ -203,10 +203,10 @@ export default function DualRingCard({
                     boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
                     pointerEvents: 'none', zIndex: 50,
                   }}>
-                    <div><span style={{ color: '#888' }}>x</span> = totalDue — due_at ≤ now (no cap)</div>
+                    <div><span style={{ color: '#888' }}>x</span> = totalDue</div>
                     <div style={{ color: '#666', marginBottom: 6 }}>all cards currently due, regardless of session size</div>
                     <div><span style={{ color: '#888' }}>y</span> = simTotalActive − simRootedCount</div>
-                    <div style={{ color: '#666' }}>sim-deck cards not yet at Rooted mastery</div>
+                    <div style={{ color: '#666' }}>sim-deck cards (priority decks) not yet at Rooted mastery</div>
                   </div>
                 )}
               </div>

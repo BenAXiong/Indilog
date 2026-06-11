@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 16:25 | FIX | Dashboard sim tooltip: cleaner x/y descriptions — drop redundant formula noise, add (priority decks) to y |
 | 2026-06-11 16:18 | FIX | Dashboard sim tooltip: formula on first row, plain-language explanation on second row |
 | 2026-06-11 16:08 | FIX | Dashboard sim tooltip: position:fixed + getBoundingClientRect for true horizontal centering |
 | 2026-06-11 15:53 | FEATURE | Dashboard: hover tooltip on sim x/y counter explaining totalDue and simGoalRemaining formulas |
