@@ -492,10 +492,16 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     pendingRef.current = true
     setGradingFly(type === 'easy' ? FLY.easy : FLY.good)
     setDrag(null)
-    await Promise.all([
-      graduateLearnCard(card.id, type),
-      new Promise<void>(r => setTimeout(r, 350)),
-    ])
+    try {
+      await Promise.all([
+        graduateLearnCard(card.id, type),
+        new Promise<void>(r => setTimeout(r, 350)),
+      ])
+    } catch {
+      setGradingFly(null)
+      pendingRef.current = false
+      return
+    }
     setGradingFly(null)
     graduatedRef.current.add(card.id)
     setRevealed(false)

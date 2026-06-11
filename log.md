@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 22:35 | FIX | handleGraduate: add try-catch so RPC failure resets animation and unblocks session instead of freezing it |
 | 2026-06-11 22:04 | FIX | Atomic learn card graduation: replace 3 separate client writes with single graduate_learn_card RPC to prevent partial-graduated state on network error |
 | 2026-06-11 18:22 | FEATURE | Dashboard: split review/learn empty states; Add new cards popup; sim goal complete overlay with dont-show-again |
 | 2026-06-11 17:45 | FEATURE | Review end screen: grade-sequence dots per card (again=red, hard=terra, good=green, easy=amber) |
