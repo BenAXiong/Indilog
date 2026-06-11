@@ -930,8 +930,8 @@ function ReviewSession({
             </>
           )}
 
-          {/* Front */}
-          <div style={{ flex: revealed ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 24px' }}>
+          {/* Front — anchored above divider, never moves on reveal */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', padding: '0 24px 16px' }}>
             {isAudio ? (
               /* Audio mode — large play button as prompt */
               <button
@@ -981,18 +981,18 @@ function ReviewSession({
             )}
           </div>
 
-          {/* Answer */}
-          {revealed ? (
-            <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ height: 1, background: T.lineSoft }} />
-              <div style={{ textAlign: 'center' }}>
-                {/* Audio back: show ab text */}
+          {/* Divider — always at vertical center */}
+          <div style={{ height: 1, background: T.lineSoft, flexShrink: 0 }} />
+
+          {/* Answer or hint — anchored below divider */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'center', paddingTop: 16 }}>
+            {revealed ? (
+              <>
                 {isAudio && (
                   <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
                     {card.ind_items?.ab}
                   </div>
                 )}
-                {/* Reverse back: reveal ab (Amis) */}
                 {isReverse ? (
                   <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
                     {card.ind_items?.ab}
@@ -1002,15 +1002,13 @@ function ReviewSession({
                     {card.ind_items?.zh ?? '—'}
                   </div>
                 )}
-              </div>
-            </div>
-          ) : (
-            <div style={{ marginTop: 'auto', paddingTop: 22, textAlign: 'center' }}>
+              </>
+            ) : (
               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 tap to reveal
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* ↓ suspend hint — outside card, below */}

@@ -865,24 +865,21 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             </>
           )}
 
-          {/* Front */}
-          <div style={{ flex: showBack ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '0 24px' }}>
+          {/* Front — anchored above divider, never moves on reveal */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', padding: '0 24px 16px' }}>
             {renderFront()}
           </div>
 
-          {/* Back or tap-to-reveal */}
-          {showBack ? (
-            <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ height: 1, background: T.lineSoft }} />
-              <div style={{ textAlign: 'center' }}>{renderBack()}</div>
-            </div>
-          ) : (
-            <div style={{ marginTop: 'auto', paddingTop: 22, textAlign: 'center' }}>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                tap to reveal
-              </span>
-            </div>
-          )}
+          {/* Divider — always at vertical center */}
+          <div style={{ height: 1, background: T.lineSoft, flexShrink: 0 }} />
+
+          {/* Back or hint — anchored below divider */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'center', paddingTop: 16 }}>
+            {showBack
+              ? renderBack()
+              : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
+            }
+          </div>
         </div>
 
         {/* ↓ suspend hint */}
