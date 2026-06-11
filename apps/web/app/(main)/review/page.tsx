@@ -1104,7 +1104,7 @@ function ReviewSession({
                         {srsRows.map(([k, v]) => (
                           <tr key={k} style={{ borderBottom: '1px solid #2a2a2a' }}>
                             <td style={{ padding: '5px 8px 5px 0', color: '#555', whiteSpace: 'nowrap', width: 130, verticalAlign: 'top' }}>{k}</td>
-                            <td style={{ padding: '5px 0', color: k === 'mastery' ? gradeColors[v] ?? '#ccc' : '#ccc', wordBreak: 'break-all' }}>{v}</td>
+                            <td onClick={() => navigator.clipboard.writeText(v)} style={{ padding: '5px 0', color: k === 'mastery' ? gradeColors[v] ?? '#ccc' : '#ccc', wordBreak: 'break-all', cursor: 'pointer' }}>{v}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1145,7 +1145,7 @@ function ReviewSession({
                       {othersRows.map(([k, v]) => (
                         <tr key={k} style={{ borderBottom: '1px solid #2a2a2a' }}>
                           <td style={{ padding: '5px 8px 5px 0', color: '#555', whiteSpace: 'nowrap', width: 130, verticalAlign: 'top' }}>{k}</td>
-                          <td style={{ padding: '5px 0', color: '#ccc', wordBreak: 'break-all' }}>{v}</td>
+                          <td onClick={() => navigator.clipboard.writeText(v)} style={{ padding: '5px 0', color: '#ccc', wordBreak: 'break-all', cursor: 'pointer' }}>{v}</td>
                         </tr>
                       ))}
                     </tbody>

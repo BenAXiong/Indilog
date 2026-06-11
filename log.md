@@ -5,6 +5,7 @@
 | 2026-06-11 15:35 | FEATURE | Review session: DEV inspect sheet — 95vh, SRS/Others tabs, ab/zh/target preview, all metadata fields |
 | 2026-06-11 15:35 | FIX | DEV inspect SRS tab: ab/zh/target_word as key-value rows instead of separate preview block |
 | 2026-06-11 15:35 | FIX | DEV inspect: rename 'grade' row to 'mastery' to avoid confusion with session rating |
+| 2026-06-11 15:35 | FEATURE | DEV inspect: click any value cell to copy to clipboard |
 | 2026-06-11 15:35 | FEATURE | Review + learn session: flag picker opens downward (column layout); status pill moved to top-center
 | 2026-06-11 15:27 | FEATURE | Review + learn session: new card slides up from below on entrance (double-RAF entering state, opacity 0→1 + translateY 70px→0)
 | 2026-06-11 15:13 | FEATURE | Learn exposure card: fly up + fade to transparent instead of sliding right; rename button "Got it, next!" (no checkmark)
