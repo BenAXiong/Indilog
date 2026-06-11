@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 16:14 | FIX | Dashboard sim tooltip: add plain-language meaning for x and y, formula as sub-line |
 | 2026-06-11 16:08 | FIX | Dashboard sim tooltip: position:fixed + getBoundingClientRect for true horizontal centering |
 | 2026-06-11 15:53 | FEATURE | Dashboard: hover tooltip on sim x/y counter explaining totalDue and simGoalRemaining formulas |
 | 2026-06-11 15:35 | FEATURE | DEV inspect: click any value cell to copy to clipboard |
