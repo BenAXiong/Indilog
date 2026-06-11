@@ -1035,7 +1035,7 @@ function ReviewSession({
           ['ab',            card.ind_items?.ab ?? '—'],
           ['zh',            card.ind_items?.zh ?? '—'],
           ['target_word',   card.ind_items?.target_word ?? '—'],
-          ['grade',         grade],
+          ['mastery',        grade],
           ['repetitions',   String(card.repetitions)],
           ['ease_factor',   card.ease_factor.toFixed(2)],
           ['interval_days', card.interval_days % 1 === 0 ? String(card.interval_days) : card.interval_days.toFixed(2)],
@@ -1104,7 +1104,7 @@ function ReviewSession({
                         {srsRows.map(([k, v]) => (
                           <tr key={k} style={{ borderBottom: '1px solid #2a2a2a' }}>
                             <td style={{ padding: '5px 8px 5px 0', color: '#555', whiteSpace: 'nowrap', width: 130, verticalAlign: 'top' }}>{k}</td>
-                            <td style={{ padding: '5px 0', color: k === 'grade' ? gradeColors[v] ?? '#ccc' : '#ccc', wordBreak: 'break-all' }}>{v}</td>
+                            <td style={{ padding: '5px 0', color: k === 'mastery' ? gradeColors[v] ?? '#ccc' : '#ccc', wordBreak: 'break-all' }}>{v}</td>
                           </tr>
                         ))}
                       </tbody>
