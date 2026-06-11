@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 17:05 | FIX | Review end screen: countDueTomorrow uses next midnight reset boundary, not rolling 24h |
 | 2026-06-11 17:00 | FEATURE | Learn end screen: show estimated tomorrow learn target |
 | 2026-06-11 16:25 | FIX | Dashboard sim tooltip: cleaner x/y descriptions — drop redundant formula noise, add (priority decks) to y |
 | 2026-06-11 16:18 | FIX | Dashboard sim tooltip: formula on first row, plain-language explanation on second row |

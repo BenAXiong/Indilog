@@ -80,14 +80,14 @@ async function countDueTomorrow(): Promise<number> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
-  const now   = new Date().toISOString()
-  const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const now = new Date().toISOString()
+  const nextReset = new Date(); nextReset.setDate(nextReset.getDate() + 1); nextReset.setHours(0, 0, 0, 0)
   const { count } = await supabase
     .from('ind_flashcards')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .gt('due_at', now)
-    .lte('due_at', in24h)
+    .lte('due_at', nextReset.toISOString())
     .is('suspended_at', null)
   return count ?? 0
 }
