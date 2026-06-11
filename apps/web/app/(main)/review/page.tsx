@@ -76,25 +76,28 @@ async function loadSessionContext(): Promise<SessionContext> {
   }
 }
 
-async function countSessionReturning(cardIds: string[]): Promise<number> {
-  if (!cardIds.length) return 0
+type SessionReturning = { total: number; newCards: number; plantedOrAbove: number }
+
+async function countSessionReturning(cardIds: string[]): Promise<SessionReturning> {
+  if (!cardIds.length) return { total: 0, newCards: 0, plantedOrAbove: 0 }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return 0
+  if (!user) return { total: 0, newCards: 0, plantedOrAbove: 0 }
   const now = new Date().toISOString()
   const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
   const nextReset = new Date()
   if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
   nextReset.setHours(resetHour, 0, 0, 0)
-  const { count } = await supabase
-    .from('ind_flashcards')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .in('id', cardIds)
-    .gt('due_at', now)
-    .lte('due_at', nextReset.toISOString())
-    .is('suspended_at', null)
-  return count ?? 0
+  const nextResetISO = nextReset.toISOString()
+  const base = supabase.from('ind_flashcards').select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id).in('id', cardIds).gt('due_at', now).lte('due_at', nextResetISO).is('suspended_at', null)
+  const [newRes, plantedRes] = await Promise.all([
+    base.eq('repetitions', 1),
+    base.gte('repetitions', 2),
+  ])
+  const newCards      = newRes.count      ?? 0
+  const plantedOrAbove = plantedRes.count ?? 0
+  return { total: newCards + plantedOrAbove, newCards, plantedOrAbove }
 }
 
 async function countDueTomorrow(): Promise<number> {
@@ -1221,7 +1224,7 @@ function ReviewEnd({
   onDone: () => void
 }) {
   const [dueTomorrow,      setDueTomorrow]      = useState<number | null>(null)
-  const [sessionReturning, setSessionReturning] = useState<number | null>(null)
+  const [sessionReturning, setSessionReturning] = useState<SessionReturning | null>(null)
   const [listExpanded,     setListExpanded]     = useState(false)
   const [reviewMoreN,      setReviewMoreNRaw]   = useState(reviewMoreNProp)
   const [editingMore,      setEditingMore]      = useState(false)
@@ -1317,9 +1320,9 @@ function ReviewEnd({
                 <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.02em' }}>{dueTomorrow}</span>
                 <span style={{ fontSize: 13, color: T.inkSoft }}>due tomorrow</span>
               </div>
-              {sessionReturning !== null && sessionReturning > 0 && (
+              {sessionReturning !== null && sessionReturning.total > 0 && (
                 <div style={{ marginTop: 8, fontSize: 13, color: T.inkMute }}>
-                  {sessionReturning} card{sessionReturning !== 1 ? 's' : ''} from this session will be back before the next reset.
+                  {sessionReturning.total} card{sessionReturning.total !== 1 ? 's' : ''} from this session will be back before the next reset ({sessionReturning.newCards} New and {sessionReturning.plantedOrAbove} Planted or above).
                 </div>
               )}
             </>

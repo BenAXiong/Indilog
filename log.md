@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 17:35 | FEATURE | Review end screen: break down returning cards by New (rep=1) and Planted or above (rep≥2) |
 | 2026-06-11 17:18 | FEATURE | Review end screen: show count of this-session cards returning before next reset |
 | 2026-06-11 17:20 | FIX | Review end screen countDueTomorrow: use srs_reset_hour from localStorage, not hardcoded midnight |
 | 2026-06-11 17:15 | FIX | Dashboard dueTomorrow: pre-fetch profile to get user reset_hour, use next reset boundary not rolling 24h |
