@@ -76,6 +76,27 @@ async function loadSessionContext(): Promise<SessionContext> {
   }
 }
 
+async function countSessionReturning(cardIds: string[]): Promise<number> {
+  if (!cardIds.length) return 0
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+  const now = new Date().toISOString()
+  const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+  const nextReset = new Date()
+  if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
+  nextReset.setHours(resetHour, 0, 0, 0)
+  const { count } = await supabase
+    .from('ind_flashcards')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .in('id', cardIds)
+    .gt('due_at', now)
+    .lte('due_at', nextReset.toISOString())
+    .is('suspended_at', null)
+  return count ?? 0
+}
+
 async function countDueTomorrow(): Promise<number> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1199,12 +1220,16 @@ function ReviewEnd({
   onReviewMore: (n: number) => void
   onDone: () => void
 }) {
-  const [dueTomorrow,    setDueTomorrow]    = useState<number | null>(null)
-  const [listExpanded,   setListExpanded]   = useState(false)
-  const [reviewMoreN,    setReviewMoreNRaw] = useState(reviewMoreNProp)
-  const [editingMore,    setEditingMore]    = useState(false)
+  const [dueTomorrow,      setDueTomorrow]      = useState<number | null>(null)
+  const [sessionReturning, setSessionReturning] = useState<number | null>(null)
+  const [listExpanded,     setListExpanded]     = useState(false)
+  const [reviewMoreN,      setReviewMoreNRaw]   = useState(reviewMoreNProp)
+  const [editingMore,      setEditingMore]      = useState(false)
 
   useEffect(() => { countDueTomorrow().then(setDueTomorrow) }, [])
+  useEffect(() => {
+    countSessionReturning(reviewedCards.map(c => c.id)).then(setSessionReturning)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function setReviewMoreN(n: number) {
     const v = Math.max(10, Math.round(n / 5) * 5)
@@ -1292,9 +1317,9 @@ function ReviewEnd({
                 <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.02em' }}>{dueTomorrow}</span>
                 <span style={{ fontSize: 13, color: T.inkSoft }}>due tomorrow</span>
               </div>
-              {dueTomorrow > 0 && (
+              {sessionReturning !== null && sessionReturning > 0 && (
                 <div style={{ marginTop: 8, fontSize: 13, color: T.inkMute }}>
-                  {dueTomorrow} additional review{dueTomorrow !== 1 ? 's' : ''} will be ready before tomorrow&apos;s reset.
+                  {sessionReturning} card{sessionReturning !== 1 ? 's' : ''} from this session will be back before the next reset.
                 </div>
               )}
             </>
