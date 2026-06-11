@@ -706,7 +706,7 @@ function ReviewSession({
                   fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.04em',
                 }}>
                   <Icon name="layers" size={14} strokeWidth={1.8} color={T.inkFaint} />
-                  DEV: inspect card
+                  Inspect card
                 </button>
               </div>
             </>
@@ -1032,6 +1032,9 @@ function ReviewSession({
           return `${d.toISOString().slice(0, 16).replace('T', ' ')} (${rel})`
         }
         const srsRows: [string, string][] = [
+          ['ab',            card.ind_items?.ab ?? '—'],
+          ['zh',            card.ind_items?.zh ?? '—'],
+          ['target_word',   card.ind_items?.target_word ?? '—'],
           ['grade',         grade],
           ['repetitions',   String(card.repetitions)],
           ['ease_factor',   card.ease_factor.toFixed(2)],
@@ -1095,18 +1098,6 @@ function ReviewSession({
               <div style={{ overflowY: 'auto', padding: '0 16px 40px' }}>
                 {inspectTab === 'srs' ? (
                   <>
-                    {/* Content preview */}
-                    <div style={{ padding: '12px 0 10px', borderBottom: '1px solid #2a2a2a' }}>
-                      <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 500, color: '#e0e0e0', lineHeight: 1.3, marginBottom: 6 }}>
-                        {card.ind_items?.ab ?? '—'}
-                      </div>
-                      {card.ind_items?.zh && (
-                        <div style={{ fontSize: 15, color: '#999', marginBottom: 4 }}>{card.ind_items.zh}</div>
-                      )}
-                      {card.ind_items?.target_word && (
-                        <div style={{ ...MONO, fontSize: 11, color: '#666' }}>target · {card.ind_items.target_word}</div>
-                      )}
-                    </div>
                     {/* SRS fields */}
                     <table style={{ width: '100%', borderCollapse: 'collapse', ...MONO, fontSize: 11, marginTop: 2 }}>
                       <tbody>
