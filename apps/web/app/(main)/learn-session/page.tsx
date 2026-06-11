@@ -310,7 +310,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const pendingRef         = useRef(false)   // blocks re-entrant actions during async operations
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
   const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
-  const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string } | null>(null)
+  const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string; opacity?: number } | null>(null)
   const audioRef           = useRef<HTMLAudioElement | null>(null)
   const swipeStart         = useRef({ x: 0, y: 0 })
   const onExitRef          = useRef(onExit)
@@ -430,7 +430,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const FLY = {
-    next:  { x:  700, y:  -80, color: T.sage,    label: 'NEXT'  },
+    next:  { x:    0, y: -380, color: T.sage,    label: 'NEXT', opacity: 0 },
     good:  { x:  700, y:  -80, color: T.sage,    label: 'GOOD'  },
     again: { x: -700, y:  -80, color: T.crimson, label: 'AGAIN' },
     easy:  { x:   60, y: -700, color: T.amber,   label: 'EASY'  },
@@ -630,7 +630,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     : gradingFly
     ? 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
     : 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)'
-  const cardOpacity = gradingFly ? 0.5 : 1
+  const cardOpacity = gradingFly ? (gradingFly.opacity ?? 0.5) : 1
 
   const showBack = !exposureDone || (exposureDone && revealed)
 
@@ -897,7 +897,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 14px rgba(80,120,30,0.2)',
           }}>
-            <Icon name="check" size={17} strokeWidth={2.5} color="#fff" /> OK, got it
+            Got it, next!
           </button>
         ) : revealed ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7 }}>

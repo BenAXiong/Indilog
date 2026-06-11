@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 15:13 | FEATURE | Learn exposure card: fly up + fade to transparent instead of sliding right; rename button "Got it, next!" (no checkmark)
 | 2026-06-11 04:35 | FEATURE | Learn session card UI: same Tinder-style swipe feedback + button repositioning as review cards; exposure phase right-swipe shows "NEXT" stamp
 | 2026-06-11 04:13 | FEATURE | Review card UI: Tinder-style swipe feedback — live drag with rotation, color overlay (crimson/sage/amber/grey) that intensifies with distance, stamp label past 15% threshold, fly-out animation on grade (network + 350ms timer run concurrently) |
 | 2026-06-11 04:13 | FEATURE | Review card UI: move flags to top-right, suspend to top-left, grade badge (status pill) to bottom-center |
