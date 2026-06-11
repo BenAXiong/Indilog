@@ -831,7 +831,7 @@ function ReviewSession({
               <Icon name={currentFlag ? 'flagF' : 'flag'} size={15} strokeWidth={1.8} />
             </button>
             {showFlagPicker && (
-              <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
                 {FLAG_COLORS.map(fc => (
                   <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
                     width: 22, height: 22, borderRadius: 999, border: 'none',
