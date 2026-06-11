@@ -321,6 +321,7 @@ function ReviewSession({
 
   // ── DEV inspect ──────────────────────────────────────────────────────────────
   const [showInspect,    setShowInspect]    = useState(false)
+  const [inspectTab,     setInspectTab]     = useState<'srs' | 'others'>('srs')
   type ReviewRow = { id: string; rating: string; mode: string | null; phase: string; reviewed_at: string; due_at: string | null }
   const [inspectHistory, setInspectHistory] = useState<ReviewRow[] | null>(null)
   useEffect(() => {
@@ -662,17 +663,7 @@ function ReviewSession({
           <Icon name="settings" size={16} strokeWidth={1.7} />
         </button>
 
-        {/* DEV inspect — temporary */}
-        <button onClick={() => setShowInspect(p => !p)} style={{
-          height: 26, padding: '0 8px', borderRadius: 6, flexShrink: 0,
-          background: showInspect ? '#1a1a1a' : T.paperHi,
-          border: `1px solid ${showInspect ? '#333' : T.line}`,
-          fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 700,
-          letterSpacing: '0.06em', color: showInspect ? '#fff' : T.inkMute,
-          cursor: 'pointer', textTransform: 'uppercase',
-        }}>DEV</button>
-
-        {/* Kebab — skip + suspend */}
+        {/* Kebab — skip + suspend + dev */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <button onClick={() => setShowKebab(p => !p)} aria-label="More actions" style={{
             width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
@@ -706,6 +697,16 @@ function ReviewSession({
                 }}>
                   <Icon name="pause" size={15} strokeWidth={1.8} color={T.inkSoft} />
                   Suspend card
+                </button>
+                <div style={{ height: 1, background: T.lineSoft }} />
+                <button onClick={() => { setShowKebab(false); setShowInspect(p => !p) }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '12px 14px', background: 'none', border: 'none',
+                  cursor: 'pointer', fontSize: 13, color: T.inkMute, textAlign: 'left',
+                  fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.04em',
+                }}>
+                  <Icon name="layers" size={14} strokeWidth={1.8} color={T.inkFaint} />
+                  DEV: inspect card
                 </button>
               </div>
             </>
@@ -1015,7 +1016,7 @@ function ReviewSession({
         ) : null}
       </div>
 
-      {/* DEV inspect sheet — temporary */}
+      {/* DEV inspect sheet */}
       {showInspect && (() => {
         const grade = computeMasteryGrade(card)
         const gradeColors: Record<string, string> = { seed: '#C89A20', planted: '#888', rooted: '#566234', blooming: '#3a601a' }
@@ -1030,73 +1031,130 @@ function ReviewSession({
             : `${sign}${Math.round(abs/86_400_000)}d`
           return `${d.toISOString().slice(0, 16).replace('T', ' ')} (${rel})`
         }
-        const rows: [string, string][] = [
-          ['id',           card.id],
-          ['note_id',      card.note_id],
-          ['collection',   card.ind_items?.collection_id ?? '—'],
-          ['type',         card.ind_items?.type ?? '—'],
-          ['grade',        grade],
-          ['repetitions',  String(card.repetitions)],
-          ['ease_factor',  card.ease_factor.toFixed(2)],
+        const srsRows: [string, string][] = [
+          ['grade',         grade],
+          ['repetitions',   String(card.repetitions)],
+          ['ease_factor',   card.ease_factor.toFixed(2)],
           ['interval_days', card.interval_days % 1 === 0 ? String(card.interval_days) : card.interval_days.toFixed(2)],
-          ['due_at',       fmt(card.due_at)],
-          ['suspended_at', fmt(card.suspended_at)],
-          ['created_at',   fmt(card.created_at)],
+          ['due_at',        fmt(card.due_at)],
+          ['suspended_at',  fmt(card.suspended_at)],
           ...(entry.lapsedInterval !== undefined ? [['lapsed_interval', String(entry.lapsedInterval)] as [string, string]] : []),
         ]
+        const othersRows: [string, string][] = [
+          ['language',    lang.language],
+          ['dialect',     lang.dialect ?? '—'],
+          ['card_type',   card.ind_items?.type ?? '—'],
+          ['session_mode', effectiveMode],
+          ['note_source', card.ind_items?.note_source ?? '—'],
+          ['collection',  card.ind_items?.ind_learn_collections?.name ?? card.ind_items?.collection_id ?? '—'],
+          ['level',       String(card.ind_items?.level ?? '—')],
+          ['lesson',      String(card.ind_items?.lesson ?? '—')],
+          ['position',    String(card.ind_items?.position ?? '—')],
+          ['place_heard', card.ind_items?.place_heard ?? '—'],
+          ['tags',        card.ind_items?.tags?.join(', ') ?? '—'],
+          ['flag_color',  card.flag_color ?? '—'],
+          ['created_at',  fmt(card.created_at)],
+          ['id',          card.id],
+          ['note_id',     card.note_id],
+        ]
+        const MONO: React.CSSProperties = { fontFamily: '"JetBrains Mono", monospace' }
         return (
           <>
             <div onClick={() => setShowInspect(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 30 }} />
             <div style={{
               position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 31,
               background: '#1a1a1a', borderRadius: '18px 18px 0 0',
-              maxHeight: '72vh', display: 'flex', flexDirection: 'column',
+              height: '95vh', display: 'flex', flexDirection: 'column',
               boxShadow: '0 -8px 32px rgba(0,0,0,0.4)',
             }}>
+              {/* Sheet header */}
               <div style={{ padding: '10px 16px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
+                <span style={{ ...MONO, fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
                   Card Inspector · DEV
                 </span>
                 <button onClick={() => setShowInspect(false)} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4 }}>
                   <Icon name="close" size={14} strokeWidth={2} />
                 </button>
               </div>
-              <div style={{ overflowY: 'auto', padding: '0 16px 24px' }}>
-                {/* SRS fields */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: '"JetBrains Mono", monospace', fontSize: 11 }}>
-                  <tbody>
-                    {rows.map(([k, v]) => (
-                      <tr key={k} style={{ borderBottom: '1px solid #2a2a2a' }}>
-                        <td style={{ padding: '5px 8px 5px 0', color: '#666', whiteSpace: 'nowrap', width: 130, verticalAlign: 'top' }}>{k}</td>
-                        <td style={{ padding: '5px 0', color: k === 'grade' ? gradeColors[v] ?? '#ccc' : '#ccc', wordBreak: 'break-all' }}>{v}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {/* Review history */}
-                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '14px 0 6px', fontWeight: 700 }}>
-                  Review history
-                </div>
-                {inspectHistory === null ? (
-                  <div style={{ fontSize: 11, color: '#555', fontFamily: '"JetBrains Mono", monospace' }}>loading…</div>
-                ) : inspectHistory.length === 0 ? (
-                  <div style={{ fontSize: 11, color: '#555', fontFamily: '"JetBrains Mono", monospace' }}>no reviews yet</div>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: '"JetBrains Mono", monospace', fontSize: 11 }}>
-                    <thead>
-                      <tr>
-                        {['reviewed_at', 'rating', 'mode', 'phase'].map(h => (
-                          <td key={h} style={{ padding: '3px 6px 3px 0', color: '#444', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</td>
+
+              {/* Tabs */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #2a2a2a', flexShrink: 0 }}>
+                {(['srs', 'others'] as const).map(t => (
+                  <button key={t} onClick={() => setInspectTab(t)} style={{
+                    flex: 1, padding: '7px 0', background: 'none', border: 'none',
+                    borderBottom: `2px solid ${inspectTab === t ? '#666' : 'transparent'}`,
+                    ...MONO, fontSize: 10, fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                    color: inspectTab === t ? '#ccc' : '#444',
+                    cursor: 'pointer',
+                  }}>{t}</button>
+                ))}
+              </div>
+
+              {/* Scrollable content */}
+              <div style={{ overflowY: 'auto', padding: '0 16px 40px' }}>
+                {inspectTab === 'srs' ? (
+                  <>
+                    {/* Content preview */}
+                    <div style={{ padding: '12px 0 10px', borderBottom: '1px solid #2a2a2a' }}>
+                      <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 500, color: '#e0e0e0', lineHeight: 1.3, marginBottom: 6 }}>
+                        {card.ind_items?.ab ?? '—'}
+                      </div>
+                      {card.ind_items?.zh && (
+                        <div style={{ fontSize: 15, color: '#999', marginBottom: 4 }}>{card.ind_items.zh}</div>
+                      )}
+                      {card.ind_items?.target_word && (
+                        <div style={{ ...MONO, fontSize: 11, color: '#666' }}>target · {card.ind_items.target_word}</div>
+                      )}
+                    </div>
+                    {/* SRS fields */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', ...MONO, fontSize: 11, marginTop: 2 }}>
+                      <tbody>
+                        {srsRows.map(([k, v]) => (
+                          <tr key={k} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                            <td style={{ padding: '5px 8px 5px 0', color: '#555', whiteSpace: 'nowrap', width: 130, verticalAlign: 'top' }}>{k}</td>
+                            <td style={{ padding: '5px 0', color: k === 'grade' ? gradeColors[v] ?? '#ccc' : '#ccc', wordBreak: 'break-all' }}>{v}</td>
+                          </tr>
                         ))}
-                      </tr>
-                    </thead>
+                      </tbody>
+                    </table>
+                    {/* Review history */}
+                    <div style={{ ...MONO, fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '14px 0 6px', fontWeight: 700 }}>
+                      Review history
+                    </div>
+                    {inspectHistory === null ? (
+                      <div style={{ fontSize: 11, color: '#555', ...MONO }}>loading…</div>
+                    ) : inspectHistory.length === 0 ? (
+                      <div style={{ fontSize: 11, color: '#555', ...MONO }}>no reviews yet</div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', ...MONO, fontSize: 11 }}>
+                        <thead>
+                          <tr>
+                            {['reviewed_at', 'rating', 'mode', 'phase'].map(h => (
+                              <td key={h} style={{ padding: '3px 6px 3px 0', color: '#444', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</td>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {inspectHistory.map(r => (
+                            <tr key={r.id} style={{ borderBottom: '1px solid #222' }}>
+                              <td style={{ padding: '4px 6px 4px 0', color: '#888', whiteSpace: 'nowrap' }}>{r.reviewed_at.slice(0, 16).replace('T', ' ')}</td>
+                              <td style={{ padding: '4px 6px 4px 0', color: r.rating === 'again' ? '#e06c6c' : r.rating === 'easy' ? '#C89A20' : r.rating === 'good' ? '#7bab4a' : '#c8844a', whiteSpace: 'nowrap' }}>{r.rating}</td>
+                              <td style={{ padding: '4px 6px 4px 0', color: '#666', whiteSpace: 'nowrap' }}>{r.mode ?? '—'}</td>
+                              <td style={{ padding: '4px 0', color: '#555', whiteSpace: 'nowrap' }}>{r.phase}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', ...MONO, fontSize: 11, marginTop: 2 }}>
                     <tbody>
-                      {inspectHistory.map(r => (
-                        <tr key={r.id} style={{ borderBottom: '1px solid #222' }}>
-                          <td style={{ padding: '4px 6px 4px 0', color: '#888', whiteSpace: 'nowrap' }}>{r.reviewed_at.slice(0, 16).replace('T', ' ')}</td>
-                          <td style={{ padding: '4px 6px 4px 0', color: r.rating === 'again' ? '#e06c6c' : r.rating === 'easy' ? '#C89A20' : r.rating === 'good' ? '#7bab4a' : '#c8844a', whiteSpace: 'nowrap' }}>{r.rating}</td>
-                          <td style={{ padding: '4px 6px 4px 0', color: '#666', whiteSpace: 'nowrap' }}>{r.mode ?? '—'}</td>
-                          <td style={{ padding: '4px 0', color: '#555', whiteSpace: 'nowrap' }}>{r.phase}</td>
+                      {othersRows.map(([k, v]) => (
+                        <tr key={k} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                          <td style={{ padding: '5px 8px 5px 0', color: '#555', whiteSpace: 'nowrap', width: 130, verticalAlign: 'top' }}>{k}</td>
+                          <td style={{ padding: '5px 0', color: '#ccc', wordBreak: 'break-all' }}>{v}</td>
                         </tr>
                       ))}
                     </tbody>
