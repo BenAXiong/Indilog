@@ -29,6 +29,41 @@ function RingWithCount({ pct, color, count, target }: { pct: number; color: stri
   )
 }
 
+// ── Shared centered popup shell ───────────────────────────────────────────────
+function CenteredPopup({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(43,34,26,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '0 24px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: T.paper, borderRadius: 18,
+          padding: '22px 20px 20px', maxWidth: 320, width: '100%',
+          boxShadow: '0 12px 48px rgba(43,34,26,0.22)',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function PopupRow({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+      <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={14} color={T.inkSoft} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
+      <span style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>{text}</span>
+    </div>
+  )
+}
+
 export default function DualRingCard({
   learnedToday, learnTarget, newCount,
   reviewedToday, reviewTarget, dueCount, totalDue,
@@ -43,19 +78,45 @@ export default function DualRingCard({
   simGoalRemaining: number
   reviewMoreN: number
 }) {
-  const [showForecast, setShowForecast] = useState(false)
-  const [showSimTip, setShowSimTip] = useState(false)
-  const [simTipY,    setSimTipY]    = useState(0)
+  const [showForecast,      setShowForecast]      = useState(false)
+  const [showSimTip,        setShowSimTip]        = useState(false)
+  const [simTipY,           setSimTipY]           = useState(0)
+  const [showNoCardsPopup,  setShowNoCardsPopup]  = useState(false)
+  const [showSimGoal,       setShowSimGoal]       = useState(false)
+  const [simGoalDontShow,   setSimGoalDontShow]   = useState(false)
   const counterRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem('srs_learn_target',  String(learnTarget))  }, [learnTarget])
   useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
   useEffect(() => { localStorage.setItem('srs_sim_active',    String(simActive))    }, [simActive])
 
+  // Sim goal overlay: clear dismissal whenever goal is not yet met, re-show when it is
+  useEffect(() => {
+    if (!simActive) return
+    if (simGoalRemaining > 0) {
+      localStorage.removeItem('srs_sim_goal_dismissed')
+    } else {
+      if (localStorage.getItem('srs_sim_goal_dismissed') !== '1') {
+        setShowSimGoal(true)
+      }
+    }
+  }, [simActive, simGoalRemaining])
+
+  function dismissSimGoal() {
+    if (simGoalDontShow) localStorage.setItem('srs_sim_goal_dismissed', '1')
+    setShowSimGoal(false)
+  }
+
   const learnPct  = learnTarget  > 0 ? Math.min(learnedToday  / learnTarget,  1) : 0
   const reviewPct = reviewTarget > 0 ? Math.min(reviewedToday / reviewTarget, 1) : 0
   const learnN     = Math.min(newCount, Math.max(0, learnTarget - learnedToday))
   const learnMoreN = Math.min(newCount, learnTarget)
+
+  // Learn case 3 sub-states
+  const learnNeedCards = newCount === 0 && learnedToday < learnTarget && learnTarget > 0
+
+  // Review case 3 sub-states
+  const reviewNeverStarted = reviewedToday === 0 && totalDue === 0
 
   return (
     <Card raised pad={16} style={{ position: 'relative' }}>
@@ -122,6 +183,19 @@ export default function DualRingCard({
             }}>
               Learn {learnMoreN} more?
             </Link>
+          ) : learnNeedCards ? (
+            <button
+              onClick={() => setShowNoCardsPopup(true)}
+              style={{
+                width: '100%', height: 44, borderRadius: 12, cursor: 'pointer',
+                background: T.terraBg, border: `1px solid ${T.terraBg}`, color: T.terra,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                fontSize: 13, fontWeight: 600,
+              }}
+            >
+              <Icon name="plus" size={13} color={T.terra} strokeWidth={2} />
+              Add new cards
+            </button>
           ) : (
             <div style={{
               width: '100%', height: 44, borderRadius: 12,
@@ -163,6 +237,14 @@ export default function DualRingCard({
               }}>
                 Review {Math.min(totalDue, reviewMoreN)} more?
               </Link>
+            ) : reviewNeverStarted ? (
+              <div style={{
+                width: '100%', height: 44, borderRadius: 12,
+                background: T.sageBg, border: `1px solid #D2D8AE`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>No reviews yet</span>
+              </div>
             ) : (
               <div style={{
                 width: '100%', height: 44, borderRadius: 12,
@@ -214,6 +296,73 @@ export default function DualRingCard({
           </div>
         </div>
       </div>
+
+      {/* ── "Add new cards" popup ─────────────────────────────────────────────── */}
+      {showNoCardsPopup && (
+        <CenteredPopup onClose={() => setShowNoCardsPopup(false)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>No new cards available</span>
+            <button onClick={() => setShowNoCardsPopup(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+              <Icon name="close" size={16} color={T.inkMute} strokeWidth={2} />
+            </button>
+          </div>
+          {simActive ? (
+            <>
+              <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5, marginBottom: 14 }}>
+                Your priority decks have no more unscheduled cards. The simulation can&apos;t schedule anything new for today.
+              </p>
+              <PopupRow icon="capture" text="Capture new words from your reading or listening" />
+              <PopupRow icon="card"    text="Add more decks to your priority list" />
+              <PopupRow icon="info"    text="Adjust your goal and rerun the simulation to reschedule" />
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5, marginBottom: 14 }}>
+                There are no new cards left to learn today.
+              </p>
+              <PopupRow icon="capture" text="Capture new words from your reading or listening" />
+              <PopupRow icon="card"    text="Add a collection deck to your library" />
+            </>
+          )}
+        </CenteredPopup>
+      )}
+
+      {/* ── Sim goal complete overlay ─────────────────────────────────────────── */}
+      {showSimGoal && (
+        <CenteredPopup onClose={dismissSimGoal}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Priority goal complete</span>
+            <button onClick={dismissSimGoal} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+              <Icon name="close" size={16} color={T.inkMute} strokeWidth={2} />
+            </button>
+          </div>
+          <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5, marginBottom: 18 }}>
+            Every card in your priority decks has reached <strong>Rooted</strong> mastery. Your original sim goal is met.
+          </p>
+          <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5, marginBottom: 20 }}>
+            To keep progressing: set a new goal, expand your priority decks, or continue reviewing to move cards toward Blooming.
+          </p>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
+            <input
+              type="checkbox"
+              checked={simGoalDontShow}
+              onChange={e => setSimGoalDontShow(e.target.checked)}
+              style={{ width: 15, height: 15, cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: 12.5, color: T.inkMute }}>Don&apos;t show again</span>
+          </label>
+          <button
+            onClick={dismissSimGoal}
+            style={{
+              width: '100%', height: 40, borderRadius: 11, cursor: 'pointer',
+              background: T.sageBg, border: `1px solid #D2D8AE`, color: T.sageDp,
+              fontSize: 13.5, fontWeight: 600,
+            }}
+          >
+            Got it
+          </button>
+        </CenteredPopup>
+      )}
     </Card>
   )
 }

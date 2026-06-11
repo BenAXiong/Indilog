@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 18:22 | FEATURE | Dashboard: split review/learn empty states; Add new cards popup; sim goal complete overlay with dont-show-again |
 | 2026-06-11 17:45 | FEATURE | Review end screen: grade-sequence dots per card (again=red, hard=terra, good=green, easy=amber) |
 | 2026-06-11 17:50 | FEATURE | Advance review mode (advance=1 param): review rep≥2 cards due before next reset; CTA on review end screen; ADR DEC-SRS12 |
 | 2026-06-11 17:35 | FEATURE | Review end screen: break down returning cards by New (rep=1) and Planted or above (rep≥2) |
