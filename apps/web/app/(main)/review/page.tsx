@@ -311,7 +311,7 @@ function ReviewSession({
   cards:    FlashcardWithItem[]
   overflow: FlashcardWithItem[]
   ctx:      SessionContext
-  onExit:   (reviewed: number, reviewedCards: FlashcardWithItem[]) => void
+  onExit:   (reviewed: number, reviewedCards: FlashcardWithItem[], gradeHistory: Map<string, Rating[]>) => void
   onReloadNeeded: () => void
 }) {
   const [queue,    setQueue]    = useState<QueueEntry[]>(() => cards.map(c => ({ card: c })))
@@ -320,6 +320,7 @@ function ReviewSession({
   const [handledCount,  setHandledCount]  = useState(0)
   const [totalCards,    setTotalCards]    = useState(cards.length)
   const completedRef                       = useRef(new Set<string>())
+  const gradeHistoryRef                    = useRef(new Map<string, Rating[]>())
   const [revealed,       setRevealed]      = useState(false)
   const [showOptions,    setShowOptions]   = useState(false)
   const [showHardEasy,   setShowHardEasyRaw] = useState(true)
@@ -424,7 +425,7 @@ function ReviewSession({
       sessionEndFiredRef.current = true
       flushReviewEvents(pendingEventsRef.current).then(() => {})
       pendingEventsRef.current = []
-      onExitRef.current(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)))
+      onExitRef.current(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)), gradeHistoryRef.current)
     }
   }, [qIdx, queue.length])
 
@@ -511,6 +512,7 @@ function ReviewSession({
 
     if (rating === 'again') {
       // Any Again: buffer event + requeue +10; preserve original pre-lapse interval across retries
+      gradeHistoryRef.current.set(card.id, [...(gradeHistoryRef.current.get(card.id) ?? []), 'again'])
       const lapsedInterval = entry.lapsedInterval ?? card.interval_days ?? 1
       pendingEventsRef.current.push({
         flashcard_id: card.id, rating: 'again',
@@ -545,6 +547,7 @@ function ReviewSession({
 
     setGradingFly(null)
     completedRef.current.add(card.id)
+    gradeHistoryRef.current.set(card.id, [...(gradeHistoryRef.current.get(card.id) ?? []), rating])
     setHandledCount(c => c + 1)
     lastRatedRef.current = { cardId: card.id, prevState }
     setCanUndo(true)
@@ -572,6 +575,8 @@ function ReviewSession({
     if (!last) { pendingRef.current = false; return }
     await undoRating(last.cardId, last.prevState)
     completedRef.current.delete(last.cardId)
+    const prevGrades = gradeHistoryRef.current.get(last.cardId) ?? []
+    gradeHistoryRef.current.set(last.cardId, prevGrades.slice(0, -1))
     setHandledCount(c => c - 1)
     lastRatedRef.current = null
     setCanUndo(false)
@@ -667,7 +672,7 @@ function ReviewSession({
         <button onClick={() => {
           flushReviewEvents(pendingEventsRef.current).then(() => {})
           pendingEventsRef.current = []
-          onExit(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)))
+          onExit(completedRef.current.size, cards.filter(c => completedRef.current.has(c.id)), gradeHistoryRef.current)
         }} aria-label="Exit session" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1206,11 +1211,19 @@ function ReviewSession({
 
 const CONFETTI_COLORS = ['#C14B2C', '#EDAB32', '#7A9F3C', '#B06030', '#F5D060']
 
+const GRADE_DOT_COLOR: Record<Rating, string> = {
+  again: T.crimson,
+  hard:  T.terra,
+  good:  T.sage,
+  easy:  T.amber,
+}
+
 function ReviewEnd({
   sessionCount,
   goalMet,
   streak,
   reviewedCards,
+  gradeHistory,
   reviewMoreN: reviewMoreNProp,
   onReviewMore,
   onDone,
@@ -1219,6 +1232,7 @@ function ReviewEnd({
   goalMet: boolean
   streak: number
   reviewedCards: FlashcardWithItem[]
+  gradeHistory: Map<string, Rating[]>
   reviewMoreN: number
   onReviewMore: (n: number) => void
   onDone: () => void
@@ -1363,16 +1377,31 @@ function ReviewEnd({
             </button>
             {listExpanded && (
               <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {reviewedCards.map(c => (
-                  <div key={c.id} style={{
-                    padding: '8px 14px', borderRadius: 10,
-                    background: T.paper, border: `1px solid ${T.lineSoft}`,
-                    display: 'flex', flexDirection: 'column', gap: 2,
-                  }}>
-                    <span style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{c.ind_items?.ab}</span>
-                    {c.ind_items?.zh && <span style={{ fontSize: 12, color: T.inkSoft }}>{c.ind_items.zh}</span>}
-                  </div>
-                ))}
+                {reviewedCards.map(c => {
+                  const grades = gradeHistory.get(c.id) ?? []
+                  return (
+                    <div key={c.id} style={{
+                      padding: '8px 14px', borderRadius: 10,
+                      background: T.paper, border: `1px solid ${T.lineSoft}`,
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{c.ind_items?.ab}</span>
+                        {c.ind_items?.zh && <span style={{ fontSize: 12, color: T.inkSoft }}>{c.ind_items.zh}</span>}
+                      </div>
+                      {grades.length > 0 && (
+                        <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                          {grades.map((g, i) => (
+                            <div key={i} style={{
+                              width: 6, height: 6, borderRadius: 999,
+                              background: GRADE_DOT_COLOR[g], opacity: 0.85,
+                            }} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -1462,6 +1491,7 @@ function ReviewPage() {
   const [sessionCount,    setSessionCount]    = useState(0)
   const [sessionKey,      setSessionKey]      = useState(0)
   const [reviewedCards,   setReviewedCards]   = useState<FlashcardWithItem[]>([])
+  const [gradeHistory,    setGradeHistory]    = useState<Map<string, Rating[]>>(new Map())
   const autostartedRef = useRef(false)
 
   function getExcludeLangs(): string[] {
@@ -1539,9 +1569,10 @@ function ReviewPage() {
 
   useEffect(() => { reload() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleSessionExit(reviewed: number, rc: FlashcardWithItem[] = []) {
+  function handleSessionExit(reviewed: number, rc: FlashcardWithItem[] = [], history: Map<string, Rating[]> = new Map()) {
     setSessionCount(reviewed)
     setReviewedCards(rc)
+    setGradeHistory(history)
     if (reviewed > 0) {
       setMode('done')
     } else if (autostart) {
@@ -1588,6 +1619,7 @@ function ReviewPage() {
       goalMet={goalMet}
       streak={ctx.streak}
       reviewedCards={reviewedCards}
+      gradeHistory={gradeHistory}
       reviewMoreN={ctx.reviewMoreSize ?? Math.max(20, Math.round(ctx.reviewTarget / 50) * 5)}
       onReviewMore={handleReviewMore}
       onDone={autostart ? () => router.push('/') : () => setMode('landing')}
