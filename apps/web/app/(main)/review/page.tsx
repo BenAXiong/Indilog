@@ -1325,6 +1325,16 @@ function ReviewEnd({
                   {sessionReturning.total} card{sessionReturning.total !== 1 ? 's' : ''} from this session will be back before the next reset ({sessionReturning.newCards} New and {sessionReturning.plantedOrAbove} Planted or above).
                 </div>
               )}
+              {sessionReturning !== null && sessionReturning.plantedOrAbove > 0 && (
+                <Link href="/review?start=1&advance=1" style={{
+                  marginTop: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '10px 20px', borderRadius: 12, textDecoration: 'none',
+                  background: T.amberBg, color: T.amber,
+                  fontSize: 13, fontWeight: 600,
+                }}>
+                  Review {sessionReturning.plantedOrAbove} in advance?
+                </Link>
+              )}
             </>
           )}
 
@@ -1441,6 +1451,7 @@ function ReviewPage() {
   const customPlaceHeard = searchParams.get('placeHeard') ?? undefined
   const customDueOnly    = searchParams.get('dueOnly') !== 'false'
 
+  const isAdvance  = searchParams.get('advance') === '1'
   const autostart = searchParams.get('start') === '1' && !isCustom
 
   const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
@@ -1477,12 +1488,20 @@ function ReviewPage() {
           })
         : (async () => {
             const exclude = await getExcludeFromReview()
-            return listDueFlashcards({
+            const opts: ListDueOpts = {
               flagColor,
               excludeLangs:       getExcludeLangs(),
               excludeCollections: exclude.collections,
               excludeCaptures:    exclude.captures,
-            })
+            }
+            if (isAdvance) {
+              const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+              const nextReset = new Date()
+              if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
+              nextReset.setHours(resetHour, 0, 0, 0)
+              opts.advanceUntil = nextReset.toISOString()
+            }
+            return listDueFlashcards(opts)
           })(),
       loadSessionContext(),
     ])
@@ -1500,7 +1519,7 @@ function ReviewPage() {
     }
 
     const reviewMoreN  = context.reviewMoreSize ?? Math.max(20, Math.round(context.reviewTarget / 50) * 5)
-    const sessionCap   = isCustom ? c.length
+    const sessionCap   = isCustom || isAdvance ? c.length
       : isMore         ? reviewMoreN
       : Math.max(0, context.reviewTarget - context.reviewedToday)
     setCards(c.slice(0, sessionCap))

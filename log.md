@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-11 17:50 | FEATURE | Advance review mode (advance=1 param): review rep≥2 cards due before next reset; CTA on review end screen; ADR DEC-SRS12 |
 | 2026-06-11 17:35 | FEATURE | Review end screen: break down returning cards by New (rep=1) and Planted or above (rep≥2) |
 | 2026-06-11 17:18 | FEATURE | Review end screen: show count of this-session cards returning before next reset |
 | 2026-06-11 17:20 | FIX | Review end screen countDueTomorrow: use srs_reset_hour from localStorage, not hardcoded midnight |

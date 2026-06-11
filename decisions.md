@@ -56,6 +56,7 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-SRS09](docs/adr/DEC-SRS09-mastery-grades.md) | Mastery grades — Seed / Planted / Rooted / Blooming | accepted |
 | [DEC-SRS10](docs/adr/DEC-SRS10-simulation-forward-projection.md) | Simulation — FormoSRS-1 day-by-day forward projection | accepted |
 | [DEC-SRS11](docs/adr/DEC-SRS11-review-session-counter.md) | Review session — in-session counter and progress bar semantics | accepted |
+| [DEC-SRS12](docs/adr/DEC-SRS12-advance-review.md) | Advance review — session mode for cards returning before next reset | accepted |
 | [DEC-M5-01](docs/adr/DEC-M5-01-learn-review-separation.md) | Learn / Review session separation + priority-list goal model | accepted |
 | [DEC-001](docs/adr/DEC-001-dictionary-corpus-api-contract.md) | Dictionary and corpus API contract | accepted |
 | [DEC-002](docs/adr/DEC-002-supported-translation-pairs.md) | Supported translation pairs (v0) | superseded by DEC-M6-01 |

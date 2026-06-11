@@ -256,6 +256,7 @@ export type ListDueOpts = {
   includeFlagColors?:  string[]   // OR logic: any of these colors (post-filter; flagColor handles single/any/none at DB level)
   includePlaceHeard?:  string     // exact match on place_heard
   dueOnly?:            boolean    // default true; false = all non-suspended cards
+  advanceUntil?:       string     // ISO timestamp ceiling; when set, queries cards due between now and this time, rep>=2 only
 }
 
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
@@ -267,9 +268,11 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
   function buildQ() {
     let q = supabase.from('ind_flashcards').select(SEL)
       .is('suspended_at', null)
-      .gt('repetitions', 0)   // Review: never show new (repetitions===0) cards
+      // advance mode: rep>=2 (exclude freshly-graduated New cards); normal: rep>=1
+      .gt('repetitions', opts.advanceUntil ? 1 : 0)
       .order('due_at', { ascending: true, nullsFirst: false })
-    if (opts.dueOnly !== false) q = q.lte('due_at', now)
+    if (opts.advanceUntil)           q = q.gt('due_at', now).lte('due_at', opts.advanceUntil)
+    else if (opts.dueOnly !== false)  q = q.lte('due_at', now)
     if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
     else if (opts.flagColor === 'none') q = q.is('flag_color', null)
     else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
