@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
@@ -287,6 +287,23 @@ function PreviewState({
   onImport: () => void
 }) {
   const selectedCount = selectedIndices.size
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  function handleAudio(e: React.MouseEvent, i: number, url: string) {
+    e.stopPropagation()
+    if (playingIdx === i) {
+      audioRef.current?.pause()
+      setPlayingIdx(null)
+      return
+    }
+    audioRef.current?.pause()
+    const a = new Audio(url)
+    a.onended = () => setPlayingIdx(null)
+    a.play().catch(() => {})
+    audioRef.current = a
+    setPlayingIdx(i)
+  }
 
   return (
     <>
@@ -348,7 +365,7 @@ function PreviewState({
               </div>
 
               {/* Content */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, paddingRight: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, color: T.ink, fontStyle: 'italic', flex: 1, lineHeight: 1.3 }}>
                     {item.ab}
@@ -378,6 +395,22 @@ function PreviewState({
                   ))}
                 </div>
               </div>
+
+              {/* Audio button — active if URL present, greyed if not */}
+              <button
+                onClick={item.audio ? e => handleAudio(e, i, item.audio!) : e => e.stopPropagation()}
+                style={{
+                  flexShrink: 0, width: 28, height: 28, borderRadius: 8, marginTop: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: playingIdx === i ? T.sageBg : 'transparent',
+                  border: `1px solid ${item.audio ? (playingIdx === i ? T.sage : T.lineSoft) : T.lineSoft}`,
+                  cursor: item.audio ? 'pointer' : 'default',
+                  opacity: item.audio ? 1 : 0.3,
+                }}
+                aria-label={playingIdx === i ? 'Stop' : 'Play audio'}
+              >
+                <Icon name={playingIdx === i ? 'stop' : 'speaker'} size={12} strokeWidth={1.8} color={item.audio ? (playingIdx === i ? T.sage : T.inkSoft) : T.inkFaint} />
+              </button>
             </div>
           )
         })}
