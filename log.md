@@ -3,6 +3,7 @@
 | Timestamp | Type | Description |
 |-----------|------|-------------|
 | 2026-06-13 | FEATURE | Browser card row: audio indicator (speaker icon) and language pill added to collapsed row |
+| 2026-06-13 | FEATURE | Import page: audio preview button on each row — greyed/inactive when no URL, playable when Grimoire supplies clipped audio |
 | 2026-06-12 14:50 | FIX | Learn session: next-card entry always floats up from below — fix intermediate snap-back frame on grading advances |
 | 2026-06-12 12:09 | FEATURE | Learn session: infinite-level undo for test phase — graduate, good1, again, suspend all undoable |
 | 2026-06-12 12:09 | FEATURE | Review session: infinite-level undo — again, defer, and suspend all undoable; stack replaces single-slot lastRatedRef |
