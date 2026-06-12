@@ -536,6 +536,11 @@ export async function unsuspendCard(id: string): Promise<void> {
   await supabase.from('ind_flashcards').update({ suspended_at: null }).eq('id', id)
 }
 
+export async function undoDefer(cardId: string, prevDueAt: string | null): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ due_at: prevDueAt }).eq('id', cardId)
+}
+
 export async function setFlagColor(id: string, color: string | null): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_flashcards').update({ flag_color: color }).eq('id', id)

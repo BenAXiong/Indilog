@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-12 12:09 | FEATURE | Review session: infinite-level undo — again, defer, and suspend all undoable; stack replaces single-slot lastRatedRef |
 | 2026-06-11 22:58 | FEATURE | Learn session: exposure exit floats up 70px with entrance easing instead of flinging off-screen |
 | 2026-06-11 22:35 | FEATURE | Review + learn card: divider always at vertical center; prompt pinned above it and no longer jumps on reveal |
 | 2026-06-11 22:35 | FIX | handleGraduate: add try-catch so RPC failure resets animation and unblocks session instead of freezing it |

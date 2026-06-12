@@ -11,7 +11,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
   rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
-  suspendCard, setFlagColor, deferCard, undoRating, localDateStr, getStudyDate,
+  suspendCard, unsuspendCard, setFlagColor, deferCard, undoRating, undoDefer, localDateStr, getStudyDate,
   type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
@@ -286,6 +286,14 @@ type QueueEntry = {
   lapsedInterval?: number  // set when requeued after Again; triggers 50% recovery on re-rating
 }
 
+type PrevSMState = { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null }
+
+type UndoEntry =
+  | { type: 'rate';    cardId: string; prevState: PrevSMState; wasLapsed: boolean; lapsedInterval?: number }
+  | { type: 'again';   cardId: string; insertedAt: number; lapsedInterval: number }
+  | { type: 'defer';   cardId: string; prevDueAt: string | null }
+  | { type: 'suspend'; cardId: string; appendedOverflow: FlashcardWithItem | null; appendedAt: number | null }
+
 function renderHighlighted(sentence: string, target: string) {
   if (!target || !sentence) return sentence
   const idx = sentence.toLowerCase().indexOf(target.toLowerCase())
@@ -334,9 +342,10 @@ function ReviewSession({
   const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
   const swipeStart   = useRef({ x: 0, y: 0 })
   const audioRef     = useRef<HTMLAudioElement | null>(null)
-  type LastRated = { cardId: string; prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null } }
-  const lastRatedRef = useRef<LastRated | null>(null)
-  const [canUndo,      setCanUndo]      = useState(false)
+  const undoStackRef  = useRef<UndoEntry[]>([])
+  const [undoCount,    setUndoCount]    = useState(0)
+  const queueRef      = useRef<QueueEntry[]>(cards.map(c => ({ card: c })))
+  const overflowRef   = useRef<FlashcardWithItem[]>(initialOverflow)
   const [showKebab,    setShowKebab]    = useState(false)
   const onExitRef = useRef(onExit)
   useEffect(() => { onExitRef.current = onExit })
@@ -492,6 +501,11 @@ function ReviewSession({
   const stsWord     = targetWord ?? ''
   const stsSentence = card.ind_items?.ab ?? ''
 
+  function pushUndo(entry: UndoEntry) { undoStackRef.current.push(entry); setUndoCount(n => n + 1) }
+  function popUndo(): UndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
+  function updateQueue(updater: (q: QueueEntry[]) => QueueEntry[]) { const next = updater(queueRef.current); queueRef.current = next; setQueue(next) }
+  function updateOverflow(updater: (o: FlashcardWithItem[]) => FlashcardWithItem[]) { const next = updater(overflowRef.current); overflowRef.current = next; setOverflow(next) }
+
   function ratingToFly(r: Rating): { x: number; y: number; color: string; label: string } {
     if (r === 'again') return { x: -700, y: -80,  color: T.crimson, label: 'AGAIN' }
     if (r === 'hard')  return { x:  300, y: -650,  color: T.terra,   label: 'HARD'  }
@@ -519,23 +533,18 @@ function ReviewSession({
         due_at: card.due_at ?? null, mode: effectiveMode,
         phase: 'review_requeue', reviewed_at: new Date().toISOString(),
       })
-      setQueue(q => {
-        const insertAt = Math.min(qIdx + 11, q.length)
-        return [...q.slice(0, insertAt), { card, lapsedInterval }, ...q.slice(insertAt)]
-      })
+      const insertedAt = Math.min(qIdx + 11, queueRef.current.length)
+      updateQueue(q => [...q.slice(0, insertedAt), { card, lapsedInterval }, ...q.slice(insertedAt)])
+      pushUndo({ type: 'again', cardId: card.id, insertedAt, lapsedInterval })
       await new Promise<void>(r => setTimeout(r, ANIM_MS))
       setGradingFly(null)
-      lastRatedRef.current = null
-      setCanUndo(false)
       setRevealed(false)
       setShowFlagPicker(false)
       setQIdx(qi => qi + 1)
       return
     }
 
-    lastRatedRef.current = null
-    setCanUndo(false)
-    const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
+    const prevState: PrevSMState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
 
     await Promise.all([
       isLapsed
@@ -549,8 +558,7 @@ function ReviewSession({
     completedRef.current.add(card.id)
     gradeHistoryRef.current.set(card.id, [...(gradeHistoryRef.current.get(card.id) ?? []), rating])
     setHandledCount(c => c + 1)
-    lastRatedRef.current = { cardId: card.id, prevState }
-    setCanUndo(true)
+    pushUndo({ type: 'rate', cardId: card.id, prevState, wasLapsed: isLapsed, lapsedInterval: entry.lapsedInterval })
     setRevealed(false)
     setShowFlagPicker(false)
     setQIdx(qi => qi + 1)
@@ -559,10 +567,10 @@ function ReviewSession({
   async function handleDefer() {
     if (pendingRef.current) return
     pendingRef.current = true
+    const prevDueAt = card.due_at ?? null
     await deferCard(card.id)
     setTotalCards(n => n - 1)
-    lastRatedRef.current = null
-    setCanUndo(false)
+    pushUndo({ type: 'defer', cardId: card.id, prevDueAt })
     setRevealed(false)
     setShowFlagPicker(false)
     setQIdx(qi => qi + 1)
@@ -571,17 +579,54 @@ function ReviewSession({
   async function handleUndo() {
     if (pendingRef.current) return
     pendingRef.current = true
-    const last = lastRatedRef.current
-    if (!last) { pendingRef.current = false; return }
-    await undoRating(last.cardId, last.prevState)
-    completedRef.current.delete(last.cardId)
-    const prevGrades = gradeHistoryRef.current.get(last.cardId) ?? []
-    gradeHistoryRef.current.set(last.cardId, prevGrades.slice(0, -1))
-    setHandledCount(c => c - 1)
-    lastRatedRef.current = null
-    setCanUndo(false)
-    setRevealed(false)
-    setQIdx(qi => qi - 1)
+    const top = popUndo()
+    if (!top) { pendingRef.current = false; return }
+
+    if (top.type === 'rate') {
+      await undoRating(top.cardId, top.prevState)
+      completedRef.current.delete(top.cardId)
+      const prevGrades = gradeHistoryRef.current.get(top.cardId) ?? []
+      gradeHistoryRef.current.set(top.cardId, prevGrades.slice(0, -1))
+      setHandledCount(c => c - 1)
+      setRevealed(false)
+      setQIdx(qi => qi - 1)
+      return
+    }
+
+    if (top.type === 'again') {
+      updateQueue(q => [...q.slice(0, top.insertedAt), ...q.slice(top.insertedAt + 1)])
+      // Remove the most recent buffered 'again' event for this card (LIFO)
+      let idx = -1
+      for (let i = pendingEventsRef.current.length - 1; i >= 0; i--) {
+        if (pendingEventsRef.current[i].flashcard_id === top.cardId && pendingEventsRef.current[i].rating === 'again') { idx = i; break }
+      }
+      if (idx !== -1) pendingEventsRef.current.splice(idx, 1)
+      const prevGrades = gradeHistoryRef.current.get(top.cardId) ?? []
+      gradeHistoryRef.current.set(top.cardId, prevGrades.slice(0, -1))
+      setRevealed(false)
+      setQIdx(qi => qi - 1)
+      return
+    }
+
+    if (top.type === 'defer') {
+      await undoDefer(top.cardId, top.prevDueAt)
+      setTotalCards(n => n + 1)
+      setRevealed(false)
+      setQIdx(qi => qi - 1)
+      return
+    }
+
+    if (top.type === 'suspend') {
+      await unsuspendCard(top.cardId)
+      if (top.appendedOverflow !== null && top.appendedAt !== null) {
+        updateQueue(q => [...q.slice(0, top.appendedAt!), ...q.slice(top.appendedAt! + 1)])
+        updateOverflow(o => [top.appendedOverflow!, ...o])
+      } else {
+        setTotalCards(n => n + 1)
+      }
+      setRevealed(false)
+      setQIdx(qi => qi - 1)
+    }
   }
 
   async function handleSuspend() {
@@ -596,15 +641,17 @@ function ReviewSession({
     setGradingFly(null)
     setShowFlagPicker(false)
     setRevealed(false)
-    setOverflow(prev => {
-      if (!prev.length) {
-        setTotalCards(n => n - 1)
-        return prev
-      }
-      const [next, ...rest] = prev
-      setQueue(q => [...q, { card: next }])
-      return rest
-    })
+    let appendedOverflow: FlashcardWithItem | null = null
+    let appendedAt: number | null = null
+    if (overflowRef.current.length > 0) {
+      appendedOverflow = overflowRef.current[0]
+      appendedAt = queueRef.current.length
+      updateQueue(q => [...q, { card: appendedOverflow! }])
+      updateOverflow(o => o.slice(1))
+    } else {
+      setTotalCards(n => n - 1)
+    }
+    pushUndo({ type: 'suspend', cardId: card.id, appendedOverflow, appendedAt })
     setQIdx(qi => qi + 1)
   }
 
@@ -759,7 +806,7 @@ function ReviewSession({
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em' }}>
               {handledCount} / {totalCards}
             </span>
-            {canUndo && (
+            {undoCount > 0 && (
               <button onClick={handleUndo} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
