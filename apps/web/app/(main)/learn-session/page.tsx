@@ -9,8 +9,8 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  listLearnFlashcards, graduateLearnCard, suspendCard, setFlagColor, listUserLanguages, cardMeta, cardAudio,
-  flushReviewEvents, getStudyDate,
+  listLearnFlashcards, graduateLearnCard, suspendCard, unsuspendCard, setFlagColor, listUserLanguages, cardMeta, cardAudio,
+  flushReviewEvents, getStudyDate, undoGraduateLearnCard,
   type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
@@ -33,6 +33,12 @@ type LearnContext = {
   learnCap:              number
   priorityCollectionIds: string[]
 }
+
+type LearnUndoEntry =
+  | { type: 'graduate'; cardId: string; prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null } }
+  | { type: 'good1';    cardId: string; insertedAt: number }
+  | { type: 'again';    cardId: string; insertedAt: number }
+  | { type: 'suspend';  cardId: string; appendedOverflow: FlashcardWithItem | null; appendedAt: number | null }
 
 // ─── Context loader ───────────────────────────────────────────────────────────
 
@@ -309,6 +315,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const sessionEndFiredRef = useRef(false)
   const pendingRef         = useRef(false)   // blocks re-entrant actions during async operations
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
+  const undoStackRef       = useRef<LearnUndoEntry[]>([])
+  const [undoCount,        setUndoCount]    = useState(0)
   const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
   const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string; opacity?: number } | null>(null)
   const [entering,   setEntering]   = useState(true)
@@ -437,6 +445,9 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
+  function pushUndo(entry: LearnUndoEntry) { undoStackRef.current.push(entry); setUndoCount(n => n + 1) }
+  function popUndo(): LearnUndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
+
   const FLY = {
     next:  { x:    0, y:  -70, color: T.sage,    label: 'NEXT', opacity: 0 },
     good:  { x:  700, y:  -80, color: T.sage,    label: 'GOOD'  },
@@ -456,25 +467,23 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     ])
     setGradingFly(null)
     setRevealed(false)
-    // Replace suspended card from overflow; insert before test entries so all exposures
-    // stay grouped. Read overflow from render scope (safe — pendingRef blocks concurrent
-    // mutations). Avoid calling setQueue inside setOverflow: StrictMode invokes updaters
-    // twice, which would insert the replacement card twice.
+    // Read overflow and queue from render scope (safe — pendingRef blocks concurrent mutations).
+    let appendedOverflow: FlashcardWithItem | null = null
+    let appendedAt: number | null = null
     if (overflow.length > 0) {
       const [next, ...rest] = overflow
+      appendedOverflow = next
+      // Compute insertAt from closure queue — find last exposure entry, insert just after it.
+      // Falls back to qIdx+1 when already in test phase (no remaining exposures ahead).
+      let insertAt = qIdx + 1
+      for (let i = queue.length - 1; i > qIdx; i--) {
+        if (!queue[i].exposureDone) { insertAt = i + 1; break }
+      }
+      appendedAt = insertAt
       setOverflow(rest)
-      setQueue(q => {
-        const newEntry = { card: next, exposureDone: false, goodCount: 0 }
-        // Find last remaining exposure entry ahead of current position.
-        // If none (we're in test phase), insert immediately next so the
-        // replacement is exposed before resuming tests — not appended to tail.
-        let insertAt = qIdx + 1
-        for (let i = q.length - 1; i > qIdx; i--) {
-          if (!q[i].exposureDone) { insertAt = i + 1; break }
-        }
-        return [...q.slice(0, insertAt), newEntry, ...q.slice(insertAt)]
-      })
+      setQueue(q => [...q.slice(0, insertAt), { card: next, exposureDone: false, goodCount: 0 }, ...q.slice(insertAt)])
     }
+    pushUndo({ type: 'suspend', cardId: card.id, appendedOverflow, appendedAt })
     setQIdx(qi => qi + 1)
   }
 
@@ -492,6 +501,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     pendingRef.current = true
     setGradingFly(type === 'easy' ? FLY.easy : FLY.good)
     setDrag(null)
+    const prevState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
     try {
       await Promise.all([
         graduateLearnCard(card.id, type),
@@ -504,6 +514,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     }
     setGradingFly(null)
     graduatedRef.current.add(card.id)
+    pushUndo({ type: 'graduate', cardId: card.id, prevState })
     setRevealed(false)
     setQIdx(qi => qi + 1)
   }
@@ -518,7 +529,9 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       due_at: card.due_at ?? null, mode: null,
       phase: 'learn', reviewed_at: new Date().toISOString(),
     })
+    const insertedAt = queue.length
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
+    pushUndo({ type: 'again', cardId: card.id, insertedAt })
     setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
   }
 
@@ -530,8 +543,49 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       pendingRef.current = true
       setGradingFly(FLY.good)
       setDrag(null)
+      const insertedAt = queue.length
       setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 1 }])
+      pushUndo({ type: 'good1', cardId: card.id, insertedAt })
       setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
+    }
+  }
+
+  async function handleUndo() {
+    if (pendingRef.current) return
+    pendingRef.current = true
+    const top = popUndo()
+    if (!top) { pendingRef.current = false; return }
+
+    if (top.type === 'graduate') {
+      await undoGraduateLearnCard(top.cardId, top.prevState)
+      graduatedRef.current.delete(top.cardId)
+      setRevealed(false)
+      setQIdx(qi => qi - 1)
+      return
+    }
+
+    if (top.type === 'again' || top.type === 'good1') {
+      if (top.type === 'again') {
+        let idx = -1
+        for (let i = pendingEventsRef.current.length - 1; i >= 0; i--) {
+          if (pendingEventsRef.current[i].flashcard_id === top.cardId && pendingEventsRef.current[i].rating === 'again') { idx = i; break }
+        }
+        if (idx !== -1) pendingEventsRef.current.splice(idx, 1)
+      }
+      setQueue(q => [...q.slice(0, top.insertedAt), ...q.slice(top.insertedAt + 1)])
+      setRevealed(false)
+      setQIdx(qi => qi - 1)
+      return
+    }
+
+    if (top.type === 'suspend') {
+      await unsuspendCard(top.cardId)
+      if (top.appendedOverflow !== null && top.appendedAt !== null) {
+        setQueue(q => [...q.slice(0, top.appendedAt!), ...q.slice(top.appendedAt! + 1)])
+        setOverflow(prev => [top.appendedOverflow!, ...prev])
+      }
+      setRevealed(false)
+      setQIdx(qi => qi - 1)
     }
   }
 
@@ -691,7 +745,17 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
           <div style={{ width: `${(graduatedCount / Math.max(totalInitial, 1)) * 100}%`, height: '100%', background: T.sage, borderRadius: 999, transition: 'width .4s' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 5 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 5 }}>
+          {undoCount > 0 && (
+            <button onClick={handleUndo} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft,
+            }}>
+              <Icon name="rotate-ccw" size={13} strokeWidth={2} color={T.inkSoft} />
+              undo
+            </button>
+          )}
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600 }}>
             {graduatedCount} / {totalInitial}
           </span>

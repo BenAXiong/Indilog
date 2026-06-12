@@ -541,6 +541,50 @@ export async function undoDefer(cardId: string, prevDueAt: string | null): Promi
   await supabase.from('ind_flashcards').update({ due_at: prevDueAt }).eq('id', cardId)
 }
 
+export async function undoGraduateLearnCard(
+  cardId: string,
+  prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null },
+): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const today = getStudyDate()
+
+  const [, { data: review }] = await Promise.all([
+    supabase.from('ind_flashcards').update({
+      ease_factor:   prevState.ease_factor,
+      interval_days: prevState.interval_days,
+      repetitions:   prevState.repetitions,
+      due_at:        prevState.due_at,
+    }).eq('id', cardId),
+    supabase.from('ind_reviews')
+      .select('id')
+      .eq('flashcard_id', cardId)
+      .eq('user_id', user.id)
+      .eq('mode', 'learn')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const { data: stats } = await supabase
+    .from('ind_daily_stats')
+    .select('learned_count')
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .maybeSingle()
+
+  await Promise.all([
+    review ? supabase.from('ind_reviews').delete().eq('id', review.id) : Promise.resolve(),
+    stats && (stats.learned_count ?? 0) > 0
+      ? supabase.from('ind_daily_stats')
+          .update({ learned_count: stats.learned_count - 1 })
+          .eq('user_id', user.id).eq('date', today)
+      : Promise.resolve(),
+  ])
+}
+
 export async function setFlagColor(id: string, color: string | null): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_flashcards').update({ flag_color: color }).eq('id', id)
