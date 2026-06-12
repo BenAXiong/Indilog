@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-12 14:11 | FIX | Learn session: all grading exits now use subtle y:-70 float (same as exposure), removing directional bounce |
 | 2026-06-12 12:09 | FEATURE | Learn session: infinite-level undo for test phase — graduate, good1, again, suspend all undoable |
 | 2026-06-12 12:09 | FEATURE | Review session: infinite-level undo — again, defer, and suspend all undoable; stack replaces single-slot lastRatedRef |
 | 2026-06-11 22:58 | FEATURE | Learn session: exposure exit floats up 70px with entrance easing instead of flinging off-screen |
