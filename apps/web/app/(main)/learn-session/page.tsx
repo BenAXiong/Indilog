@@ -449,11 +449,11 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function popUndo(): LearnUndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
 
   const FLY = {
-    next:  { x: 0, y: -70, color: T.sage,    label: 'NEXT',  opacity: 0 },
-    good:  { x: 0, y: -70, color: T.sage,    label: 'GOOD',  opacity: 0 },
-    again: { x: 0, y: -70, color: T.crimson, label: 'AGAIN', opacity: 0 },
-    easy:  { x: 0, y: -70, color: T.amber,   label: 'EASY',  opacity: 0 },
-    pause: { x: 0, y: -70, color: T.inkSoft, label: 'PAUSE', opacity: 0 },
+    next:  { x:    0, y:  -70, color: T.sage,    label: 'NEXT', opacity: 0 },
+    good:  { x:  700, y:  -80, color: T.sage,    label: 'GOOD'  },
+    again: { x: -700, y:  -80, color: T.crimson, label: 'AGAIN' },
+    easy:  { x:   60, y: -700, color: T.amber,   label: 'EASY'  },
+    pause: { x:    0, y:  700, color: T.inkSoft,  label: 'PAUSE' },
   }
 
   async function handleSuspend() {
@@ -466,6 +466,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       new Promise<void>(r => setTimeout(r, 350)),
     ])
     setGradingFly(null)
+    setEntering(true)
     setRevealed(false)
     // Read overflow and queue from render scope (safe — pendingRef blocks concurrent mutations).
     let appendedOverflow: FlashcardWithItem | null = null
@@ -493,7 +494,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     setGradingFly(FLY.next)
     setDrag(null)
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
-    setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
+    setTimeout(() => { setGradingFly(null); setEntering(true); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
   }
 
   async function handleGraduate(type: 'good' | 'easy') {
@@ -513,6 +514,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       return
     }
     setGradingFly(null)
+    setEntering(true)
     graduatedRef.current.add(card.id)
     pushUndo({ type: 'graduate', cardId: card.id, prevState })
     setRevealed(false)
@@ -532,7 +534,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     const insertedAt = queue.length
     setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 0 }])
     pushUndo({ type: 'again', cardId: card.id, insertedAt })
-    setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
+    setTimeout(() => { setGradingFly(null); setEntering(true); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
   }
 
   function handleGood(currentGoodCount: number) {
@@ -546,7 +548,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       const insertedAt = queue.length
       setQueue(prev => [...prev, { card, exposureDone: true, goodCount: 1 }])
       pushUndo({ type: 'good1', cardId: card.id, insertedAt })
-      setTimeout(() => { setGradingFly(null); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
+      setTimeout(() => { setGradingFly(null); setEntering(true); setRevealed(false); setQIdx(qi => qi + 1) }, 350)
     }
   }
 
@@ -695,7 +697,13 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const cardTransform = (drag || gradingFly)
     ? `translate(${swipeDx}px, ${swipeDy}px) rotate(${swipeRot}deg)`
     : entering ? 'translateY(70px)' : 'translate(0px,0px) rotate(0deg)'
-  const cardTransition = (drag || entering)
+  const cardTransition = drag
+    ? 'none'
+    : gradingFly
+    ? gradingFly.opacity === 0
+      ? 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
+      : 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
+    : entering
     ? 'none'
     : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
   const cardOpacity = gradingFly ? (gradingFly.opacity ?? 0.5) : entering ? 0 : 1
