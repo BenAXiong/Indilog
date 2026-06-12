@@ -70,10 +70,11 @@ function CapturePageInner() {
   const [stsTarget,      setStsTarget]      = useState<string | null>(null)
 
   // Audio recording
-  const [recording,    setRecording]    = useState(false)
-  const [hasRecording, setHasRecording] = useState(false)
-  const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null)
-  const [playing,      setPlaying]      = useState(false)
+  const [recording,       setRecording]       = useState(false)
+  const [hasRecording,    setHasRecording]    = useState(false)
+  const [audioBlobUrl,    setAudioBlobUrl]    = useState<string | null>(null)
+  const [playing,         setPlaying]         = useState(false)
+  const [audioUploadFail, setAudioUploadFail] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef   = useRef<Blob[]>([])
   const audioBlobUrlRef  = useRef<string | null>(null)
@@ -240,6 +241,7 @@ function CapturePageInner() {
 
   // ── Audio recording ──────────────────────────────────────────────────────
   async function startRecording() {
+    setAudioUploadFail(false)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       audioChunksRef.current = []
@@ -404,8 +406,11 @@ function CapturePageInner() {
         if (!upErr && up) {
           const { data: { publicUrl } } = supabase.storage.from('ind-audio').getPublicUrl(up.path)
           audioUrl = publicUrl
+        } else {
+          console.error('audio upload:', upErr)
+          setAudioUploadFail(true)
         }
-      } catch (e) { console.error('audio upload:', e) }
+      } catch (e) { console.error('audio upload:', e); setAudioUploadFail(true) }
     }
 
     const payload = {
@@ -501,6 +506,13 @@ function CapturePageInner() {
             letterSpacing: '-0.015em', lineHeight: 1.35, outline: 'none',
           }}
         />
+
+        {/* Audio upload failure notice */}
+        {audioUploadFail && (
+          <div style={{ fontSize: 11.5, color: T.crimson, background: T.crimsonBg, border: `1px solid #EFCAB8`, borderRadius: 8, padding: '5px 10px', marginTop: 4 }}>
+            Audio upload failed — card saved without audio. Re-record and save again.
+          </div>
+        )}
 
         {/* Ab area footer: [hint?] [trash?] [play?] [lookup] [mic] */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: 6, gap: 6 }}>
