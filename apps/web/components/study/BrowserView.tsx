@@ -229,6 +229,9 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
             {flagHex && (
               <span style={{ width: 10, height: 10, borderRadius: 999, background: flagHex, flexShrink: 0 }} />
             )}
+            {card.audio && (
+              <Icon name="speaker" size={10} strokeWidth={1.8} color={T.inkFaint} />
+            )}
             {card.target_word && (
               <span style={{ fontSize: 9, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', padding: '1px 4px', borderRadius: 3, border: `1px solid ${T.lineSoft}` }}>STS</span>
             )}
@@ -236,8 +239,15 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
               {card.source}
             </span>
           </div>
-          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
-            e{card.ease_factor.toFixed(1)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {card.language && (
+              <span style={{ fontSize: 9, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint, padding: '1px 5px', borderRadius: 3, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
+                {card.language}
+              </span>
+            )}
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
+              e{card.ease_factor.toFixed(1)}
+            </span>
           </div>
         </div>
       </button>
