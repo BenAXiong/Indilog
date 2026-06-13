@@ -546,13 +546,19 @@ function ReviewSession({
 
     const prevState: PrevSMState = { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions, due_at: card.due_at }
 
-    await Promise.all([
-      isLapsed
-        // Requeued card rated Good/Easy/Hard: 50% interval recovery (Hard mapped to Good)
-        ? rateCardRelearn(card.id, (rating === 'hard' ? 'good' : rating) as 'good' | 'easy', state, entry.lapsedInterval!, effectiveMode, rating)
-        : rateCard(card.id, rating, state, effectiveMode),
-      new Promise<void>(r => setTimeout(r, ANIM_MS)),
-    ])
+    try {
+      await Promise.all([
+        isLapsed
+          // Requeued card rated Good/Easy/Hard: 50% interval recovery (Hard mapped to Good)
+          ? rateCardRelearn(card.id, (rating === 'hard' ? 'good' : rating) as 'good' | 'easy', state, entry.lapsedInterval!, effectiveMode, rating)
+          : rateCard(card.id, rating, state, effectiveMode),
+        new Promise<void>(r => setTimeout(r, ANIM_MS)),
+      ])
+    } catch {
+      setGradingFly(null)
+      pendingRef.current = false
+      return
+    }
 
     setGradingFly(null)
     completedRef.current.add(card.id)

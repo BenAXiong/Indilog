@@ -408,7 +408,7 @@ export async function rateCardRelearn(
   const { due_at, new_state } = nextRelearn(currentState, rating, lapsedInterval)
   const today = getStudyDate()
 
-  await Promise.all([
+  const [cardRes, , rpcRes] = await Promise.all([
     supabase.from('ind_flashcards').update({
       due_at,
       ease_factor:   new_state.ease_factor,
@@ -418,6 +418,8 @@ export async function rateCardRelearn(
     supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating: storeRating ?? rating, due_at, mode }),
     supabase.rpc('increment_reviewed_today', { p_user_id: user.id, p_date: today }),
   ])
+  if (cardRes.error) throw new Error(`rateCardRelearn flashcard update: ${cardRes.error.message}`)
+  if (rpcRes.error)  throw new Error(`rateCardRelearn increment: ${rpcRes.error.message}`)
 }
 
 async function wipeReviewsAndReset(supabase: ReturnType<typeof createClient>, userId: string, noteIds: string[]): Promise<void> {
@@ -605,7 +607,7 @@ export async function rateCard(
   const { due_at, new_state } = nextFormoSRS1(currentState, rating)
   const today = getStudyDate()
 
-  await Promise.all([
+  const [cardRes, , rpcRes] = await Promise.all([
     supabase.from('ind_flashcards').update({
       due_at,
       ease_factor:   new_state.ease_factor,
@@ -615,4 +617,6 @@ export async function rateCard(
     supabase.from('ind_reviews').insert({ user_id: user.id, flashcard_id: flashcardId, rating, due_at, mode }),
     supabase.rpc('increment_reviewed_today', { p_user_id: user.id, p_date: today }),
   ])
+  if (cardRes.error) throw new Error(`rateCard flashcard update: ${cardRes.error.message}`)
+  if (rpcRes.error)  throw new Error(`rateCard increment: ${rpcRes.error.message}`)
 }
