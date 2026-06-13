@@ -21,9 +21,12 @@ import { patchPreferences } from '@/lib/db/profile/preferences'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
 import { GradeBadge } from '@/components/study/GradeBadge'
 import { FlagPicker } from '@/components/study/FlagPicker'
-import { SwipeOverlay } from '@/components/study/SwipeOverlay'
+import { SwipeOverlay, computeSwipePhysics } from '@/components/study/SwipeOverlay'
 import { CardFront, CardBack } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
+import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
+import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
+import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,62 +149,31 @@ function OptionsSheet({
   onReloadNeeded: () => void
   onClose: () => void
 }) {
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [])
-
   return (
-    <>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(30,22,16,0.32)', zIndex: 20 }} />
-      <div style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 21,
-        background: T.cream, borderRadius: '22px 22px 0 0',
-        padding: '10px 0 32px', boxShadow: '0 -12px 36px rgba(40,30,20,0.2)',
-      }}>
-        <div style={{ width: 40, height: 5, borderRadius: 999, background: T.line, margin: '0 auto 14px' }} />
-        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, padding: '0 16px 10px' }}>
-          Session options
-        </div>
-        <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
-          {/* Review mode selector */}
-          <div style={{ padding: '12px 16px 10px', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ fontSize: 14, color: T.ink, fontWeight: 500, marginBottom: 8 }}>Review mode</div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {(['forward', 'reverse', 'audio', 'sts'] as const).map(m => (
-                <button key={m} onClick={() => setReviewMode(m)} style={{
-                  padding: '4px 9px', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.04em',
-                  background: reviewMode === m ? T.crimsonBg : T.paper,
-                  border: `1.5px solid ${reviewMode === m ? T.crimson : T.lineSoft}`,
-                  color: reviewMode === m ? T.crimson : T.inkMute,
-                }}>{m}</button>
-              ))}
-            </div>
-          </div>
-          <SessionToggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
-          <SessionToggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
-          <SessionToggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
+    <SessionOptionsSheet onClose={onClose}>
+      <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
+        <ReviewModeSelector value={reviewMode} onChange={setReviewMode} />
+        <SessionToggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
+        <SessionToggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
+        <SessionToggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
 
-          <div style={{ padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
-              ← Again · → Good · ↑ Easy · ↓ Suspend
-            </div>
+        <div style={{ padding: '14px 16px' }}>
+          <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
+            ← Again · → Good · ↑ Easy · ↓ Suspend
           </div>
-        </div>
-
-        {/* Language filter */}
-        <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '10px 14px 0', overflow: 'hidden' }}>
-          <LangFilterSection
-            showAllLangs={showAllLangs}    setShowAllLangs={setShowAllLangs}
-            excludedLangs={excludedLangs}  setExcludedLangs={setExcludedLangs}
-            onReloadNeeded={onReloadNeeded}
-            showAccumulateNote
-          />
         </div>
       </div>
-    </>
+
+      {/* Language filter */}
+      <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '10px 14px 0', overflow: 'hidden' }}>
+        <LangFilterSection
+          showAllLangs={showAllLangs}    setShowAllLangs={setShowAllLangs}
+          excludedLangs={excludedLangs}  setExcludedLangs={setExcludedLangs}
+          onReloadNeeded={onReloadNeeded}
+          showAccumulateNote
+        />
+      </div>
+    </SessionOptionsSheet>
   )
 }
 
@@ -265,7 +237,7 @@ function ReviewSession({
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
   const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
   const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string } | null>(null)
-  const [entering,   setEntering]   = useState(true)
+  const entering = useEnteringAnimation(qIdx)
 
   // ── DEV inspect ──────────────────────────────────────────────────────────────
   const [showInspect,    setShowInspect]    = useState(false)
@@ -290,13 +262,6 @@ function ReviewSession({
 
   // Stop audio + close kebab when card advances; reset action gate
   useEffect(() => { audioRef.current?.pause(); setShowKebab(false); setShowInspect(false); pendingRef.current = false }, [qIdx])
-
-  useEffect(() => {
-    setEntering(true)
-    let cancelled = false
-    requestAnimationFrame(() => { requestAnimationFrame(() => { if (!cancelled) setEntering(false) }) })
-    return () => { cancelled = true }
-  }, [qIdx])
 
   // Autoplay in audio mode when card changes
   useEffect(() => {
@@ -606,20 +571,8 @@ function ReviewSession({
   const visibleRatings = showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
 
   // ── Tinder swipe visuals ──────────────────────────────────────────────────────
-  const swipeDx = drag?.x ?? gradingFly?.x ?? 0
-  const swipeDy = drag?.y ?? gradingFly?.y ?? 0
-  const swipeRot = Math.max(-15, Math.min(15, swipeDx * 0.04))
-  const cardTransform = (drag || gradingFly)
-    ? `translate(${swipeDx}px, ${swipeDy}px) rotate(${swipeRot}deg)`
-    : entering ? 'translateY(70px)' : 'translate(0px,0px) rotate(0deg)'
-  const cardTransition = drag
-    ? 'none'
-    : gradingFly
-    ? 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
-    : entering
-    ? 'none'
-    : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
-  const cardOpacity = gradingFly ? 0.5 : entering ? 0 : 1
+  const { transform: cardTransform, transition: cardTransition, opacity: cardOpacity } =
+    computeSwipePhysics(drag, gradingFly, entering)
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>

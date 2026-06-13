@@ -2,8 +2,38 @@ import { type CSSProperties } from 'react'
 import { T } from '@/lib/tokens'
 
 type DragState  = { x: number; y: number }
-type FlyState   = { x: number; y: number; color: string; label: string }
+type FlyState   = { x: number; y: number; color: string; label: string; opacity?: number }
 type SideLabel  = { color: string; label: string } | null
+
+// ─── computeSwipePhysics ──────────────────────────────────────────────────────
+
+export function computeSwipePhysics(
+  drag:       DragState | null,
+  gradingFly: FlyState  | null,
+  entering:   boolean,
+): { transform: string; transition: string; opacity: number } {
+  const dx  = drag?.x ?? gradingFly?.x ?? 0
+  const dy  = drag?.y ?? gradingFly?.y ?? 0
+  const rot = Math.max(-15, Math.min(15, dx * 0.04))
+
+  const transform = (drag || gradingFly)
+    ? `translate(${dx}px, ${dy}px) rotate(${rot}deg)`
+    : entering ? 'translateY(70px)' : 'translate(0px,0px) rotate(0deg)'
+
+  const transition = drag
+    ? 'none'
+    : gradingFly
+    ? gradingFly.opacity === 0
+      ? 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
+      : 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
+    : entering
+    ? 'none'
+    : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
+
+  const opacity = gradingFly ? (gradingFly.opacity ?? 0.5) : entering ? 0 : 1
+
+  return { transform, transition, opacity }
+}
 
 export function SwipeOverlay({
   drag,
