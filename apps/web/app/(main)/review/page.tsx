@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense } from 'react'
-import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -9,17 +9,21 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
+  ensureFlashcards, listDueFlashcards, getExcludeFromReview,
   rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
   suspendCard, unsuspendCard, setFlagColor, deferCard, undoRating, undoDefer, localDateStr, getStudyDate,
   type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
-import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { GradeBadge } from '@/components/study/GradeBadge'
+import { FlagPicker } from '@/components/study/FlagPicker'
+import { SwipeOverlay } from '@/components/study/SwipeOverlay'
+import { CardFront, CardBack } from '@/components/study/CardContent'
+import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,57 +146,11 @@ function OptionsSheet({
   onReloadNeeded: () => void
   onClose: () => void
 }) {
-  const [availLangs, setAvailLangs] = useState<string[] | null>(null)
-
-  useEffect(() => {
-    if (!showAllLangs && availLangs === null) listUserLanguages().then(setAvailLangs)
-  }, [showAllLangs, availLangs])
-
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
-
-  function handleToggleShowAll(v: boolean) {
-    setShowAllLangs(v)
-    localStorage.setItem('srs_show_all_langs', String(v))
-    if (v) {
-      setExcludedLangs([]); localStorage.setItem('srs_excluded_langs', '[]')
-      patchPreferences({ show_all_langs: v, excluded_langs: [] })
-    } else {
-      patchPreferences({ show_all_langs: v })
-    }
-    onReloadNeeded()
-  }
-
-  function handleToggleLang(code: string) {
-    const nowExcluded = !excludedLangs.includes(code)
-    const next = nowExcluded ? [...excludedLangs, code] : excludedLangs.filter(l => l !== code)
-    setExcludedLangs(next)
-    localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
-    patchPreferences({ excluded_langs: next })
-    onReloadNeeded()
-  }
-
-  const Toggle = ({ label, sub, on, onToggle }: { label: string; sub: string; on: boolean; onToggle: () => void }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>{label}</div>
-        <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>{sub}</div>
-      </div>
-      <button onClick={onToggle} aria-label={`Toggle ${label}`} style={{
-        width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
-        background: on ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
-      }}>
-        <span style={{
-          position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20,
-          borderRadius: 999, background: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
-        }} />
-      </button>
-    </div>
-  )
 
   return (
     <>
@@ -222,9 +180,9 @@ function OptionsSheet({
               ))}
             </div>
           </div>
-          <Toggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
-          <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
-          <Toggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
+          <SessionToggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
+          <SessionToggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
+          <SessionToggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
 
           <div style={{ padding: '14px 16px' }}>
             <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
@@ -235,44 +193,12 @@ function OptionsSheet({
 
         {/* Language filter */}
         <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '10px 14px 0', overflow: 'hidden' }}>
-          <Toggle
-            label="Show all languages"
-            sub="Include all languages in this session"
-            on={showAllLangs}
-            onToggle={() => handleToggleShowAll(!showAllLangs)}
+          <LangFilterSection
+            showAllLangs={showAllLangs}    setShowAllLangs={setShowAllLangs}
+            excludedLangs={excludedLangs}  setExcludedLangs={setExcludedLangs}
+            onReloadNeeded={onReloadNeeded}
+            showAccumulateNote
           />
-          {!showAllLangs && (
-            <div style={{ padding: '4px 16px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 0 8px' }}>
-                Languages
-              </div>
-              {availLangs === null ? (
-                <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
-              ) : availLangs.map(code => {
-                const included = !excludedLangs.includes(code)
-                return (
-                  <button key={code} onClick={() => handleToggleLang(code)} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    width: '100%', padding: '8px 0', background: 'none', border: 'none',
-                    cursor: 'pointer', textAlign: 'left',
-                  }}>
-                    <div style={{
-                      width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                      background: included ? T.crimson : 'transparent',
-                      border: `1.5px solid ${included ? T.crimson : T.line}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
-                    </div>
-                    <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
-                  </button>
-                )
-              })}
-              <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
-                Excluded languages still accumulate due cards.
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </>
@@ -293,21 +219,6 @@ type UndoEntry =
   | { type: 'again';   cardId: string; insertedAt: number; lapsedInterval: number }
   | { type: 'defer';   cardId: string; prevDueAt: string | null }
   | { type: 'suspend'; cardId: string; appendedOverflow: FlashcardWithItem | null; appendedAt: number | null }
-
-function renderHighlighted(sentence: string, target: string) {
-  if (!target || !sentence) return sentence
-  const idx = sentence.toLowerCase().indexOf(target.toLowerCase())
-  if (idx === -1) return sentence
-  return (
-    <>
-      {sentence.slice(0, idx)}
-      <mark style={{ background: 'rgba(213,155,64,0.18)', color: T.amber, borderRadius: 3, padding: '0 2px', fontStyle: 'normal' }}>
-        {sentence.slice(idx, idx + target.length)}
-      </mark>
-      {sentence.slice(idx + target.length)}
-    </>
-  )
-}
 
 function ReviewSession({
   cards,
@@ -495,11 +406,6 @@ function ReviewSession({
     : reviewMode === 'reverse' && hasZh      ? 'reverse'
     : reviewMode === 'reverse' && !hasZh     ? 'forward'
     : 'forward'
-  const isSts       = effectiveMode === 'sts'
-  const isAudio     = effectiveMode === 'audio'
-  const isReverse   = effectiveMode === 'reverse'
-  const stsWord     = targetWord ?? ''
-  const stsSentence = card.ind_items?.ab ?? ''
 
   function pushUndo(entry: UndoEntry) { undoStackRef.current.push(entry); setUndoCount(n => n + 1) }
   function popUndo(): UndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
@@ -667,8 +573,7 @@ function ReviewSession({
     setFlagColor(card.id, color)
   }
 
-  const currentFlag    = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
-  const currentFlagHex = flagColorHex(currentFlag)
+  const currentFlag = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
 
   function onTouchStart(e: React.TouchEvent) {
     swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
@@ -858,104 +763,26 @@ function ReviewSession({
           }}
         >
           {/* Swipe color overlay + stamp */}
-          {(drag || gradingFly) && (() => {
-            const dx = drag?.x ?? gradingFly?.x ?? 0
-            const dy = drag?.y ?? gradingFly?.y ?? 0
-            const absX = Math.abs(dx), absY = Math.abs(dy)
-
-            let color = '', label = ''
-            if (gradingFly) {
-              color = gradingFly.color; label = gradingFly.label
-            } else if (absX > absY) {
-              if (revealed) { color = dx < 0 ? T.crimson : T.sage; label = dx < 0 ? 'AGAIN' : 'GOOD' }
-            } else {
-              color = dy < 0 ? T.amber : T.inkSoft; label = dy < 0 ? 'EASY' : 'PAUSE'
+          <SwipeOverlay
+            drag={drag}
+            gradingFly={gradingFly}
+            horizontalLabels={
+              revealed
+                ? { left: { color: T.crimson, label: 'AGAIN' }, right: { color: T.sage, label: 'GOOD' } }
+                : null
             }
-            if (!color) return null
+          />
 
-            const intensity = gradingFly ? 1 : Math.min(Math.max(absX, absY) / 90, 1)
-            const isH = absX >= absY
-            const stampPos: CSSProperties = isH
-              ? (dx > 0
-                ? { top: 20, left: 20, transform: 'rotate(-10deg)' }
-                : { top: 20, right: 20, transform: 'rotate(10deg)' })
-              : (dy < 0
-                ? { bottom: 20, left: '50%', transform: 'translateX(-50%)' }
-                : { top: 20, left: '50%', transform: 'translateX(-50%)' })
-
-            return (
-              <>
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: 22, pointerEvents: 'none', zIndex: 5,
-                  background: color, opacity: intensity * 0.22,
-                }} />
-                {intensity > 0.15 && (
-                  <div style={{
-                    position: 'absolute', pointerEvents: 'none', zIndex: 6,
-                    opacity: Math.min((intensity - 0.15) / 0.35, 1),
-                    ...stampPos,
-                  }}>
-                    <span style={{
-                      display: 'block', fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: 18, fontWeight: 800, letterSpacing: '0.1em',
-                      color, border: `2.5px solid ${color}`, borderRadius: 6, padding: '3px 10px',
-                    }}>{label}</span>
-                  </div>
-                )}
-              </>
-            )
-          })()}
-
-          {/* Top-right: flag button + picker (opens downward) */}
-          <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}
-            onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
-              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: currentFlagHex ?? T.inkFaint,
-            }}>
-              <Icon name={currentFlag ? 'flagF' : 'flag'} size={15} strokeWidth={1.8} />
-            </button>
-            {showFlagPicker && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
-                {FLAG_COLORS.map(fc => (
-                  <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
-                    width: 22, height: 22, borderRadius: 999, border: 'none',
-                    background: fc.color, cursor: 'pointer', flexShrink: 0,
-                    boxShadow: currentFlag === fc.key ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}` : 'none',
-                  }} />
-                ))}
-                <button onClick={() => handleSetFlag(null)} style={{
-                  width: 22, height: 22, borderRadius: 999,
-                  border: `1.5px solid ${T.lineSoft}`, background: T.paper,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
-                }}>×</button>
-              </div>
-            )}
-          </div>
+          {/* Top-right: flag button + picker */}
+          <FlagPicker
+            currentFlag={currentFlag}
+            showPicker={showFlagPicker}
+            onToggle={() => setShowFlagPicker(p => !p)}
+            onSelect={handleSetFlag}
+          />
 
           {/* Top-center: grade badge */}
-          {(() => {
-            const grade = computeMasteryGrade(card)
-            const GS: Record<string, { color: string; bg: string; border: string }> = {
-              seed:     { color: T.amber,    bg: T.amberBg,  border: '#EBD49A' },
-              planted:  { color: T.inkSoft,  bg: T.paperHi,  border: T.lineSoft },
-              rooted:   { color: '#566234',  bg: '#E4E7CC',  border: '#D2D8AE' },
-              blooming: { color: '#3a601a',  bg: '#cfe8b8',  border: '#b2d895' },
-            }
-            const gs = GS[grade]
-            return (
-              <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)' }}>
-                <span style={{
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.06em',
-                  color: gs.color, background: gs.bg, border: `1px solid ${gs.border}`,
-                  padding: '2px 7px', borderRadius: 5,
-                }}>{grade}</span>
-              </div>
-            )
-          })()}
+          <GradeBadge card={card} />
 
           {/* Top-left: suspend */}
           <div style={{ position: 'absolute', top: 10, left: 12 }}
@@ -985,53 +812,7 @@ function ReviewSession({
 
           {/* Front — anchored above divider, never moves on reveal */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', padding: '0 24px 16px' }}>
-            {isAudio ? (
-              /* Audio mode — large play button as prompt */
-              <button
-                onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
-                aria-label="Play audio"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 64, height: 64, borderRadius: 999,
-                  background: T.crimson, border: 'none',
-                  cursor: 'pointer', color: '#fff',
-                  boxShadow: '0 2px 14px rgba(180,40,30,0.22)',
-                }}
-              >
-                <Icon name="speaker" size={26} strokeWidth={1.6} />
-              </button>
-            ) : isSts ? (
-              /* STS — full sentence with target word highlighted */
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
-                {renderHighlighted(stsSentence, stsWord)}
-              </div>
-            ) : isReverse ? (
-              /* Reverse — zh as prompt */
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
-                {card.ind_items?.zh ?? '—'}
-              </div>
-            ) : (
-              /* Forward — ab as prompt */
-              <>
-                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-                  {card.ind_items?.ab}
-                </div>
-                {cardAudio(card) && (
-                  <button
-                    onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
-                    aria-label="Play audio"
-                    style={{
-                      marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 34, height: 34, borderRadius: 999, flexShrink: 0,
-                      background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                      cursor: 'pointer', color: T.inkSoft,
-                    }}
-                  >
-                    <Icon name="speaker" size={14} strokeWidth={1.8} />
-                  </button>
-                )}
-              </>
-            )}
+            <CardFront card={card} effectiveMode={effectiveMode} targetWord={targetWord} playAudio={playAudio} />
           </div>
 
           {/* Divider — always at vertical center */}
@@ -1039,28 +820,10 @@ function ReviewSession({
 
           {/* Answer or hint — anchored below divider */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'center', paddingTop: 16 }}>
-            {revealed ? (
-              <>
-                {isAudio && (
-                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
-                    {card.ind_items?.ab}
-                  </div>
-                )}
-                {isReverse ? (
-                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
-                    {card.ind_items?.ab}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-                    {card.ind_items?.zh ?? '—'}
-                  </div>
-                )}
-              </>
-            ) : (
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                tap to reveal
-              </span>
-            )}
+            {revealed
+              ? <CardBack card={card} effectiveMode={effectiveMode} showZhAfterAudio />
+              : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
+            }
           </div>
         </div>
 

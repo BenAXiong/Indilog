@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense } from 'react'
-import { useState, useEffect, useRef, type CSSProperties } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -9,16 +9,19 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  listLearnFlashcards, graduateLearnCard, suspendCard, unsuspendCard, setFlagColor, listUserLanguages, cardMeta, cardAudio,
+  listLearnFlashcards, graduateLearnCard, suspendCard, unsuspendCard, setFlagColor, cardMeta, cardAudio,
   flushReviewEvents, getStudyDate, undoGraduateLearnCard,
   type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
-import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
-import { computeMasteryGrade } from '@/lib/db/srs/schedule'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { createClient } from '@/lib/supabase/client'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { GradeBadge } from '@/components/study/GradeBadge'
+import { FlagPicker } from '@/components/study/FlagPicker'
+import { SwipeOverlay } from '@/components/study/SwipeOverlay'
+import { CardFront, CardBack } from '@/components/study/CardContent'
+import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,23 +93,6 @@ async function loadLearnContext(): Promise<LearnContext> {
   }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function renderHighlighted(sentence: string, target: string) {
-  if (!target || !sentence) return sentence
-  const idx = sentence.toLowerCase().indexOf(target.toLowerCase())
-  if (idx === -1) return sentence
-  return (
-    <>
-      {sentence.slice(0, idx)}
-      <mark style={{ background: 'rgba(213,155,64,0.18)', color: T.amber, borderRadius: 3, padding: '0 2px', fontStyle: 'normal' }}>
-        {sentence.slice(idx, idx + target.length)}
-      </mark>
-      {sentence.slice(idx + target.length)}
-    </>
-  )
-}
-
 // ─── LearnOptionsSheet ───────────────────────────────────────────────────────
 
 function LearnOptionsSheet({
@@ -126,34 +112,6 @@ function LearnOptionsSheet({
   onReloadNeeded: () => void
   onClose: () => void
 }) {
-  const [availLangs, setAvailLangs] = useState<string[] | null>(null)
-
-  useEffect(() => {
-    if (!showAllLangs && availLangs === null) listUserLanguages().then(setAvailLangs)
-  }, [showAllLangs, availLangs])
-
-  function handleToggleShowAll(v: boolean) {
-    setShowAllLangs(v)
-    localStorage.setItem('srs_show_all_langs', String(v))
-    if (v) {
-      setExcludedLangs([]); localStorage.setItem('srs_excluded_langs', '[]')
-      patchPreferences({ show_all_langs: v, excluded_langs: [] })
-    } else {
-      patchPreferences({ show_all_langs: v })
-    }
-    onReloadNeeded()
-  }
-
-  function handleToggleLang(code: string) {
-    const next = excludedLangs.includes(code)
-      ? excludedLangs.filter(l => l !== code)
-      : [...excludedLangs, code]
-    setExcludedLangs(next)
-    localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
-    patchPreferences({ excluded_langs: next })
-    onReloadNeeded()
-  }
-
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -190,87 +148,23 @@ function LearnOptionsSheet({
             </div>
           </div>
 
-          {/* Shuffle tests */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>Shuffle tests</div>
-              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Randomize test phase order</div>
-            </div>
-            <button onClick={() => { const v = !shuffleTests; setShuffleTests(v); localStorage.setItem('srs_shuffle_tests', String(v)) }} aria-label="Toggle shuffle tests" style={{
-              width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
-              background: shuffleTests ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
-            }}>
-              <span style={{
-                position: 'absolute', top: 3, left: shuffleTests ? 21 : 3, width: 20, height: 20,
-                borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
-              }} />
-            </button>
-          </div>
-
-          {/* Shuffle exposure */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, color: T.ink, fontWeight: 500 }}>Shuffle exposure</div>
-              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Randomize exposure phase order</div>
-            </div>
-            <button onClick={() => { const v = !shuffleExposure; setShuffleExposure(v); localStorage.setItem('srs_shuffle_exposure', String(v)); onReloadNeeded() }} aria-label="Toggle shuffle exposure" style={{
-              width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
-              background: shuffleExposure ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
-            }}>
-              <span style={{
-                position: 'absolute', top: 3, left: shuffleExposure ? 21 : 3, width: 20, height: 20,
-                borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
-              }} />
-            </button>
-          </div>
-
-          {/* Show all languages */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: showAllLangs ? 'none' : `1px solid ${T.lineSoft}` }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>Show all languages</div>
-              <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>Include all languages in this session</div>
-            </div>
-            <button onClick={() => handleToggleShowAll(!showAllLangs)} aria-label="Toggle show all languages" style={{
-              width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
-              background: showAllLangs ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
-            }}>
-              <span style={{
-                position: 'absolute', top: 3, left: showAllLangs ? 21 : 3, width: 20, height: 20,
-                borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
-              }} />
-            </button>
-          </div>
-
-          {/* Language list */}
-          {!showAllLangs && (
-            <div style={{ padding: '4px 16px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 0 8px' }}>
-                Languages
-              </div>
-              {availLangs === null ? (
-                <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
-              ) : availLangs.map(code => {
-                const included = !excludedLangs.includes(code)
-                return (
-                  <button key={code} onClick={() => handleToggleLang(code)} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    width: '100%', padding: '8px 0', background: 'none', border: 'none',
-                    cursor: 'pointer', textAlign: 'left',
-                  }}>
-                    <div style={{
-                      width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                      background: included ? T.crimson : 'transparent',
-                      border: `1.5px solid ${included ? T.crimson : T.line}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
-                    </div>
-                    <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          <SessionToggle
+            label="Shuffle tests"
+            sub="Randomize test phase order"
+            on={shuffleTests}
+            onToggle={() => { const v = !shuffleTests; setShuffleTests(v); localStorage.setItem('srs_shuffle_tests', String(v)) }}
+          />
+          <SessionToggle
+            label="Shuffle exposure"
+            sub="Randomize exposure phase order"
+            on={shuffleExposure}
+            onToggle={() => { const v = !shuffleExposure; setShuffleExposure(v); localStorage.setItem('srs_shuffle_exposure', String(v)); onReloadNeeded() }}
+          />
+          <LangFilterSection
+            showAllLangs={showAllLangs}    setShowAllLangs={setShowAllLangs}
+            excludedLangs={excludedLangs}  setExcludedLangs={setExcludedLangs}
+            onReloadNeeded={onReloadNeeded}
+          />
         </div>
       </div>
     </>
@@ -436,10 +330,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     : reviewMode === 'reverse' && hasZh     ? 'reverse'
     : reviewMode === 'reverse' && !hasZh    ? 'forward'
     : 'forward'
-  const isAudio   = effectiveMode === 'audio'
-  const isReverse = effectiveMode === 'reverse'
-  const isSts     = effectiveMode === 'sts'
-
   const totalInitial   = cards.length
   const graduatedCount = graduatedRef.current.size
 
@@ -628,68 +518,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     }
   }
 
-  // ── Front / back render ───────────────────────────────────────────────────
-
-  function renderFront() {
-    if (isAudio) {
-      return (
-        <button onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 999, background: T.crimson, border: 'none', cursor: 'pointer', color: '#fff', boxShadow: '0 2px 14px rgba(180,40,30,0.22)' }}>
-          <Icon name="speaker" size={26} strokeWidth={1.6} />
-        </button>
-      )
-    }
-    if (isSts) {
-      return (
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
-          {renderHighlighted(card.ind_items?.ab ?? '', targetWord ?? '')}
-        </div>
-      )
-    }
-    if (isReverse) {
-      return (
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
-          {card.ind_items?.zh ?? '—'}
-        </div>
-      )
-    }
-    return (
-      <>
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-          {card.ind_items?.ab}
-        </div>
-        {cardAudio(card) && (
-          <button onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
-            style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.lineSoft}`, cursor: 'pointer', color: T.inkSoft }}>
-            <Icon name="speaker" size={14} strokeWidth={1.8} />
-          </button>
-        )}
-      </>
-    )
-  }
-
-  function renderBack() {
-    if (isAudio) {
-      return (
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em' }}>
-          {card.ind_items?.ab}
-        </div>
-      )
-    }
-    if (isReverse) {
-      return (
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
-          {card.ind_items?.ab}
-        </div>
-      )
-    }
-    return (
-      <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-        {card.ind_items?.zh ?? '—'}
-      </div>
-    )
-  }
-
   // ── Tinder swipe visuals ──────────────────────────────────────────────────
   const swipeDx = drag?.x ?? gradingFly?.x ?? 0
   const swipeDy = drag?.y ?? gradingFly?.y ?? 0
@@ -798,115 +626,28 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
           }}
         >
           {/* Swipe color overlay + stamp */}
-          {(drag || gradingFly) && (() => {
-            const dx = drag?.x ?? gradingFly?.x ?? 0
-            const dy = drag?.y ?? gradingFly?.y ?? 0
-            const absX = Math.abs(dx), absY = Math.abs(dy)
-
-            let color = '', label = ''
-            if (gradingFly) {
-              color = gradingFly.color; label = gradingFly.label
-            } else if (absX > absY) {
-              if (!exposureDone) {
-                if (dx > 0) { color = T.sage; label = 'NEXT' }
-              } else if (revealed) {
-                color = dx < 0 ? T.crimson : T.sage
-                label = dx < 0 ? 'AGAIN' : 'GOOD'
-              }
-            } else {
-              color = dy < 0 ? T.amber : T.inkSoft; label = dy < 0 ? 'EASY' : 'PAUSE'
+          <SwipeOverlay
+            drag={drag}
+            gradingFly={gradingFly}
+            horizontalLabels={
+              !exposureDone
+                ? { left: null, right: { color: T.sage, label: 'NEXT' } }
+                : revealed
+                  ? { left: { color: T.crimson, label: 'AGAIN' }, right: { color: T.sage, label: 'GOOD' } }
+                  : null
             }
-            if (!color) return null
-
-            const intensity = gradingFly ? 1 : Math.min(Math.max(absX, absY) / 90, 1)
-            const isH = absX >= absY
-            const stampPos: CSSProperties = isH
-              ? (dx > 0
-                ? { top: 20, left: 20, transform: 'rotate(-10deg)' }
-                : { top: 20, right: 20, transform: 'rotate(10deg)' })
-              : (dy < 0
-                ? { bottom: 20, left: '50%', transform: 'translateX(-50%)' }
-                : { top: 20, left: '50%', transform: 'translateX(-50%)' })
-
-            return (
-              <>
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: 22, pointerEvents: 'none', zIndex: 5,
-                  background: color, opacity: intensity * 0.22,
-                }} />
-                {intensity > 0.15 && (
-                  <div style={{
-                    position: 'absolute', pointerEvents: 'none', zIndex: 6,
-                    opacity: Math.min((intensity - 0.15) / 0.35, 1),
-                    ...stampPos,
-                  }}>
-                    <span style={{
-                      display: 'block', fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: 18, fontWeight: 800, letterSpacing: '0.1em',
-                      color, border: `2.5px solid ${color}`, borderRadius: 6, padding: '3px 10px',
-                    }}>{label}</span>
-                  </div>
-                )}
-              </>
-            )
-          })()}
+          />
 
           {/* Top-center: grade badge */}
-          {(() => {
-            const grade = computeMasteryGrade(card)
-            const GS: Record<string, { color: string; bg: string; border: string }> = {
-              seed:     { color: T.amber,    bg: T.amberBg,  border: '#EBD49A' },
-              planted:  { color: T.inkSoft,  bg: T.paperHi,  border: T.lineSoft },
-              rooted:   { color: '#566234',  bg: '#E4E7CC',  border: '#D2D8AE' },
-              blooming: { color: '#3a601a',  bg: '#cfe8b8',  border: '#b2d895' },
-            }
-            const gs = GS[grade]
-            return (
-              <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)' }}>
-                <span style={{
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.06em',
-                  color: gs.color, background: gs.bg, border: `1px solid ${gs.border}`,
-                  padding: '2px 7px', borderRadius: 5,
-                }}>{grade}</span>
-              </div>
-            )
-          })()}
+          <GradeBadge card={card} />
 
-          {/* Top-right: flag button + picker (opens downward) */}
-          {(() => {
-            const currentFlag    = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
-            const currentFlagHex = flagColorHex(currentFlag)
-            return (
-              <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}
-                onClick={e => e.stopPropagation()}>
-                <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
-                  width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: currentFlagHex ?? T.inkFaint,
-                }}>
-                  <Icon name={currentFlag ? 'flagF' : 'flag'} size={15} strokeWidth={1.8} />
-                </button>
-                {showFlagPicker && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
-                    {FLAG_COLORS.map(fc => (
-                      <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
-                        width: 22, height: 22, borderRadius: 999, border: 'none',
-                        background: fc.color, cursor: 'pointer', flexShrink: 0,
-                        boxShadow: currentFlag === fc.key ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}` : 'none',
-                      }} />
-                    ))}
-                    <button onClick={() => handleSetFlag(null)} style={{
-                      width: 22, height: 22, borderRadius: 999,
-                      border: `1.5px solid ${T.lineSoft}`, background: T.paper,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
-                    }}>×</button>
-                  </div>
-                )}
-              </div>
-            )
-          })()}
+          {/* Top-right: flag button + picker */}
+          <FlagPicker
+            currentFlag={card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)}
+            showPicker={showFlagPicker}
+            onToggle={() => setShowFlagPicker(p => !p)}
+            onSelect={handleSetFlag}
+          />
 
           {/* Top-left: suspend */}
           <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
@@ -935,7 +676,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
           {/* Front — anchored above divider, never moves on reveal */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', padding: '0 24px 16px' }}>
-            {renderFront()}
+            <CardFront card={card} effectiveMode={effectiveMode} targetWord={targetWord} playAudio={playAudio} />
           </div>
 
           {/* Divider — always at vertical center */}
@@ -944,7 +685,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
           {/* Back or hint — anchored below divider */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'center', paddingTop: 16 }}>
             {showBack
-              ? renderBack()
+              ? <CardBack card={card} effectiveMode={effectiveMode} />
               : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
             }
           </div>

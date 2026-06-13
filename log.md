@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-13 | REFACTOR | Extract 5 shared session components (GradeBadge, FlagPicker, SwipeOverlay, CardFront/CardBack, LangFilterSection/SessionToggle) from learn and review sessions; -498 lines in session files, zero behavior change |
 | 2026-06-13 | FIX | Review session: rateCard/rateCardRelearn throw on DB error (same pattern as graduateLearnCard); submit wraps rating call in try-catch — resets animation and keeps card visible for retry instead of silently losing it |
 | 2026-06-13 | FEATURE | Dashboard Learn CTA: smart session size — chunks targets >15 into sessions of 10 (±5); passes ?n= to learn-session page; same cap applied to "Learn more?" CTA |
 | 2026-06-13 | FEATURE | Browser card row: audio indicator (speaker icon) and language pill added to collapsed row |
