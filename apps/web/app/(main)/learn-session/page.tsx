@@ -17,16 +17,16 @@ import { patchPreferences } from '@/lib/db/profile/preferences'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { createClient } from '@/lib/supabase/client'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
-import { GradeBadge } from '@/components/study/GradeBadge'
-import { FlagPicker } from '@/components/study/FlagPicker'
-import { SwipeOverlay, computeSwipePhysics } from '@/components/study/SwipeOverlay'
-import { CardFront, CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
+import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
+import { SessionCard } from '@/components/study/SessionCard'
 import { LearnEnd } from '@/components/study/LearnEnd'
 import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
 import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
+import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
+import { useUndoStack } from '@/lib/hooks/useUndoStack'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -181,12 +181,11 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const sessionEndFiredRef = useRef(false)
   const pendingRef         = useRef(false)   // blocks re-entrant actions during async operations
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
-  const undoStackRef       = useRef<LearnUndoEntry[]>([])
-  const [undoCount,        setUndoCount]    = useState(0)
+  const { push: pushUndo, pop: popUndo, count: undoCount } = useUndoStack<LearnUndoEntry>()
   const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
   const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string; opacity?: number } | null>(null)
   const entering = useEnteringAnimation(qIdx)
-  const audioRef           = useRef<HTMLAudioElement | null>(null)
+  const { playAudio, pauseAudio } = useAudioPlayer()
   const onExitRef          = useRef(onExit)
   useEffect(() => { onExitRef.current = onExit })
 
@@ -200,7 +199,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   function setShowAllLangs(v: boolean)   { setShowAllLangsRaw(v) }
   function setExcludedLangs(v: string[]) { setExcludedLangsRaw(v) }
 
-  useEffect(() => { audioRef.current?.pause(); setShowFlagPicker(false); pendingRef.current = false }, [qIdx])
+  useEffect(() => { pauseAudio(); setShowFlagPicker(false); pendingRef.current = false }, [qIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Shuffle test-phase entries once, when the last exposure entry has been processed
   useEffect(() => {
@@ -246,12 +245,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   const entry = queue[qIdx]
 
-  function playAudio(url: string) {
-    if (audioRef.current) audioRef.current.pause()
-    const a = new Audio(url); audioRef.current = a
-    a.play().catch(() => {})
-  }
-
   // Keyboard
   useEffect(() => {
     if (!entry) return
@@ -291,9 +284,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const graduatedCount = graduatedRef.current.size
 
   // ── Actions ───────────────────────────────────────────────────────────────
-
-  function pushUndo(entry: LearnUndoEntry) { undoStackRef.current.push(entry); setUndoCount(n => n + 1) }
-  function popUndo(): LearnUndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
 
   const FLY = {
     next:  { x:    0, y:  -70, color: T.sage,    label: 'NEXT', opacity: 0 },
@@ -450,10 +440,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     onNext:    handleExposureOK,
   })
 
-  // ── Tinder swipe visuals ──────────────────────────────────────────────────
-  const { transform: cardTransform, transition: cardTransition, opacity: cardOpacity } =
-    computeSwipePhysics(drag, gradingFly, entering)
-
   const showBack = !exposureDone || (exposureDone && revealed)
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -521,7 +507,14 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
           </div>
         </div>
 
-        <div
+        <SessionCard
+          card={card}
+          effectiveMode={effectiveMode}
+          targetWord={targetWord}
+          playAudio={playAudio}
+          drag={drag}
+          gradingFly={gradingFly}
+          entering={entering}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -530,84 +523,26 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             if (!exposureDone) { handleExposureOK(); return }
             if (!revealed) setRevealed(true)
           }}
-          style={{
-            position: 'relative', background: T.paperHi, borderRadius: 22,
-            border: `1px solid ${!exposureDone ? '#D2D8AE' : T.lineSoft}`,
-            padding: '26px 22px', minHeight: 280,
-            display: 'flex', flexDirection: 'column', cursor: 'pointer',
-            touchAction: 'none',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
-            transform: cardTransform,
-            transition: cardTransition,
-            opacity: cardOpacity,
-            willChange: 'transform',
-          }}
-        >
-          {/* Swipe color overlay + stamp */}
-          <SwipeOverlay
-            drag={drag}
-            gradingFly={gradingFly}
-            horizontalLabels={
-              !exposureDone
-                ? { left: null, right: { color: T.sage, label: 'NEXT' } }
-                : revealed
-                  ? { left: { color: T.crimson, label: 'AGAIN' }, right: { color: T.sage, label: 'GOOD' } }
-                  : null
-            }
-          />
-
-          {/* Top-center: grade badge */}
-          <GradeBadge card={card} />
-
-          {/* Top-right: flag button + picker */}
-          <FlagPicker
-            currentFlag={card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)}
-            showPicker={showFlagPicker}
-            onToggle={() => setShowFlagPicker(p => !p)}
-            onSelect={handleSetFlag}
-          />
-
-          {/* Top-left: suspend */}
-          <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
-            <button onClick={handleSuspend} aria-label="Suspend card" style={{
-              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: T.inkFaint,
-            }}>
-              <Icon name="pause" size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-
-          {/* Swipe hints — after reveal on test pass */}
-          {exposureDone && revealed && (
-            <>
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.65 }}>
-                <Icon name="arrow-l" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
-              </div>
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.5 }}>
-                <Icon name="arrow-r" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>good</span>
-              </div>
-            </>
-          )}
-
-          {/* Front — anchored above divider, never moves on reveal */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', padding: '0 24px 16px' }}>
-            <CardFront card={card} effectiveMode={effectiveMode} targetWord={targetWord} playAudio={playAudio} />
-          </div>
-
-          {/* Divider — always at vertical center */}
-          <div style={{ height: 1, background: T.lineSoft, flexShrink: 0 }} />
-
-          {/* Back or hint — anchored below divider */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'center', paddingTop: 16 }}>
-            {showBack
+          borderColor={!exposureDone ? '#D2D8AE' : T.lineSoft}
+          horizontalLabels={
+            !exposureDone
+              ? { left: null, right: { color: T.sage, label: 'NEXT' } }
+              : revealed
+                ? { left: { color: T.crimson, label: 'AGAIN' }, right: { color: T.sage, label: 'GOOD' } }
+                : null
+          }
+          showSideHints={exposureDone && revealed}
+          cardFlags={cardFlags}
+          onSuspend={handleSuspend}
+          showFlagPicker={showFlagPicker}
+          onFlagToggle={() => setShowFlagPicker(p => !p)}
+          onFlagSelect={handleSetFlag}
+          backContent={
+            showBack
               ? <CardBack card={card} effectiveMode={effectiveMode} />
               : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
-            }
-          </div>
-        </div>
+          }
+        />
 
         {/* ↓ suspend hint */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.65 }}>

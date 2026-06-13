@@ -19,16 +19,16 @@ import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from 
 import { createClient } from '@/lib/supabase/client'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
-import { GradeBadge } from '@/components/study/GradeBadge'
-import { FlagPicker } from '@/components/study/FlagPicker'
-import { SwipeOverlay, computeSwipePhysics } from '@/components/study/SwipeOverlay'
-import { CardFront, CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
+import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
+import { SessionCard } from '@/components/study/SessionCard'
 import { ReviewEnd } from '@/components/study/ReviewEnd'
 import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
 import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
+import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
+import { useUndoStack } from '@/lib/hooks/useUndoStack'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -182,9 +182,8 @@ function ReviewSession({
   const [shuffleNew,     setShuffleNewRaw]  = useState(false)
   const [showAllLangs,   setShowAllLangsRaw] = useState(true)
   const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
-  const audioRef     = useRef<HTMLAudioElement | null>(null)
-  const undoStackRef  = useRef<UndoEntry[]>([])
-  const [undoCount,    setUndoCount]    = useState(0)
+  const { playAudio, pauseAudio } = useAudioPlayer()
+  const { push: pushUndo, pop: popUndo, count: undoCount } = useUndoStack<UndoEntry>()
   const queueRef      = useRef<QueueEntry[]>(cards.map(c => ({ card: c })))
   const overflowRef   = useRef<FlashcardWithItem[]>(initialOverflow)
   const [showKebab,    setShowKebab]    = useState(false)
@@ -219,7 +218,7 @@ function ReviewSession({
   }, [showInspect, qIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Stop audio + close kebab when card advances; reset action gate
-  useEffect(() => { audioRef.current?.pause(); setShowKebab(false); setShowInspect(false); pendingRef.current = false }, [qIdx])
+  useEffect(() => { pauseAudio(); setShowKebab(false); setShowInspect(false); pendingRef.current = false }, [qIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autoplay in audio mode when card changes
   useEffect(() => {
@@ -230,13 +229,6 @@ function ReviewSession({
     if (url) playAudio(url)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qIdx, reviewMode])
-
-  function playAudio(url: string) {
-    if (audioRef.current) audioRef.current.pause()
-    const a = new Audio(url)
-    audioRef.current = a
-    a.play().catch(() => {})
-  }
 
   useEffect(() => {
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
@@ -322,8 +314,6 @@ function ReviewSession({
   const hasAudio    = !!cardAudio(card)
   const effectiveMode = resolveEffectiveMode(reviewMode, targetWord, hasZh, hasAudio)  // DEC-SRS06
 
-  function pushUndo(entry: UndoEntry) { undoStackRef.current.push(entry); setUndoCount(n => n + 1) }
-  function popUndo(): UndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
   function updateQueue(updater: (q: QueueEntry[]) => QueueEntry[]) { const next = updater(queueRef.current); queueRef.current = next; setQueue(next) }
   function updateOverflow(updater: (o: FlashcardWithItem[]) => FlashcardWithItem[]) { const next = updater(overflowRef.current); overflowRef.current = next; setOverflow(next) }
 
@@ -488,8 +478,6 @@ function ReviewSession({
     setFlagColor(card.id, color)
   }
 
-  const currentFlag = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
-
   const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
     flying:    !!gradingFly,
     setDrag,
@@ -502,10 +490,6 @@ function ReviewSession({
   })
 
   const visibleRatings = showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
-
-  // ── Tinder swipe visuals ──────────────────────────────────────────────────────
-  const { transform: cardTransform, transition: cardTransition, opacity: cardOpacity } =
-    computeSwipePhysics(drag, gradingFly, entering)
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
@@ -628,7 +612,14 @@ function ReviewSession({
           </div>
         </div>
 
-        <div
+        <SessionCard
+          card={card}
+          effectiveMode={effectiveMode}
+          targetWord={targetWord}
+          playAudio={playAudio}
+          drag={drag}
+          gradingFly={gradingFly}
+          entering={entering}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -636,82 +627,24 @@ function ReviewSession({
             if (showFlagPicker) { setShowFlagPicker(false); return }
             if (!revealed) setRevealed(true)
           }}
-          style={{
-            position: 'relative', background: T.paperHi, borderRadius: 22,
-            border: `1px solid ${T.lineSoft}`, padding: '26px 22px', minHeight: 280,
-            display: 'flex', flexDirection: 'column', cursor: revealed ? 'default' : 'pointer',
-            touchAction: 'none',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
-            transform: cardTransform,
-            transition: cardTransition,
-            opacity: cardOpacity,
-            willChange: 'transform',
-          }}
-        >
-          {/* Swipe color overlay + stamp */}
-          <SwipeOverlay
-            drag={drag}
-            gradingFly={gradingFly}
-            horizontalLabels={
-              revealed
-                ? { left: { color: T.crimson, label: 'AGAIN' }, right: { color: T.sage, label: 'GOOD' } }
-                : null
-            }
-          />
-
-          {/* Top-right: flag button + picker */}
-          <FlagPicker
-            currentFlag={currentFlag}
-            showPicker={showFlagPicker}
-            onToggle={() => setShowFlagPicker(p => !p)}
-            onSelect={handleSetFlag}
-          />
-
-          {/* Top-center: grade badge */}
-          <GradeBadge card={card} />
-
-          {/* Top-left: suspend */}
-          <div style={{ position: 'absolute', top: 10, left: 12 }}
-            onClick={e => e.stopPropagation()}>
-            <button onClick={handleSuspend} aria-label="Suspend card" style={{
-              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: T.inkFaint,
-            }}>
-              <Icon name="pause" size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-
-          {/* Left/right swipe hints — inside card, visible only after flip */}
-          {revealed && (
-            <>
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.crimson, opacity: 0.65 }}>
-                <Icon name="arrow-l" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>again</span>
-              </div>
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: T.sage, opacity: 0.65 }}>
-                <Icon name="arrow-r" size={17} strokeWidth={2} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 8.5, textTransform: 'uppercase', letterSpacing: '0.08em', writingMode: 'vertical-rl' }}>good</span>
-              </div>
-            </>
-          )}
-
-          {/* Front — anchored above divider, never moves on reveal */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', padding: '0 24px 16px' }}>
-            <CardFront card={card} effectiveMode={effectiveMode} targetWord={targetWord} playAudio={playAudio} />
-          </div>
-
-          {/* Divider — always at vertical center */}
-          <div style={{ height: 1, background: T.lineSoft, flexShrink: 0 }} />
-
-          {/* Answer or hint — anchored below divider */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'center', paddingTop: 16 }}>
-            {revealed
+          cursor={revealed ? 'default' : 'pointer'}
+          horizontalLabels={
+            revealed
+              ? { left: { color: T.crimson, label: 'AGAIN' }, right: { color: T.sage, label: 'GOOD' } }
+              : null
+          }
+          showSideHints={revealed}
+          cardFlags={cardFlags}
+          onSuspend={handleSuspend}
+          showFlagPicker={showFlagPicker}
+          onFlagToggle={() => setShowFlagPicker(p => !p)}
+          onFlagSelect={handleSetFlag}
+          backContent={
+            revealed
               ? <CardBack card={card} effectiveMode={effectiveMode} showZhAfterAudio />
               : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
-            }
-          </div>
-        </div>
+          }
+        />
 
         {/* ↓ suspend hint — outside card, below */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, opacity: 0.65 }}>
