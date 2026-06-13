@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense } from 'react'
-import { useState, useEffect, useRef, useMemo, type CSSProperties } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -9,17 +9,26 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, listUserLanguages, getExcludeFromReview,
+  ensureFlashcards, listDueFlashcards, getExcludeFromReview,
   rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
   suspendCard, unsuspendCard, setFlagColor, deferCard, undoRating, undoDefer, localDateStr, getStudyDate,
   type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
-import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { GradeBadge } from '@/components/study/GradeBadge'
+import { FlagPicker } from '@/components/study/FlagPicker'
+import { SwipeOverlay, computeSwipePhysics } from '@/components/study/SwipeOverlay'
+import { CardFront, CardBack } from '@/components/study/CardContent'
+import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
+import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
+import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
+import { ReviewEnd } from '@/components/study/ReviewEnd'
+import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
+import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,49 +85,6 @@ async function loadSessionContext(): Promise<SessionContext> {
   }
 }
 
-type SessionReturning = { total: number; newCards: number; plantedOrAbove: number }
-
-async function countSessionReturning(cardIds: string[]): Promise<SessionReturning> {
-  if (!cardIds.length) return { total: 0, newCards: 0, plantedOrAbove: 0 }
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { total: 0, newCards: 0, plantedOrAbove: 0 }
-  const now = new Date().toISOString()
-  const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
-  const nextReset = new Date()
-  if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
-  nextReset.setHours(resetHour, 0, 0, 0)
-  const nextResetISO = nextReset.toISOString()
-  const base = supabase.from('ind_flashcards').select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id).in('id', cardIds).gt('due_at', now).lte('due_at', nextResetISO).is('suspended_at', null)
-  const [newRes, plantedRes] = await Promise.all([
-    base.eq('repetitions', 1),
-    base.gte('repetitions', 2),
-  ])
-  const newCards      = newRes.count      ?? 0
-  const plantedOrAbove = plantedRes.count ?? 0
-  return { total: newCards + plantedOrAbove, newCards, plantedOrAbove }
-}
-
-async function countDueTomorrow(): Promise<number> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return 0
-  const now = new Date().toISOString()
-  const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
-  const nextReset = new Date()
-  if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
-  nextReset.setHours(resetHour, 0, 0, 0)
-  const { count } = await supabase
-    .from('ind_flashcards')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gt('due_at', now)
-    .lte('due_at', nextReset.toISOString())
-    .is('suspended_at', null)
-  return count ?? 0
-}
-
 // ─── OptionsSheet ─────────────────────────────────────────────────────────────
 
 function OptionsSheet({
@@ -142,140 +108,31 @@ function OptionsSheet({
   onReloadNeeded: () => void
   onClose: () => void
 }) {
-  const [availLangs, setAvailLangs] = useState<string[] | null>(null)
-
-  useEffect(() => {
-    if (!showAllLangs && availLangs === null) listUserLanguages().then(setAvailLangs)
-  }, [showAllLangs, availLangs])
-
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [])
-
-  function handleToggleShowAll(v: boolean) {
-    setShowAllLangs(v)
-    localStorage.setItem('srs_show_all_langs', String(v))
-    if (v) {
-      setExcludedLangs([]); localStorage.setItem('srs_excluded_langs', '[]')
-      patchPreferences({ show_all_langs: v, excluded_langs: [] })
-    } else {
-      patchPreferences({ show_all_langs: v })
-    }
-    onReloadNeeded()
-  }
-
-  function handleToggleLang(code: string) {
-    const nowExcluded = !excludedLangs.includes(code)
-    const next = nowExcluded ? [...excludedLangs, code] : excludedLangs.filter(l => l !== code)
-    setExcludedLangs(next)
-    localStorage.setItem('srs_excluded_langs', JSON.stringify(next))
-    patchPreferences({ excluded_langs: next })
-    onReloadNeeded()
-  }
-
-  const Toggle = ({ label, sub, on, onToggle }: { label: string; sub: string; on: boolean; onToggle: () => void }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${T.lineSoft}` }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 600, color: T.ink }}>{label}</div>
-        <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1 }}>{sub}</div>
-      </div>
-      <button onClick={onToggle} aria-label={`Toggle ${label}`} style={{
-        width: 44, height: 26, borderRadius: 999, flexShrink: 0, position: 'relative',
-        background: on ? T.sage : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
-      }}>
-        <span style={{
-          position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20,
-          borderRadius: 999, background: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
-        }} />
-      </button>
-    </div>
-  )
-
   return (
-    <>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(30,22,16,0.32)', zIndex: 20 }} />
-      <div style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 21,
-        background: T.cream, borderRadius: '22px 22px 0 0',
-        padding: '10px 0 32px', boxShadow: '0 -12px 36px rgba(40,30,20,0.2)',
-      }}>
-        <div style={{ width: 40, height: 5, borderRadius: 999, background: T.line, margin: '0 auto 14px' }} />
-        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, padding: '0 16px 10px' }}>
-          Session options
-        </div>
-        <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
-          {/* Review mode selector */}
-          <div style={{ padding: '12px 16px 10px', borderBottom: `1px solid ${T.lineSoft}` }}>
-            <div style={{ fontSize: 14, color: T.ink, fontWeight: 500, marginBottom: 8 }}>Review mode</div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {(['forward', 'reverse', 'audio', 'sts'] as const).map(m => (
-                <button key={m} onClick={() => setReviewMode(m)} style={{
-                  padding: '4px 9px', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.04em',
-                  background: reviewMode === m ? T.crimsonBg : T.paper,
-                  border: `1.5px solid ${reviewMode === m ? T.crimson : T.lineSoft}`,
-                  color: reviewMode === m ? T.crimson : T.inkMute,
-                }}>{m}</button>
-              ))}
-            </div>
-          </div>
-          <Toggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
-          <Toggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
-          <Toggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
+    <SessionOptionsSheet onClose={onClose}>
+      <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
+        <ReviewModeSelector value={reviewMode} onChange={setReviewMode} />
+        <SessionToggle label="Rating buttons" sub="Off = gesture-only grading" on={showButtons} onToggle={() => setShowButtons(!showButtons)} />
+        <SessionToggle label="Hard + Easy" sub="Show all four grades, not just two" on={showHardEasy} onToggle={() => setShowHardEasy(!showHardEasy)} />
+        <SessionToggle label="Shuffle new cards" sub="Randomise order within each deck level" on={shuffleNew} onToggle={() => { setShuffleNew(!shuffleNew); onReloadNeeded() }} />
 
-          <div style={{ padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
-              ← Again · → Good · ↑ Easy · ↓ Suspend
-            </div>
+        <div style={{ padding: '14px 16px' }}>
+          <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.7 }}>
+            ← Again · → Good · ↑ Easy · ↓ Suspend
           </div>
-        </div>
-
-        {/* Language filter */}
-        <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '10px 14px 0', overflow: 'hidden' }}>
-          <Toggle
-            label="Show all languages"
-            sub="Include all languages in this session"
-            on={showAllLangs}
-            onToggle={() => handleToggleShowAll(!showAllLangs)}
-          />
-          {!showAllLangs && (
-            <div style={{ padding: '4px 16px 14px', borderTop: `1px solid ${T.lineSoft}` }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 0 8px' }}>
-                Languages
-              </div>
-              {availLangs === null ? (
-                <div style={{ fontSize: 13, color: T.inkMute, padding: '4px 0' }}>Loading…</div>
-              ) : availLangs.map(code => {
-                const included = !excludedLangs.includes(code)
-                return (
-                  <button key={code} onClick={() => handleToggleLang(code)} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    width: '100%', padding: '8px 0', background: 'none', border: 'none',
-                    cursor: 'pointer', textAlign: 'left',
-                  }}>
-                    <div style={{
-                      width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                      background: included ? T.crimson : 'transparent',
-                      border: `1.5px solid ${included ? T.crimson : T.line}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {included && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
-                    </div>
-                    <span style={{ fontSize: 14, color: T.ink }}>{getLangName(code)}</span>
-                  </button>
-                )
-              })}
-              <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
-                Excluded languages still accumulate due cards.
-              </div>
-            </div>
-          )}
         </div>
       </div>
-    </>
+
+      {/* Language filter */}
+      <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '10px 14px 0', overflow: 'hidden' }}>
+        <LangFilterSection
+          showAllLangs={showAllLangs}    setShowAllLangs={setShowAllLangs}
+          excludedLangs={excludedLangs}  setExcludedLangs={setExcludedLangs}
+          onReloadNeeded={onReloadNeeded}
+          showAccumulateNote
+        />
+      </div>
+    </SessionOptionsSheet>
   )
 }
 
@@ -293,21 +150,6 @@ type UndoEntry =
   | { type: 'again';   cardId: string; insertedAt: number; lapsedInterval: number }
   | { type: 'defer';   cardId: string; prevDueAt: string | null }
   | { type: 'suspend'; cardId: string; appendedOverflow: FlashcardWithItem | null; appendedAt: number | null }
-
-function renderHighlighted(sentence: string, target: string) {
-  if (!target || !sentence) return sentence
-  const idx = sentence.toLowerCase().indexOf(target.toLowerCase())
-  if (idx === -1) return sentence
-  return (
-    <>
-      {sentence.slice(0, idx)}
-      <mark style={{ background: 'rgba(213,155,64,0.18)', color: T.amber, borderRadius: 3, padding: '0 2px', fontStyle: 'normal' }}>
-        {sentence.slice(idx, idx + target.length)}
-      </mark>
-      {sentence.slice(idx + target.length)}
-    </>
-  )
-}
 
 function ReviewSession({
   cards,
@@ -340,7 +182,6 @@ function ReviewSession({
   const [shuffleNew,     setShuffleNewRaw]  = useState(false)
   const [showAllLangs,   setShowAllLangsRaw] = useState(true)
   const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
-  const swipeStart   = useRef({ x: 0, y: 0 })
   const audioRef     = useRef<HTMLAudioElement | null>(null)
   const undoStackRef  = useRef<UndoEntry[]>([])
   const [undoCount,    setUndoCount]    = useState(0)
@@ -354,7 +195,7 @@ function ReviewSession({
   const pendingEventsRef   = useRef<PendingReviewEvent[]>([])
   const [drag,       setDrag]       = useState<{ x: number; y: number } | null>(null)
   const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string } | null>(null)
-  const [entering,   setEntering]   = useState(true)
+  const entering = useEnteringAnimation(qIdx)
 
   // ── DEV inspect ──────────────────────────────────────────────────────────────
   const [showInspect,    setShowInspect]    = useState(false)
@@ -379,13 +220,6 @@ function ReviewSession({
 
   // Stop audio + close kebab when card advances; reset action gate
   useEffect(() => { audioRef.current?.pause(); setShowKebab(false); setShowInspect(false); pendingRef.current = false }, [qIdx])
-
-  useEffect(() => {
-    setEntering(true)
-    let cancelled = false
-    requestAnimationFrame(() => { requestAnimationFrame(() => { if (!cancelled) setEntering(false) }) })
-    return () => { cancelled = true }
-  }, [qIdx])
 
   // Autoplay in audio mode when card changes
   useEffect(() => {
@@ -495,11 +329,6 @@ function ReviewSession({
     : reviewMode === 'reverse' && hasZh      ? 'reverse'
     : reviewMode === 'reverse' && !hasZh     ? 'forward'
     : 'forward'
-  const isSts       = effectiveMode === 'sts'
-  const isAudio     = effectiveMode === 'audio'
-  const isReverse   = effectiveMode === 'reverse'
-  const stsWord     = targetWord ?? ''
-  const stsSentence = card.ind_items?.ab ?? ''
 
   function pushUndo(entry: UndoEntry) { undoStackRef.current.push(entry); setUndoCount(n => n + 1) }
   function popUndo(): UndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
@@ -667,54 +496,24 @@ function ReviewSession({
     setFlagColor(card.id, color)
   }
 
-  const currentFlag    = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
-  const currentFlagHex = flagColorHex(currentFlag)
+  const currentFlag = card.id in cardFlags ? cardFlags[card.id] : (card.flag_color ?? null)
 
-  function onTouchStart(e: React.TouchEvent) {
-    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-  }
-  function onTouchMove(e: React.TouchEvent) {
-    if (gradingFly) return
-    const dx = e.touches[0].clientX - swipeStart.current.x
-    const dy = e.touches[0].clientY - swipeStart.current.y
-    setDrag({ x: dx, y: dy })
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    const dx = e.changedTouches[0].clientX - swipeStart.current.x
-    const dy = e.changedTouches[0].clientY - swipeStart.current.y
-    const absX = Math.abs(dx), absY = Math.abs(dy)
-    const THRESH = 70
-    setDrag(null)
-    if (!revealed) {
-      if (absX < 10 && absY < 10) { setRevealed(true); return }
-      if (absY > absX && absY > THRESH) {
-        if (dy < 0) { submit('easy'); return }   // up = easy
-        else        { handleSuspend(); return }  // down = suspend
-      }
-      return  // horizontal swipes before flip do nothing
-    }
-    // After flip: ← again, → good, ↓ suspend, ↑ easy
-    if (absX > absY && absX > THRESH) submit(dx < 0 ? 'again' : 'good')
-    else if (absY > absX && absY > THRESH) { if (dy < 0) submit('easy'); else handleSuspend() }
-  }
+  const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
+    flying:    !!gradingFly,
+    setDrag,
+    revealed,
+    onEasy:    () => submit('easy'),
+    onSuspend: handleSuspend,
+    onAgain:   () => submit('again'),
+    onGood:    () => submit('good'),
+    onReveal:  () => setRevealed(true),
+  })
 
   const visibleRatings = showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
 
   // ── Tinder swipe visuals ──────────────────────────────────────────────────────
-  const swipeDx = drag?.x ?? gradingFly?.x ?? 0
-  const swipeDy = drag?.y ?? gradingFly?.y ?? 0
-  const swipeRot = Math.max(-15, Math.min(15, swipeDx * 0.04))
-  const cardTransform = (drag || gradingFly)
-    ? `translate(${swipeDx}px, ${swipeDy}px) rotate(${swipeRot}deg)`
-    : entering ? 'translateY(70px)' : 'translate(0px,0px) rotate(0deg)'
-  const cardTransition = drag
-    ? 'none'
-    : gradingFly
-    ? 'transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease'
-    : entering
-    ? 'none'
-    : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease-out'
-  const cardOpacity = gradingFly ? 0.5 : entering ? 0 : 1
+  const { transform: cardTransform, transition: cardTransition, opacity: cardOpacity } =
+    computeSwipePhysics(drag, gradingFly, entering)
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
@@ -858,104 +657,26 @@ function ReviewSession({
           }}
         >
           {/* Swipe color overlay + stamp */}
-          {(drag || gradingFly) && (() => {
-            const dx = drag?.x ?? gradingFly?.x ?? 0
-            const dy = drag?.y ?? gradingFly?.y ?? 0
-            const absX = Math.abs(dx), absY = Math.abs(dy)
-
-            let color = '', label = ''
-            if (gradingFly) {
-              color = gradingFly.color; label = gradingFly.label
-            } else if (absX > absY) {
-              if (revealed) { color = dx < 0 ? T.crimson : T.sage; label = dx < 0 ? 'AGAIN' : 'GOOD' }
-            } else {
-              color = dy < 0 ? T.amber : T.inkSoft; label = dy < 0 ? 'EASY' : 'PAUSE'
+          <SwipeOverlay
+            drag={drag}
+            gradingFly={gradingFly}
+            horizontalLabels={
+              revealed
+                ? { left: { color: T.crimson, label: 'AGAIN' }, right: { color: T.sage, label: 'GOOD' } }
+                : null
             }
-            if (!color) return null
+          />
 
-            const intensity = gradingFly ? 1 : Math.min(Math.max(absX, absY) / 90, 1)
-            const isH = absX >= absY
-            const stampPos: CSSProperties = isH
-              ? (dx > 0
-                ? { top: 20, left: 20, transform: 'rotate(-10deg)' }
-                : { top: 20, right: 20, transform: 'rotate(10deg)' })
-              : (dy < 0
-                ? { bottom: 20, left: '50%', transform: 'translateX(-50%)' }
-                : { top: 20, left: '50%', transform: 'translateX(-50%)' })
-
-            return (
-              <>
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: 22, pointerEvents: 'none', zIndex: 5,
-                  background: color, opacity: intensity * 0.22,
-                }} />
-                {intensity > 0.15 && (
-                  <div style={{
-                    position: 'absolute', pointerEvents: 'none', zIndex: 6,
-                    opacity: Math.min((intensity - 0.15) / 0.35, 1),
-                    ...stampPos,
-                  }}>
-                    <span style={{
-                      display: 'block', fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: 18, fontWeight: 800, letterSpacing: '0.1em',
-                      color, border: `2.5px solid ${color}`, borderRadius: 6, padding: '3px 10px',
-                    }}>{label}</span>
-                  </div>
-                )}
-              </>
-            )
-          })()}
-
-          {/* Top-right: flag button + picker (opens downward) */}
-          <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}
-            onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowFlagPicker(p => !p)} aria-label="Set flag" style={{
-              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: currentFlagHex ?? T.inkFaint,
-            }}>
-              <Icon name={currentFlag ? 'flagF' : 'flag'} size={15} strokeWidth={1.8} />
-            </button>
-            {showFlagPicker && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
-                {FLAG_COLORS.map(fc => (
-                  <button key={fc.key} onClick={() => handleSetFlag(fc.key)} style={{
-                    width: 22, height: 22, borderRadius: 999, border: 'none',
-                    background: fc.color, cursor: 'pointer', flexShrink: 0,
-                    boxShadow: currentFlag === fc.key ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}` : 'none',
-                  }} />
-                ))}
-                <button onClick={() => handleSetFlag(null)} style={{
-                  width: 22, height: 22, borderRadius: 999,
-                  border: `1.5px solid ${T.lineSoft}`, background: T.paper,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
-                }}>×</button>
-              </div>
-            )}
-          </div>
+          {/* Top-right: flag button + picker */}
+          <FlagPicker
+            currentFlag={currentFlag}
+            showPicker={showFlagPicker}
+            onToggle={() => setShowFlagPicker(p => !p)}
+            onSelect={handleSetFlag}
+          />
 
           {/* Top-center: grade badge */}
-          {(() => {
-            const grade = computeMasteryGrade(card)
-            const GS: Record<string, { color: string; bg: string; border: string }> = {
-              seed:     { color: T.amber,    bg: T.amberBg,  border: '#EBD49A' },
-              planted:  { color: T.inkSoft,  bg: T.paperHi,  border: T.lineSoft },
-              rooted:   { color: '#566234',  bg: '#E4E7CC',  border: '#D2D8AE' },
-              blooming: { color: '#3a601a',  bg: '#cfe8b8',  border: '#b2d895' },
-            }
-            const gs = GS[grade]
-            return (
-              <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)' }}>
-                <span style={{
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.06em',
-                  color: gs.color, background: gs.bg, border: `1px solid ${gs.border}`,
-                  padding: '2px 7px', borderRadius: 5,
-                }}>{grade}</span>
-              </div>
-            )
-          })()}
+          <GradeBadge card={card} />
 
           {/* Top-left: suspend */}
           <div style={{ position: 'absolute', top: 10, left: 12 }}
@@ -985,53 +706,7 @@ function ReviewSession({
 
           {/* Front — anchored above divider, never moves on reveal */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', textAlign: 'center', padding: '0 24px 16px' }}>
-            {isAudio ? (
-              /* Audio mode — large play button as prompt */
-              <button
-                onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
-                aria-label="Play audio"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 64, height: 64, borderRadius: 999,
-                  background: T.crimson, border: 'none',
-                  cursor: 'pointer', color: '#fff',
-                  boxShadow: '0 2px 14px rgba(180,40,30,0.22)',
-                }}
-              >
-                <Icon name="speaker" size={26} strokeWidth={1.6} />
-              </button>
-            ) : isSts ? (
-              /* STS — full sentence with target word highlighted */
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
-                {renderHighlighted(stsSentence, stsWord)}
-              </div>
-            ) : isReverse ? (
-              /* Reverse — zh as prompt */
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
-                {card.ind_items?.zh ?? '—'}
-              </div>
-            ) : (
-              /* Forward — ab as prompt */
-              <>
-                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-                  {card.ind_items?.ab}
-                </div>
-                {cardAudio(card) && (
-                  <button
-                    onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
-                    aria-label="Play audio"
-                    style={{
-                      marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      width: 34, height: 34, borderRadius: 999, flexShrink: 0,
-                      background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                      cursor: 'pointer', color: T.inkSoft,
-                    }}
-                  >
-                    <Icon name="speaker" size={14} strokeWidth={1.8} />
-                  </button>
-                )}
-              </>
-            )}
+            <CardFront card={card} effectiveMode={effectiveMode} targetWord={targetWord} playAudio={playAudio} />
           </div>
 
           {/* Divider — always at vertical center */}
@@ -1039,28 +714,10 @@ function ReviewSession({
 
           {/* Answer or hint — anchored below divider */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', textAlign: 'center', paddingTop: 16 }}>
-            {revealed ? (
-              <>
-                {isAudio && (
-                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
-                    {card.ind_items?.ab}
-                  </div>
-                )}
-                {isReverse ? (
-                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
-                    {card.ind_items?.ab}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-                    {card.ind_items?.zh ?? '—'}
-                  </div>
-                )}
-              </>
-            ) : (
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                tap to reveal
-              </span>
-            )}
+            {revealed
+              ? <CardBack card={card} effectiveMode={effectiveMode} showZhAfterAudio />
+              : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
+            }
           </div>
         </div>
 
@@ -1254,256 +911,6 @@ function ReviewSession({
           onClose={() => setShowOptions(false)}
         />
       )}
-    </div>
-  )
-}
-
-// ─── ReviewEnd ────────────────────────────────────────────────────────────────
-
-const CONFETTI_COLORS = ['#C14B2C', '#EDAB32', '#7A9F3C', '#B06030', '#F5D060']
-
-const GRADE_DOT_COLOR: Record<Rating, string> = {
-  again: T.crimson,
-  hard:  T.terra,
-  good:  T.sage,
-  easy:  T.amber,
-}
-
-function ReviewEnd({
-  sessionCount,
-  goalMet,
-  streak,
-  reviewedCards,
-  gradeHistory,
-  reviewMoreN: reviewMoreNProp,
-  onReviewMore,
-  onDone,
-}: {
-  sessionCount: number
-  goalMet: boolean
-  streak: number
-  reviewedCards: FlashcardWithItem[]
-  gradeHistory: Map<string, Rating[]>
-  reviewMoreN: number
-  onReviewMore: (n: number) => void
-  onDone: () => void
-}) {
-  const [dueTomorrow,      setDueTomorrow]      = useState<number | null>(null)
-  const [sessionReturning, setSessionReturning] = useState<SessionReturning | null>(null)
-  const [listExpanded,     setListExpanded]     = useState(false)
-  const [reviewMoreN,      setReviewMoreNRaw]   = useState(reviewMoreNProp)
-  const [editingMore,      setEditingMore]      = useState(false)
-
-  useEffect(() => { countDueTomorrow().then(setDueTomorrow) }, [])
-  useEffect(() => {
-    countSessionReturning(reviewedCards.map(c => c.id)).then(setSessionReturning)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function setReviewMoreN(n: number) {
-    const v = Math.max(10, Math.round(n / 5) * 5)
-    setReviewMoreNRaw(v)
-    localStorage.setItem('srs_review_more_size', String(v))
-    patchPreferences({ review_more_size: v })
-  }
-
-  const confetti = useMemo(() => {
-    let s = 11
-    const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
-    return Array.from({ length: 22 }, (_, i) => ({
-      left: rnd() * 100, top: rnd() * 45, rot: rnd() * 360,
-      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      w: 6 + rnd() * 6, h: 9 + rnd() * 8, round: rnd() > 0.6,
-    }))
-  }, [])
-
-  function handleShare() {
-    const text = `Reviewed ${sessionCount} card${sessionCount !== 1 ? 's' : ''}${streak > 0 ? ` · 🔥 ${streak}-day streak` : ''} — studying Amis`
-    if (navigator.share) {
-      navigator.share({ text }).catch(() => {})
-    } else {
-      navigator.clipboard?.writeText(text).catch(() => {})
-    }
-  }
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 50,
-      background: T.cream, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-    }}>
-      {/* Confetti */}
-      {goalMet && (
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
-          {confetti.map((p, i) => (
-            <span key={i} style={{
-              position: 'absolute', left: `${p.left}%`, top: `${p.top}%`,
-              width: p.w, height: p.h, background: p.color,
-              borderRadius: p.round ? 999 : 2, transform: `rotate(${p.rot}deg)`, opacity: 0.9,
-            }} />
-          ))}
-        </div>
-      )}
-
-      {/* Close */}
-      <div style={{ padding: '10px 16px 0', display: 'flex', justifyContent: 'flex-end', position: 'relative', zIndex: 2 }}>
-        <button onClick={onDone} aria-label="Close" style={{
-          width: 36, height: 36, borderRadius: 999, background: T.paperHi,
-          border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: T.inkSoft, cursor: 'pointer',
-        }}>
-          <Icon name="close" size={16} strokeWidth={2} />
-        </button>
-      </div>
-
-      {/* Main scrollable area */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 2 }}>
-
-        {/* Hero */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '24px 28px 20px' }}>
-          {goalMet && (
-            <span style={{
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.12em',
-              color: '#4A7320', background: T.sageBg, border: '1px solid #D2D8AE',
-              padding: '6px 13px', borderRadius: 999, marginBottom: 18,
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}>
-              <Icon name="check" size={13} color="#4A7320" strokeWidth={2.6} /> Daily goal met
-            </span>
-          )}
-          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 88, fontWeight: 600, color: T.ink, letterSpacing: '-0.04em', lineHeight: 0.9 }}>
-            {sessionCount}
-          </div>
-          <div style={{ fontSize: 17, color: T.inkSoft, marginTop: 8, fontWeight: 500 }}>cards reviewed</div>
-
-          {dueTomorrow !== null && (
-            <>
-              <div style={{
-                marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '10px 16px', borderRadius: 14, background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-              }}>
-                <Icon name="card" size={16} color={T.amber} strokeWidth={1.8} />
-                <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 20, fontWeight: 600, color: T.ink, letterSpacing: '-0.02em' }}>{dueTomorrow}</span>
-                <span style={{ fontSize: 13, color: T.inkSoft }}>due tomorrow</span>
-              </div>
-              {sessionReturning !== null && sessionReturning.total > 0 && (
-                <div style={{ marginTop: 8, fontSize: 13, color: T.inkMute }}>
-                  {sessionReturning.total} card{sessionReturning.total !== 1 ? 's' : ''} from this session will be back before the next reset ({sessionReturning.newCards} New and {sessionReturning.plantedOrAbove} Planted or above).
-                </div>
-              )}
-              {sessionReturning !== null && sessionReturning.plantedOrAbove > 0 && (
-                <Link href="/review?start=1&advance=1" style={{
-                  marginTop: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '10px 20px', borderRadius: 12, textDecoration: 'none',
-                  background: T.amberBg, color: T.amber,
-                  fontSize: 13, fontWeight: 600,
-                }}>
-                  Review {sessionReturning.plantedOrAbove} in advance?
-                </Link>
-              )}
-            </>
-          )}
-
-          {!goalMet && dueTomorrow !== null && dueTomorrow < 5 && (
-            <div style={{ marginTop: 14, display: 'flex', alignItems: 'flex-start', gap: 7, maxWidth: 280, fontSize: 12, color: T.inkMute, lineHeight: 1.5, textAlign: 'left' }}>
-              <Icon name="capture" size={14} color={T.sage} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
-              <span>Capture more words today to keep your streak growing tomorrow.</span>
-            </div>
-          )}
-        </div>
-
-        {/* Reviewed items list */}
-        {reviewedCards.length > 0 && (
-          <div style={{ padding: '0 16px 16px' }}>
-            <button
-              onClick={() => setListExpanded(v => !v)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
-                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                fontSize: 13, fontWeight: 600, color: T.inkSoft,
-              }}
-            >
-              <span>{reviewedCards.length} card{reviewedCards.length !== 1 ? 's' : ''} this session</span>
-              <Icon name="chev-d" size={14} strokeWidth={2} style={{ transform: listExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
-            </button>
-            {listExpanded && (
-              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {reviewedCards.map(c => {
-                  const grades = gradeHistory.get(c.id) ?? []
-                  return (
-                    <div key={c.id} style={{
-                      padding: '8px 14px', borderRadius: 10,
-                      background: T.paper, border: `1px solid ${T.lineSoft}`,
-                      display: 'flex', alignItems: 'center', gap: 8,
-                    }}>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{c.ind_items?.ab}</span>
-                        {c.ind_items?.zh && <span style={{ fontSize: 12, color: T.inkSoft }}>{c.ind_items.zh}</span>}
-                      </div>
-                      {grades.length > 0 && (
-                        <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-                          {grades.map((g, i) => (
-                            <div key={i} style={{
-                              width: 6, height: 6, borderRadius: 999,
-                              background: GRADE_DOT_COLOR[g], opacity: 0.85,
-                            }} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div style={{ padding: '0 16px 40px', position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {editingMore && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '10px 14px', borderRadius: 13, background: T.paperHi, border: `1px solid ${T.lineSoft}` }}>
-            <span style={{ fontSize: 13, color: T.inkSoft }}>Review</span>
-            <button onClick={() => setReviewMoreN(reviewMoreN - 5)} disabled={reviewMoreN <= 10} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: reviewMoreN <= 10 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: reviewMoreN <= 10 ? 0.35 : 1, fontSize: 16 }}>−</button>
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 16, fontWeight: 700, color: T.ink, minWidth: 32, textAlign: 'center' }}>{reviewMoreN}</span>
-            <button onClick={() => setReviewMoreN(reviewMoreN + 5)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${T.line}`, background: T.paper, color: T.inkSoft, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>+</button>
-            <span style={{ fontSize: 13, color: T.inkSoft }}>more cards</span>
-          </div>
-        )}
-        <button onClick={handleShare} style={{
-          width: '100%', height: 46, borderRadius: 13, background: T.paperHi, color: T.ink,
-          border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          fontSize: 14.5, fontWeight: 600, cursor: 'pointer',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-        }}>
-          <Icon name="share" size={16} strokeWidth={1.9} /> Share progress
-        </button>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {/* Review N more — with inline editable N */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', gap: 0, borderRadius: 14, border: `1px solid ${T.line}`, overflow: 'hidden', background: T.paperHi, boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset' }}>
-            <button onClick={() => onReviewMore(reviewMoreN)} style={{
-              flex: 1, height: 52, background: 'none', border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              fontSize: 15, fontWeight: 600, cursor: 'pointer', color: T.ink,
-            }}>
-              <Icon name="review" size={15} strokeWidth={2} /> {reviewMoreN} more
-            </button>
-            <button onClick={() => setEditingMore(v => !v)} aria-label="Edit count" style={{
-              width: 36, background: 'none', border: 'none', borderLeft: `1px solid ${T.lineSoft}`,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkFaint,
-            }}>
-              <Icon name="pen" size={13} strokeWidth={2} />
-            </button>
-          </div>
-          <button onClick={onDone} style={{
-            flex: 1, height: 52, borderRadius: 14,
-            background: T.crimson, color: '#fff', border: `1px solid ${T.crimson}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, fontWeight: 600, cursor: 'pointer',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 6px 14px rgba(120,30,15,0.2)',
-          }}>Done</button>
-        </div>
-      </div>
     </div>
   )
 }
