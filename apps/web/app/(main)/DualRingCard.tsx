@@ -109,8 +109,9 @@ export default function DualRingCard({
 
   const learnPct  = learnTarget  > 0 ? Math.min(learnedToday  / learnTarget,  1) : 0
   const reviewPct = reviewTarget > 0 ? Math.min(reviewedToday / reviewTarget, 1) : 0
-  const learnN     = Math.min(newCount, Math.max(0, learnTarget - learnedToday))
-  const learnMoreN = Math.min(newCount, learnTarget)
+  const learnRemaining    = Math.max(0, learnTarget - learnedToday)
+  const learnN            = Math.min(newCount, learnRemaining > 15 ? 10 : learnRemaining)
+  const learnMoreN        = Math.min(newCount, learnTarget > 15 ? 10 : learnTarget)
 
   // Learn case 3 sub-states
   const learnNeedCards = newCount === 0 && learnedToday < learnTarget && learnTarget > 0
@@ -164,7 +165,7 @@ export default function DualRingCard({
           </div>
           <RingWithCount pct={learnPct} color={T.sage} count={learnedToday} target={learnTarget} />
           {learnedToday < learnTarget && newCount > 0 ? (
-            <Link href="/learn-session?start=1" style={{
+            <Link href={`/learn-session?start=1&n=${learnN}`} style={{
               width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
               background: T.sage, color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -175,7 +176,7 @@ export default function DualRingCard({
               Learn {learnN}
             </Link>
           ) : learnedToday >= learnTarget && newCount > 0 ? (
-            <Link href="/learn-session" style={{
+            <Link href={`/learn-session?n=${learnMoreN}`} style={{
               width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
               background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',

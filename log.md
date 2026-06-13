@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-13 | FIX | Review session: rateCard/rateCardRelearn throw on DB error (same pattern as graduateLearnCard); submit wraps rating call in try-catch — resets animation and keeps card visible for retry instead of silently losing it |
+| 2026-06-13 | FEATURE | Dashboard Learn CTA: smart session size — chunks targets >15 into sessions of 10 (±5); passes ?n= to learn-session page; same cap applied to "Learn more?" CTA |
 | 2026-06-13 | FEATURE | Browser card row: audio indicator (speaker icon) and language pill added to collapsed row |
 | 2026-06-13 | FEATURE | Import page: audio preview button on each row — greyed/inactive when no URL, playable when Grimoire supplies clipped audio |
 | 2026-06-13 | FIX | Capture: audio upload failure now shows red notice instead of silently saving card without audio |

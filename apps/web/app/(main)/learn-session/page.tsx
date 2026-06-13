@@ -1069,6 +1069,8 @@ function LearnPage() {
   const searchParams = useSearchParams()
   const autostart    = searchParams.get('start') === '1'
 
+  const nParam = (() => { const v = parseInt(searchParams.get('n') ?? '', 10); return Number.isFinite(v) && v > 0 ? v : null })()
+
   const [mode,         setMode]         = useState<'landing' | 'learning' | 'done'>('landing')
   const [cards,        setCards]        = useState<FlashcardWithItem[]>([])
   const [overflow,     setOverflow]     = useState<FlashcardWithItem[]>([])
@@ -1086,9 +1088,10 @@ function LearnPage() {
     const filtered = excludeLangs.length
       ? allCards.filter(c => !excludeLangs.includes(c.ind_items?.language ?? ''))
       : allCards
-    const toLearn = Math.max(0, context.learnedToday >= context.learnCap
+    const remaining = Math.max(0, context.learnedToday >= context.learnCap
       ? context.learnCap
       : context.learnCap - context.learnedToday)
+    const toLearn = nParam ?? remaining
     const sessionCards = filtered.slice(0, toLearn)
     setCards(sessionCards)
     setOverflow(filtered.slice(toLearn))
