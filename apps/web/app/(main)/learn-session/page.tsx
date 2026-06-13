@@ -20,7 +20,7 @@ import { listPriorityDecks } from '@/lib/db/srs/priority'
 import { GradeBadge } from '@/components/study/GradeBadge'
 import { FlagPicker } from '@/components/study/FlagPicker'
 import { SwipeOverlay, computeSwipePhysics } from '@/components/study/SwipeOverlay'
-import { CardFront, CardBack } from '@/components/study/CardContent'
+import { CardFront, CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
@@ -286,14 +286,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const targetWord  = card.ind_items?.target_word ?? null
   const hasZh       = !!(card.ind_items?.zh)
   const hasAudio    = !!cardAudio(card)
-  const effectiveMode =
-    reviewMode === 'sts'     && targetWord ? 'sts'
-    : reviewMode === 'sts'   && !targetWord ? 'reverse'
-    : reviewMode === 'audio' && hasAudio    ? 'audio'
-    : reviewMode === 'audio' && !hasAudio   ? 'reverse'
-    : reviewMode === 'reverse' && hasZh     ? 'reverse'
-    : reviewMode === 'reverse' && !hasZh    ? 'forward'
-    : 'forward'
+  const effectiveMode = resolveEffectiveMode(reviewMode, targetWord, hasZh, hasAudio)
   const totalInitial   = cards.length
   const graduatedCount = graduatedRef.current.size
 

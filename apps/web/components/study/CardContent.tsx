@@ -4,6 +4,23 @@ import { cardAudio, type FlashcardWithItem } from '@/lib/db/srs/flashcards'
 
 export type CardMode = 'forward' | 'reverse' | 'audio' | 'sts'
 
+// ─── resolveEffectiveMode ─────────────────────────────────────────────────────
+
+export function resolveEffectiveMode(
+  reviewMode: string,
+  targetWord: string | null,
+  hasZh:      boolean,
+  hasAudio:   boolean,
+): CardMode {
+  if (reviewMode === 'sts'     && targetWord)  return 'sts'
+  if (reviewMode === 'sts'     && !targetWord) return 'reverse'
+  if (reviewMode === 'audio'   && hasAudio)    return 'audio'
+  if (reviewMode === 'audio'   && !hasAudio)   return 'reverse'
+  if (reviewMode === 'reverse' && hasZh)       return 'reverse'
+  if (reviewMode === 'reverse' && !hasZh)      return 'forward'
+  return 'forward'
+}
+
 // ─── renderHighlighted ────────────────────────────────────────────────────────
 
 export function renderHighlighted(sentence: string, target: string) {

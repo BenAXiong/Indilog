@@ -22,7 +22,7 @@ import { listPriorityDecks } from '@/lib/db/srs/priority'
 import { GradeBadge } from '@/components/study/GradeBadge'
 import { FlagPicker } from '@/components/study/FlagPicker'
 import { SwipeOverlay, computeSwipePhysics } from '@/components/study/SwipeOverlay'
-import { CardFront, CardBack } from '@/components/study/CardContent'
+import { CardFront, CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
@@ -320,15 +320,7 @@ function ReviewSession({
   const targetWord  = card.ind_items?.target_word ?? null
   const hasZh       = !!(card.ind_items?.zh)
   const hasAudio    = !!cardAudio(card)
-  // Resolve effective mode with fallback chain (DEC-SRS06)
-  const effectiveMode =
-    reviewMode === 'sts'     && targetWord  ? 'sts'
-    : reviewMode === 'sts'   && !targetWord  ? 'reverse'
-    : reviewMode === 'audio' && hasAudio     ? 'audio'
-    : reviewMode === 'audio' && !hasAudio    ? 'reverse'
-    : reviewMode === 'reverse' && hasZh      ? 'reverse'
-    : reviewMode === 'reverse' && !hasZh     ? 'forward'
-    : 'forward'
+  const effectiveMode = resolveEffectiveMode(reviewMode, targetWord, hasZh, hasAudio)  // DEC-SRS06
 
   function pushUndo(entry: UndoEntry) { undoStackRef.current.push(entry); setUndoCount(n => n + 1) }
   function popUndo(): UndoEntry | undefined { const e = undoStackRef.current.pop(); setUndoCount(n => n - 1); return e }
