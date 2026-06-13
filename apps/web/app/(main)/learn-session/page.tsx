@@ -24,7 +24,9 @@ import { CardFront, CardBack } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
+import { LearnEnd } from '@/components/study/LearnEnd'
 import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
+import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -185,7 +187,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const [gradingFly, setGradingFly] = useState<{ x: number; y: number; color: string; label: string; opacity?: number } | null>(null)
   const entering = useEnteringAnimation(qIdx)
   const audioRef           = useRef<HTMLAudioElement | null>(null)
-  const swipeStart         = useRef({ x: 0, y: 0 })
   const onExitRef          = useRef(onExit)
   useEffect(() => { onExitRef.current = onExit })
 
@@ -444,40 +445,17 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   // ── Touch ─────────────────────────────────────────────────────────────────
 
-  function onTouchStart(e: React.TouchEvent) {
-    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-  }
-  function onTouchMove(e: React.TouchEvent) {
-    if (gradingFly) return
-    const dx = e.touches[0].clientX - swipeStart.current.x
-    const dy = e.touches[0].clientY - swipeStart.current.y
-    setDrag({ x: dx, y: dy })
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    const dx = e.changedTouches[0].clientX - swipeStart.current.x
-    const dy = e.changedTouches[0].clientY - swipeStart.current.y
-    const absX = Math.abs(dx), absY = Math.abs(dy)
-    const THRESH = 70
-    setDrag(null)
-    if (!exposureDone) {
-      if (absX > absY && absX > THRESH && dx > 0) handleExposureOK()
-      else if (absY > absX && absY > THRESH) {
-        if (dy < 0) handleGraduate('easy'); else handleSuspend()
-      }
-      return
-    }
-    if (!revealed) {
-      if (absY > absX && absY > THRESH) {
-        if (dy < 0) handleGraduate('easy'); else handleSuspend()
-      }
-      return
-    }
-    if (absX > absY && absX > THRESH) {
-      if (dx < 0) handleAgain(); else handleGood(goodCount)
-    } else if (absY > absX && absY > THRESH) {
-      if (dy < 0) handleGraduate('easy'); else handleSuspend()
-    }
-  }
+  const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
+    flying:      !!gradingFly,
+    setDrag,
+    revealed,
+    exposureDone,
+    onEasy:    () => handleGraduate('easy'),
+    onSuspend: handleSuspend,
+    onAgain:   handleAgain,
+    onGood:    () => handleGood(goodCount),
+    onNext:    handleExposureOK,
+  })
 
   // ── Tinder swipe visuals ──────────────────────────────────────────────────
   const { transform: cardTransform, transition: cardTransition, opacity: cardOpacity } =
@@ -713,42 +691,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   )
 }
 
-// ─── LearnEnd ─────────────────────────────────────────────────────────────────
-
-function LearnEnd({ learnedCount, tomorrowTarget, onDone }: {
-  learnedCount: number
-  tomorrowTarget: number
-  onDone: () => void
-}) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cream, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 28px' }}>
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 88, fontWeight: 600, color: T.ink, letterSpacing: '-0.04em', lineHeight: 0.9 }}>
-          {learnedCount}
-        </div>
-        <div style={{ fontSize: 17, color: T.inkSoft, marginTop: 8, fontWeight: 500 }}>
-          {learnedCount === 1 ? 'card learned' : 'cards learned'}
-        </div>
-        <div style={{ marginTop: 12, fontSize: 13, color: T.inkMute, lineHeight: 1.6, maxWidth: 260 }}>
-          {learnedCount > 0
-            ? 'These will appear in your review queue soon.'
-            : 'Exit whenever you\'re ready.'}
-        </div>
-        <div style={{ marginTop: 10, fontSize: 13, color: T.inkMute }}>
-          Estimated for tomorrow: {tomorrowTarget} new cards.
-        </div>
-      </div>
-      <div style={{ padding: '0 16px 40px' }}>
-        <button onClick={onDone} style={{
-          width: '100%', height: 52, borderRadius: 14, background: T.sage, color: '#fff',
-          border: `1px solid ${T.sage}`, fontSize: 15, fontWeight: 600, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 12px rgba(80,120,30,0.2)',
-        }}>Done</button>
-      </div>
-    </div>
-  )
-}
 
 // ─── Landing / wrapper ────────────────────────────────────────────────────────
 
