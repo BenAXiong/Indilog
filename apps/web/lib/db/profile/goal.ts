@@ -12,12 +12,14 @@ export async function getDeckRootedStats(collectionId: string): Promise<DeckRoot
       .from('ind_flashcards')
       .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('ind_items.collection_id', collectionId),
+      .eq('ind_items.collection_id', collectionId)
+      .is('suspended_at', null),
     supabase
       .from('ind_flashcards')
       .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('ind_items.collection_id', collectionId)
+      .is('suspended_at', null)
       .gte('interval_days', 21)
       .gte('repetitions', 5)
       .gte('ease_factor', 2.5),
@@ -39,10 +41,10 @@ export async function getDeckMasteryStats(collectionId: string): Promise<DeckMas
     q.select(sel, base).eq('user_id', user.id).eq('ind_items.collection_id', collectionId)
 
   const [totalRes, seedRes, bloomingRes, rootedRes] = await Promise.all([
-    match(supabase.from('ind_flashcards')),
-    match(supabase.from('ind_flashcards')).eq('repetitions', 0),
-    match(supabase.from('ind_flashcards')).gt('repetitions', 0).gte('interval_days', 60),
-    match(supabase.from('ind_flashcards')).gte('repetitions', 5).gte('interval_days', 21).lt('interval_days', 60).gte('ease_factor', 2.5),
+    match(supabase.from('ind_flashcards')).is('suspended_at', null),
+    match(supabase.from('ind_flashcards')).is('suspended_at', null).eq('repetitions', 0),
+    match(supabase.from('ind_flashcards')).is('suspended_at', null).gt('repetitions', 0).gte('interval_days', 60),
+    match(supabase.from('ind_flashcards')).is('suspended_at', null).gte('repetitions', 5).gte('interval_days', 21).lt('interval_days', 60).gte('ease_factor', 2.5),
   ])
 
   const total    = totalRes.count    ?? 0
