@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-15 | FIX | Exclude suspended cards from getDeckRootedStats and getDeckMasteryStats queries |
+| 2026-06-15 | FEATURE | BrowserView Preview panel: add video clip playback — metadata (video_clip) added to BrowserCard type and SELECT query; <video> element renders below audio button when card has a clip |
 | 2026-06-15 | FEATURE | BrowserView expanded panel: Preview button — shows card face (ab + audio) with Reveal to expose back (zh); resets on collapse |
 | 2026-06-14 | FEATURE | BrowserView collapsed card: full-height audio button, crimson when audio available, grey when not; replaces the static small speaker icon in meta row |
 | 2026-06-14 | FEATURE | Add /import/extension bridge page — postMessage listener accepts ycm-popupdict protocol, accumulates items + audio chunks in refs, uploads WebM blobs to ind-audio via app Supabase session, then hands resolved payload to existing dedup/preview/import flow; middleware updated to allow /import/* without auth redirect |
