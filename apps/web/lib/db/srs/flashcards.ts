@@ -179,6 +179,24 @@ export async function listUserLanguages(): Promise<string[]> {
   return [...new Set(rows.map(r => r.language).filter(Boolean))].sort()
 }
 
+type DueStatRow = { note_source: string; collection_id: string | null }
+
+export function computeDueStats(rows: DueStatRow[]): DueStats {
+  let total = 0, captures = 0
+  const byCollection: Record<string, number> = {}
+  for (const note of rows) {
+    const colId = note.note_source === 'collection' ? note.collection_id : null
+    if (colId) {
+      total++
+      byCollection[colId] = (byCollection[colId] ?? 0) + 1
+    } else {
+      total++
+      captures++
+    }
+  }
+  return { total, captures, byCollection }
+}
+
 export async function getDueStats(
   opts: { excludeLangs?: string[]; excludeCollections?: string[]; excludeCaptures?: boolean } = {},
 ): Promise<DueStats> {
@@ -188,36 +206,27 @@ export async function getDueStats(
 
   const now = new Date().toISOString()
   function buildQ() {
-    return supabase.from('ind_flashcards')
-      .select('note_id, ind_items(note_source, collection_id, language)')
+    let q = supabase.from('ind_flashcards')
+      .select('ind_items(note_source, collection_id)')
       .eq('user_id', user!.id)
       .lte('due_at', now)
       .gt('repetitions', 0)
       .is('suspended_at', null)
-  }
-
-  const data = await paginate<{ note_id: string; ind_items: unknown }>(buildQ, 'getDueStats')
-  if (!data.length) return { total: 0, captures: 0, byCollection: {} }
-
-  let total = 0
-  let captures = 0
-  const byCollection: Record<string, number> = {}
-  type NoteRef = { note_source: string; collection_id: string | null; language: string }
-  for (const row of data) {
-    const note = row.ind_items as unknown as NoteRef | null
-    if (opts.excludeLangs?.length && opts.excludeLangs.includes(note?.language ?? '')) continue
-    const colId = note?.note_source === 'collection' ? note.collection_id : null
-    if (colId) {
-      if (opts.excludeCollections?.includes(colId)) continue
-      total++
-      byCollection[colId] = (byCollection[colId] ?? 0) + 1
-    } else {
-      if (opts.excludeCaptures) continue
-      total++
-      captures++
+    if (opts.excludeLangs?.length)
+      q = q.filter('ind_items.language', 'not.in', `(${opts.excludeLangs.join(',')})`)
+    if (opts.excludeCollections?.length && opts.excludeCaptures) {
+      q = q.filter('ind_items.note_source', 'eq', 'collection')
+      q = q.filter('ind_items.collection_id', 'not.in', `(${opts.excludeCollections.join(',')})`)
+    } else if (opts.excludeCollections?.length) {
+      q = q.or(`note_source.neq.collection,collection_id.not.in.(${opts.excludeCollections.join(',')})`, { foreignTable: 'ind_items' })
+    } else if (opts.excludeCaptures) {
+      q = q.filter('ind_items.note_source', 'eq', 'collection')
     }
+    return q
   }
-  return { total, captures, byCollection }
+
+  const rows = await paginate<{ ind_items: unknown }>(buildQ, 'getDueStats')
+  return computeDueStats(rows.map(r => (r.ind_items as DueStatRow | null) ?? { note_source: '', collection_id: null }))
 }
 
 export type ListDueOpts = {
@@ -243,7 +252,6 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
   const supabase = createClient()
   const now = new Date().toISOString()
 
-  // Paginate to work around Supabase's server-side 1000-row cap
   function buildQ() {
     let q = supabase.from('ind_flashcards').select(CARD_SEL)
       .is('suspended_at', null)
@@ -255,39 +263,40 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
     else if (opts.flagColor === 'none') q = q.is('flag_color', null)
     else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
+    // Global exclusions — push to DB to reduce pagination payload for large vaults
+    if (opts.excludeLangs?.length)
+      q = q.filter('ind_items.language', 'not.in', `(${opts.excludeLangs.join(',')})`)
+    if (opts.excludeCollections?.length && opts.excludeCaptures) {
+      q = q.filter('ind_items.note_source', 'eq', 'collection')
+      q = q.filter('ind_items.collection_id', 'not.in', `(${opts.excludeCollections.join(',')})`)
+    } else if (opts.excludeCollections?.length) {
+      q = q.or(`note_source.neq.collection,collection_id.not.in.(${opts.excludeCollections.join(',')})`, { foreignTable: 'ind_items' })
+    } else if (opts.excludeCaptures) {
+      q = q.filter('ind_items.note_source', 'eq', 'collection')
+    }
+    // Custom session inclusions — push to DB
+    if (opts.includeLangs?.length)
+      q = q.filter('ind_items.language', 'in', `(${opts.includeLangs.join(',')})`)
+    if (opts.includeDialect)
+      q = q.filter('ind_items.dialect', 'eq', opts.includeDialect)
+    if (opts.includeCollectionId)
+      q = q.filter('ind_items.collection_id', 'eq', opts.includeCollectionId)
+    else if (opts.capturesOnly)
+      q = q.filter('ind_items.note_source', 'neq', 'collection')
+    if (opts.includeNoteTypes?.length)
+      q = q.filter('ind_items.type', 'in', `(${opts.includeNoteTypes.join(',')})`)
+    if (opts.includeFlagColors?.length)
+      q = q.in('flag_color', opts.includeFlagColors)
+    if (opts.includePlaceHeard)
+      q = q.filter('ind_items.place_heard', 'eq', opts.includePlaceHeard)
     return q
   }
 
   let results = await paginate<FlashcardWithItem>(buildQ, 'listDueFlashcards')
 
-  // Global exclusions (Review all)
-  if (opts.excludeLangs?.length)
-    results = results.filter(c => !opts.excludeLangs!.includes(c.ind_items?.language ?? ''))
-  if (opts.excludeCollections?.length || opts.excludeCaptures)
-    results = results.filter(c => {
-      const note = c.ind_items
-      if (note?.note_source === 'collection' && note.collection_id)
-        return !opts.excludeCollections?.includes(note.collection_id)
-      return !opts.excludeCaptures
-    })
-
-  // Custom session inclusions
-  if (opts.includeLangs?.length)
-    results = results.filter(c => opts.includeLangs!.includes(c.ind_items?.language ?? ''))
-  if (opts.includeDialect)
-    results = results.filter(c => c.ind_items?.dialect === opts.includeDialect)
-  if (opts.includeCollectionId)
-    results = results.filter(c => c.ind_items?.collection_id === opts.includeCollectionId)
-  else if (opts.capturesOnly)
-    results = results.filter(c => c.ind_items?.note_source !== 'collection')
-  if (opts.includeNoteTypes?.length)
-    results = results.filter(c => opts.includeNoteTypes!.includes(c.ind_items?.type ?? ''))
+  // includeTags stays client-side: OR across an array column has no clean PostgREST pushdown
   if (opts.includeTags?.length)
     results = results.filter(c => opts.includeTags!.some(t => (c.ind_items?.tags ?? []).includes(t)))
-  if (opts.includeFlagColors?.length)
-    results = results.filter(c => opts.includeFlagColors!.includes(c.flag_color ?? ''))
-  if (opts.includePlaceHeard)
-    results = results.filter(c => c.ind_items?.place_heard === opts.includePlaceHeard)
 
   return results
 }
