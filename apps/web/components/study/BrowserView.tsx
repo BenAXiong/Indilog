@@ -79,6 +79,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   const [confirmDelete,  setConfirmDelete]  = useState(false)
   const [lookupResults,  setLookupResults]  = useState<string[] | null>(null)
   const [lookingUp,      setLookingUp]      = useState(false)
+  const [showPreview,    setShowPreview]    = useState(false)
+  const [previewRevealed, setPreviewRevealed] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
 
@@ -324,13 +326,68 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
 
 
 
-            {/* Save / cancel */}
+            {/* Save / cancel / preview */}
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
                 {saving ? 'Saving…' : 'Save'}
               </button>
               <button onClick={onToggle} style={ghostBtn}>Cancel</button>
+              <button onClick={() => { setShowPreview(v => !v); setPreviewRevealed(false) }} style={{
+                ...ghostBtn,
+                marginLeft: 'auto',
+                background: showPreview ? T.ink : T.paperHi,
+                color: showPreview ? T.cream : T.inkSoft,
+                border: `1px solid ${showPreview ? T.ink : T.lineSoft}`,
+              }}>
+                Preview
+              </button>
             </div>
+
+            {/* Card preview */}
+            {showPreview && (
+              <div style={{
+                borderRadius: 14, border: `1px solid ${T.lineSoft}`,
+                background: T.paperHi, overflow: 'hidden',
+              }}>
+                {/* Front */}
+                <div style={{ padding: '22px 20px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+                    {card.ab}
+                  </div>
+                  {card.audio && (
+                    <button onClick={handleAudio} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 999,
+                      background: T.crimson, border: 'none', cursor: 'pointer',
+                      boxShadow: '0 2px 10px rgba(180,40,30,0.2)',
+                    }}>
+                      <Icon name={playing ? 'stop' : 'speaker'} size={15} strokeWidth={1.6} color="#fff" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Divider / reveal */}
+                <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
+                  {previewRevealed ? (
+                    <div style={{ padding: '18px 20px 20px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 18, fontWeight: 500, color: T.ink, lineHeight: 1.35, letterSpacing: '-0.01em' }}>
+                        {card.zh || <span style={{ color: T.inkFaint, fontStyle: 'italic' }}>No back</span>}
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setPreviewRevealed(true)} style={{
+                      width: '100%', padding: '12px 20px',
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, color: T.inkMute,
+                      fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}>
+                      Reveal
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Info strip */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>
