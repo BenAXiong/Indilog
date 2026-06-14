@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-14 | REFACTOR | Rename routes: /learn-session → /learn (learn session), /learn/* → /study/* (curriculum browser pages move under study hub); update all hrefs in DualRingCard, StudyView, study/page.tsx |
 | 2026-06-14 | REFACTOR | Extract useAudioPlayer, useUndoStack<T> hooks and SessionCard component from learn-session and review; eliminates remaining duplicated logic (audio handling, undo stack, card canvas JSX) |
 | 2026-06-14 | FIX | Sync shuffle_tests and shuffle_exposure to cloud preferences — add fields to UserPreferences, call patchPreferences() on each toggle, wire SettingsSheet on-open sync and buildPrefs passthrough |
 | 2026-06-14 | REFACTOR | Extract paginate<T> helper and CARD_SEL constant in flashcards.ts — eliminates 7 copy-pasted pagination loops and the duplicated select string |
