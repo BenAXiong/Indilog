@@ -1,28 +1,29 @@
 # Indivore — Learn Feature UI Spec
 
 > Companion to `docs/learn-feature.md`
-> Created: 2026-05-26 · Status: Planning
+> Created: 2026-05-26 · Status: Implemented (routes updated 2026-06-14)
 
 ---
 
 ## 1. Route map
 
 ```
-/learn                    Hub — card grid launcher
-/learn/lessons            Corpus: 12-level curriculum
-/learn/patterns           Corpus: grammar pattern drills
-/learn/essays             Corpus: prose essays
-/learn/dialogues          Corpus: conversational dialogues
-/learn/[slug]             Custom collection study view (dynamic)
-/learn/new                Create / import a custom collection
-/learn/[slug]/edit        Edit an existing custom collection
+/learn                    Learn session (SRS new-card learning mode)
+/study                    Study hub — decks, browser, stats
+/study/lessons            Corpus: 12-level curriculum
+/study/patterns           Corpus: grammar pattern drills
+/study/essays             Corpus: prose essays
+/study/dialogues          Corpus: conversational dialogues
+/study/collection/[id]    Custom collection browse page
+/study/new                Create / import a custom collection
+/review                   Review session (SRS review mode)
 ```
 
-All study routes (`/learn/*` except hub and new/edit) share a single layout pattern described in §3.
+All corpus study routes (`/study/lessons`, `/study/patterns`, etc.) share the StudyView shell described in §3.
 
 ---
 
-## 2. Hub page (`/learn`)
+## 2. Hub page (`/study`)
 
 ### Layout
 
@@ -68,7 +69,7 @@ Bottom padding accounts for BottomNav.
 
 - Dashed border (`lineSoft`), muted background (`paperHi`), `inkFaint` text
 - Always the last card in the grid
-- Navigates to `/learn/new`
+- Navigates to `/study/new`
 
 ### Custom collection card
 
@@ -80,7 +81,7 @@ Same anatomy as source cards, plus:
 
 ## 3. Shared study view layout
 
-All five study routes (`/learn/lessons`, `/learn/patterns`, `/learn/essays`, `/learn/dialogues`, `/learn/[slug]`) use the same shell.
+All corpus study routes (`/study/lessons`, `/study/patterns`, `/study/essays`, `/study/dialogues`) use the same StudyView shell.
 
 ### Header bar
 
@@ -88,7 +89,7 @@ All five study routes (`/learn/lessons`, `/learn/patterns`, `/learn/essays`, `/l
 [← back]  [Source name]  ···  [L3 · 4  ▾]  [⚙]
 ```
 
-- **← back**: navigates to `/learn`
+- **← back**: navigates to `/study`
 - **Source name**: "Lessons", "Patterns", "Essays", "Dialogs", or the collection name
 - **Current item pill** (right of center, tappable): shows the current selection in compact form
   - Lessons: `L3 · 4` (Level 3 Lesson 4)
@@ -285,7 +286,7 @@ Full cross-app `WordLookup` component (hover tooltip on desktop, sticky panel on
 
 ---
 
-## 8. Custom collection — creation flow (`/learn/new`)
+## 8. Custom collection — creation flow (`/study/new`)
 
 ### Step 1 — Identity
 
@@ -420,7 +421,7 @@ After file selected — preview panel:
 | `Toast` | Save confirmation |
 | `SectionHead` | Sheet section labels |
 | `Card` | Hub cards base |
-| `LangAvatar` | Language picker in /learn/new |
+| `LangAvatar` | Language picker in /study/new |
 
 ---
 
@@ -447,7 +448,7 @@ Custom collection cursor not stored in localStorage — the collection's last-vi
 ## 11. Open items / deferred
 
 - Drag-to-reorder cards within a lesson in the manual editor
-- Edit existing custom collection (`/learn/[slug]/edit`)
+- Edit existing custom collection (`/study/collection/[id]/edit`)
 - Completion tracking for custom collections (v1 ships without it)
 - "From captures" import (option C in creation flow — visible but disabled)
 - Cross-app `WordLookup` component (desktop hover tooltip, mobile sticky panel)
