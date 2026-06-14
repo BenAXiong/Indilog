@@ -14,6 +14,8 @@ export type UserPreferences = {
   auto_lookup:       boolean
   dict_sources:      string[]
   translate_dialect: string
+  shuffle_tests:     boolean
+  shuffle_exposure:  boolean
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -30,6 +32,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   auto_lookup:      true,
   dict_sources:     ['moe'],
   translate_dialect: 'ami_Coas',
+  shuffle_tests:    true,
+  shuffle_exposure: true,
 }
 
 export async function patchPreferences(patch: Partial<UserPreferences>): Promise<void> {

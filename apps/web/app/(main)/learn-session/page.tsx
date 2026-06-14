@@ -125,13 +125,13 @@ function LearnOptionsSheet({
           label="Shuffle tests"
           sub="Randomize test phase order"
           on={shuffleTests}
-          onToggle={() => { const v = !shuffleTests; setShuffleTests(v); localStorage.setItem('srs_shuffle_tests', String(v)) }}
+          onToggle={() => { const v = !shuffleTests; setShuffleTests(v); localStorage.setItem('srs_shuffle_tests', String(v)); patchPreferences({ shuffle_tests: v }) }}
         />
         <SessionToggle
           label="Shuffle exposure"
           sub="Randomize exposure phase order"
           on={shuffleExposure}
-          onToggle={() => { const v = !shuffleExposure; setShuffleExposure(v); localStorage.setItem('srs_shuffle_exposure', String(v)); onReloadNeeded() }}
+          onToggle={() => { const v = !shuffleExposure; setShuffleExposure(v); localStorage.setItem('srs_shuffle_exposure', String(v)); patchPreferences({ shuffle_exposure: v }); onReloadNeeded() }}
         />
         <LangFilterSection
           showAllLangs={showAllLangs}    setShowAllLangs={setShowAllLangs}

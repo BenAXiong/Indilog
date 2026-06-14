@@ -122,6 +122,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
           setAutoLookup(p.auto_lookup);        localStorage.setItem('ind_auto_lookup',     String(p.auto_lookup))
           setDictSources(p.dict_sources);      localStorage.setItem('ind_dict_sources',    JSON.stringify(p.dict_sources))
           setTranslateDialect(p.translate_dialect); localStorage.setItem('translate_ami_dialect', p.translate_dialect)
+          localStorage.setItem('srs_shuffle_tests',    String(p.shuffle_tests))
+          localStorage.setItem('srs_shuffle_exposure', String(p.shuffle_exposure))
         })
     })
   }, [])
@@ -205,6 +207,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
       auto_lookup:      autoLookup,
       dict_sources:     dictSources,
       translate_dialect: translateDialect,
+      shuffle_tests:    localStorage.getItem('srs_shuffle_tests')    !== 'false',
+      shuffle_exposure: localStorage.getItem('srs_shuffle_exposure') !== 'false',
       ...patch,
     }
   }
