@@ -83,6 +83,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   const [previewRevealed, setPreviewRevealed] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [videoPlaying, setVideoPlaying] = useState(false)
 
   useEffect(() => {
     if (expanded) {
@@ -516,13 +518,35 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
               </button>
             )}
             {card.video_clip && (
-              <video
-                src={card.video_clip}
-                autoPlay
-                muted
-                playsInline
-                style={{ width: '100%', borderRadius: 12, maxHeight: 280, background: '#000' }}
-              />
+              <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+                <video
+                  ref={videoRef}
+                  src={card.video_clip}
+                  playsInline
+                  onPlay={() => setVideoPlaying(true)}
+                  onPause={() => setVideoPlaying(false)}
+                  onEnded={() => setVideoPlaying(false)}
+                  style={{ width: '100%', maxHeight: 280, display: 'block' }}
+                />
+                {!videoPlaying && (
+                  <button
+                    onClick={() => videoRef.current?.play()}
+                    style={{
+                      position: 'absolute', inset: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(0,0,0,0.32)', border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 999,
+                      background: 'rgba(255,255,255,0.92)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Icon name="play" size={20} color="#111" />
+                    </div>
+                  </button>
+                )}
+              </div>
             )}
           </div>
           <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
