@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-14 | FEATURE | BrowserView collapsed card: full-height audio button, crimson when audio available, grey when not; replaces the static small speaker icon in meta row |
 | 2026-06-14 | FEATURE | Add /import/extension bridge page — postMessage listener accepts ycm-popupdict protocol, accumulates items + audio chunks in refs, uploads WebM blobs to ind-audio via app Supabase session, then hands resolved payload to existing dedup/preview/import flow; middleware updated to allow /import/* without auth redirect |
 | 2026-06-14 | REFACTOR | Rename routes: /learn-session → /learn (learn session), /learn/* → /study/* (curriculum browser pages move under study hub); update all hrefs in DualRingCard, StudyView, study/page.tsx |
 | 2026-06-14 | REFACTOR | Extract useAudioPlayer, useUndoStack<T> hooks and SessionCard component from learn-session and review; eliminates remaining duplicated logic (audio handling, undo stack, card canvas JSX) |

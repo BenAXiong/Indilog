@@ -188,8 +188,9 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
       opacity: isSuspended ? 0.72 : 1,
     }}>
       {/* Collapsed row */}
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
       <button onClick={selectionMode ? onSelect : onToggle} style={{
-        width: '100%', padding: '11px 12px',
+        flex: 1, minWidth: 0, padding: '11px 12px',
         display: 'flex', alignItems: 'flex-start', gap: 9,
         background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
       }}>
@@ -229,10 +230,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
             {flagHex && (
               <span style={{ width: 10, height: 10, borderRadius: 999, background: flagHex, flexShrink: 0 }} />
             )}
-            {card.audio && (
-              <Icon name="speaker" size={10} strokeWidth={1.8} color={T.inkFaint} />
-            )}
-            {card.target_word && (
+{card.target_word && (
               <span style={{ fontSize: 9, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', padding: '1px 4px', borderRadius: 3, border: `1px solid ${T.lineSoft}` }}>STS</span>
             )}
             <span style={{ fontSize: 11, color: T.inkMute, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -246,6 +244,26 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
           )}
         </div>
       </button>
+
+      {/* Audio button — full height, crimson when available */}
+      <button
+        onClick={handleAudio}
+        disabled={!card.audio}
+        style={{
+          flexShrink: 0, width: 44,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'none', border: 'none',
+          borderLeft: `1px solid ${T.lineSoft}`,
+          cursor: card.audio ? 'pointer' : 'default',
+        }}
+      >
+        <Icon
+          name={playing ? 'stop' : 'speaker'}
+          size={16} strokeWidth={1.6}
+          color={card.audio ? (playing ? T.crimsonDp : T.crimson) : T.lineSoft}
+        />
+      </button>
+      </div>
 
       {/* Edit panel */}
       {expanded && !selectionMode && (
