@@ -237,23 +237,24 @@ ind_flashcards
   LIMIT 20
 ```
 
+All `ListDueOpts` predicates are pushed to PostgREST via `.filter('ind_items.column', operator, value)` embedded-resource filters, so the paginated fetch returns only the rows matching the session's filters — O(result) not O(vault). The one exception is `includeTags`: OR logic across a JSONB array column has no clean PostgREST pushdown, so it applies client-side after the fetch.
+
+`getDueStats` uses the same embedded-filter pushdown for its exclusion opts. Counting is delegated to `computeDueStats(rows)`, a pure function exported from `lib/db/srs/flashcards.ts` — callers who already have `FlashcardWithItem[]` loaded can call it directly without a second DB round-trip.
+
 ### Supabase row cap — pagination pattern
 
-Supabase's PostgREST server enforces a hard max-rows limit (1000 by default). `.limit(N)` in the JS client is capped server-side regardless of N. Any query that may return >1000 rows must use `.range()` pagination:
+Supabase's PostgREST server enforces a hard max-rows limit (1000 by default). `.limit(N)` in the JS client is capped server-side regardless of N. Any query that may return >1000 rows must use the `paginate<T>` helper in `lib/db/srs/flashcards.ts`:
 
 ```typescript
-const PAGE = 1000
-const results = []
-let from = 0
-while (true) {
-  const { data } = await buildQuery().range(from, from + PAGE - 1)
-  if (data?.length) results.push(...data)
-  if (!data?.length || data.length < PAGE) break
-  from += PAGE
-}
+const results = await paginate<MyType>(
+  () => supabase.from('table').select('...').eq('user_id', user.id),
+  'tagForErrorLogs',
+)
 ```
 
-Affected functions (all paginated as of 2026-06-01): `ensureFlashcards` (both queries), `listDueFlashcards`, `getDueStats`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (split into two parallel queries by `note_source` instead).
+`paginate<T>` runs the `while/range/break` loop internally (PAGE = 1000), logs any PostgREST error with the tag prefix, and returns a flat `T[]`. Do not copy-paste the loop — call the helper.
+
+Affected functions (all paginated as of 2026-06-14): `ensureFlashcards` (both queries), `listDueFlashcards`, `getDueStats`, `listLearnFlashcards`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (split into two parallel queries by `note_source` instead).
 
 ---
 

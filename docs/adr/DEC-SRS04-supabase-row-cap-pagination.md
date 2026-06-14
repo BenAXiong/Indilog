@@ -12,6 +12,6 @@ Any query that may return >1000 rows uses `.range(from, from + PAGE - 1)` in a l
 
 **Exception:** `listBrowserCards` instead splits into two parallel queries (one per `note_source` value) — semantically cleaner since the two data types are always fetched separately anyway.
 
-**Affected functions (as of 2026-05-31):** `listDueFlashcards`, `getDueStats`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards`.
+**Affected functions (as of 2026-06-14):** `listDueFlashcards`, `getDueStats`, `listLearnFlashcards`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards`, `ensureFlashcards` (both inner queries).
 
-See `architecture.md` § *Supabase row cap* for the standard pattern.
+The raw loop is now centralized in the `paginate<T>` helper in `lib/db/srs/flashcards.ts` — do not copy-paste the loop. See `architecture.md` § *Supabase row cap* for usage.
