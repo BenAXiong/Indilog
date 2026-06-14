@@ -254,7 +254,7 @@ const results = await paginate<MyType>(
 
 `paginate<T>` runs the `while/range/break` loop internally (PAGE = 1000), logs any PostgREST error with the tag prefix, and returns a flat `T[]`. Do not copy-paste the loop — call the helper.
 
-Affected functions (all paginated as of 2026-06-14): `ensureFlashcards` (both queries), `listDueFlashcards`, `getDueStats`, `listLearnFlashcards`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (split into two parallel queries by `note_source` instead).
+Affected functions (all paginated as of 2026-06-14): `ensureFlashcards` (both queries), `listDueFlashcards`, `getDueStats`, `listLearnFlashcards`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (two parallel `paginate<T>` calls, one per `note_source`, to prevent cross-type row crowding).
 
 ---
 

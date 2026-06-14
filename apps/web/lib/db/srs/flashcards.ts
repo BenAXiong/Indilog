@@ -61,7 +61,7 @@ export function cardAudio(card: FlashcardWithItem): string | null {
 
 const CARD_SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
 
-async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]> {
+export async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]> {
   const PAGE = 1000
   const results: T[] = []
   let from = 0

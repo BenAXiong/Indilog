@@ -10,7 +10,7 @@ Any query that may return >1000 rows uses `.range(from, from + PAGE - 1)` in a l
 
 **Context:** Supabase's PostgREST server enforces a hard max-rows limit (default 1000). `.limit(N)` in the JS client is silently capped server-side regardless of N. Discovered when the Amis1k import (1063 cards, all due simultaneously) caused `getDueStats` to show 1000 due, `listDueFlashcards` to return 1000 cards, and `listBrowserCards` to omit captured items entirely.
 
-**Exception:** `listBrowserCards` instead splits into two parallel queries (one per `note_source` value) — semantically cleaner since the two data types are always fetched separately anyway.
+**Note:** `listBrowserCards` uses two parallel `paginate<T>` calls (one per `note_source` value) instead of one, to keep collection items from crowding out captured notes within the same page window.
 
 **Affected functions (as of 2026-06-14):** `listDueFlashcards`, `getDueStats`, `listLearnFlashcards`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards`, `ensureFlashcards` (both inner queries).
 

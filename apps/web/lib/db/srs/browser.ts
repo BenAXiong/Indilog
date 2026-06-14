@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
+import { paginate } from './flashcards'
 export { suspendCard, unsuspendCard, setFlagColor } from './flashcards'
 
 export type BrowserCard = {
@@ -42,25 +43,52 @@ export async function listBrowserCards(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
+  const now = new Date().toISOString()
   const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)'
 
-  // Two parallel queries so collection items (potentially 1000+) never crowd out per-item notes
-  const [capturedRes, collectionRes] = await Promise.all([
-    supabase.from('ind_items').select(SEL).eq('user_id', user.id).neq('note_source', 'collection').order('created_at', { ascending: false }),
-    supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false }),
+  // Push filter to DB so pagination fetches only matching rows, not the full vault
+  function applyFilter(q: any): any {
+    switch (filter) {
+      case 'due':
+        return q.is('ind_flashcards.suspended_at', null)
+                .or(`due_at.is.null,due_at.lte.${now}`, { foreignTable: 'ind_flashcards' })
+      case 'new':
+        return q.filter('ind_flashcards.repetitions', 'eq', 0)
+                .is('ind_flashcards.suspended_at', null)
+      case 'flagged': {
+        let fq = q.not('ind_flashcards.flag_color', 'is', null).is('ind_flashcards.suspended_at', null)
+        if (flagColorFilter) fq = fq.filter('ind_flashcards.flag_color', 'eq', flagColorFilter)
+        return fq
+      }
+      case 'suspended':
+        return q.not('ind_flashcards.suspended_at', 'is', null)
+      default:
+        return q
+    }
+  }
+
+  // Two parallel paginated queries — one per note_source so collection items
+  // (potentially 1000+) never crowd out captured notes within the same page window
+  const [capturedRows, collectionRows] = await Promise.all([
+    paginate<any>(
+      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).neq('note_source', 'collection').order('created_at', { ascending: false })),
+      'listBrowserCards:captured',
+    ),
+    paginate<any>(
+      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false })),
+      'listBrowserCards:collection',
+    ),
   ])
 
-  const data = [...(capturedRes.data ?? []), ...(collectionRes.data ?? [])]
+  const data = [...capturedRows, ...collectionRows]
   if (!data.length) return []
-
-  const now = new Date().toISOString()
 
   type CardJoin = {
     id: string; due_at: string | null; ease_factor: number; interval_days: number
     repetitions: number; suspended_at: string | null; flag_color: string | null
   }
 
-  let results: BrowserCard[] = data.map(row => {
+  const results: BrowserCard[] = data.map(row => {
     const cardArr = row.ind_flashcards as unknown as CardJoin[] | null
     const card    = Array.isArray(cardArr) ? (cardArr[0] ?? null) : null
     const col     = row.ind_learn_collections as unknown as { name: string } | null
@@ -91,24 +119,8 @@ export async function listBrowserCards(
     }
   })
 
-  // Post-filter for SRS state
-  switch (filter) {
-    case 'due':
-      results = results.filter(c => c.card_id && !c.suspended_at && (!c.due_at || c.due_at <= now))
-      break
-    case 'new':
-      results = results.filter(c => c.card_id && c.repetitions === 0 && !c.suspended_at)
-      break
-    case 'flagged':
-      results = results.filter(c => c.card_id && !c.suspended_at && c.flag_color !== null)
-      if (flagColorFilter) results = results.filter(c => c.flag_color === flagColorFilter)
-      break
-    case 'suspended':
-      results = results.filter(c => c.card_id && c.suspended_at !== null)
-      break
-  }
-
-  // Sort ('added' already ordered by created_at desc from DB)
+  // Sort — 'added' is already chronological from DB order; 'due' and 'ease' sort
+  // the O(result) set after transform (PostgREST can't ORDER BY embedded columns)
   if (sort === 'due') {
     results.sort((a, b) => {
       if (!a.due_at && !b.due_at) return 0
