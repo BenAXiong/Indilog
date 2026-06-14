@@ -3,6 +3,7 @@
 | Timestamp | Type | Description |
 |-----------|------|-------------|
 | 2026-06-15 | FIX | Exclude suspended cards from getDeckRootedStats and getDeckMasteryStats queries |
+| 2026-06-15 | FEATURE | BrowserView: move card Preview to bottom sheet — card-icon button on collapsed row opens fixed bottom sheet with ab, audio, video clip, and Reveal toggle for zh; removes inline preview from edit panel |
 | 2026-06-15 | FEATURE | BrowserView Preview panel: add video clip playback — metadata (video_clip) added to BrowserCard type and SELECT query; <video> element renders below audio button when card has a clip |
 | 2026-06-15 | FEATURE | BrowserView expanded panel: Preview button — shows card face (ab + audio) with Reveal to expose back (zh); resets on collapse |
 | 2026-06-14 | FEATURE | BrowserView collapsed card: full-height audio button, crimson when audio available, grey when not; replaces the static small speaker icon in meta row |
