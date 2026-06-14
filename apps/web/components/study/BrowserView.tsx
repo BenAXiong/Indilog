@@ -518,7 +518,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
             {card.video_clip && (
               <video
                 src={card.video_clip}
-                controls
+                autoPlay
+                muted
                 playsInline
                 style={{ width: '100%', borderRadius: 12, maxHeight: 280, background: '#000' }}
               />
