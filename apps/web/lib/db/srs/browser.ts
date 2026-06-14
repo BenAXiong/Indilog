@@ -22,6 +22,7 @@ export type BrowserCard = {
   note_source:   string
   notes:         string | null
   audio:         string | null
+  video_clip:    string | null
   note_type:     string
   language:      string
   dialect:       string | null
@@ -44,7 +45,7 @@ export async function listBrowserCards(
   if (!user) return []
 
   const now = new Date().toISOString()
-  const SEL = 'id, ab, zh, notes, audio, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)'
+  const SEL = 'id, ab, zh, notes, audio, metadata, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)'
 
   // Push filter to DB so pagination fetches only matching rows, not the full vault
   function applyFilter(q: any): any {
@@ -109,6 +110,7 @@ export async function listBrowserCards(
       note_source:   row.note_source ?? 'captured',
       notes:         row.notes ?? null,
       audio:         row.audio ?? null,
+      video_clip:    (row.metadata as any)?.video_clip ?? null,
       note_type:     row.type ?? 'word',
       language:      row.language ?? '',
       dialect:       row.dialect ?? null,

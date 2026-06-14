@@ -364,6 +364,14 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
                       <Icon name={playing ? 'stop' : 'speaker'} size={15} strokeWidth={1.6} color="#fff" />
                     </button>
                   )}
+                  {card.video_clip && (
+                    <video
+                      src={card.video_clip}
+                      controls
+                      playsInline
+                      style={{ width: '100%', borderRadius: 10, maxHeight: 260, background: '#000' }}
+                    />
+                  )}
                 </div>
 
                 {/* Divider / reveal */}
