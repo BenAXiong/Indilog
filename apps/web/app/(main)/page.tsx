@@ -1,12 +1,11 @@
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
-import { Stat, SectionHead, LangAvatar, Icon, Wordmark, Card } from '@/components/ui'
+import { LangAvatar, Icon, Wordmark, Card } from '@/components/ui'
 import DualRingCard from './DualRingCard'
 import { getDashboardStats } from '@/lib/db/progress/stats-server'
 import { getActiveLangServer } from '@/lib/db/profile/server'
 import GoalWidget from '@/components/widgets/GoalWidget'
 import SettingsButton from '@/components/widgets/SettingsSheet'
-import { getLanguage } from '@/lib/languages'
 
 const INTENSITY = [T.lineSoft, '#F1D8C6', '#E5A88E', '#C66848', T.crimsonDp]
 
@@ -173,77 +172,7 @@ export default async function DashboardPage() {
       />
 
       {/* Heatmap */}
-      <div>
-        <SectionHead title="Review history" />
-        <Heatmap heatmap={stats.heatmap} monthLabels={stats.monthLabels} />
-      </div>
-
-      {/* Quick stats */}
-      <div>
-        <SectionHead title="Overview" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Stat value={stats.mastered}    label="Rooted"        icon="check"   accent={T.sage}   />
-          <Stat value={stats.active}      label="Active cards"  icon="card"    accent={T.crimson} />
-          <Stat value={stats.thisWeek}    label="This week"     icon="review"  accent={T.terra}  />
-          <Stat value={stats.dueTomorrow} label="Due tomorrow"  icon="layers"  accent={T.amber}  />
-        </div>
-      </div>
-
-      {/* Recent captures — collapsible, closed by default */}
-      <details>
-        <summary style={{
-          listStyle: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          cursor: 'pointer', padding: '2px 0 10px', userSelect: 'none',
-        }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Recent captures
-          </span>
-          <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transition: 'transform .15s' }} />
-        </summary>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {stats.recentItems.length === 0 ? (
-            <div style={{
-              padding: '24px 16px', textAlign: 'center',
-              background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14,
-            }}>
-              <div style={{ fontSize: 13, color: T.inkSoft }}>Nothing captured yet.</div>
-              <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>Tap Capture to start your notebook.</div>
-            </div>
-          ) : stats.recentItems.map((item) => {
-            const tc = item.type === 'word'
-              ? { color: T.crimson, bg: T.crimsonBg, border: '#EFCAB8' }
-              : item.type === 'sentence'
-              ? { color: T.sage, bg: T.sageBg, border: '#D2D8AE' }
-              : { color: T.amber, bg: T.amberBg, border: '#EBD49A' }
-            const when = new Date(item.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
-            return (
-              <div key={item.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '11px 14px', background: T.paperHi,
-                border: `1px solid ${T.lineSoft}`, borderRadius: 14,
-                boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{
-                    fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontWeight: 500, color: T.ink,
-                    display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{item.ab}</span>
-                  <span style={{ fontSize: 12, color: T.inkSoft, display: 'block', marginTop: 2 }}>
-                    {getLanguage(item.language)?.name ?? item.language}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: 999,
-                    background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`, fontSize: 10.5, fontWeight: 500,
-                  }}>{item.type}</span>
-                  <span style={{ fontSize: 10.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace' }}>{when}</span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </details>
+      <Heatmap heatmap={stats.heatmap} monthLabels={stats.monthLabels} />
 
     </div>
   )

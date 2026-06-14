@@ -239,16 +239,11 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
               {card.source}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {card.language && (
-              <span style={{ fontSize: 9, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint, padding: '1px 5px', borderRadius: 3, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
-                {card.language}
-              </span>
-            )}
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint }}>
-              e{card.ease_factor.toFixed(1)}
+          {card.language && (
+            <span style={{ fontSize: 9, fontFamily: '"JetBrains Mono", monospace', color: T.inkFaint, padding: '1px 5px', borderRadius: 3, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
+              {card.language}
             </span>
-          </div>
+          )}
         </div>
       </button>
 

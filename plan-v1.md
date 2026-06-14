@@ -179,15 +179,19 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Mastery grades — Seed/Planted/Rooted/Blooming; see DEC-SRS09; rename "mastered" stat to "Rooted"
 - [x] ind_daily_stats: add learned_count column; add increment_learned_today RPC
 - [x] Revamp GoalSheet UI — 3 tabs: Goals (manual/calculated toggle), Priority (ordered deck list), Simulate (deadline + deck selection + curve)
-- [~] Fix: SRS workflow bugs - Learn
-- [~] Fix: SRS workflow bugs - Review (again not requeed, bottom bar jiggle, see ss)
-- [x] Refine Cards UI - Learn (rewind, skip, gestures, scores buttons, etc)
-- [~] Refine Cards UI - Review (rewind, skip, gestures, scores buttons, etc)
-- [ ] Refine Cards UX (visual grading feedback)
-- [ ] Add motivation stats/progression to Learn session end
-- [~] Fix: dailies recalc after session on same day
-- [ ] Revamp Dashboard — streak card, goal card with background chart overlay, central card, heatmap, overview section; remove recent captures
+
+- [x] Fix: SRS workflow bugs - Learn
+- [x] Fix: SRS workflow bugs - Review (again not requeed, bottom bar jiggle, see ss)
+- [x] Clean Cards UI - Learn (rewind, skip, gestures, scores buttons, etc)
+- [x] Clean Cards UI - Review (rewind, skip, gestures, scores buttons, etc)
+- [x] Improve Cards UX - visual grading feedback
+- [x] Fix: dailies recalc after session on same day, session end screen
+- [x] Add overlay when priority or all decks have been learned/reviewed
+- [x] Add rewind to review Again and Learn tests
+
+- [-] Dashboard — improve goal card remove recent captures and labels
 - [ ] Curriculum content layout options — compact / standard / flashcard view; toggled per-section or globally
+- [ ] Curriculum deck: fix UI, esp progress indicators. Add play + number?
 - [ ] Study tab decks: on click, add in sheet review now, open in browser, etc
 
 ### M5-C — Feature refinement
@@ -196,8 +200,10 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Browser zh lookup: enable multi word — lookup also searches sentences, includes sentence zh
 - [x] 2-step review entry — resolved by Learn/Review split + priority list (DEC-M5-01)
 - [x] Refine simulation of dailies from custom goals
-
-
+- [ ] Set smart session size defaults for Learn. 10-15-20 depending on target.
+- [ ] Enable non-priority reps deck-by-deck in the Study tab.
+- [ ] Rework goal-target-cap confusing semantics and update the ADRs.
+- [ ] Mod Again in Reviews: min(10min, requeue to last)
 
 ---
 
@@ -236,6 +242,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] FIX: dict sentence bookmark toast invisible when scrolled — moved to `position: fixed` at bottom
 - [x] FIX: dict sentence saved state not pre-loaded across sessions — `savedAbSet` pre-check from `ind_items` on sentences state change
 - [x] FIX: dict sentence could be re-saved indefinitely — block duplicates, show amber warning toast
+- [ ] FIX: duplicate captures from dict
 
 - [ ] Desktop usability pass
 - [ ] Error states (API failures, auth errors)

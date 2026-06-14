@@ -2,8 +2,28 @@
 
 Ideas, deferred features, and future directions not yet scoped into a milestone. Nothing here is committed or prioritised.
 
-- Refactor (see skill)
+- Refactor (see skill and doc)
 
+- Amis 1k: create v1 from ePark content. Save broad then filter on indi ws
+    see if learn 12 units content corresponds to eassays and dialogue
+    Find how many gaoji vocab have exsent in ePark
+
+- consider nice mining reports
+    https://github.com/L-M-Sherlock/japanese-mining-report
+- FSRS
+- late review handling
+- Big cleanup of the docs
+- Share card: aesthetic, motivating, and only available when target completed
+- Revamp Browser
+- Dashboard revamp, focus on streak and dailies redesign (double-strands)
+- Add zh to ab MT in capture (check dialects)
+- Add language-dep dialects in capture context
+- Add a celebration/goal complete message
+- Design dash CTAs when deck are done, esp in no-prio mode and tmrdue less than target
+    and fix 0/0 if all priority cards are Rooted
+- Add motivation stats/progression to Learn session end
+- Add motivation stats/progression to Review session end
+- SRS: Again requeue 5min then 12h then 50% even young
 - **SRS test suite (two-layer):**
   - *Pure-function layer* (Vitest, no DB): unit tests per grade/edge-case + 90-day population simulations with a fixed seed to catch algo regressions and long-term curve health (ease collapse, due-count growth, blooming rate)
   - *In-vivo integration layer* (Vitest + dedicated Supabase test project): call real service functions (`rateCard`, `graduateLearnCard`, `flushReviewEvents`) against a seeded test DB, query actual rows, assert correct `interval_days / ease_factor / due_at / phase`; catches DB-layer bugs (missing `.eq('user_id')`, RLS failures, wrong column writes) that pure tests miss; ~20–30 key scenarios, test user cleaned up in teardown
@@ -16,8 +36,7 @@ Ideas, deferred features, and future directions not yet scoped into a milestone.
 - Configurable streak: hitting any/all/combination of caps selectable per goal type — deferred until 3-ring dashboard exists (E-option; v1 streak = any cap hit)
 - Amis100 - useful fun version
 - generate IP-stable manga images
-- Dialogue 001
-- Find how many gaoji vocab have exsent in ePark
+- Think dialogue layout & make Dialogue_001
 - **Offline / no-signal review**: every scheduled rating (`rateCard`, `rateCardRelearn`, `graduateLearnCard`) is a live `await supabase.update()` — no queue, no cache. Network failure silently drops the write; card resets to pre-session state on next load. Fix requires local-first layer: optimistic in-memory state + background sync queue (e.g. IndexedDB write-ahead log or Supabase offline mode). Buffered non-algo events (`flushReviewEvents`) are already fire-and-forget and acceptable to lose, but scheduled algo writes are not.
 - Use disctionary to explore affixes (examples)
 - Icons: capture = fish net, dash = stone house, study = ?, trans = stars, dict = ?
