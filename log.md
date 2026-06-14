@@ -7,6 +7,7 @@
 | 2026-06-14 | REFACTOR | Extract paginate<T> helper and CARD_SEL constant in flashcards.ts — eliminates 7 copy-pasted pagination loops and the duplicated select string |
 | 2026-06-14 | REFACTOR | Push listDueFlashcards/getDueStats filters to DB via PostgREST embedded-resource syntax; extract computeDueStats pure function — reduces network transfer from O(vault) to O(result) for large vaults |
 | 2026-06-14 | CONFIG | Update architecture.md and DEC-SRS04: document paginate<T> helper, predicate pushdown pattern, computeDueStats, and complete affected-functions list |
+| 2026-06-14 | REFACTOR | Push browser SRS filters to DB in listBrowserCards; add paginate<T> to both query branches — fixes silent 1000-row truncation on all-cards view, reduces network transfer for filtered views |
 | 2026-06-13 | REFACTOR | Extract 5 shared session components (GradeBadge, FlagPicker, SwipeOverlay, CardFront/CardBack, LangFilterSection/SessionToggle) from learn and review sessions; -498 lines in session files, zero behavior change |
 | 2026-06-13 | REFACTOR | Wave 2: add computeSwipePhysics to SwipeOverlay, extract useEnteringAnimation hook, ReviewModeSelector, SessionOptionsSheet; remove 5 redundant setEntering(true) calls and double-write bug in learn options sheet |
 | 2026-06-13 | REFACTOR | Wave 3: extract useSwipeGesture hook (touch handlers), LearnEnd and ReviewEnd components; move ReviewEnd helpers (countDueTomorrow, countSessionReturning, CONFETTI_COLORS, GRADE_DOT_COLOR) into ReviewEnd.tsx; -367 lines from session files |
