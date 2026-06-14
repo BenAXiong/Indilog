@@ -3,6 +3,7 @@
 | Timestamp | Type | Description |
 |-----------|------|-------------|
 | 2026-06-14 | REFACTOR | Extract useAudioPlayer, useUndoStack<T> hooks and SessionCard component from learn-session and review; eliminates remaining duplicated logic (audio handling, undo stack, card canvas JSX) |
+| 2026-06-14 | FIX | Sync shuffle_tests and shuffle_exposure to cloud preferences — add fields to UserPreferences, call patchPreferences() on each toggle, wire SettingsSheet on-open sync and buildPrefs passthrough |
 | 2026-06-13 | REFACTOR | Extract 5 shared session components (GradeBadge, FlagPicker, SwipeOverlay, CardFront/CardBack, LangFilterSection/SessionToggle) from learn and review sessions; -498 lines in session files, zero behavior change |
 | 2026-06-13 | REFACTOR | Wave 2: add computeSwipePhysics to SwipeOverlay, extract useEnteringAnimation hook, ReviewModeSelector, SessionOptionsSheet; remove 5 redundant setEntering(true) calls and double-write bug in learn options sheet |
 | 2026-06-13 | REFACTOR | Wave 3: extract useSwipeGesture hook (touch handlers), LearnEnd and ReviewEnd components; move ReviewEnd helpers (countDueTomorrow, countSessionReturning, CONFETTI_COLORS, GRADE_DOT_COLOR) into ReviewEnd.tsx; -367 lines from session files |
