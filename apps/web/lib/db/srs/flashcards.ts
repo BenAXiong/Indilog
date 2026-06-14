@@ -59,38 +59,33 @@ export function cardAudio(card: FlashcardWithItem): string | null {
   return card.audio ?? card.ind_items?.audio ?? null
 }
 
+const CARD_SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
+
+async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]> {
+  const PAGE = 1000
+  const results: T[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await buildQ().range(from, from + PAGE - 1)
+    if (error) { console.error(tag ?? 'paginate:', error); break }
+    if (data?.length) results.push(...(data as T[]))
+    if (!data?.length || data.length < PAGE) break
+    from += PAGE
+  }
+  return results
+}
+
 export async function ensureFlashcards(): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const PAGE = 1000
-
   // Paginate both queries in parallel — plain .select() is capped at 1000 rows server-side
-  const [existingIds, allItems] = await Promise.all([
-    (async () => {
-      const ids = new Set<string>()
-      let from = 0
-      while (true) {
-        const { data } = await supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id).range(from, from + PAGE - 1)
-        if (data?.length) data.forEach(r => ids.add(r.note_id))
-        if (!data?.length || data.length < PAGE) break
-        from += PAGE
-      }
-      return ids
-    })(),
-    (async () => {
-      const items: { id: string; target_word: string | null }[] = []
-      let from = 0
-      while (true) {
-        const { data } = await supabase.from('ind_items').select('id, target_word').eq('user_id', user.id).range(from, from + PAGE - 1)
-        if (data?.length) items.push(...(data as { id: string; target_word: string | null }[]))
-        if (!data?.length || data.length < PAGE) break
-        from += PAGE
-      }
-      return items
-    })(),
+  const [existingRows, allItems] = await Promise.all([
+    paginate<{ note_id: string }>(() => supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id)),
+    paginate<{ id: string; target_word: string | null }>(() => supabase.from('ind_items').select('id, target_word').eq('user_id', user.id)),
   ])
+  const existingIds = new Set(existingRows.map(r => r.note_id))
 
   if (!allItems.length) return
   const newItems = allItems.filter(i => !existingIds.has(i.id))
@@ -178,16 +173,10 @@ export async function listUserLanguages(): Promise<string[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
-  const PAGE = 1000
-  const langs: string[] = []
-  let from = 0
-  while (true) {
-    const { data: page } = await supabase.from('ind_items').select('language').eq('user_id', user.id).range(from, from + PAGE - 1)
-    if (page?.length) langs.push(...(page.map(r => r.language).filter(Boolean) as string[]))
-    if (!page?.length || page.length < PAGE) break
-    from += PAGE
-  }
-  return [...new Set(langs)].sort()
+  const rows = await paginate<{ language: string }>(
+    () => supabase.from('ind_items').select('language').eq('user_id', user.id),
+  )
+  return [...new Set(rows.map(r => r.language).filter(Boolean))].sort()
 }
 
 export async function getDueStats(
@@ -207,16 +196,7 @@ export async function getDueStats(
       .is('suspended_at', null)
   }
 
-  const PAGE = 1000
-  const allRows: { note_id: string; ind_items: unknown }[] = []
-  let from = 0
-  while (true) {
-    const { data: page } = await buildQ().range(from, from + PAGE - 1)
-    if (page?.length) allRows.push(...(page as typeof allRows))
-    if (!page?.length || page.length < PAGE) break
-    from += PAGE
-  }
-  const data = allRows
+  const data = await paginate<{ note_id: string; ind_items: unknown }>(buildQ, 'getDueStats')
   if (!data.length) return { total: 0, captures: 0, byCollection: {} }
 
   let total = 0
@@ -262,11 +242,10 @@ export type ListDueOpts = {
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
 
   // Paginate to work around Supabase's server-side 1000-row cap
   function buildQ() {
-    let q = supabase.from('ind_flashcards').select(SEL)
+    let q = supabase.from('ind_flashcards').select(CARD_SEL)
       .is('suspended_at', null)
       // advance mode: rep>=2 (exclude freshly-graduated New cards); normal: rep>=1
       .gt('repetitions', opts.advanceUntil ? 1 : 0)
@@ -279,17 +258,7 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     return q
   }
 
-  const PAGE = 1000
-  const pages: FlashcardWithItem[] = []
-  let from = 0
-  while (true) {
-    const { data, error } = await buildQ().range(from, from + PAGE - 1)
-    if (error) { console.error('listDueFlashcards:', error); break }
-    if (data?.length) pages.push(...(data as FlashcardWithItem[]))
-    if (!data?.length || data.length < PAGE) break
-    from += PAGE
-  }
-  let results = pages
+  let results = await paginate<FlashcardWithItem>(buildQ, 'listDueFlashcards')
 
   // Global exclusions (Review all)
   if (opts.excludeLangs?.length)
@@ -346,24 +315,10 @@ export async function listLearnFlashcards(): Promise<FlashcardWithItem[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
-
-  const PAGE = 1000
-  const pages: FlashcardWithItem[] = []
-  let from = 0
-  while (true) {
-    const { data, error } = await supabase
-      .from('ind_flashcards')
-      .select(SEL)
-      .eq('user_id', user.id)
-      .eq('repetitions', 0)
-      .is('suspended_at', null)
-      .range(from, from + PAGE - 1)
-    if (error) { console.error('listLearnFlashcards:', error); break }
-    if (data?.length) pages.push(...(data as FlashcardWithItem[]))
-    if (!data?.length || data.length < PAGE) break
-    from += PAGE
-  }
+  const pages = await paginate<FlashcardWithItem>(
+    () => supabase.from('ind_flashcards').select(CARD_SEL).eq('user_id', user.id).eq('repetitions', 0).is('suspended_at', null),
+    'listLearnFlashcards',
+  )
 
   if (!pages.length) return []
 
@@ -452,13 +407,10 @@ export async function resetCollectionSRS(collectionId: string): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  const PAGE = 1000; const ids: string[] = []; let from = 0
-  while (true) {
-    const { data: page } = await supabase.from('ind_items').select('id').eq('collection_id', collectionId).range(from, from + PAGE - 1)
-    if (page?.length) ids.push(...page.map((r: { id: string }) => r.id))
-    if (!page?.length || page.length < PAGE) break
-    from += PAGE
-  }
+  const rows = await paginate<{ id: string }>(
+    () => supabase.from('ind_items').select('id').eq('collection_id', collectionId),
+  )
+  const ids = rows.map(r => r.id)
   if (!ids.length) return
   await wipeReviewsAndReset(supabase, user.id, ids)
 }
@@ -467,13 +419,10 @@ export async function resetCapturesSRS(): Promise<void> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  const PAGE = 1000; const ids: string[] = []; let from = 0
-  while (true) {
-    const { data: page } = await supabase.from('ind_items').select('id').eq('user_id', user.id).neq('note_source', 'collection').range(from, from + PAGE - 1)
-    if (page?.length) ids.push(...page.map((r: { id: string }) => r.id))
-    if (!page?.length || page.length < PAGE) break
-    from += PAGE
-  }
+  const rows = await paginate<{ id: string }>(
+    () => supabase.from('ind_items').select('id').eq('user_id', user.id).neq('note_source', 'collection'),
+  )
+  const ids = rows.map(r => r.id)
   if (!ids.length) return
   await wipeReviewsAndReset(supabase, user.id, ids)
 }
