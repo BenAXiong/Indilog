@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   // /import is public — hash fragment is client-side and must be read before any redirect
-  const isPublic = pathname.startsWith('/login') || pathname.startsWith('/auth') || pathname === '/import'
+  const isPublic = pathname.startsWith('/login') || pathname.startsWith('/auth') || pathname.startsWith('/import')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
