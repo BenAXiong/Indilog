@@ -40,7 +40,7 @@ export default function NewCollectionPage() {
     setSaving(true)
     const id = await saveCollection(name.trim(), langCode, levels)
     setSaving(false)
-    if (id) { router.push('/learn') }
+    if (id) { router.push('/study') }
     else     { setError('Failed to save. Please try again.') }
   }
 
@@ -59,7 +59,7 @@ export default function NewCollectionPage() {
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4, marginBottom: 24 }}>
-        <Link href="/learn" style={{
+        <Link href="/study" style={{
           width: 34, height: 34, borderRadius: 999, flexShrink: 0,
           background: T.paperHi, border: `1px solid ${T.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',

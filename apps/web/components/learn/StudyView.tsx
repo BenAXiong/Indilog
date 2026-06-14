@@ -329,7 +329,7 @@ export default function StudyView({ source }: Props) {
         backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
         zIndex: 20,
       }}>
-        <Link href="/learn" style={{
+        <Link href="/study" style={{
           width: 34, height: 34, borderRadius: 999, flexShrink: 0,
           background: T.paperHi, border: `1px solid ${T.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',

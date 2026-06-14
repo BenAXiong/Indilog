@@ -165,7 +165,7 @@ export default function DualRingCard({
           </div>
           <RingWithCount pct={learnPct} color={T.sage} count={learnedToday} target={learnTarget} />
           {learnedToday < learnTarget && newCount > 0 ? (
-            <Link href={`/learn-session?start=1&n=${learnN}`} style={{
+            <Link href={`/learn?start=1&n=${learnN}`} style={{
               width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
               background: T.sage, color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -176,7 +176,7 @@ export default function DualRingCard({
               Learn {learnN}
             </Link>
           ) : learnedToday >= learnTarget && newCount > 0 ? (
-            <Link href={`/learn-session?n=${learnMoreN}`} style={{
+            <Link href={`/learn?n=${learnMoreN}`} style={{
               width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
               background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',

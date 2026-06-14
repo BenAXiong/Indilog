@@ -374,11 +374,11 @@ function StatsLoading() {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] = [
-  { id: 'lessons',  name: 'Lessons',  icon: 'learn',  href: '/learn/lessons'   },
-  { id: 'patterns', name: 'Patterns', icon: 'layers', href: '/learn/patterns'  },
-  { id: 'essays',         name: 'Essays',         icon: 'pen',    href: '/learn/essays'         },
-  { id: 'dialogues',      name: 'Dialogues',      icon: 'wave',   href: '/learn/dialogues'      },
-  { id: 'conversations',  name: 'Conversations',  icon: 'mic',    href: '/learn/conversations'  },
+  { id: 'lessons',  name: 'Lessons',  icon: 'learn',  href: '/study/lessons'   },
+  { id: 'patterns', name: 'Patterns', icon: 'layers', href: '/study/patterns'  },
+  { id: 'essays',         name: 'Essays',         icon: 'pen',    href: '/study/essays'         },
+  { id: 'dialogues',      name: 'Dialogues',      icon: 'wave',   href: '/study/dialogues'      },
+  { id: 'conversations',  name: 'Conversations',  icon: 'mic',    href: '/study/conversations'  },
 ]
 
 const SUBTABS = [
@@ -663,7 +663,7 @@ export default function StudyPage() {
                 <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>My collections</span>
                 <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.collections ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
               </button>
-              <Link href="/learn/new" aria-label="Import collection" style={{
+              <Link href="/study/new" aria-label="Import collection" style={{
                 width: 22, height: 22, borderRadius: 999,
                 border: `1.5px solid ${T.lineSoft}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -688,7 +688,7 @@ export default function StudyPage() {
                       name={col.name}
                       sub={`${col.card_count} cards`}
                       due={due.byCollection[col.id] ?? 0}
-                      href={`/learn/collection/${col.id}`}
+                      href={`/study/collection/${col.id}`}
                       pinned={col.pinned}
                       onPin={() => handlePinInline(col.id, !col.pinned)}
                       kebab
