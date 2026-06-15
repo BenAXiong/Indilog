@@ -236,17 +236,22 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ## Milestone 8 — Video cards
 
-> Design contract: ?
+> Design contract: DEC-M8-01
 
 - [x] Scripted deck creation from ILRDF-scrape videos
 - [x] Video page: new subtab in Study tab with filtered decks browser
 - [x] Video page: preview mode for video cards with susp & flags & prev/next controls
 - [x] Video cards: merge cards, auto-reveal toggle, zh toggle & future gloss toggle
-- [ ] 
-- [ ] 
-- [ ] 
+- [x] Video cards: gloss toggle
+- [x] Video cards: definition on tap
 - [x] Desktop layout fix
+- [x] ADR — DEC-M8-01
+- [x] Clip compression — H.264 CRF 42 re-encode + upsert (426 MB → 49 MB); pipeline updated (`gen_ilrdf_cards.py`)
+- [ ] Lite decks — screenshot + audio only; `gen_ilrdf_cards.py --lite`; VideoPage mode switcher (full/lite/audio) (see DEC-M8-01 §6)
 
+> MT?
+> standalone SPA from ILRDF
+> titv and other: pre-made ocr timestamps
 ---
 
 ## Milestone 9 — Tests and fixes

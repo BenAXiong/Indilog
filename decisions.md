@@ -28,6 +28,7 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-M4-01](docs/adr/DEC-M4-01-sources-schema-type-taxonomy.md) | Sources db — schema, type taxonomy, FK consolidation | accepted |
 | [DEC-M6-01](docs/adr/DEC-M6-01-ilrdf-mt-tts-endpoints.md) | ILRDF AI Labs MT + TTS endpoints | accepted |
 | [DEC-M7-01](docs/adr/DEC-M7-01-extension-import-format.md) | Chrome Extension Import — format, mechanism, dedup | accepted |
+| [DEC-M8-01](docs/adr/DEC-M8-01-video-cards-pipeline.md) | Video cards — pipeline, storage schema, player, planned extensions | accepted |
 | [DEC-NOTE01](docs/adr/DEC-NOTE01-canonical-srs-terminology.md) | Canonical SRS terminology | accepted |
 | [DEC-NOTE02](docs/adr/DEC-NOTE02-note-unification-deferred.md) | Note unification — T-UNIFY | resolved |
 | [DEC-NOTE03](docs/adr/DEC-NOTE03-metadata-jsonb-card-templates.md) | `metadata jsonb` on `ind_flashcards` | superseded by DEC-SRS06 |
