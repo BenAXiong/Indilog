@@ -441,6 +441,13 @@ export default function VideoPage() {
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden',
     }}>
+    {/* Width-constrained center column */}
+    <div style={{
+      flex: 1, minHeight: 0, width: '100%',
+      maxWidth: 720, margin: '0 auto',
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
 
       {/* ── Header: back · title · deck selector · counter · controls ── */}
       <div style={{
@@ -624,6 +631,7 @@ export default function VideoPage() {
         </div>
       )}
 
+    </div>
     </div>
   )
 }

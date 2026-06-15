@@ -15,7 +15,7 @@ export default function MainLayout({ children }: Readonly<{ children: React.Reac
             <DesktopSidebar />
           </div>
           <main className="relative min-h-screen overflow-x-hidden">
-            <div className="pb-32 lg:pb-10 scrollbar-hide">
+            <div className="pb-32 lg:pb-10 scrollbar-hide lg:max-w-[640px] lg:mx-auto">
               {children}
             </div>
             <BottomNav />
