@@ -72,16 +72,22 @@ export async function listBrowserCards(
   // (potentially 1000+) never crowd out captured notes within the same page window
   const [capturedRows, collectionRows] = await Promise.all([
     paginate<any>(
-      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).neq('note_source', 'collection').order('created_at', { ascending: false })),
+      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).neq('note_source', 'collection').order('created_at', { ascending: false }).order('id', { ascending: true })),
       'listBrowserCards:captured',
     ),
     paginate<any>(
-      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false })),
+      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false }).order('id', { ascending: true })),
       'listBrowserCards:collection',
     ),
   ])
 
-  const data = [...capturedRows, ...collectionRows]
+  // Dedup defensively in case created_at ties still produce overlap at page boundaries
+  const seen = new Set<string>()
+  const data = [...capturedRows, ...collectionRows].filter(r => {
+    if (seen.has(r.id)) return false
+    seen.add(r.id)
+    return true
+  })
   if (!data.length) return []
 
   type CardJoin = {
