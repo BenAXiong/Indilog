@@ -82,6 +82,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   const [showPreview,    setShowPreview]    = useState(false)
   const [previewRevealed, setPreviewRevealed] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
@@ -535,11 +536,19 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
             )}
             {card.video_clip && (
               <video
+                ref={videoRef}
                 src={card.video_clip}
                 autoPlay
                 muted
                 playsInline
-                style={{ width: '100%', borderRadius: 12, maxHeight: 280, background: '#000' }}
+                onClick={() => {
+                  const v = videoRef.current
+                  const a = audioRef.current
+                  if (!v) return
+                  if (v.paused) { v.play(); a?.play() }
+                  else          { v.pause(); a?.pause() }
+                }}
+                style={{ width: '100%', borderRadius: 12, maxHeight: 280, background: '#000', cursor: 'pointer' }}
               />
             )}
           </div>
