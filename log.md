@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-15 | FIX | Video deck sort order: stagger created_at by seg_n per ilrdf_id group (DB migration); fix gen_ilrdf_cards.py to use NOW() + N*1ms per card so future imports preserve clip order |
 | 2026-06-15 | FEATURE | Add /video page — full-screen card previewer for video decks: deck selector chips, position counter, SessionCard-shell replica (same border-radius/shadow/flag/suspend), always-reveal toggle (on by default), sequential multi-segment video+audio playback, tap-to-pause sync, merge feature (±3-card strip, preview before commit, combine writes merged card to DB and soft-deletes originals via metadata.merged_into) |
 | 2026-06-15 | FEATURE | BrowserView preview sheet: lift preview state to parent for cross-card prev/next navigation; sync separate audio file with muted autoplay video; hide audio button when video_clip present; card-icon trigger on collapsed row |
 | 2026-06-15 | FIX | Exclude suspended cards from getDeckRootedStats and getDeckMasteryStats queries |
