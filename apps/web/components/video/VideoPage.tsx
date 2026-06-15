@@ -849,11 +849,6 @@ export default function VideoPage({
               <div className="animate-iv-shimmer" style={{ height: 380, borderRadius: 22, background: T.lineSoft }} />
             ) : activeCard ? (
               <>
-                {!previewCard && cards.length > 0 && (
-                  <div style={{ textAlign: 'right', fontSize: 11, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', paddingBottom: 6 }}>
-                    {currentIndex + 1} / {cards.length}
-                  </div>
-                )}
                 <VideoCardDisplay
                   card={activeCard}
                   alwaysRevealed={alwaysRevealed}
@@ -897,6 +892,7 @@ export default function VideoPage({
               flexShrink: 0,
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '0 18px 16px', justifyContent: 'center',
+              position: 'relative',
             }}>
               <button disabled={!hasPrev} onClick={() => goTo(currentIndex - 1)} style={navBtn(hasPrev)}>
                 <Icon name="arrow-l" size={18} strokeWidth={1.8} />
@@ -918,6 +914,15 @@ export default function VideoPage({
               <button disabled={!hasNext} onClick={() => goTo(currentIndex + 1)} style={navBtn(hasNext)}>
                 <Icon name="arrow-r" size={18} strokeWidth={1.8} />
               </button>
+              {!previewCard && (
+                <span style={{
+                  position: 'absolute', right: 18, bottom: 22,
+                  fontSize: 11, color: T.inkFaint,
+                  fontFamily: '"JetBrains Mono", monospace',
+                }}>
+                  {currentIndex + 1} / {cards.length}
+                </span>
+              )}
             </div>
           )}
 
