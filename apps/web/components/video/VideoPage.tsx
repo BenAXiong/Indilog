@@ -13,6 +13,25 @@ import {
   type VideoCard, type VideoCollection,
 } from '@/lib/db/video/queries'
 
+// ─── Gloss helpers ────────────────────────────────────────────────────────────────────────
+
+function tokenizeAmis(text: string): Array<{ display: string; key: string }> {
+  return text.split(/\s+/).filter(Boolean).map(raw => ({
+    display: raw,
+    key: raw.toLowerCase()
+      .replace(/^[.,;:!?()\[\]\u201C\u201D\u2018\u2019]+|[.,;:!?()\[\]\u201C\u201D\u2018\u2019]+$/g, '')
+      .replace(/[\u2018\u2019\u02BC\uA78C]/g, "'"),
+  })).filter(t => t.key.length > 0)
+}
+
+function shortGloss(wordCh: string): string {
+  const first = (wordCh.split(' \u00B7 ')[0] ?? '')
+    .replace(/\uFF08[^\uFF09]*\uFF09|\([^)]*\)/g, '')
+    .trim()
+  const chars = [...first]
+  return chars.length <= 5 ? first : chars.slice(0, 4).join('') + '\u2026'
+}
+
 // ─── Card shell ───────────────────────────────────────────────────────────────
 
 function VideoCardDisplay({
@@ -30,6 +49,9 @@ function VideoCardDisplay({
   onFlagToggle,
   onFlagSelect,
   isPreview,
+  glossMode,
+  glosses,
+  glossLoading,
 }: {
   card: VideoCard
   alwaysRevealed: boolean
@@ -45,6 +67,9 @@ function VideoCardDisplay({
   onFlagToggle: () => void
   onFlagSelect: (c: string | null) => void
   isPreview?: boolean
+  glossMode: boolean
+  glosses: Record<string, string>
+  glossLoading: boolean
 }) {
   const flagHex = flagColorHex(card.flag_color)
   const showBack = alwaysRevealed || revealed
@@ -115,13 +140,34 @@ function VideoCardDisplay({
 
       {/* Front — ab */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 16 }}>
-        <div style={{
-          fontFamily: 'Newsreader, Georgia, serif',
-          fontSize: 28, fontWeight: 500, color: T.ink,
-          letterSpacing: '-0.02em', lineHeight: 1.25,
-        }}>
-          {card.ab}
-        </div>
+        {glossMode ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 14px', justifyContent: 'center' }}>
+            {tokenizeAmis(card.ab).map((tok, i) => (
+              <span key={i} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <span style={{
+                  fontFamily: 'Newsreader, Georgia, serif',
+                  fontSize: 26, fontWeight: 500, color: T.ink,
+                  letterSpacing: '-0.02em', lineHeight: 1.2,
+                }}>{tok.display}</span>
+                <span style={{
+                  fontSize: 9, color: T.inkMute,
+                  fontFamily: '"JetBrains Mono", monospace',
+                  letterSpacing: '0.03em', lineHeight: 1,
+                }}>
+                  {glossLoading ? '...' : (glosses[tok.key] ?? (tok.key.length < 3 ? tok.key : '?'))}
+                </span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            fontFamily: 'Newsreader, Georgia, serif',
+            fontSize: 28, fontWeight: 500, color: T.ink,
+            letterSpacing: '-0.02em', lineHeight: 1.25,
+          }}>
+            {card.ab}
+          </div>
+        )}
       </div>
 
       {/* Divider */}
@@ -250,6 +296,12 @@ export default function VideoPage() {
   // Flag
   const [showFlagPicker, setShowFlagPicker] = useState(false)
 
+  // Gloss
+  const [glossMode,    setGlossMode]    = useState(false)
+  const [glosses,      setGlosses]      = useState<Record<string, string>>({})
+  const [glossLoading, setGlossLoading] = useState(false)
+  const glossCache = useRef(new Map<string, string>())
+
   // Video / audio refs
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -309,6 +361,33 @@ export default function VideoPage() {
     a.play().catch(() => {})
     audioRef.current = a
   }, [activeCard?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Gloss fetch ──
+  useEffect(() => {
+    if (!glossMode || !activeCard) return
+    setGlosses({})
+    const allTokens = tokenizeAmis(activeCard.ab)
+    const toFetch = allTokens.filter(t => t.key.length >= 3 && !glossCache.current.has(t.key))
+    const applyCache = () => {
+      const out: Record<string, string> = {}
+      for (const t of allTokens)
+        out[t.key] = t.key.length < 3 ? t.key : (glossCache.current.get(t.key) ?? '?')
+      setGlosses(out)
+    }
+    if (toFetch.length === 0) { applyCache(); return }
+    setGlossLoading(true)
+    Promise.all(toFetch.map(async ({ key }) => {
+      try {
+        const res = await fetch(`/api/dict/search?q=${encodeURIComponent(key)}&moe=1`)
+        const data = await res.json()
+        const words: Array<{ word_ch: string; exact: boolean }> = data.words ?? []
+        const match = words.find(w => w.exact) ?? words[0]
+        glossCache.current.set(key, match ? shortGloss(match.word_ch) : '?')
+      } catch {
+        glossCache.current.set(key, '?')
+      }
+    })).then(() => { applyCache(); setGlossLoading(false) })
+  }, [glossMode, activeCard?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Video segment ended → advance both ──
   function handleVideoEnded() {
@@ -473,17 +552,16 @@ export default function VideoPage() {
             letterSpacing: '-0.02em', lineHeight: 1.1, flex: 1,
           }}>Video Decks</span>
 
-          {/* Magnifier — WIP */}
-          <div title="WIP: display ab gloss annotations">
-            <button disabled style={{
-              width: 34, height: 34, borderRadius: 10,
-              border: `1px solid ${T.lineSoft}`, background: T.paperHi,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: T.inkFaint, cursor: 'not-allowed', opacity: 0.4,
-            }}>
-              <Icon name="search" size={14} strokeWidth={1.8} />
-            </button>
-          </div>
+          {/* Magnifier — gloss mode */}
+          <button onClick={() => setGlossMode(v => !v)} style={{
+            width: 34, height: 34, borderRadius: 10,
+            border: `1px solid ${glossMode ? T.ink : T.lineSoft}`,
+            background: glossMode ? T.ink : T.paperHi,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
+          }}>
+            <Icon name="search" size={14} strokeWidth={1.8} />
+          </button>
 
           {/* Always-reveal toggle */}
           <button onClick={() => setAlwaysRevealed(v => !v)} style={{
@@ -570,6 +648,9 @@ export default function VideoPage() {
                 onFlagToggle={() => setShowFlagPicker(v => !v)}
                 onFlagSelect={handleFlagSelect}
                 isPreview={!!previewCard}
+                glossMode={glossMode}
+                glosses={glosses}
+                glossLoading={glossLoading}
               />
             ) : (
               <div style={{ textAlign: 'center', color: T.inkMute, fontSize: 14 }}>

@@ -23,8 +23,8 @@ export function FlagPicker({
       style={{
         position: 'absolute', top: 10,
         ...(side === 'right' ? { right: 12 } : { left: 12 }),
-        display: 'flex', flexDirection: 'column',
-        alignItems: side === 'right' ? 'flex-end' : 'flex-start',
+        display: 'flex', flexDirection: expandDir === 'row' ? 'row' : 'column',
+        alignItems: expandDir === 'row' ? 'center' : (side === 'right' ? 'flex-end' : 'flex-start'),
         gap: 4,
       }}
       onClick={e => e.stopPropagation()}

@@ -234,7 +234,22 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ---
 
-## Milestone 8 — Tests and fixes
+## Milestone 8 — Video cards
+
+> Design contract: ?
+
+- [x] Scripted deck creation from ILRDF-scrape videos
+- [x] Video page: new subtab in Study tab with filtered decks browser
+- [x] Video page: preview mode for video cards with susp & flags & prev/next controls
+- [x] Video cards: merge cards, auto-reveal toggle, zh toggle & future gloss toggle
+- [ ] 
+- [ ] 
+- [ ] 
+- [x] Desktop layout fix
+
+---
+
+## Milestone 9 — Tests and fixes
 
 - [x] FIX: grmpts audio still not playing — pre-existing, investigate correct URL pattern
 - [x] FIX: sentences cannot be unbookmarked — investigate handleSave / saved state reset
@@ -244,6 +259,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] FIX: dict sentence could be re-saved indefinitely — block duplicates, show amber warning toast
 - [ ] FIX: duplicate captures from dict
 
+- [ ] Improve latency (eg batch supa calls)
 - [ ] Desktop usability pass
 - [ ] Error states (API failures, auth errors)
 - [ ] Basic accessibility pass (focus order, ARIA labels)
