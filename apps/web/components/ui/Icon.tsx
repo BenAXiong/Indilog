@@ -11,6 +11,7 @@ export type IconName =
   | 'rotate-ccw' | 'skip-fwd' | 'pause'
   | 'flag' | 'flagF'
   | 'info'
+  | 'film'
 
 type IconProps = {
   name: IconName
@@ -86,6 +87,7 @@ const ICONS: Record<IconName, (p: SVGProps) => ReactNode> = {
   'flag':       p => S(p, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   'flagF':      p => S({ ...p, fill: p.stroke }, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   'info':       p => S(p, <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>),
+  'film':       p => S(p, <><rect x="2" y="7" width="13" height="10" rx="2"/><path d="M15 10l5-3v10l-5-3V10z"/></>),
 }
 
 export default function Icon({ name, size = 22, color = 'currentColor', strokeWidth = 1.6, style, className }: IconProps) {

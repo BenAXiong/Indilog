@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { FlagPicker } from '@/components/study/FlagPicker'
+import BrowserView from '@/components/study/BrowserView'
 import { flagColorHex } from '@/lib/db/srs/flags'
 import {
   listVideoCollections, listCollectionVideoCards, mergeVideoCards,
@@ -58,8 +59,18 @@ function VideoCardDisplay({
       display: 'flex', flexDirection: 'column',
       boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
     }}>
-      {/* Suspend — top left */}
-      <div style={{ position: 'absolute', top: 10, left: 12 }} onClick={e => e.stopPropagation()}>
+      {/* Flag — top left, expands right */}
+      <FlagPicker
+        currentFlag={card.flag_color}
+        showPicker={showFlagPicker}
+        onToggle={onFlagToggle}
+        onSelect={onFlagSelect}
+        side="left"
+        expandDir="row"
+      />
+
+      {/* Suspend — top right */}
+      <div style={{ position: 'absolute', top: 10, right: 12 }} onClick={e => e.stopPropagation()}>
         <button onClick={onSuspend} aria-label="Suspend" style={{
           width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -68,14 +79,6 @@ function VideoCardDisplay({
           <Icon name="pause" size={15} strokeWidth={1.8} />
         </button>
       </div>
-
-      {/* Flag picker — top right */}
-      <FlagPicker
-        currentFlag={card.flag_color}
-        showPicker={showFlagPicker}
-        onToggle={onFlagToggle}
-        onSelect={onFlagSelect}
-      />
 
       {/* Preview badge */}
       {isPreview && (
@@ -89,9 +92,14 @@ function VideoCardDisplay({
         </div>
       )}
 
-      {/* Video */}
-      {videoSegs.length > 0 && (
-        <div style={{ borderRadius: 14, overflow: 'hidden', marginTop: 22, marginBottom: 18 }}>
+      {/* Video — aspect-ratio box prevents wiggle while loading */}
+      <div style={{
+        borderRadius: 14, overflow: 'hidden',
+        marginTop: 22, marginBottom: 18,
+        aspectRatio: '16/9', background: '#000',
+        display: videoSegs.length > 0 ? 'block' : 'none',
+      }}>
+        {videoSegs.length > 0 && (
           <video
             ref={videoRef as React.RefObject<HTMLVideoElement>}
             key={`${card.id}-${vidSegIdx}`}
@@ -101,10 +109,10 @@ function VideoCardDisplay({
             playsInline
             onEnded={onVideoEnded}
             onClick={onVideoTap}
-            style={{ width: '100%', maxHeight: 240, background: '#000', cursor: 'pointer', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Front — ab */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 16 }}>
@@ -133,12 +141,9 @@ function VideoCardDisplay({
         ) : (
           <button onClick={onReveal} style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 11, fontWeight: 600, color: T.inkMute,
-            letterSpacing: '0.08em', textTransform: 'uppercase', padding: '8px 16px',
-          }}>
-            Reveal
-          </button>
+            fontSize: 20, fontWeight: 600, color: T.inkMute,
+            padding: '8px 16px',
+          }}>中</button>
         )}
       </div>
     </div>
@@ -227,7 +232,7 @@ function MergeStrip({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function VideoPage() {
+export default function VideoPage({ embedded = false }: { embedded?: boolean }) {
   const [collections,    setCollections]    = useState<VideoCollection[]>([])
   const [collectionId,   setCollectionId]   = useState<string | null>(null)
   const [cards,          setCards]          = useState<VideoCard[]>([])
@@ -235,6 +240,7 @@ export default function VideoPage() {
   const [loading,        setLoading]        = useState(false)
   const [alwaysRevealed, setAlwaysRevealed] = useState(true)
   const [revealed,       setRevealed]       = useState(false)
+  const [viewMode,       setViewMode]       = useState<'video' | 'list'>('video')
 
   // Merge
   const [mergeMode,   setMergeMode]   = useState(false)
@@ -256,6 +262,12 @@ export default function VideoPage() {
     ?? (activeCard?.metadata?.video_clip ? [activeCard.metadata.video_clip] : [])
   const audioSegs = activeCard?.metadata?.audio_segments
     ?? (activeCard?.audio ? [activeCard.audio] : [])
+
+  // ── Hide bottom nav while this page is mounted ──
+  useEffect(() => {
+    window.dispatchEvent(new Event('videomodeenter'))
+    return () => { window.dispatchEvent(new Event('videomodeleave')) }
+  }, [])
 
   // ── Load collections on mount ──
   useEffect(() => {
@@ -407,7 +419,6 @@ export default function VideoPage() {
     }
   }
 
-  // ── Styles ──
   const navBtn = (enabled: boolean): React.CSSProperties => ({
     width: 48, height: 48, borderRadius: 999,
     border: `1px solid ${T.line}`, background: T.paperHi,
@@ -420,124 +431,180 @@ export default function VideoPage() {
   const hasNext = currentIndex < cards.length - 1
 
   return (
-    <div style={{ paddingBottom: 110, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 24 }}>
 
-      {/* Header */}
-      <div style={{ padding: '8px 18px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link href="/study" style={{
-          width: 34, height: 34, borderRadius: 999,
-          border: `1px solid ${T.lineSoft}`, background: T.paperHi,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: T.inkSoft, textDecoration: 'none', flexShrink: 0,
+      {/* Back button + title — standalone only */}
+      {!embedded && (
+        <div style={{ padding: '8px 18px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link href="/study" style={{
+            width: 34, height: 34, borderRadius: 999,
+            border: `1px solid ${T.lineSoft}`, background: T.paperHi,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: T.inkSoft, textDecoration: 'none', flexShrink: 0,
+          }}>
+            <Icon name="arrow-l" size={16} strokeWidth={1.8} />
+          </Link>
+          <h1 style={{
+            fontFamily: 'Newsreader, Georgia, serif',
+            fontSize: 26, fontWeight: 500, color: T.ink,
+            letterSpacing: '-0.025em', lineHeight: 1.1, flex: 1, margin: 0,
+          }}>Video Decks</h1>
+        </div>
+      )}
+
+      {/* Deck selector + counter */}
+      <div style={{ padding: '14px 18px 0', display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <select
+            value={collectionId ?? ''}
+            onChange={e => setCollectionId(e.target.value || null)}
+            disabled={collections.length === 0}
+            style={{
+              width: '100%', height: 36, borderRadius: 10,
+              border: `1px solid ${T.lineSoft}`, background: T.paperHi,
+              color: T.ink, fontSize: 14, fontWeight: 500,
+              fontFamily: 'Newsreader, Georgia, serif',
+              paddingLeft: 12, paddingRight: 30,
+              appearance: 'none', cursor: 'pointer', outline: 'none',
+            }}
+          >
+            {collections.length === 0
+              ? <option value="">No video decks</option>
+              : collections.map(col => <option key={col.id} value={col.id}>{col.name}</option>)
+            }
+          </select>
+          <div style={{
+            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+            pointerEvents: 'none', color: T.inkMute,
+          }}>
+            <Icon name="chev-d" size={13} />
+          </div>
+        </div>
+        <span style={{
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: T.inkMute,
+          flexShrink: 0, minWidth: 48, textAlign: 'right',
         }}>
-          <Icon name="arrow-l" size={16} strokeWidth={1.8} />
-        </Link>
-        <h1 style={{
-          fontFamily: 'Newsreader, Georgia, serif',
-          fontSize: 26, fontWeight: 500, color: T.ink,
-          letterSpacing: '-0.025em', lineHeight: 1.1, flex: 1,
-        }}>Video Decks</h1>
+          {loading ? '…' : cards.length === 0 ? '—' : `${currentIndex + 1} / ${cards.length}`}
+        </span>
+      </div>
+
+      {/* Control bar: [magnifier WIP] [中 always-reveal] [layout toggle] */}
+      <div style={{ padding: '10px 18px 0', display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+        {/* Magnifier — WIP */}
+        <div title="WIP: display ab gloss annotations">
+          <button disabled style={{
+            width: 36, height: 36, borderRadius: 10,
+            border: `1px solid ${T.lineSoft}`, background: T.paperHi,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: T.inkFaint, cursor: 'not-allowed', opacity: 0.4,
+          }}>
+            <Icon name="search" size={15} strokeWidth={1.8} />
+          </button>
+        </div>
 
         {/* Always-reveal toggle */}
         <button onClick={() => setAlwaysRevealed(v => !v)} style={{
-          height: 30, padding: '0 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+          height: 36, padding: '0 18px', borderRadius: 10,
           border: `1px solid ${alwaysRevealed ? T.ink : T.lineSoft}`,
           background: alwaysRevealed ? T.ink : T.paperHi,
           color: alwaysRevealed ? T.cream : T.inkMute,
-          cursor: 'pointer', fontFamily: '"JetBrains Mono", monospace',
-          letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0,
-        }}>Reveal</button>
+          cursor: 'pointer', fontSize: 17, fontWeight: 600,
+          lineHeight: 1,
+        }}>中</button>
+
+        {/* Layout toggle: film = video mode, word = list mode */}
+        <button onClick={() => setViewMode(v => v === 'video' ? 'list' : 'video')} style={{
+          width: 36, height: 36, borderRadius: 10,
+          border: `1px solid ${viewMode === 'list' ? T.ink : T.lineSoft}`,
+          background: viewMode === 'list' ? T.ink : T.paperHi,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+          color: viewMode === 'list' ? T.cream : T.inkSoft,
+        }}>
+          <Icon name={viewMode === 'video' ? 'film' : 'word'} size={15} strokeWidth={1.8} />
+        </button>
       </div>
 
-      {/* Collection chips */}
-      {collections.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '14px 18px 0' }}>
-          {collections.map(col => {
-            const active = col.id === collectionId
-            return (
-              <button key={col.id} onClick={() => setCollectionId(col.id)} style={{
-                flexShrink: 0, height: 30, padding: '0 12px', borderRadius: 999,
-                border: `1px solid ${active ? T.ink : T.lineSoft}`,
-                background: active ? T.ink : T.paperHi,
-                color: active ? T.cream : T.inkSoft,
-                fontSize: 12, fontWeight: 500, cursor: 'pointer',
-              }}>{col.name}</button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Counter */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '12px 18px 0',
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: T.inkMute,
-      }}>
-        {loading ? '…' : cards.length === 0 ? 'No video cards' : `${currentIndex + 1} / ${cards.length}`}
-      </div>
-
-      {/* Card */}
-      <div style={{ padding: '12px 18px 0' }}>
-        {loading ? (
-          <div className="animate-iv-shimmer" style={{ height: 360, borderRadius: 22, background: T.lineSoft }} />
-        ) : activeCard ? (
-          <VideoCardDisplay
-            card={activeCard}
-            alwaysRevealed={alwaysRevealed}
-            revealed={revealed}
-            onReveal={() => setRevealed(true)}
-            videoRef={videoRef}
-            videoSegs={videoSegs as string[]}
-            vidSegIdx={vidSegIdx}
-            onVideoEnded={handleVideoEnded}
-            onVideoTap={handleVideoTap}
-            onSuspend={handleSuspend}
-            showFlagPicker={showFlagPicker}
-            onFlagToggle={() => setShowFlagPicker(v => !v)}
-            onFlagSelect={handleFlagSelect}
-            isPreview={!!previewCard}
-          />
-        ) : (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: T.inkMute, fontSize: 14 }}>
-            {collectionId ? 'No video cards in this deck.' : 'Select a deck above.'}
-          </div>
-        )}
-      </div>
-
-      {/* Nav row */}
-      {!loading && cards.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px 0', justifyContent: 'center' }}>
-          <button disabled={!hasPrev} onClick={() => goTo(currentIndex - 1)} style={navBtn(hasPrev)}>
-            <Icon name="arrow-l" size={18} strokeWidth={1.8} />
-          </button>
-          <button onClick={mergeMode ? () => { setMergeMode(false); setMergeSel(new Set()); setPreviewCard(null) } : enterMerge} style={{
-            height: 48, padding: '0 20px', borderRadius: 999,
-            border: `1px solid ${mergeMode ? T.crimson : T.line}`,
-            background: mergeMode ? T.crimsonBg : T.paperHi,
-            color: mergeMode ? T.crimson : T.inkSoft,
-            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+      {/* ── Video mode ── */}
+      {viewMode === 'video' && (
+        <>
+          {/* Card area — vertically centered */}
+          <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            padding: '12px 18px 0', minHeight: 480,
           }}>
-            {mergeMode ? 'Cancel merge' : 'Merge'}
-          </button>
-          <button disabled={!hasNext} onClick={() => goTo(currentIndex + 1)} style={navBtn(hasNext)}>
-            <Icon name="arrow-r" size={18} strokeWidth={1.8} />
-          </button>
-        </div>
+            {loading ? (
+              <div className="animate-iv-shimmer" style={{ height: 400, borderRadius: 22, background: T.lineSoft }} />
+            ) : activeCard ? (
+              <VideoCardDisplay
+                card={activeCard}
+                alwaysRevealed={alwaysRevealed}
+                revealed={revealed}
+                onReveal={() => setRevealed(true)}
+                videoRef={videoRef}
+                videoSegs={videoSegs as string[]}
+                vidSegIdx={vidSegIdx}
+                onVideoEnded={handleVideoEnded}
+                onVideoTap={handleVideoTap}
+                onSuspend={handleSuspend}
+                showFlagPicker={showFlagPicker}
+                onFlagToggle={() => setShowFlagPicker(v => !v)}
+                onFlagSelect={handleFlagSelect}
+                isPreview={!!previewCard}
+              />
+            ) : (
+              <div style={{ padding: '60px 0', textAlign: 'center', color: T.inkMute, fontSize: 14 }}>
+                {collectionId ? 'No video cards in this deck.' : 'Select a deck above.'}
+              </div>
+            )}
+          </div>
+
+          {/* Nav row */}
+          {!loading && cards.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 18px 0', justifyContent: 'center' }}>
+              <button disabled={!hasPrev} onClick={() => goTo(currentIndex - 1)} style={navBtn(hasPrev)}>
+                <Icon name="arrow-l" size={18} strokeWidth={1.8} />
+              </button>
+              <button onClick={mergeMode
+                ? () => { setMergeMode(false); setMergeSel(new Set()); setPreviewCard(null) }
+                : enterMerge
+              } style={{
+                height: 48, padding: '0 20px', borderRadius: 999,
+                border: `1px solid ${mergeMode ? T.crimson : T.line}`,
+                background: mergeMode ? T.crimsonBg : T.paperHi,
+                color: mergeMode ? T.crimson : T.inkSoft,
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}>
+                {mergeMode ? 'Cancel merge' : 'Merge'}
+              </button>
+              <button disabled={!hasNext} onClick={() => goTo(currentIndex + 1)} style={navBtn(hasNext)}>
+                <Icon name="arrow-r" size={18} strokeWidth={1.8} />
+              </button>
+            </div>
+          )}
+
+          {/* Merge strip */}
+          {mergeMode && (
+            <div style={{ padding: '12px 18px 0' }}>
+              <MergeStrip
+                cards={cards}
+                currentIndex={currentIndex}
+                selection={mergeSel}
+                onToggle={toggleMergeSel}
+                onPreview={() => setPreviewCard(buildMergePreview())}
+                onCombine={handleCombine}
+                onCancel={() => { setMergeMode(false); setMergeSel(new Set()); setPreviewCard(null) }}
+                combining={combining}
+              />
+            </div>
+          )}
+        </>
       )}
 
-      {/* Merge strip */}
-      {mergeMode && (
-        <div style={{ padding: '12px 18px 0' }}>
-          <MergeStrip
-            cards={cards}
-            currentIndex={currentIndex}
-            selection={mergeSel}
-            onToggle={toggleMergeSel}
-            onPreview={() => setPreviewCard(buildMergePreview())}
-            onCombine={handleCombine}
-            onCancel={() => { setMergeMode(false); setMergeSel(new Set()); setPreviewCard(null) }}
-            combining={combining}
-          />
+      {/* ── List mode ── */}
+      {viewMode === 'list' && (
+        <div style={{ marginTop: 12 }}>
+          <BrowserView />
         </div>
       )}
 

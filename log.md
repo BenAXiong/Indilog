@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-15 | FEATURE | Add /video page — full-screen card previewer for video decks: deck selector chips, position counter, SessionCard-shell replica (same border-radius/shadow/flag/suspend), always-reveal toggle (on by default), sequential multi-segment video+audio playback, tap-to-pause sync, merge feature (±3-card strip, preview before commit, combine writes merged card to DB and soft-deletes originals via metadata.merged_into) |
+| 2026-06-15 | FEATURE | BrowserView preview sheet: lift preview state to parent for cross-card prev/next navigation; sync separate audio file with muted autoplay video; hide audio button when video_clip present; card-icon trigger on collapsed row |
 | 2026-06-15 | FIX | Exclude suspended cards from getDeckRootedStats and getDeckMasteryStats queries |
 | 2026-06-15 | FEATURE | BrowserView: move card Preview to bottom sheet — card-icon button on collapsed row opens fixed bottom sheet with ab, audio, video clip, and Reveal toggle for zh; removes inline preview from edit panel |
 | 2026-06-15 | FEATURE | BrowserView Preview panel: add video clip playback — metadata (video_clip) added to BrowserCard type and SELECT query; <video> element renders below audio button when card has a clip |

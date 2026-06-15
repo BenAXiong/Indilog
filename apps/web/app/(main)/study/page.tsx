@@ -14,6 +14,7 @@ import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
 import BrowserView from '@/components/study/BrowserView'
+import VideoPage from '@/components/video/VideoPage'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
 import CustomSessionSheet from '@/components/sheets/CustomSessionSheet'
 
@@ -385,6 +386,7 @@ const SUBTABS = [
   { id: 'decks'   as const, label: 'Decks'   },
   { id: 'browser' as const, label: 'Browser' },
   { id: 'stats'   as const, label: 'Stats'   },
+  { id: 'video'   as const, label: 'Video'   },
 ]
 
 const btnStyle: CSSProperties = {
@@ -398,7 +400,7 @@ const btnStyle: CSSProperties = {
 
 export default function StudyPage() {
   const { lang, dialect, dialectLabel } = useLang()
-  const [activeTab, setActiveTab] = useState<'decks' | 'browser' | 'stats'>('decks')
+  const [activeTab, setActiveTab] = useState<'decks' | 'browser' | 'stats' | 'video'>('decks')
   const [collections, setCollections]     = useState<CollectionMeta[]>([])
   const [due, setDue]                     = useState<DueStats>({ total: 0, captures: 0, byCollection: {} })
   const [loading, setLoading]             = useState(true)
@@ -663,17 +665,6 @@ export default function StudyPage() {
                 <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>My collections</span>
                 <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.collections ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
               </button>
-              <Link href="/video" style={{
-                height: 26, padding: '0 10px', borderRadius: 999, fontSize: 10.5,
-                fontFamily: '"JetBrains Mono", monospace', fontWeight: 600,
-                letterSpacing: '0.04em', textTransform: 'uppercase',
-                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                color: T.inkMute, textDecoration: 'none',
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}>
-                <Icon name="play" size={10} color={T.inkMute} />
-                Video
-              </Link>
               <Link href="/study/new" aria-label="Import collection" style={{
                 width: 22, height: 22, borderRadius: 999,
                 border: `1.5px solid ${T.lineSoft}`,
@@ -725,6 +716,8 @@ export default function StudyPage() {
           : <StudyStatsView stats={studyStats} />
       )}
 
+      {/* ── Video ── */}
+      {activeTab === 'video' && <VideoPage embedded />}
 
       <CustomSessionSheet open={customOpen} onClose={() => setCustomOpen(false)} />
 

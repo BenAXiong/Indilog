@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 
@@ -18,6 +18,18 @@ export default function BottomNav() {
   const pathname = usePathname()
   const router   = useRouter()
   const swipeRef = useRef<{ x: number; y: number; edge: boolean } | null>(null)
+  const [videoMode, setVideoMode] = useState(false)
+
+  useEffect(() => {
+    const onEnter = () => setVideoMode(true)
+    const onLeave = () => setVideoMode(false)
+    window.addEventListener('videomodeenter', onEnter)
+    window.addEventListener('videomodeleave', onLeave)
+    return () => {
+      window.removeEventListener('videomodeenter', onEnter)
+      window.removeEventListener('videomodeleave', onLeave)
+    }
+  }, [])
 
   const activeId = TABS.find(t =>
     t.href === '/' ? pathname === '/' : pathname.startsWith(t.href)
@@ -51,6 +63,8 @@ export default function BottomNav() {
       document.removeEventListener('touchend',   onEnd)
     }
   }, [activeId, router])
+
+  if (videoMode || pathname === '/video') return null
 
   return (
     <div

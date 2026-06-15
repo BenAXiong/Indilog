@@ -7,16 +7,26 @@ export function FlagPicker({
   showPicker,
   onToggle,
   onSelect,
+  side = 'right',
+  expandDir = 'column',
 }: {
   currentFlag: string | null
   showPicker: boolean
   onToggle: () => void
   onSelect: (color: string | null) => void
+  side?: 'left' | 'right'
+  expandDir?: 'column' | 'row'
 }) {
   const currentFlagHex = flagColorHex(currentFlag)
   return (
     <div
-      style={{ position: 'absolute', top: 10, right: 12, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}
+      style={{
+        position: 'absolute', top: 10,
+        ...(side === 'right' ? { right: 12 } : { left: 12 }),
+        display: 'flex', flexDirection: 'column',
+        alignItems: side === 'right' ? 'flex-end' : 'flex-start',
+        gap: 4,
+      }}
       onClick={e => e.stopPropagation()}
     >
       <button onClick={onToggle} aria-label="Set flag" style={{
@@ -27,7 +37,7 @@ export function FlagPicker({
         <Icon name={currentFlag ? 'flagF' : 'flag'} size={15} strokeWidth={1.8} />
       </button>
       {showPicker && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: expandDir, gap: 5, alignItems: 'center' }}>
           {FLAG_COLORS.map(fc => (
             <button key={fc.key} onClick={() => onSelect(fc.key)} style={{
               width: 22, height: 22, borderRadius: 999, border: 'none',

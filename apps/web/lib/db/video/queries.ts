@@ -34,10 +34,26 @@ export async function listVideoCollections(): Promise<VideoCollection[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
+
+  const { data: videoItems } = await supabase
+    .from('ind_items')
+    .select('collection_id')
+    .eq('user_id', user.id)
+    .not('metadata->>video_clip', 'is', null)
+    .is('metadata->>merged_into', null)
+
+  const collectionIds = [...new Set(
+    (videoItems ?? [])
+      .map(r => r.collection_id as string | null)
+      .filter((id): id is string => !!id)
+  )]
+  if (collectionIds.length === 0) return []
+
   const { data } = await supabase
     .from('ind_learn_collections')
     .select('id, name')
     .eq('user_id', user.id)
+    .in('id', collectionIds)
     .order('created_at', { ascending: true })
   return (data ?? []) as VideoCollection[]
 }
