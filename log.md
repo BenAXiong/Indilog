@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-15 | FIX | VideoPage: preserve card mode (video/image/audio) across card navigation — mode now resets only when the next card lacks the current mode |
 | 2026-06-15 | FEATURE | VideoPage M8: 3-way card mode toggle (video/image/audio) as 4th header button; audio-only mode shows crimson circle player button; audio inconsistency in video mode fixed (play inside gesture handler); gen_ilrdf_cards.py --add-images extracts midpoint JPEGs and emits UPDATE SQL + image_records.json; upload_to_supabase.py --images uploads via REST API; UPDATE SQL patches metadata.image on existing ILRDF video cards |
 | 2026-06-15 | FIX | listBrowserCards: add secondary .order("id") to both paginated queries so offset boundaries are deterministic when created_at ties exist; dedup by id defensively — fixes 58 duplicate-key React warnings in BrowserView list mode (2034 collection items crossing the 1000-row page boundary) |
 | 2026-06-15 | FEATURE | VideoPage word lookup: tapping any interlinear token in gloss mode opens a bottom sheet with full Citadel entry (word_ab + all definition senses split on ·); results cached in lookupFullCache ref; short tokens show no-entry state; dismiss via backdrop or X; also adds gloss IconName and swaps header magnifier to custom gloss icon |
