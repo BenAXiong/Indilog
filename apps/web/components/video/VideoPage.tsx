@@ -52,6 +52,7 @@ function VideoCardDisplay({
   glossMode,
   glosses,
   glossLoading,
+  onTokenTap,
 }: {
   card: VideoCard
   alwaysRevealed: boolean
@@ -70,6 +71,7 @@ function VideoCardDisplay({
   glossMode: boolean
   glosses: Record<string, string>
   glossLoading: boolean
+  onTokenTap?: (tok: { display: string; key: string }) => void
 }) {
   const flagHex = flagColorHex(card.flag_color)
   const showBack = alwaysRevealed || revealed
@@ -143,7 +145,7 @@ function VideoCardDisplay({
         {glossMode ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 14px', justifyContent: 'center' }}>
             {tokenizeAmis(card.ab).map((tok, i) => (
-              <span key={i} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <span key={i} onClick={() => onTokenTap?.(tok)} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
                 <span style={{
                   fontFamily: 'Newsreader, Georgia, serif',
                   fontSize: 26, fontWeight: 500, color: T.ink,
@@ -302,6 +304,10 @@ export default function VideoPage() {
   const [glossLoading, setGlossLoading] = useState(false)
   const glossCache = useRef(new Map<string, string>())
 
+  // Word lookup bottom sheet
+  const [lookup, setLookup] = useState<{ display: string; key: string; wordAb: string | null; wordCh: string | null; loading: boolean } | null>(null)
+  const lookupFullCache = useRef(new Map<string, { wordAb: string; wordCh: string } | null>())
+
   // Video / audio refs
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -388,6 +394,36 @@ export default function VideoPage() {
       }
     })).then(() => { applyCache(); setGlossLoading(false) })
   }, [glossMode, activeCard?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Token tap → bottom sheet ──
+  function handleTokenTap(tok: { display: string; key: string }) {
+    if (tok.key.length < 3) {
+      setLookup({ display: tok.display, key: tok.key, wordAb: null, wordCh: null, loading: false })
+      return
+    }
+    if (lookupFullCache.current.has(tok.key)) {
+      const cached = lookupFullCache.current.get(tok.key) ?? null
+      setLookup({ display: tok.display, key: tok.key, wordAb: cached?.wordAb ?? null, wordCh: cached?.wordCh ?? null, loading: false })
+      return
+    }
+    setLookup({ display: tok.display, key: tok.key, wordAb: null, wordCh: null, loading: true })
+    fetch(`/api/dict/search?q=${encodeURIComponent(tok.key)}&moe=1`)
+      .then(r => r.json())
+      .then((data: { words?: Array<{ word_ab: string; word_ch: string; exact: boolean }> }) => {
+        const words = data.words ?? []
+        const match = words.find(w => w.exact) ?? words[0] ?? null
+        const entry = match ? { wordAb: match.word_ab, wordCh: match.word_ch } : null
+        lookupFullCache.current.set(tok.key, entry)
+        setLookup(prev => prev?.key === tok.key
+          ? { ...prev, wordAb: entry?.wordAb ?? null, wordCh: entry?.wordCh ?? null, loading: false }
+          : prev
+        )
+      })
+      .catch(() => {
+        lookupFullCache.current.set(tok.key, null)
+        setLookup(prev => prev?.key === tok.key ? { ...prev, loading: false } : prev)
+      })
+  }
 
   // ── Video segment ended → advance both ──
   function handleVideoEnded() {
@@ -560,7 +596,7 @@ export default function VideoPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
           }}>
-            <Icon name="search" size={14} strokeWidth={1.8} />
+            <Icon name="gloss" size={14} strokeWidth={1.8} />
           </button>
 
           {/* Always-reveal toggle */}
@@ -651,6 +687,7 @@ export default function VideoPage() {
                 glossMode={glossMode}
                 glosses={glosses}
                 glossLoading={glossLoading}
+                onTokenTap={handleTokenTap}
               />
             ) : (
               <div style={{ textAlign: 'center', color: T.inkMute, fontSize: 14 }}>
@@ -713,6 +750,59 @@ export default function VideoPage() {
       )}
 
     </div>
+
+    {/* ── Word lookup bottom sheet ── */}
+    {lookup && (
+      <>
+        <div
+          onClick={() => setLookup(null)}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)', zIndex: 50 }}
+        />
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: T.paperHi, borderRadius: '18px 18px 0 0',
+          padding: '20px 22px 36px',
+          boxShadow: '0 -4px 24px rgba(80,40,20,0.12)',
+          zIndex: 51, display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{
+                fontFamily: 'Newsreader, Georgia, serif',
+                fontSize: 26, fontWeight: 500, color: T.ink,
+                letterSpacing: '-0.02em', lineHeight: 1.2,
+              }}>{lookup.display}</div>
+              {lookup.wordAb && lookup.wordAb.toLowerCase() !== lookup.key && (
+                <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute, marginTop: 2 }}>
+                  {lookup.wordAb}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setLookup(null)} style={{
+              width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
+              cursor: 'pointer', color: T.inkMute,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="x" size={16} strokeWidth={2} />
+            </button>
+          </div>
+          {lookup.loading ? (
+            <div style={{ color: T.inkMute, fontSize: 13 }}>…</div>
+          ) : lookup.wordCh ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {lookup.wordCh.split(' · ').map((def, i) => (
+                <div key={i} style={{ fontSize: 15, color: i === 0 ? T.ink : T.inkSoft, lineHeight: 1.4 }}>
+                  {i > 0 && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, marginRight: 6 }}>{i + 1}</span>}
+                  {def.trim()}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: T.inkFaint, fontSize: 13, fontStyle: 'italic' }}>No entry found</div>
+          )}
+        </div>
+      </>
+    )}
     </div>
   )
 }
