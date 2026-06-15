@@ -119,16 +119,8 @@ function VideoCardDisplay({
         expandDir="row"
       />
 
-      {/* Audio replay + Suspend — top right */}
-      <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', gap: 2 }} onClick={e => e.stopPropagation()}>
-        {hasAudio && (
-          <button onClick={onAudioToggle} aria-label="Replay audio" style={{
-            width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Icon name={audioPlaying ? 'stop' : 'speaker'} size={15} strokeWidth={1.8} color={audioPlaying ? T.crimsonDp : T.crimson} />
-          </button>
-        )}
+      {/* Suspend — top right */}
+      <div style={{ position: 'absolute', top: 10, right: 12 }} onClick={e => e.stopPropagation()}>
         <button onClick={onSuspend} aria-label="Suspend" style={{
           width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -184,20 +176,20 @@ function VideoCardDisplay({
       ) : hasAudio ? (
         <div style={{
           borderRadius: 14, marginTop: 22, marginBottom: 18,
-          height: 120, background: T.crimsonBg,
-          border: `1px solid #EFCAB8`,
+          height: 120, background: T.paper,
+          border: `1px solid ${T.lineSoft}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <button
             onClick={e => { e.stopPropagation(); onAudioToggle() }}
             style={{
               width: 72, height: 72, borderRadius: 999,
-              border: 'none', background: 'none',
+              border: `1px solid ${T.line}`, background: T.paperHi,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
+              cursor: 'pointer', color: T.ink,
             }}
           >
-            <Icon name={audioPlaying ? 'stop' : 'speaker'} size={32} strokeWidth={1.6} color={audioPlaying ? T.crimsonDp : T.crimson} />
+            <Icon name={audioPlaying ? 'pause' : 'play'} size={28} strokeWidth={1.6} />
           </button>
         </div>
       ) : null}
@@ -706,6 +698,17 @@ export default function VideoPage() {
             letterSpacing: '-0.02em', lineHeight: 1.1, flex: 1,
           }}>Video Decks</span>
 
+          {/* Magnifier — gloss mode */}
+          <button onClick={() => setGlossMode(v => !v)} style={{
+            width: 34, height: 34, borderRadius: 10,
+            border: `1px solid ${glossMode ? T.ink : T.lineSoft}`,
+            background: glossMode ? T.ink : T.paperHi,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
+          }}>
+            <Icon name="gloss" size={14} strokeWidth={1.8} />
+          </button>
+
           {/* Card mode — cycles video → image → audio */}
           <button onClick={cycleCardMode} disabled={availableModes.length <= 1} style={{
             width: 34, height: 34, borderRadius: 10,
@@ -716,17 +719,6 @@ export default function VideoPage() {
             color: T.inkSoft, opacity: availableModes.length > 1 ? 1 : 0.4,
           }}>
             <Icon name={cardMode === 'video' ? 'film' : cardMode === 'image' ? 'mountain' : 'speaker'} size={14} strokeWidth={1.8} />
-          </button>
-
-          {/* Magnifier — gloss mode */}
-          <button onClick={() => setGlossMode(v => !v)} style={{
-            width: 34, height: 34, borderRadius: 10,
-            border: `1px solid ${glossMode ? T.ink : T.lineSoft}`,
-            background: glossMode ? T.ink : T.paperHi,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
-          }}>
-            <Icon name="gloss" size={14} strokeWidth={1.8} />
           </button>
 
           {/* Always-reveal toggle */}
