@@ -637,7 +637,7 @@ export default function StudyPage() {
                   name="Captured"
                   sub="words saved while reading"
                   due={due.captures}
-                  href="/review?capturesOnly=true"
+                  href="/review?custom=1&capturesOnly=true"
                   kebab
                   onKebab={() => setActionDeck({
                     id: CAPTURES_DECK_ID, name: 'Captured',

@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-16 | FIX | Captured deck review link: add custom=1 so capturesOnly param is actually read by the review page (was silently ignored without it) |
 | 2026-06-16 | FEATURE | Dashboard: StreakCard simplified to number+flame only; Heatmap header shows avg reps/day + days studied (new daysStudied/dailyAverage stats); sim counter tooltip replaced with info icon popover; "Learn"/"Review" ring labels removed |
 | 2026-06-16 | FIX | Curriculum counter font → JetBrains Mono (matches Next label); Captured deck href → /review?capturesOnly=true (was showing all 85 due cards instead of just the 3 captures due) |
 | 2026-06-16 | FEATURE | Study page curriculum rows: card background fills left-to-right as progress indicator (replaces bar); counter uses Newsreader serif + chevron right-aligned; lang pill moved to section header; Next label no longer truncated server-side or client-side |
