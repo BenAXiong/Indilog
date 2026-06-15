@@ -17,6 +17,8 @@ type MoeRow = {
 const normMoeAb  = (s: string) => s.replace(/\|+$/, '').trim()
 const normMoeKey = (s: string) =>
   normMoeAb(s).toLowerCase().normalize('NFC').replace(/[\u2018\u2019\u02BC\uA78C]/g, "'")
+// MoE raw definitions use geometric-shape chars (U+25A0\u2013U+25FF) as field separators
+const cleanMoeDef = (s: string) => s.replace(/[\u25A0-\u25FF]+/g, ' ').replace(/\s+/g, ' ').trim()
 const stripAuthor = (s: string) =>
   (s ?? '阿美語').replace(/\s*\([^)]*\)\s*$/, '').trim() || '阿美語'
 
@@ -29,12 +31,13 @@ function mergeMoeRow(merged: Map<string, MoeMerged>, row: MoeRow, qKey: string) 
   const isExact = key === qKey
   const entry   = merged.get(key)
   if (entry) {
-    if (row.definition && !entry.defs.includes(row.definition)) entry.defs.push(row.definition)
+    const def = row.definition ? cleanMoeDef(row.definition) : ''
+    if (def && !entry.defs.includes(def)) entry.defs.push(def)
     if (isExact) entry.exact = true
   } else {
     merged.set(key, {
       word_ab: ab,
-      defs: row.definition ? [row.definition] : [],
+      defs: row.definition ? [cleanMoeDef(row.definition)] : [],
       dialect_name: stripAuthor(row.dialect_name),
       exact: isExact,
     })
