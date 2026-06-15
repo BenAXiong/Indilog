@@ -234,7 +234,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 ---
 
-## Milestone 8 — Video cards
+## Milestone 8 — Video cards — COMPLETE (2026-06-16)
 
 > Design contract: DEC-M8-01
 
@@ -247,10 +247,11 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] Desktop layout fix
 - [x] ADR — DEC-M8-01
 - [x] Clip compression — H.264 CRF 42 re-encode + upsert (426 MB → 49 MB); pipeline updated (`gen_ilrdf_cards.py`)
-- [ ] Lite decks — screenshot + audio only; `gen_ilrdf_cards.py --lite`; VideoPage mode switcher (full/lite/audio) (see DEC-M8-01 §6)
+- [x] Image mode — `gen_ilrdf_cards.py --add-images` extracts midpoint JPEGs for existing video cards; `upload_to_supabase.py --images` uploads via REST; UPDATE SQL patches `metadata.image` on existing rows (DEC-M8-01 §6)
+- [x] 3-way card mode toggle (video / image / audio) in VideoPage header; mode persists across card navigation; audio-only shows crimson circle player button
+- [x] VideoPage list mode: BrowserView filtered to video/image cards only (`videoOnly` prop)
 
-> MT?
-> standalone SPA from ILRDF
+> standalone SPA from ILRDF (skip login for single page?)
 > titv and other: pre-made ocr timestamps
 ---
 
@@ -262,7 +263,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] FIX: dict sentence bookmark toast invisible when scrolled — moved to `position: fixed` at bottom
 - [x] FIX: dict sentence saved state not pre-loaded across sessions — `savedAbSet` pre-check from `ind_items` on sentences state change
 - [x] FIX: dict sentence could be re-saved indefinitely — block duplicates, show amber warning toast
-- [ ] FIX: duplicate captures from dict
+- [ ] FIX: dict duplicate captures & bookmark state persistence
 
 - [ ] Improve latency (eg batch supa calls)
 - [ ] Desktop usability pass
@@ -310,6 +311,6 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 ## Versioning
 
 - **v0** — all phases 0–10 shipped, architecture baseline, Phase 9 mostly done.
-- **v1** — M1–M4, M6, M7 complete. M5 (UI polish, pending dashboard/goals/cards revamp), M8 (tests), MoE dict expansion in progress. Target: `v1.0.0` when M1–M8 all complete.
+- **v1** — M1–M4, M6, M7, M8 complete. M5 (UI polish, pending dashboard/goals/cards revamp), M9 (tests), MoE dict expansion in progress. Target: `v1.0.0` when M1–M9 all complete.
 
-Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1–M8 complete.
+Semver tags when publishing: `v0.9.0` now → `v1.0.0` when M1–M9 complete.

@@ -39,6 +39,7 @@ export async function listBrowserCards(
   filter: BrowserFilter,
   sort: BrowserSort,
   flagColorFilter?: string | null,
+  videoOnly?: boolean,
 ): Promise<BrowserCard[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,6 +47,13 @@ export async function listBrowserCards(
 
   const now = new Date().toISOString()
   const SEL = 'id, ab, zh, notes, audio, metadata, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)'
+
+  function withVideoFilter(q: any): any {
+    if (!videoOnly) return q
+    return q
+      .or('metadata->>video_clip.not.is.null,metadata->>image.not.is.null')
+      .is('metadata->>merged_into', null)
+  }
 
   // Push filter to DB so pagination fetches only matching rows, not the full vault
   function applyFilter(q: any): any {
@@ -72,11 +80,11 @@ export async function listBrowserCards(
   // (potentially 1000+) never crowd out captured notes within the same page window
   const [capturedRows, collectionRows] = await Promise.all([
     paginate<any>(
-      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).neq('note_source', 'collection').order('created_at', { ascending: false }).order('id', { ascending: true })),
+      () => applyFilter(withVideoFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).neq('note_source', 'collection').order('created_at', { ascending: false }).order('id', { ascending: true }))),
       'listBrowserCards:captured',
     ),
     paginate<any>(
-      () => applyFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false }).order('id', { ascending: true })),
+      () => applyFilter(withVideoFilter(supabase.from('ind_items').select(SEL).eq('user_id', user.id).eq('note_source', 'collection').order('created_at', { ascending: false }).order('id', { ascending: true }))),
       'listBrowserCards:collection',
     ),
   ])

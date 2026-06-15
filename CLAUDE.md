@@ -11,6 +11,10 @@
 - Format: `| 2026-MM-DD HH:MM | TYPE | Description |`
 - Types: FEATURE, FIX, REFACTOR, SCHEMA, CONFIG, PHASE COMPLETE
 
+## Pushing
+- **Never push without explicit approval.** When a commit or batch of commits seems ready to ship, say so and ask — do not push until the user confirms.
+- After an approved push, check Vercel build status with `npx vercel ls`.
+
 ## Commit cadence
 - Commit after each complete, self-contained unit: one bug fix, one feature, one schema change
 - Multiple small related tweaks (e.g. 2–3 copy fixes in one session) can be batched into one commit if they're trivially related

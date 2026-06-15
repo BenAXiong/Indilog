@@ -744,12 +744,20 @@ export default function VideoPage() {
           {/* Always-reveal toggle */}
           <button onClick={() => setAlwaysRevealed(v => !v)} style={{
             width: 34, height: 34, borderRadius: 10,
-            border: `1px solid ${alwaysRevealed ? T.ink : T.lineSoft}`,
-            background: alwaysRevealed ? T.ink : T.paperHi,
-            color: alwaysRevealed ? T.cream : T.inkMute,
+            border: `1px solid ${!alwaysRevealed ? T.ink : T.lineSoft}`,
+            background: !alwaysRevealed ? T.ink : T.paperHi,
+            color: !alwaysRevealed ? T.cream : T.inkMute,
             cursor: 'pointer', fontSize: 15, fontWeight: 600, lineHeight: 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>中</button>
+            position: 'relative', overflow: 'hidden',
+          }}>
+            中
+            {!alwaysRevealed && (
+              <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 34 34">
+                <line x1="3" y1="31" x2="31" y2="3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
 
           {/* Layout toggle */}
           <button onClick={() => setViewMode(v => v === 'video' ? 'list' : 'video')} style={{
@@ -759,7 +767,7 @@ export default function VideoPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', color: viewMode === 'list' ? T.cream : T.inkSoft,
           }}>
-            <Icon name={viewMode === 'video' ? 'film' : 'word'} size={14} strokeWidth={1.8} />
+            <Icon name={viewMode === 'video' ? 'card' : 'word'} size={14} strokeWidth={1.8} />
           </button>
         </div>
 
@@ -896,7 +904,7 @@ export default function VideoPage() {
       {/* ── List mode ── */}
       {viewMode === 'list' && (
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <BrowserView />
+          <BrowserView videoOnly />
         </div>
       )}
 

@@ -489,7 +489,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
 
 // ─── Browser ──────────────────────────────────────────────────────────────────
 
-export default function BrowserView() {
+export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {}) {
   const [filter,          setFilter]          = useState<BrowserFilter>('all')
   const [flagColorFilter, setFlagColorFilter] = useState<string | null>(null)
   const [sort,            setSort]            = useState<BrowserSort>('due')
@@ -519,7 +519,7 @@ export default function BrowserView() {
   useEffect(() => {
     setLoading(true)
     setExpandedId(null)
-    listBrowserCards(filter, sort, filter === 'flagged' ? flagColorFilter : undefined)
+    listBrowserCards(filter, sort, filter === 'flagged' ? flagColorFilter : undefined, videoOnly)
       .then(c => { setCards(c); setLoading(false) })
   }, [filter, sort, flagColorFilter])
 
