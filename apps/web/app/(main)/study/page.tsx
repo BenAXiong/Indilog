@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
-import { Icon, SectionHead } from '@/components/ui'
+import { Icon } from '@/components/ui'
 import type { IconName } from '@/components/ui/Icon'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { listCollections, pinCollection, setIncludeInReview, type CollectionMeta } from '@/lib/db/progress/collections'
 import { ensureFlashcards, getDueStats, getExcludeFromReview, type DueStats } from '@/lib/db/srs/flashcards'
 import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
+import { createClient } from '@/lib/supabase/client'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
-import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
 import BrowserView from '@/components/study/BrowserView'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
 import CustomSessionSheet from '@/components/sheets/CustomSessionSheet'
@@ -48,7 +48,7 @@ type DeckRowProps = {
   iconBg: string
   name: string
   sub?: string
-  due: number
+  due?: number
   href: string
   pinned?: boolean
   onPin?: () => void
@@ -57,7 +57,7 @@ type DeckRowProps = {
   last?: boolean
 }
 
-function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false, onPin, kebab = false, onKebab, last = false }: DeckRowProps) {
+function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false, onPin, kebab = false, onKebab, last = false  }: DeckRowProps) {
   return (
     <Link href={href} style={{
       display: 'flex', alignItems: 'center', gap: 12,
@@ -88,7 +88,7 @@ function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false
           </div>
         )}
       </div>
-      <DueBadge n={due} />
+      {due !== undefined && <DueBadge n={due} />}
       {onPin !== undefined && (
         <button
           aria-label={pinned ? 'Unpin' : 'Pin to top'}
@@ -212,150 +212,6 @@ function EmptyTab({ icon, title, line1, line2 }: { icon: IconName; title: string
   )
 }
 
-// ─── Stats subtab ─────────────────────────────────────────────────────────────
-
-function CoverageLine({ stat }: { stat: CollectionStat }) {
-  const pct = stat.total > 0 ? stat.known / stat.total : 0
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{stat.name}</span>
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute }}>
-          {stat.known}/{stat.total}
-        </span>
-      </div>
-      <div style={{ height: 7, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', borderRadius: 999,
-          background: pct >= 0.8 ? T.sage : pct >= 0.4 ? T.amber : T.crimson,
-          width: `${Math.round(pct * 100)}%`,
-          transition: 'width 0.4s ease',
-        }} />
-      </div>
-      <div style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, marginTop: 4,
-      }}>
-        {Math.round(pct * 100)}% known
-      </div>
-    </div>
-  )
-}
-
-function PaceChart({ dailyCounts }: { dailyCounts: Array<{ date: string; count: number }> }) {
-  const maxCount = Math.max(...dailyCounts.map(d => d.count), 1)
-  const days     = ['S','M','T','W','T','F','S']
-
-  return (
-    <div style={{ display: 'flex', gap: 4, height: 56, alignItems: 'flex-end' }}>
-      {dailyCounts.map((d, i) => {
-        const barH   = d.count > 0 ? Math.max(4, Math.round(d.count / maxCount * 48)) : 2
-        const dow    = new Date(d.date + 'T12:00:00').getDay()
-        const isToday = i === dailyCounts.length - 1
-        return (
-          <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
-              <div style={{
-                width: '100%', borderRadius: '3px 3px 0 0',
-                height: barH,
-                background: isToday
-                  ? T.crimson
-                  : d.count > 0 ? '#E5A88E' : T.lineSoft,
-                transition: 'height 0.3s ease',
-              }} />
-            </div>
-            <span style={{
-              fontSize: 8.5, fontFamily: '"JetBrains Mono", monospace',
-              color: isToday ? T.crimson : T.inkFaint,
-              fontWeight: isToday ? 700 : 400,
-            }}>{days[dow]}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function StudyStatsView({ stats }: { stats: StudyStats }) {
-  return (
-    <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 22 }}>
-
-      {/* Overview 2×2 */}
-      <div>
-        <SectionHead title="Overview" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {[
-            { label: 'Total cards', value: stats.totalCards, color: T.crimson },
-            { label: 'Due today',   value: stats.dueToday,   color: T.amber   },
-            { label: 'Rooted',      value: stats.rooted,     color: '#566234'  },
-            { label: 'Blooming',    value: stats.blooming,   color: '#3a601a'  },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{
-              padding: '14px 14px', borderRadius: 14,
-              background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-              boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-            }}>
-              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-                {label}
-              </div>
-              <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 32, fontWeight: 600, color, letterSpacing: '-0.03em', lineHeight: 1, marginTop: 4 }}>
-                {value}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Coverage */}
-      {(stats.collections.length > 0 || stats.captures.total > 0) && (
-        <div>
-          <SectionHead title="Coverage" />
-          <div style={{
-            background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-            borderRadius: 16, padding: '14px 14px',
-            display: 'flex', flexDirection: 'column', gap: 16,
-          }}>
-            {stats.collections.map(col => (
-              <CoverageLine key={col.id} stat={col} />
-            ))}
-            {stats.captures.total > 0 && (
-              <CoverageLine stat={stats.captures} />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 14-day pace */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <SectionHead title="14-day pace" style={{ marginBottom: 0 }} />
-          {stats.avgPerDay > 0 && (
-            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkMute }}>
-              avg {stats.avgPerDay}/day
-            </span>
-          )}
-        </div>
-        <div style={{
-          background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-          borderRadius: 16, padding: '14px 14px',
-        }}>
-          <PaceChart dailyCounts={stats.dailyCounts} />
-        </div>
-      </div>
-
-    </div>
-  )
-}
-
-function StatsLoading() {
-  return (
-    <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {[60, 100, 80].map((w, i) => (
-        <div key={i} className="animate-iv-shimmer" style={{ height: 14, borderRadius: 6, background: T.lineSoft, width: `${w}%` }} />
-      ))}
-    </div>
-  )
-}
-
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] = [
@@ -369,7 +225,6 @@ const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] =
 const SUBTABS = [
   { id: 'decks'   as const, label: 'Decks'   },
   { id: 'browser' as const, label: 'Browser' },
-  { id: 'stats'   as const, label: 'Stats'   },
 ]
 
 const btnStyle: CSSProperties = {
@@ -383,12 +238,10 @@ const btnStyle: CSSProperties = {
 
 export default function StudyPage() {
   const { lang, dialect, dialectLabel } = useLang()
-  const [activeTab, setActiveTab] = useState<'decks' | 'browser' | 'stats'>('decks')
+  const [activeTab, setActiveTab] = useState<'decks' | 'browser'>('decks')
   const [collections, setCollections]     = useState<CollectionMeta[]>([])
   const [due, setDue]                     = useState<DueStats>({ total: 0, captures: 0, byCollection: {} })
   const [loading, setLoading]             = useState(true)
-  const [studyStats, setStudyStats]       = useState<StudyStats | null>(null)
-  const [statsLoading, setStatsLoading]   = useState(false)
   const [actionDeck,        setActionDeck]        = useState<CollectionMeta | null>(null)
   const [capturesIncluded,  setCapturesIncluded]  = useState(true)
   const [customOpen,   setCustomOpen]       = useState(false)
@@ -400,6 +253,7 @@ export default function StudyPage() {
     try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] }
   })
   const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
+  const [captureStats, setCaptureStats] = useState<{ total: number; withAudio: number } | null>(null)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     const base: Record<string, boolean> = { curriculum: false, captures: false, collections: false }
     if (typeof window === 'undefined') return base
@@ -409,6 +263,19 @@ export default function StudyPage() {
       collections: localStorage.getItem('study_collapse_collections') === 'true',
     }
   })
+
+  useEffect(() => {
+    const sb = createClient()
+    sb.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      Promise.all([
+        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('note_source', 'collection'),
+        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('note_source', 'collection').not('audio', 'is', null),
+      ]).then(([{ count: total }, { count: withAudio }]) => {
+        setCaptureStats({ total: total ?? 0, withAudio: withAudio ?? 0 })
+      })
+    })
+  }, [])
 
   useEffect(() => {
     if (!lang.code) return
@@ -435,12 +302,6 @@ export default function StudyPage() {
       .then(setCurriculumMeta)
       .catch(() => {})
   }, [lang.code, dialect, dialectLabel])
-
-  useEffect(() => {
-    if (activeTab !== 'stats' || studyStats || statsLoading) return
-    setStatsLoading(true)
-    getStudyStats().then(s => { setStudyStats(s); setStatsLoading(false) })
-  }, [activeTab, studyStats, statsLoading])
 
   function handleRenamed(id: string, newName: string) {
     setCollections(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c))
@@ -635,8 +496,7 @@ export default function StudyPage() {
                   iconColor={T.sage}
                   iconBg={T.sageBg}
                   name="Captured"
-                  sub="words saved while reading"
-                  due={due.captures}
+                  sub={captureStats ? `${captureStats.total} cards, ${captureStats.withAudio} with audio` : undefined}
                   href="/review?custom=1&capturesOnly=true"
                   kebab
                   onKebab={() => setActionDeck({
@@ -700,13 +560,6 @@ export default function StudyPage() {
 
       {/* ── Browser ── */}
       {activeTab === 'browser' && <BrowserView />}
-
-      {/* ── Stats ── */}
-      {activeTab === 'stats' && (
-        statsLoading || !studyStats
-          ? <StatsLoading />
-          : <StudyStatsView stats={studyStats} />
-      )}
 
       <CustomSessionSheet open={customOpen} onClose={() => setCustomOpen(false)} />
 

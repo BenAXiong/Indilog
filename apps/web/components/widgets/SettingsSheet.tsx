@@ -797,12 +797,13 @@ export default function SettingsButton({
         </button>
       )}
       {variant === 'change' && (
-        <button onClick={() => setOpen(true)} style={{
-          fontSize: 12, color: T.inkSoft, padding: '6px 10px', borderRadius: 8,
+        <button onClick={() => setOpen(true)} aria-label="Change language" style={{
+          width: 32, height: 32, borderRadius: 999, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: T.paper, border: `1px solid ${T.lineSoft}`,
-          fontWeight: 500, cursor: 'pointer',
+          color: T.inkSoft, cursor: 'pointer',
         }}>
-          Change
+          <Icon name="rotate-cw" size={15} strokeWidth={1.8} />
         </button>
       )}
       {variant === 'sidebar' && (
