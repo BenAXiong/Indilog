@@ -49,6 +49,7 @@ function VideoCardDisplay({
   videoRef,
   videoSegs,
   vidSegIdx,
+  imageUrl,
   onVideoEnded,
   onVideoTap,
   onSuspend,
@@ -71,6 +72,7 @@ function VideoCardDisplay({
   videoRef: React.RefObject<HTMLVideoElement | null>
   videoSegs: string[]
   vidSegIdx: number
+  imageUrl: string | null
   onVideoEnded: () => void
   onVideoTap: () => void
   onSuspend: () => void
@@ -132,8 +134,8 @@ function VideoCardDisplay({
         </div>
       )}
 
-      {/* Video — aspect-ratio box prevents wiggle while loading */}
-      {videoSegs.length > 0 && (
+      {/* Media — video clip, or still image for lite cards */}
+      {videoSegs.length > 0 ? (
         <div style={{
           borderRadius: 14, overflow: 'hidden',
           marginTop: 22, marginBottom: 18,
@@ -151,7 +153,19 @@ function VideoCardDisplay({
             style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
           />
         </div>
-      )}
+      ) : imageUrl ? (
+        <div style={{
+          borderRadius: 14, overflow: 'hidden',
+          marginTop: 22, marginBottom: 18,
+          aspectRatio: '16/9', background: '#000',
+        }}>
+          <img
+            src={imageUrl}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+          />
+        </div>
+      ) : null}
 
       {/* Front — ab: always tokenized so each word is tappable */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 16 }}>
@@ -337,6 +351,7 @@ export default function VideoPage() {
     ?? (activeCard?.metadata?.video_clip ? [activeCard.metadata.video_clip] : [])
   const audioSegs = activeCard?.metadata?.audio_segments
     ?? (activeCard?.audio ? [activeCard.audio] : [])
+  const imageUrl  = activeCard?.metadata?.image ?? null
 
   // ── Desktop hover detection ──
   useEffect(() => {
@@ -531,7 +546,7 @@ export default function VideoPage() {
       language:     first.language,
       dialect:      first.dialect,
       created_at:   first.created_at,
-      metadata:     { video_clip: videoSegsP[0], video_segments: videoSegsP, audio_segments: audioSegsP },
+      metadata:     { video_clip: videoSegsP[0] ?? null, video_segments: videoSegsP, audio_segments: audioSegsP, image: selected[0].metadata?.image ?? null },
       flashcard_id: null, flag_color: null, suspended_at: null,
     }
   }
@@ -719,6 +734,7 @@ export default function VideoPage() {
                 videoRef={videoRef}
                 videoSegs={videoSegs as string[]}
                 vidSegIdx={vidSegIdx}
+                imageUrl={imageUrl}
                 onVideoEnded={handleVideoEnded}
                 onVideoTap={handleVideoTap}
                 onSuspend={handleSuspend}

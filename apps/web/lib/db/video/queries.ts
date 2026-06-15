@@ -17,6 +17,7 @@ export type VideoCard = {
     video_clip?:     string | null
     video_segments?: string[]
     audio_segments?: string[]
+    image?:          string | null
     merged_from?:    string[]
     merged_into?:    string
   } | null
@@ -39,7 +40,7 @@ export async function listVideoCollections(): Promise<VideoCollection[]> {
     .from('ind_items')
     .select('collection_id')
     .eq('user_id', user.id)
-    .not('metadata->>video_clip', 'is', null)
+    .or('metadata->>video_clip.not.is.null,metadata->>image.not.is.null')
     .is('metadata->>merged_into', null)
 
   const collectionIds = [...new Set(
@@ -67,7 +68,7 @@ export async function listCollectionVideoCards(collectionId: string): Promise<Vi
     .select('id, ab, zh, audio, language, dialect, metadata, created_at, ind_flashcards(id, flag_color, suspended_at)')
     .eq('user_id', user.id)
     .eq('collection_id', collectionId)
-    .not('metadata->>video_clip', 'is', null)
+    .or('metadata->>video_clip.not.is.null,metadata->>image.not.is.null')
     .is('metadata->>merged_into', null)
     .order('created_at', { ascending: true })
   if (!data) return []
