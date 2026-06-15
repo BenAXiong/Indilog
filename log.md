@@ -2,6 +2,8 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-15 | FIX | FlagPicker: outer container now uses flexDirection:row when expandDir=row, so color swatches appear to the right of the flag button instead of below |
+| 2026-06-15 | FEATURE | VideoPage gloss mode: magnifier button toggles interlinear display; tokenizeAmis splits ab into word/key pairs; shortGloss extracts first CJK def from Citadel via /api/dict/search proxy; glosses fetched in parallel per card, cached in useRef; short tokens shown as-is; stacked word/gloss pairs flex-wrapped in VideoCardDisplay |
 | 2026-06-15 | FIX | Video deck sort order: stagger created_at by seg_n per ilrdf_id group (DB migration); fix gen_ilrdf_cards.py to use NOW() + N*1ms per card so future imports preserve clip order |
 | 2026-06-15 | FEATURE | Add /video page — full-screen card previewer for video decks: deck selector chips, position counter, SessionCard-shell replica (same border-radius/shadow/flag/suspend), always-reveal toggle (on by default), sequential multi-segment video+audio playback, tap-to-pause sync, merge feature (±3-card strip, preview before commit, combine writes merged card to DB and soft-deletes originals via metadata.merged_into) |
 | 2026-06-15 | FEATURE | BrowserView preview sheet: lift preview state to parent for cross-card prev/next navigation; sync separate audio file with muted autoplay video; hide audio button when video_clip present; card-icon trigger on collapsed row |
