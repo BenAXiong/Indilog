@@ -24,8 +24,13 @@ function tokenizeAmis(text: string): Array<{ display: string; key: string }> {
   })).filter(t => t.key.length > 0)
 }
 
+function cleanDef(s: string): string {
+  return s.replace(/[^ -~\u00A0-\u024F\u1E00-\u1EFF\u2000-\u206F\u3000-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/g, ' ')
+           .replace(/\s+/g, ' ').trim()
+}
+
 function shortGloss(wordCh: string): string {
-  const first = (wordCh.split(' \u00B7 ')[0] ?? '')
+  const first = cleanDef(wordCh.split(' \u00B7 ')[0] ?? '')
     .replace(/\uFF08[^\uFF09]*\uFF09|\([^)]*\)/g, '')
     .replace(/^[)\uFF09\s]+/, '')
     .trim()
@@ -826,7 +831,7 @@ export default function VideoPage() {
               {lookup.wordCh.split(' · ').map((def, i) => (
                 <div key={i} style={{ fontSize: 13, color: i === 0 ? T.ink : T.inkSoft, lineHeight: 1.4 }}>
                   {i > 0 && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.inkFaint, marginRight: 5 }}>{i + 1}</span>}
-                  {def.trim()}
+                  {cleanDef(def)}
                 </div>
               ))}
             </div>
@@ -876,7 +881,7 @@ export default function VideoPage() {
               {lookup.wordCh.split(' · ').map((def, i) => (
                 <div key={i} style={{ fontSize: 15, color: i === 0 ? T.ink : T.inkSoft, lineHeight: 1.4 }}>
                   {i > 0 && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkFaint, marginRight: 6 }}>{i + 1}</span>}
-                  {def.trim()}
+                  {cleanDef(def)}
                 </div>
               ))}
             </div>

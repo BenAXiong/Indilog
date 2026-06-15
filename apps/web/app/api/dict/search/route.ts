@@ -17,8 +17,11 @@ type MoeRow = {
 const normMoeAb  = (s: string) => s.replace(/\|+$/, '').trim()
 const normMoeKey = (s: string) =>
   normMoeAb(s).toLowerCase().normalize('NFC').replace(/[\u2018\u2019\u02BC\uA78C]/g, "'")
-// MoE raw definitions use geometric-shape chars (U+25A0\u2013U+25FF) as field separators
-const cleanMoeDef = (s: string) => s.replace(/[\u25A0-\u25FF]+/g, ' ').replace(/\s+/g, ' ').trim()
+// MoE raw definitions use misc symbol chars as internal field separators; strip everything
+// outside printable ASCII + General Punctuation + CJK ranges.
+const cleanMoeDef = (s: string) =>
+  s.replace(/[^ -~\u00A0-\u024F\u1E00-\u1EFF\u2000-\u206F\u3000-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/g, ' ')
+   .replace(/\s+/g, ' ').trim()
 const stripAuthor = (s: string) =>
   (s ?? '阿美語').replace(/\s*\([^)]*\)\s*$/, '').trim() || '阿美語'
 
