@@ -61,6 +61,7 @@ function VideoCardDisplay({
   onFlagToggle,
   onFlagSelect,
   isPreview,
+  isDemo,
   glossMode,
   glosses,
   glossLoading,
@@ -88,6 +89,7 @@ function VideoCardDisplay({
   onFlagToggle: () => void
   onFlagSelect: (c: string | null) => void
   isPreview?: boolean
+  isDemo?: boolean
   glossMode: boolean
   glosses: Record<string, string>
   glossLoading: boolean
@@ -110,6 +112,7 @@ function VideoCardDisplay({
       boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
     }}>
       {/* Flag — top left, expands right */}
+      {!isDemo && (
       <FlagPicker
         currentFlag={card.flag_color}
         showPicker={showFlagPicker}
@@ -118,8 +121,10 @@ function VideoCardDisplay({
         side="left"
         expandDir="row"
       />
+      )}
 
       {/* Suspend — top right */}
+      {!isDemo && (
       <div style={{ position: 'absolute', top: 10, right: 12 }} onClick={e => e.stopPropagation()}>
         <button onClick={onSuspend} aria-label="Suspend" style={{
           width: 30, height: 30, borderRadius: 8, border: 'none', background: 'none',
@@ -129,6 +134,7 @@ function VideoCardDisplay({
           <Icon name="pause" size={15} strokeWidth={1.8} />
         </button>
       </div>
+      )}
 
       {/* Preview badge */}
       {isPreview && (
@@ -857,6 +863,7 @@ export default function VideoPage({
                 onFlagToggle={() => setShowFlagPicker(v => !v)}
                 onFlagSelect={handleFlagSelect}
                 isPreview={!!previewCard}
+                isDemo={isDemo}
                 glossMode={glossMode}
                 glosses={glosses}
                 glossLoading={glossLoading}
