@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-15 | FEATURE | VideoPage word lookup: tapping any interlinear token in gloss mode opens a bottom sheet with full Citadel entry (word_ab + all definition senses split on ·); results cached in lookupFullCache ref; short tokens show no-entry state; dismiss via backdrop or X; also adds gloss IconName and swaps header magnifier to custom gloss icon |
 | 2026-06-15 | FIX | FlagPicker: outer container now uses flexDirection:row when expandDir=row, so color swatches appear to the right of the flag button instead of below |
 | 2026-06-15 | FEATURE | VideoPage gloss mode: magnifier button toggles interlinear display; tokenizeAmis splits ab into word/key pairs; shortGloss extracts first CJK def from Citadel via /api/dict/search proxy; glosses fetched in parallel per card, cached in useRef; short tokens shown as-is; stacked word/gloss pairs flex-wrapped in VideoCardDisplay |
 | 2026-06-15 | FIX | Video deck sort order: stagger created_at by seg_n per ilrdf_id group (DB migration); fix gen_ilrdf_cards.py to use NOW() + N*1ms per card so future imports preserve clip order |
