@@ -57,18 +57,20 @@ function FlagPicker({ current, onChange }: { current: string | null; onChange: (
 // ─── Card row ─────────────────────────────────────────────────────────────────
 
 type CardRowProps = {
-  card:          BrowserCard
-  expanded:      boolean
-  onToggle:      () => void
-  onUpdate:      (patch: Partial<BrowserCard>) => void
-  onRemove:      () => void
-  selectionMode: boolean
-  isSelected:    boolean
-  onSelect:      () => void
-  sourceName?:   string
+  card:           BrowserCard
+  expanded:       boolean
+  onToggle:       () => void
+  onUpdate:       (patch: Partial<BrowserCard>) => void
+  onRemove:       () => void
+  selectionMode:  boolean
+  isSelected:     boolean
+  onSelect:       () => void
+  sourceName?:    string
+  isPreviewOpen:  boolean
+  onOpenPreview:  () => void
 }
 
-function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, isSelected, onSelect, sourceName }: CardRowProps) {
+function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, isSelected, onSelect, sourceName, isPreviewOpen, onOpenPreview }: CardRowProps) {
   const [editFront,  setEditFront]  = useState(card.ab)
   const [editBack,   setEditBack]   = useState(card.zh ?? '')
   const [editNotes,  setEditNotes]  = useState(card.notes ?? '')
@@ -79,10 +81,7 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   const [confirmDelete,  setConfirmDelete]  = useState(false)
   const [lookupResults,  setLookupResults]  = useState<string[] | null>(null)
   const [lookingUp,      setLookingUp]      = useState(false)
-  const [showPreview,    setShowPreview]    = useState(false)
-  const [previewRevealed, setPreviewRevealed] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
   const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
@@ -92,24 +91,6 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
       setEditTarget(card.target_word ?? '')
     }
   }, [expanded, card.ab, card.zh, card.notes, card.place_heard, card.target_word])
-
-  useEffect(() => {
-    if (!card.audio) return
-    if (showPreview) {
-      const a = new Audio(card.audio)
-      a.onended = () => setPlaying(false)
-      a.play().catch(() => {})
-      audioRef.current = a
-      setPlaying(true)
-    } else {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.currentTime = 0
-        audioRef.current = null
-      }
-      setPlaying(false)
-    }
-  }, [showPreview]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const now         = new Date().toISOString()
   const isDue       = !card.due_at || card.due_at <= now
@@ -201,7 +182,6 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   }
 
   return (
-    <>
     <div style={{
       background: isSelected ? T.crimsonBg : isSuspended ? T.paper : T.paperHi,
       border: `1px solid ${isSelected ? '#EFCAB8' : flagHex ? flagHex + '55' : isSuspended ? T.line : T.lineSoft}`,
@@ -269,16 +249,16 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
 
       {/* Preview icon button */}
       <button
-        onClick={e => { e.stopPropagation(); setShowPreview(v => !v); setPreviewRevealed(false) }}
+        onClick={e => { e.stopPropagation(); onOpenPreview() }}
         style={{
           flexShrink: 0, width: 40,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: showPreview ? T.ink : 'none', border: 'none',
+          background: isPreviewOpen ? T.ink : 'none', border: 'none',
           borderLeft: `1px solid ${T.lineSoft}`,
           cursor: 'pointer',
         }}
       >
-        <Icon name="card" size={14} strokeWidth={1.6} color={showPreview ? T.cream : T.inkMute} />
+        <Icon name="card" size={14} strokeWidth={1.6} color={isPreviewOpen ? T.cream : T.inkMute} />
       </button>
 
       {/* Audio button — full height, crimson when available */}
@@ -504,77 +484,6 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
         </div>
       )}
     </div>
-
-    {showPreview && (
-      <>
-        <div
-          onClick={() => { setShowPreview(false); setPreviewRevealed(false) }}
-          style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(30,20,10,0.45)' }}
-        />
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 101,
-          background: T.paper, borderRadius: '20px 20px 0 0',
-          boxShadow: '0 -4px 32px rgba(30,20,10,0.18)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line }} />
-          </div>
-          <div style={{ padding: '20px 24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-              {card.ab}
-            </div>
-            {card.audio && (
-              <button onClick={handleAudio} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 40, height: 40, borderRadius: 999,
-                background: T.crimson, border: 'none', cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(180,40,30,0.2)',
-              }}>
-                <Icon name={playing ? 'stop' : 'speaker'} size={16} strokeWidth={1.6} color="#fff" />
-              </button>
-            )}
-            {card.video_clip && (
-              <video
-                ref={videoRef}
-                src={card.video_clip}
-                autoPlay
-                muted
-                playsInline
-                onClick={() => {
-                  const v = videoRef.current
-                  const a = audioRef.current
-                  if (!v) return
-                  if (v.paused) { v.play(); a?.play() }
-                  else          { v.pause(); a?.pause() }
-                }}
-                style={{ width: '100%', borderRadius: 12, maxHeight: 280, background: '#000', cursor: 'pointer' }}
-              />
-            )}
-          </div>
-          <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
-            {previewRevealed ? (
-              <div style={{ padding: '20px 24px 28px', textAlign: 'center' }}>
-                <div style={{ fontSize: 20, fontWeight: 500, color: T.ink, lineHeight: 1.35, letterSpacing: '-0.01em' }}>
-                  {card.zh || <span style={{ color: T.inkFaint, fontStyle: 'italic' }}>No back</span>}
-                </div>
-              </div>
-            ) : (
-              <button onClick={() => setPreviewRevealed(true)} style={{
-                width: '100%', padding: '16px 24px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 600, color: T.inkMute,
-                fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-              }}>
-                Reveal
-              </button>
-            )}
-          </div>
-        </div>
-      </>
-    )}
-    </>
   )
 }
 
@@ -597,6 +506,11 @@ export default function BrowserView() {
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
   const [batchConfirm,   setBatchConfirm]   = useState(false)
   const [showBatchFlag,  setShowBatchFlag]  = useState(false)
+  const [previewIndex,        setPreviewIndex]        = useState<number | null>(null)
+  const [previewRevealed,     setPreviewRevealed]     = useState(false)
+  const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false)
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null)
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
     if (filter !== 'flagged') setFlagColorFilter(null)
@@ -614,6 +528,24 @@ export default function BrowserView() {
       setSourceNames(new Map(ss.map(s => [s.id, s.name])))
     })
   }, [])
+
+  useEffect(() => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause()
+      previewAudioRef.current.currentTime = 0
+      previewAudioRef.current = null
+      setPreviewAudioPlaying(false)
+    }
+    setPreviewRevealed(false)
+    if (previewIndex === null) return
+    const pc = filtered[previewIndex]
+    if (!pc?.audio) return
+    const a = new Audio(pc.audio)
+    a.onended = () => setPreviewAudioPlaying(false)
+    a.play().catch(() => {})
+    previewAudioRef.current = a
+    setPreviewAudioPlaying(true)
+  }, [previewIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dropStyle: React.CSSProperties = {
     height: 30, padding: '0 26px 0 10px', borderRadius: 8, fontSize: 12,
@@ -831,7 +763,7 @@ export default function BrowserView() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {filtered.map(card => (
+          {filtered.map((card, idx) => (
             <CardRow
               key={card.id}
               card={card}
@@ -843,10 +775,123 @@ export default function BrowserView() {
               isSelected={selectedIds.has(card.id)}
               onSelect={() => toggleSelect(card.id)}
               sourceName={card.source_id ? sourceNames.get(card.source_id) : undefined}
+              isPreviewOpen={previewIndex === idx}
+              onOpenPreview={() => setPreviewIndex(idx)}
             />
           ))}
         </div>
       )}
+
+      {/* Preview bottom sheet */}
+      {previewIndex !== null && (() => {
+        const pc = filtered[previewIndex]
+        if (!pc) return null
+        const hasPrev = previewIndex > 0
+        const hasNext = previewIndex < filtered.length - 1
+        const navBtn = (enabled: boolean): React.CSSProperties => ({
+          width: 44, height: 44, borderRadius: 999, border: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: enabled ? T.paperHi : 'transparent',
+          cursor: enabled ? 'pointer' : 'default',
+          opacity: enabled ? 1 : 0.2, flexShrink: 0,
+        })
+        return (
+          <>
+            <div
+              onClick={() => { setPreviewIndex(null) }}
+              style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(30,20,10,0.45)' }}
+            />
+            <div style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 101,
+              background: T.paper, borderRadius: '20px 20px 0 0',
+              boxShadow: '0 -4px 32px rgba(30,20,10,0.18)',
+              paddingBottom: 'env(safe-area-inset-bottom)',
+            }}>
+              {/* Handle + nav */}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px 4px', gap: 8 }}>
+                <button
+                  disabled={!hasPrev}
+                  onClick={() => setPreviewIndex(i => i! - 1)}
+                  style={navBtn(hasPrev)}
+                >
+                  <Icon name="arrow-l" size={18} strokeWidth={1.8} color={T.inkSoft} />
+                </button>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line }} />
+                </div>
+                <button
+                  disabled={!hasNext}
+                  onClick={() => setPreviewIndex(i => i! + 1)}
+                  style={navBtn(hasNext)}
+                >
+                  <Icon name="arrow-r" size={18} strokeWidth={1.8} color={T.inkSoft} />
+                </button>
+              </div>
+
+              {/* Front */}
+              <div style={{ padding: '16px 24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
+                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                  {pc.ab}
+                </div>
+                {pc.audio && (
+                  <button onClick={() => {
+                    const a = previewAudioRef.current
+                    if (!a) return
+                    if (previewAudioPlaying) { a.pause(); a.currentTime = 0; setPreviewAudioPlaying(false) }
+                    else { a.play().catch(() => {}); setPreviewAudioPlaying(true) }
+                  }} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 40, height: 40, borderRadius: 999,
+                    background: T.crimson, border: 'none', cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(180,40,30,0.2)',
+                  }}>
+                    <Icon name={previewAudioPlaying ? 'stop' : 'speaker'} size={16} strokeWidth={1.6} color="#fff" />
+                  </button>
+                )}
+                {pc.video_clip && (
+                  <video
+                    key={pc.id}
+                    ref={previewVideoRef}
+                    src={pc.video_clip}
+                    autoPlay
+                    muted
+                    playsInline
+                    onClick={() => {
+                      const v = previewVideoRef.current
+                      const a = previewAudioRef.current
+                      if (!v) return
+                      if (v.paused) { v.play(); a?.play() }
+                      else          { v.pause(); a?.pause() }
+                    }}
+                    style={{ width: '100%', borderRadius: 12, maxHeight: 260, background: '#000', cursor: 'pointer' }}
+                  />
+                )}
+              </div>
+
+              {/* Reveal */}
+              <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
+                {previewRevealed ? (
+                  <div style={{ padding: '18px 24px 26px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 500, color: T.ink, lineHeight: 1.35, letterSpacing: '-0.01em' }}>
+                      {pc.zh || <span style={{ color: T.inkFaint, fontStyle: 'italic' }}>No back</span>}
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setPreviewRevealed(true)} style={{
+                    width: '100%', padding: '16px 24px',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 600, color: T.inkMute,
+                    fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}>
+                    Reveal
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* Bottom padding when action bar is visible */}
       {selectionMode && <div style={{ height: 80 }} />}
