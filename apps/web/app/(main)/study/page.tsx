@@ -663,6 +663,17 @@ export default function StudyPage() {
                 <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>My collections</span>
                 <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.collections ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
               </button>
+              <Link href="/video" style={{
+                height: 26, padding: '0 10px', borderRadius: 999, fontSize: 10.5,
+                fontFamily: '"JetBrains Mono", monospace', fontWeight: 600,
+                letterSpacing: '0.04em', textTransform: 'uppercase',
+                background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                color: T.inkMute, textDecoration: 'none',
+                display: 'flex', alignItems: 'center', gap: 4,
+              }}>
+                <Icon name="play" size={10} color={T.inkMute} />
+                Video
+              </Link>
               <Link href="/study/new" aria-label="Import collection" style={{
                 width: 22, height: 22, borderRadius: 999,
                 border: `1.5px solid ${T.lineSoft}`,
