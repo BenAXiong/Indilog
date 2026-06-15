@@ -143,9 +143,11 @@ function VideoCardDisplay({
 
       {/* Front — ab: always tokenized so each word is tappable */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 16 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: glossMode ? '8px 14px' : '0px 8px', justifyContent: 'center' }}>
-          {tokenizeAmis(card.ab).map((tok, i) => (
-            <span key={i} onClick={() => onTokenTap?.(tok)} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: glossMode ? '12px 22px' : '0px 8px', justifyContent: 'center' }}>
+          {tokenizeAmis(card.ab).map((tok, i) => {
+            const isPunct = tok.key.length <= 2 && !/[a-zA-Z]/.test(tok.key)
+            return (
+            <span key={i} onClick={() => onTokenTap?.(tok)} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', marginLeft: isPunct ? (glossMode ? -20 : -6) : 0 }}>
               <span style={{
                 fontFamily: 'Newsreader, Georgia, serif',
                 fontSize: glossMode ? 26 : 28, fontWeight: 500, color: T.ink,
@@ -161,7 +163,8 @@ function VideoCardDisplay({
                 </span>
               )}
             </span>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -594,11 +597,12 @@ export default function VideoPage() {
 
           {/* Always-reveal toggle */}
           <button onClick={() => setAlwaysRevealed(v => !v)} style={{
-            height: 34, padding: '0 12px', borderRadius: 10,
+            width: 34, height: 34, borderRadius: 10,
             border: `1px solid ${alwaysRevealed ? T.ink : T.lineSoft}`,
             background: alwaysRevealed ? T.ink : T.paperHi,
             color: alwaysRevealed ? T.cream : T.inkMute,
-            cursor: 'pointer', fontSize: 16, fontWeight: 600, lineHeight: 1,
+            cursor: 'pointer', fontSize: 15, fontWeight: 600, lineHeight: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>中</button>
 
           {/* Layout toggle */}
