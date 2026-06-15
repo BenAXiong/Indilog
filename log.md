@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-16 | FEATURE | Study page curriculum rows: card background fills left-to-right as progress indicator (replaces bar); counter uses Newsreader serif + chevron right-aligned; lang pill moved to section header; Next label no longer truncated server-side or client-side |
 | 2026-06-16 | FIX | PWA splash screen: revert manifest icons to transparent, add apple-touch-icon.png (180×180, cream #F5EEDF bg) for iOS splash generation; fix manifest (remove dead /icon.png, drop maskable purpose) |
 | 2026-06-16 | PHASE COMPLETE | M8 Video cards complete — image mode pipeline, 3-way toggle, BrowserView videoOnly filter, card mode persistence, cosmetic polish (中 diagonal bar, flashcard icon) |
 | 2026-06-16 | FIX | VideoPage list mode: BrowserView now filtered to video/image cards only via videoOnly prop; non-video cards no longer appear |

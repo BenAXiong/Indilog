@@ -122,17 +122,21 @@ function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false
 
 // ─── Curriculum row ──────────────────────────────────────────────────────────
 
-function CurriculumRow({ icon, name, href, meta, langName, last }: {
+function CurriculumRow({ icon, name, href, meta, last }: {
   icon: IconName; name: string; href: string
-  meta: CurriculumProgressItem | null; langName: string; last?: boolean
+  meta: CurriculumProgressItem | null; last?: boolean
 }) {
   const pct = meta && meta.total > 0 ? Math.round(meta.completed / meta.total * 100) : 0
+  const fillRgba = pct >= 80 ? 'rgba(74,112,51,0.09)' : pct >= 40 ? 'rgba(196,143,52,0.09)' : 'rgba(180,40,40,0.07)'
   return (
     <Link href={href} style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '13px 14px',
       borderBottom: last ? 'none' : `1px solid ${T.lineSoft}`,
       textDecoration: 'none',
+      background: pct > 0
+        ? `linear-gradient(to right, ${fillRgba} ${pct}%, transparent ${pct}%)`
+        : 'transparent',
     }}>
       {/* Icon */}
       <div style={{
@@ -143,52 +147,33 @@ function CurriculumRow({ icon, name, href, meta, langName, last }: {
         <Icon name={icon} size={19} color={T.crimson} strokeWidth={1.6} />
       </div>
 
-      {/* Name + Next */}
+      {/* Central column */}
       <div style={{ flex: '1 1 0', minWidth: 0 }}>
         <div style={{
           fontFamily: 'Newsreader, Georgia, serif',
           fontSize: 16, fontWeight: 500, color: T.ink,
           letterSpacing: '-0.015em', lineHeight: 1.15,
         }}>{name}</div>
-        {meta ? (
+        {meta && meta.total > 0 && (
           <div style={{
             fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 10.5, color: T.inkMute, marginTop: 2,
+            fontSize: 10.5, color: T.inkMute, marginTop: 3,
           }}>
-            {meta.total > 0
-              ? (meta.nextLabel ? `Next: ${meta.nextLabel}` : 'All done ✓')
-              : '—'}
+            {meta.nextLabel ? `Next: ${meta.nextLabel.replace(/\s*…+$/, '')}` : 'All done ✓'}
           </div>
-        ) : (
-          <div className="animate-iv-shimmer" style={{
-            height: 9, width: 110, borderRadius: 4, background: T.lineSoft, marginTop: 4,
-          }} />
         )}
       </div>
 
-      {/* Bar — 1/3 card width, centered */}
-      <div style={{ flex: '0 0 33%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-        <div style={{ width: '100%', height: 3, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', borderRadius: 999, transition: 'width 0.4s ease',
-            width: `${pct}%`,
-            background: pct >= 80 ? T.sage : pct >= 40 ? T.amber : T.crimson,
-          }} />
-        </div>
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.inkFaint }}>
-          {meta ? (meta.total > 0 ? `${meta.completed}/${meta.total}` : '—') : '…'}
+      {/* Counter + chevron */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        <span style={{
+          fontFamily: 'Newsreader, Georgia, serif',
+          fontSize: 15, color: T.inkMute, fontWeight: 400,
+        }}>
+          {meta && meta.total > 0 ? `${meta.completed}/${meta.total}` : ''}
         </span>
+        <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
       </div>
-
-      {/* Lang pill */}
-      <span style={{
-        fontSize: 9.5, fontFamily: '"JetBrains Mono", monospace',
-        padding: '2px 7px', borderRadius: 999, flexShrink: 0,
-        background: '#F9E8E6', color: T.crimson,
-        fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
-      }}>{langName}</span>
-
-      <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
     </Link>
   )
 }
@@ -614,7 +599,12 @@ export default function StudyPage() {
           <div>
             <button onClick={() => toggleSection('curriculum')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0 4px', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}>
               <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1, textAlign: 'left' }}>Curriculum</span>
-              <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.curriculum ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
+              <span style={{
+                fontSize: 9.5, fontFamily: '"JetBrains Mono", monospace',
+                padding: '2px 7px', borderRadius: 999, flexShrink: 0,
+                background: '#F9E8E6', color: T.crimson,
+                fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+              }}>{lang.name}</span>
             </button>
             {!collapsed.curriculum && (
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
@@ -625,7 +615,6 @@ export default function StudyPage() {
                     name={deck.name}
                     href={deck.href}
                     meta={curriculumMeta?.[deck.id as keyof typeof curriculumMeta] ?? null}
-                    langName={lang.name}
                     last={i === CURRICULUM.length - 1}
                   />
                 ))}

@@ -125,9 +125,7 @@ export async function GET(req: NextRequest) {
     return {
       completed: all.filter(i => done.has(i.title_zh)).length,
       total:     all.length,
-      nextLabel: next
-        ? `${next.index + 1} · ${next.title_zh.length > 6 ? next.title_zh.slice(0, 5) + '…' : next.title_zh}`
-        : '',
+      nextLabel: next ? `${next.index + 1} · ${next.title_zh}` : '',
     }
   }
 
