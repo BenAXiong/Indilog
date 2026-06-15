@@ -50,6 +50,10 @@ function VideoCardDisplay({
   videoSegs,
   vidSegIdx,
   imageUrl,
+  cardMode,
+  hasAudio,
+  audioPlaying,
+  onAudioToggle,
   onVideoEnded,
   onVideoTap,
   onSuspend,
@@ -73,6 +77,10 @@ function VideoCardDisplay({
   videoSegs: string[]
   vidSegIdx: number
   imageUrl: string | null
+  cardMode: 'video' | 'image' | 'audio'
+  hasAudio: boolean
+  audioPlaying: boolean
+  onAudioToggle: () => void
   onVideoEnded: () => void
   onVideoTap: () => void
   onSuspend: () => void
@@ -134,8 +142,8 @@ function VideoCardDisplay({
         </div>
       )}
 
-      {/* Media — video clip, or still image for lite cards */}
-      {videoSegs.length > 0 ? (
+      {/* Media — video, still image, or audio player */}
+      {cardMode === 'video' && videoSegs.length > 0 ? (
         <div style={{
           borderRadius: 14, overflow: 'hidden',
           marginTop: 22, marginBottom: 18,
@@ -153,7 +161,7 @@ function VideoCardDisplay({
             style={{ width: '100%', height: '100%', objectFit: 'contain', cursor: 'pointer', display: 'block' }}
           />
         </div>
-      ) : imageUrl ? (
+      ) : cardMode === 'image' && imageUrl ? (
         <div style={{
           borderRadius: 14, overflow: 'hidden',
           marginTop: 22, marginBottom: 18,
@@ -164,6 +172,25 @@ function VideoCardDisplay({
             alt=""
             style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
+        </div>
+      ) : hasAudio ? (
+        <div style={{
+          borderRadius: 14, marginTop: 22, marginBottom: 18,
+          height: 120, background: T.paper,
+          border: `1px solid ${T.lineSoft}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <button
+            onClick={e => { e.stopPropagation(); onAudioToggle() }}
+            style={{
+              width: 72, height: 72, borderRadius: 999,
+              border: `1px solid ${T.line}`, background: T.paperHi,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: T.ink,
+            }}
+          >
+            <Icon name={audioPlaying ? 'pause' : 'play'} size={28} strokeWidth={1.6} />
+          </button>
         </div>
       ) : null}
 
@@ -344,6 +371,8 @@ export default function VideoPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [vidSegIdx, setVidSegIdx] = useState(0)
+  const [cardMode, setCardMode] = useState<'video' | 'image' | 'audio'>('video')
+  const [audioPlaying, setAudioPlaying] = useState(false)
 
   const activeCard = previewCard ?? cards[currentIndex] ?? null
 
@@ -352,6 +381,12 @@ export default function VideoPage() {
   const audioSegs = activeCard?.metadata?.audio_segments
     ?? (activeCard?.audio ? [activeCard.audio] : [])
   const imageUrl  = activeCard?.metadata?.image ?? null
+  const availableModes: Array<'video' | 'image' | 'audio'> = [
+    ...(videoSegs.length > 0 ? ['video' as const] : []),
+    ...(imageUrl             ? ['image' as const] : []),
+    ...(audioSegs.length > 0 ? ['audio' as const] : []),
+  ]
+  const hasAudio = audioSegs.length > 0
 
   // ── Desktop hover detection ──
   useEffect(() => {
@@ -399,14 +434,20 @@ export default function VideoPage() {
     setVidSegIdx(0)
     setRevealed(false)
     setShowFlagPicker(false)
+    const best: 'video' | 'image' | 'audio' = videoSegs.length > 0 ? 'video' : imageUrl ? 'image' : 'audio'
+    setCardMode(best)
 
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current = null
     }
+    setAudioPlaying(false)
     if (!audioSegs[0]) return
     const a = new Audio(audioSegs[0])
-    a.play().catch(() => {})
+    a.onplay  = () => setAudioPlaying(true)
+    a.onpause = () => setAudioPlaying(false)
+    a.onended = () => setAudioPlaying(false)
+    a.play().then(() => setAudioPlaying(true)).catch(() => {})
     audioRef.current = a
   }, [activeCard?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -501,6 +542,19 @@ export default function VideoPage() {
     if (!v) return
     if (v.paused) { v.play(); a?.play() }
     else          { v.pause(); a?.pause() }
+  }
+
+  function handleAudioToggle() {
+    const a = audioRef.current
+    if (!a) return
+    if (a.paused) { a.play().then(() => setAudioPlaying(true)).catch(() => {}) }
+    else          { a.pause() }
+  }
+
+  function cycleCardMode() {
+    if (availableModes.length <= 1) return
+    const idx = availableModes.indexOf(cardMode)
+    setCardMode(availableModes[(idx + 1) % availableModes.length])
   }
 
   // ── Navigation ──
@@ -655,6 +709,18 @@ export default function VideoPage() {
             <Icon name="gloss" size={14} strokeWidth={1.8} />
           </button>
 
+          {/* Card mode — cycles video → image → audio */}
+          <button onClick={cycleCardMode} disabled={availableModes.length <= 1} style={{
+            width: 34, height: 34, borderRadius: 10,
+            border: `1px solid ${T.lineSoft}`,
+            background: T.paperHi,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: availableModes.length > 1 ? 'pointer' : 'default',
+            color: T.inkSoft, opacity: availableModes.length > 1 ? 1 : 0.4,
+          }}>
+            <Icon name={cardMode === 'video' ? 'film' : cardMode === 'image' ? 'mountain' : 'speaker'} size={14} strokeWidth={1.8} />
+          </button>
+
           {/* Always-reveal toggle */}
           <button onClick={() => setAlwaysRevealed(v => !v)} style={{
             width: 34, height: 34, borderRadius: 10,
@@ -735,6 +801,10 @@ export default function VideoPage() {
                 videoSegs={videoSegs as string[]}
                 vidSegIdx={vidSegIdx}
                 imageUrl={imageUrl}
+                cardMode={cardMode}
+                hasAudio={hasAudio}
+                audioPlaying={audioPlaying}
+                onAudioToggle={handleAudioToggle}
                 onVideoEnded={handleVideoEnded}
                 onVideoTap={handleVideoTap}
                 onSuspend={handleSuspend}
