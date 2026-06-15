@@ -53,7 +53,10 @@ function VideoCardDisplay({
   glossMode,
   glosses,
   glossLoading,
+  isDesktop,
   onTokenTap,
+  onTokenHover,
+  onTokenHoverEnd,
 }: {
   card: VideoCard
   alwaysRevealed: boolean
@@ -72,7 +75,10 @@ function VideoCardDisplay({
   glossMode: boolean
   glosses: Record<string, string>
   glossLoading: boolean
+  isDesktop: boolean
   onTokenTap?: (tok: { display: string; key: string }) => void
+  onTokenHover?: (tok: { display: string; key: string }, anchor: { x: number; y: number; vpH: number }) => void
+  onTokenHoverEnd?: () => void
 }) {
   const flagHex = flagColorHex(card.flag_color)
   const showBack = alwaysRevealed || revealed
@@ -147,7 +153,13 @@ function VideoCardDisplay({
           {tokenizeAmis(card.ab).map((tok, i) => {
             const isPunct = tok.key.length <= 2 && !/[a-zA-Z]/.test(tok.key)
             return (
-            <span key={i} onClick={() => onTokenTap?.(tok)} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', marginLeft: isPunct ? (glossMode ? -20 : -6) : 0 }}>
+            <span
+              key={i}
+              onClick={!isDesktop ? () => onTokenTap?.(tok) : undefined}
+              onMouseEnter={isDesktop ? e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); onTokenHover?.(tok, { x: r.left + r.width / 2, y: r.top, vpH: window.innerHeight }) } : undefined}
+              onMouseLeave={isDesktop ? () => onTokenHoverEnd?.() : undefined}
+              style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: isDesktop ? 'default' : 'pointer', marginLeft: isPunct ? (glossMode ? -20 : -6) : 0 }}
+            >
               <span style={{
                 fontFamily: 'Newsreader, Georgia, serif',
                 fontSize: glossMode ? 26 : 28, fontWeight: 500, color: T.ink,
@@ -300,9 +312,13 @@ export default function VideoPage() {
   const [glossLoading, setGlossLoading] = useState(false)
   const glossCache = useRef(new Map<string, string>())
 
-  // Word lookup bottom sheet
-  const [lookup, setLookup] = useState<{ display: string; key: string; wordAb: string | null; wordCh: string | null; loading: boolean } | null>(null)
+  // Word lookup — bottom sheet (mobile) or tooltip (desktop)
+  type Anchor = { x: number; y: number; vpH: number }
+  type LookupState = { display: string; key: string; wordAb: string | null; wordCh: string | null; loading: boolean; anchor: Anchor | null }
+  const [lookup, setLookup] = useState<LookupState | null>(null)
   const lookupFullCache = useRef(new Map<string, { wordAb: string; wordCh: string } | null>())
+  const [isDesktop, setIsDesktop] = useState(false)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Video / audio refs
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -315,6 +331,15 @@ export default function VideoPage() {
     ?? (activeCard?.metadata?.video_clip ? [activeCard.metadata.video_clip] : [])
   const audioSegs = activeCard?.metadata?.audio_segments
     ?? (activeCard?.audio ? [activeCard.audio] : [])
+
+  // ── Desktop hover detection ──
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: hover)')
+    setIsDesktop(mq.matches)
+    const h = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
+  }, [])
 
   // ── Fullscreen: hide nav, prevent scroll ──
   useEffect(() => {
@@ -391,18 +416,18 @@ export default function VideoPage() {
     })).then(() => { applyCache(); setGlossLoading(false) })
   }, [glossMode, activeCard?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Token tap → bottom sheet ──
-  function handleTokenTap(tok: { display: string; key: string }) {
+  // ── Token lookup (shared by tap + hover) ──
+  function handleTokenLookup(tok: { display: string; key: string }, anchor: Anchor | null) {
     if (tok.key.length < 3) {
-      setLookup({ display: tok.display, key: tok.key, wordAb: null, wordCh: null, loading: false })
+      setLookup({ display: tok.display, key: tok.key, wordAb: null, wordCh: null, loading: false, anchor })
       return
     }
     if (lookupFullCache.current.has(tok.key)) {
       const cached = lookupFullCache.current.get(tok.key) ?? null
-      setLookup({ display: tok.display, key: tok.key, wordAb: cached?.wordAb ?? null, wordCh: cached?.wordCh ?? null, loading: false })
+      setLookup({ display: tok.display, key: tok.key, wordAb: cached?.wordAb ?? null, wordCh: cached?.wordCh ?? null, loading: false, anchor })
       return
     }
-    setLookup({ display: tok.display, key: tok.key, wordAb: null, wordCh: null, loading: true })
+    setLookup({ display: tok.display, key: tok.key, wordAb: null, wordCh: null, loading: true, anchor })
     fetch(`/api/dict/search?q=${encodeURIComponent(tok.key)}&moe=1`)
       .then(r => r.json())
       .then((data: { words?: Array<{ word_ab: string; word_ch: string; exact: boolean }> }) => {
@@ -419,6 +444,20 @@ export default function VideoPage() {
         lookupFullCache.current.set(tok.key, null)
         setLookup(prev => prev?.key === tok.key ? { ...prev, loading: false } : prev)
       })
+  }
+
+  function handleTokenTap(tok: { display: string; key: string }) {
+    handleTokenLookup(tok, null)
+  }
+
+  function handleTokenHover(tok: { display: string; key: string }, anchor: Anchor) {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    hoverTimer.current = setTimeout(() => handleTokenLookup(tok, anchor), 180)
+  }
+
+  function handleTokenHoverEnd() {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    hoverTimer.current = setTimeout(() => setLookup(null), 280)
   }
 
   // ── Video segment ended → advance both ──
@@ -684,7 +723,10 @@ export default function VideoPage() {
                 glossMode={glossMode}
                 glosses={glosses}
                 glossLoading={glossLoading}
+                isDesktop={isDesktop}
                 onTokenTap={handleTokenTap}
+                onTokenHover={handleTokenHover}
+                onTokenHoverEnd={handleTokenHoverEnd}
               />
             ) : (
               <div style={{ textAlign: 'center', color: T.inkMute, fontSize: 14 }}>
@@ -748,8 +790,51 @@ export default function VideoPage() {
 
     </div>
 
-    {/* ── Word lookup bottom sheet ── */}
-    {lookup && (
+    {/* ── Word lookup: tooltip (desktop) or bottom sheet (mobile) ── */}
+    {lookup && lookup.anchor ? (() => {
+      const W = 240
+      const left = Math.max(8, Math.min(lookup.anchor.x - W / 2, (typeof window !== 'undefined' ? window.innerWidth : 800) - W - 8))
+      const bottom = lookup.anchor.vpH - lookup.anchor.y + 10
+      return (
+        <div
+          onMouseEnter={() => { if (hoverTimer.current) clearTimeout(hoverTimer.current) }}
+          onMouseLeave={() => { hoverTimer.current = setTimeout(() => setLookup(null), 200) }}
+          style={{
+            position: 'fixed', bottom, left, width: W, zIndex: 60,
+            background: T.paperHi, borderRadius: 12,
+            border: `1px solid ${T.lineSoft}`,
+            boxShadow: '0 4px 20px rgba(80,40,20,0.14)',
+            padding: '12px 14px',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}
+        >
+          <div style={{
+            fontFamily: 'Newsreader, Georgia, serif',
+            fontSize: 20, fontWeight: 500, color: T.ink,
+            letterSpacing: '-0.02em', lineHeight: 1.2,
+          }}>{lookup.display}</div>
+          {lookup.wordAb && lookup.wordAb.toLowerCase() !== lookup.key && (
+            <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, marginTop: -4 }}>
+              {lookup.wordAb}
+            </div>
+          )}
+          {lookup.loading ? (
+            <div style={{ color: T.inkMute, fontSize: 12 }}>…</div>
+          ) : lookup.wordCh ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {lookup.wordCh.split(' · ').map((def, i) => (
+                <div key={i} style={{ fontSize: 13, color: i === 0 ? T.ink : T.inkSoft, lineHeight: 1.4 }}>
+                  {i > 0 && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.inkFaint, marginRight: 5 }}>{i + 1}</span>}
+                  {def.trim()}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: T.inkFaint, fontSize: 12, fontStyle: 'italic' }}>No entry found</div>
+          )}
+        </div>
+      )
+    })() : lookup ? (
       <>
         <div
           onClick={() => setLookup(null)}
@@ -799,7 +884,7 @@ export default function VideoPage() {
           )}
         </div>
       </>
-    )}
+    ) : null}
     </div>
   )
 }
