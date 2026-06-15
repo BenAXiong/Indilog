@@ -140,17 +140,17 @@ function VideoCardDisplay({
         </div>
       )}
 
-      {/* Front — ab */}
+      {/* Front — ab: always tokenized so each word is tappable */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingBottom: 16 }}>
-        {glossMode ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 14px', justifyContent: 'center' }}>
-            {tokenizeAmis(card.ab).map((tok, i) => (
-              <span key={i} onClick={() => onTokenTap?.(tok)} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
-                <span style={{
-                  fontFamily: 'Newsreader, Georgia, serif',
-                  fontSize: 26, fontWeight: 500, color: T.ink,
-                  letterSpacing: '-0.02em', lineHeight: 1.2,
-                }}>{tok.display}</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: glossMode ? '8px 14px' : '0px 8px', justifyContent: 'center' }}>
+          {tokenizeAmis(card.ab).map((tok, i) => (
+            <span key={i} onClick={() => onTokenTap?.(tok)} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
+              <span style={{
+                fontFamily: 'Newsreader, Georgia, serif',
+                fontSize: glossMode ? 26 : 28, fontWeight: 500, color: T.ink,
+                letterSpacing: '-0.02em', lineHeight: glossMode ? 1.2 : 1.25,
+              }}>{tok.display}</span>
+              {glossMode && (
                 <span style={{
                   fontSize: 9, color: T.inkMute,
                   fontFamily: '"JetBrains Mono", monospace',
@@ -158,18 +158,10 @@ function VideoCardDisplay({
                 }}>
                   {glossLoading ? '...' : (glosses[tok.key] ?? (tok.key.length < 3 ? tok.key : '?'))}
                 </span>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div style={{
-            fontFamily: 'Newsreader, Georgia, serif',
-            fontSize: 28, fontWeight: 500, color: T.ink,
-            letterSpacing: '-0.02em', lineHeight: 1.25,
-          }}>
-            {card.ab}
-          </div>
-        )}
+              )}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Divider */}
