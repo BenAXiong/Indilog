@@ -175,21 +175,19 @@ function VideoCardDisplay({
         </div>
       ) : hasAudio ? (
         <div style={{
-          borderRadius: 14, marginTop: 22, marginBottom: 18,
-          height: 120, background: T.paper,
-          border: `1px solid ${T.lineSoft}`,
+          marginTop: 22, marginBottom: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <button
             onClick={e => { e.stopPropagation(); onAudioToggle() }}
             style={{
-              width: 72, height: 72, borderRadius: 999,
-              border: `1px solid ${T.line}`, background: T.paperHi,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: T.ink,
+              width: 40, height: 40, borderRadius: 999,
+              background: T.crimson, border: 'none', cursor: 'pointer',
+              boxShadow: '0 2px 10px rgba(180,40,30,0.2)',
             }}
           >
-            <Icon name={audioPlaying ? 'pause' : 'play'} size={28} strokeWidth={1.6} />
+            <Icon name={audioPlaying ? 'stop' : 'speaker'} size={16} strokeWidth={1.6} color="#fff" />
           </button>
         </div>
       ) : null}
@@ -698,17 +696,6 @@ export default function VideoPage() {
             letterSpacing: '-0.02em', lineHeight: 1.1, flex: 1,
           }}>Video Decks</span>
 
-          {/* Magnifier — gloss mode */}
-          <button onClick={() => setGlossMode(v => !v)} style={{
-            width: 34, height: 34, borderRadius: 10,
-            border: `1px solid ${glossMode ? T.ink : T.lineSoft}`,
-            background: glossMode ? T.ink : T.paperHi,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
-          }}>
-            <Icon name="gloss" size={14} strokeWidth={1.8} />
-          </button>
-
           {/* Card mode — cycles video → image → audio */}
           <button onClick={cycleCardMode} disabled={availableModes.length <= 1} style={{
             width: 34, height: 34, borderRadius: 10,
@@ -719,6 +706,17 @@ export default function VideoPage() {
             color: T.inkSoft, opacity: availableModes.length > 1 ? 1 : 0.4,
           }}>
             <Icon name={cardMode === 'video' ? 'film' : cardMode === 'image' ? 'mountain' : 'speaker'} size={14} strokeWidth={1.8} />
+          </button>
+
+          {/* Magnifier — gloss mode */}
+          <button onClick={() => setGlossMode(v => !v)} style={{
+            width: 34, height: 34, borderRadius: 10,
+            border: `1px solid ${glossMode ? T.ink : T.lineSoft}`,
+            background: glossMode ? T.ink : T.paperHi,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
+          }}>
+            <Icon name="gloss" size={14} strokeWidth={1.8} />
           </button>
 
           {/* Always-reveal toggle */}
