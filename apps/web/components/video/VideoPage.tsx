@@ -332,7 +332,14 @@ function MergeStrip({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function VideoPage() {
+export default function VideoPage({
+  demoCollections,
+  demoCardsByCollection,
+}: {
+  demoCollections?: VideoCollection[]
+  demoCardsByCollection?: Record<string, VideoCard[]>
+} = {}) {
+  const isDemo = !!demoCollections
   const [collections,    setCollections]    = useState<VideoCollection[]>([])
   const [collectionId,   setCollectionId]   = useState<string | null>(null)
   const [cards,          setCards]          = useState<VideoCard[]>([])
@@ -408,11 +415,16 @@ export default function VideoPage() {
 
   // ── Load collections on mount ──
   useEffect(() => {
+    if (demoCollections) {
+      setCollections(demoCollections)
+      if (demoCollections.length > 0) setCollectionId(demoCollections[0].id)
+      return
+    }
     listVideoCollections().then(cols => {
       setCollections(cols)
       if (cols.length > 0) setCollectionId(cols[0].id)
     })
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load cards when collection changes ──
   useEffect(() => {
@@ -422,11 +434,16 @@ export default function VideoPage() {
     setCurrentIndex(0)
     setPreviewCard(null)
     setMergeMode(false)
+    if (demoCardsByCollection) {
+      setCards(demoCardsByCollection[collectionId] ?? [])
+      setLoading(false)
+      return
+    }
     listCollectionVideoCards(collectionId).then(c => {
       setCards(c)
       setLoading(false)
     })
-  }, [collectionId])
+  }, [collectionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Reset video/audio when active card changes ──
   useEffect(() => {
@@ -703,7 +720,7 @@ export default function VideoPage() {
       }}>
         {/* Row 1: back · title · 3 controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link href="/study" style={{
+          <Link href={isDemo ? '/demo' : '/study'} style={{
             width: 34, height: 34, borderRadius: 999,
             border: `1px solid ${T.lineSoft}`, background: T.paperHi,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -865,6 +882,7 @@ export default function VideoPage() {
               <button disabled={!hasPrev} onClick={() => goTo(currentIndex - 1)} style={navBtn(hasPrev)}>
                 <Icon name="arrow-l" size={18} strokeWidth={1.8} />
               </button>
+              {!isDemo && (
               <button onClick={mergeMode
                 ? () => { setMergeMode(false); setMergeSel(new Set()); setPreviewCard(null) }
                 : enterMerge
@@ -877,6 +895,7 @@ export default function VideoPage() {
               }}>
                 {mergeMode ? 'Cancel merge' : 'Merge'}
               </button>
+              )}
               <button disabled={!hasNext} onClick={() => goTo(currentIndex + 1)} style={navBtn(hasNext)}>
                 <Icon name="arrow-r" size={18} strokeWidth={1.8} />
               </button>
