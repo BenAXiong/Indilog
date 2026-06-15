@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon, Card } from '@/components/ui'
@@ -79,12 +79,10 @@ export default function DualRingCard({
   reviewMoreN: number
 }) {
   const [showForecast,      setShowForecast]      = useState(false)
-  const [showSimTip,        setShowSimTip]        = useState(false)
-  const [simTipY,           setSimTipY]           = useState(0)
+  const [showSimInfo,       setShowSimInfo]       = useState(false)
   const [showNoCardsPopup,  setShowNoCardsPopup]  = useState(false)
   const [showSimGoal,       setShowSimGoal]       = useState(false)
   const [simGoalDontShow,   setSimGoalDontShow]   = useState(false)
-  const counterRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem('srs_learn_target',  String(learnTarget))  }, [learnTarget])
   useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
@@ -157,12 +155,39 @@ export default function DualRingCard({
         </>
       )}
 
+      {/* Sim goal counter — absolutely positioned top-right, symmetrical to forecast */}
+      {simActive && (
+        <>
+          <button
+            onClick={() => setShowSimInfo(v => !v)}
+            style={{ position: 'absolute', top: 8, right: 10, zIndex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0 }}
+          >
+            <Icon name="info" size={13} color={T.inkMute} />
+          </button>
+          {showSimInfo && (
+            <div style={{
+              position: 'absolute', top: 30, right: 10, zIndex: 10,
+              background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+              borderRadius: 10, padding: '10px 14px', minWidth: 180,
+              boxShadow: '0 4px 16px rgba(43,34,26,0.12)',
+            }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 18, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em', marginBottom: 8 }}>
+                {totalDue} / {simGoalRemaining}
+              </div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, lineHeight: 1.6 }}>
+                <div><span style={{ color: T.inkSoft }}>x</span> = totalDue</div>
+                <div style={{ color: T.inkFaint, marginBottom: 6 }}>all cards currently due, regardless of session size</div>
+                <div><span style={{ color: T.inkSoft }}>y</span> = simTotalActive − simRootedCount</div>
+                <div style={{ color: T.inkFaint }}>sim-deck cards (priority decks) not yet at Rooted mastery</div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <div style={{ display: 'flex', gap: 12 }}>
         {/* ── Learn half ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-            Learn
-          </div>
           <RingWithCount pct={learnPct} color={T.sage} count={learnedToday} target={learnTarget} />
           {learnedToday < learnTarget && newCount > 0 ? (
             <Link href={`/learn?start=1&n=${learnN}`} style={{
@@ -213,88 +238,45 @@ export default function DualRingCard({
 
         {/* ── Review half ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-            Review
-          </div>
           <RingWithCount pct={reviewPct} color={T.crimson} count={reviewedToday} target={reviewTarget} />
-          <div style={{ position: 'relative', width: '100%' }}>
-            {dueCount > 0 && reviewedToday < reviewTarget ? (
-              <Link href="/review?start=1" style={{
-                width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
-                background: T.crimson, color: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                fontSize: 13.5, fontWeight: 600,
-                boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
-              }}>
-                <Icon name="play" size={12} color="#fff" />
-                Review {dueCount}
-              </Link>
-            ) : reviewedToday >= reviewTarget && totalDue > 0 ? (
-              <Link href="/review?start=1&more=1" style={{
-                width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
-                background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, fontWeight: 600,
-              }}>
-                Review {Math.min(totalDue, reviewMoreN)} more?
-              </Link>
-            ) : reviewNeverStarted ? (
-              <div style={{
-                width: '100%', height: 44, borderRadius: 12,
-                background: T.sageBg, border: `1px solid #D2D8AE`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>No reviews yet</span>
-              </div>
-            ) : (
-              <div style={{
-                width: '100%', height: 44, borderRadius: 12,
-                background: T.sageBg, border: `1px solid #D2D8AE`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}>
-                <Icon name="check" size={14} color={T.sageDp} strokeWidth={2.2} />
-                <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>All caught up!</span>
-              </div>
-            )}
-            {simActive && (
-              <div
-                ref={counterRef}
-                role="presentation"
-                onMouseEnter={() => {
-                  setSimTipY(counterRef.current?.getBoundingClientRect().bottom ?? 0)
-                  setShowSimTip(true)
-                }}
-                onMouseLeave={() => setShowSimTip(false)}
-                style={{
-                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                  textAlign: 'center',
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: 9, color: T.inkMute,
-                  cursor: 'default',
-                }}
-              >
-                {totalDue} / {simGoalRemaining}
-                {showSimTip && (
-                  <div style={{
-                    position: 'fixed', top: simTipY + 4, left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#1e1e1e', border: '1px solid #333',
-                    borderRadius: 8, padding: '8px 10px',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: 10, color: '#bbb', lineHeight: 1.6,
-                    whiteSpace: 'nowrap', textAlign: 'left', width: 'max-content',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-                    pointerEvents: 'none', zIndex: 50,
-                  }}>
-                    <div><span style={{ color: '#888' }}>x</span> = totalDue</div>
-                    <div style={{ color: '#666', marginBottom: 6 }}>all cards currently due, regardless of session size</div>
-                    <div><span style={{ color: '#888' }}>y</span> = simTotalActive − simRootedCount</div>
-                    <div style={{ color: '#666' }}>sim-deck cards (priority decks) not yet at Rooted mastery</div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {dueCount > 0 && reviewedToday < reviewTarget ? (
+            <Link href="/review?start=1" style={{
+              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.crimson, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              fontSize: 13.5, fontWeight: 600,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
+            }}>
+              <Icon name="play" size={12} color="#fff" />
+              Review {dueCount}
+            </Link>
+          ) : reviewedToday >= reviewTarget && totalDue > 0 ? (
+            <Link href="/review?start=1&more=1" style={{
+              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBg}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 600,
+            }}>
+              Review {Math.min(totalDue, reviewMoreN)} more?
+            </Link>
+          ) : reviewNeverStarted ? (
+            <div style={{
+              width: '100%', height: 44, borderRadius: 12,
+              background: T.sageBg, border: `1px solid #D2D8AE`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>No reviews yet</span>
+            </div>
+          ) : (
+            <div style={{
+              width: '100%', height: 44, borderRadius: 12,
+              background: T.sageBg, border: `1px solid #D2D8AE`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+              <Icon name="check" size={14} color={T.sageDp} strokeWidth={2.2} />
+              <span style={{ fontSize: 11.5, color: T.sageDp, fontWeight: 600 }}>All caught up!</span>
+            </div>
+          )}
         </div>
       </div>
 

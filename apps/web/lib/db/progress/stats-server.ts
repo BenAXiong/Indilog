@@ -29,6 +29,8 @@ export type DashboardStats = {
   monthLabels: (string | null)[]  // label per week column, null if mid-month
   simGoalRemaining: number   // non-Rooted active cards in sim decks (temporary x/y counter)
   reviewMoreN: number        // session size for "Review more" — matches session formula
+  daysStudied: number        // days with ≥1 review in 16-week window
+  dailyAverage: number       // total reviews in 16-week window / daysStudied
   mastered: number          // ease_factor >= 2.5 AND interval_days >= 21
   active: number            // total flashcards
   thisWeek: number          // sum reviewed_count last 7 days
@@ -52,6 +54,8 @@ const EMPTY: DashboardStats = {
   monthLabels: new Array(16).fill(null) as (string | null)[],
   simGoalRemaining: 0,
   reviewMoreN: 10,
+  daysStudied: 0,
+  dailyAverage: 0,
   mastered: 0, active: 0, thisWeek: 0,
   goalCollectionId: null, goalDueDate: null,
   capturedTotal: 0, capturedToday: 0, recentItems: [],
@@ -231,6 +235,15 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   }
 
 
+  // 16-week (112-day) aggregate stats for heatmap header
+  let periodReviews = 0
+  let daysStudied   = 0
+  for (let i = 0; i <= 111; i++) {
+    const reviews = statsMap.get(dateStep(today, -i))?.reviewed ?? 0
+    if (reviews > 0) { periodReviews += reviews; daysStudied++ }
+  }
+  const dailyAverage = daysStudied > 0 ? Math.round(periodReviews / daysStudied) : 0
+
   const todayStats    = statsMap.get(today)
   const reviewedToday = todayStats?.reviewed ?? 0
   const learnedToday  = todayStats?.learned  ?? 0
@@ -269,6 +282,8 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     totalDue:          dueRes.count      ?? 0,
     simGoalRemaining:  sim.simTotalActive - sim.simRootedCount,
     reviewMoreN,
+    daysStudied,
+    dailyAverage,
     newCount:       newCountRes.count ?? 0,
     dueTomorrow:    dueTomorrowRes.count ?? 0,
     learnTarget,

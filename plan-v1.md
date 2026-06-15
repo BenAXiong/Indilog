@@ -189,9 +189,9 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Add overlay when priority or all decks have been learned/reviewed
 - [x] Add rewind to review Again and Learn tests
 
-- [-] Dashboard — improve goal card remove recent captures and labels
+- [x] Dashboard — improve goal card remove recent captures and labels
+- [-] Curriculum deck: fix UI, esp progress indicators. Add play + number?
 - [ ] Curriculum content layout options — compact / standard / flashcard view; toggled per-section or globally
-- [ ] Curriculum deck: fix UI, esp progress indicators. Add play + number?
 - [ ] Study tab decks: on click, add in sheet review now, open in browser, etc
 
 ### M5-C — Feature refinement
@@ -200,7 +200,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Browser zh lookup: enable multi word — lookup also searches sentences, includes sentence zh
 - [x] 2-step review entry — resolved by Learn/Review split + priority list (DEC-M5-01)
 - [x] Refine simulation of dailies from custom goals
-- [ ] Set smart session size defaults for Learn. 10-15-20 depending on target.
+- [x] Set smart session size defaults for Learn. 10-15-20 depending on target.
 - [ ] Enable non-priority reps deck-by-deck in the Study tab.
 - [ ] Rework goal-target-cap confusing semantics and update the ADRs.
 - [ ] Mod Again in Reviews: min(10min, requeue to last)
@@ -251,8 +251,6 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] 3-way card mode toggle (video / image / audio) in VideoPage header; mode persists across card navigation; audio-only shows crimson circle player button
 - [x] VideoPage list mode: BrowserView filtered to video/image cards only (`videoOnly` prop)
 
-> standalone SPA from ILRDF (skip login for single page?)
-> titv and other: pre-made ocr timestamps
 ---
 
 ## Milestone 9 — Tests and fixes
