@@ -718,7 +718,7 @@ export default function VideoPage({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {viewMode === 'landing' ? (
-            <Link href={isDemo ? '/demo' : '/study'} style={{
+            <Link href={isDemo ? '/login' : '/study'} style={{
               width: 34, height: 34, borderRadius: 999,
               border: `1px solid ${T.lineSoft}`, background: T.paperHi,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
