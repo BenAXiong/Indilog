@@ -833,7 +833,7 @@ export default function BrowserView() {
                 <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                   {pc.ab}
                 </div>
-                {pc.audio && (
+                {pc.audio && !pc.video_clip && (
                   <button onClick={() => {
                     const a = previewAudioRef.current
                     if (!a) return
