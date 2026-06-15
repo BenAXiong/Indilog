@@ -167,8 +167,8 @@ function CurriculumRow({ icon, name, href, meta, last }: {
       {/* Counter + chevron */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
         <span style={{
-          fontFamily: 'Newsreader, Georgia, serif',
-          fontSize: 15, color: T.inkMute, fontWeight: 400,
+          fontFamily: '"JetBrains Mono", monospace',
+          fontSize: 11.5, color: T.inkMute, fontWeight: 500,
         }}>
           {meta && meta.total > 0 ? `${meta.completed}/${meta.total}` : ''}
         </span>
@@ -637,7 +637,7 @@ export default function StudyPage() {
                   name="Captured"
                   sub="words saved while reading"
                   due={due.captures}
-                  href="/review"
+                  href="/review?capturesOnly=true"
                   kebab
                   onKebab={() => setActionDeck({
                     id: CAPTURES_DECK_ID, name: 'Captured',
