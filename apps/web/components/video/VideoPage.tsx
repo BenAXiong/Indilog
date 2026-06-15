@@ -366,8 +366,9 @@ export default function VideoPage() {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Video / audio refs
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const videoRef    = useRef<HTMLVideoElement | null>(null)
+  const audioRef    = useRef<HTMLAudioElement | null>(null)
+  const audioCardId = useRef<string | null>(null)   // tracks which card's audio is loaded
   const [vidSegIdx, setVidSegIdx] = useState(0)
   const [cardMode, setCardMode] = useState<'video' | 'image' | 'audio'>('video')
   const [audioPlaying, setAudioPlaying] = useState(false)
@@ -435,10 +436,17 @@ export default function VideoPage() {
     const best: 'video' | 'image' | 'audio' = videoSegs.length > 0 ? 'video' : imageUrl ? 'image' : 'audio'
     setCardMode(best)
 
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
+    // goTo already started audio within the gesture — just attach listeners
+    if (audioCardId.current === activeCard?.id && audioRef.current) {
+      const a = audioRef.current
+      a.onplay  = () => setAudioPlaying(true)
+      a.onpause = () => setAudioPlaying(false)
+      a.onended = () => setAudioPlaying(false)
+      return
     }
+
+    // Initial load or preview change — try autoplay (may be blocked on mobile)
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
     setAudioPlaying(false)
     if (!audioSegs[0]) return
     const a = new Audio(audioSegs[0])
@@ -447,6 +455,7 @@ export default function VideoPage() {
     a.onended = () => setAudioPlaying(false)
     a.play().then(() => setAudioPlaying(true)).catch(() => {})
     audioRef.current = a
+    audioCardId.current = activeCard?.id ?? null
   }, [activeCard?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Gloss fetch ──
@@ -558,11 +567,24 @@ export default function VideoPage() {
   // ── Navigation ──
   const goTo = useCallback((idx: number) => {
     if (idx < 0 || idx >= cards.length) return
+    // Start audio within the gesture so browsers permit autoplay
+    const nextCard = cards[idx]
+    const url = nextCard?.metadata?.audio_segments?.[0] ?? nextCard?.audio ?? null
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+    if (url) {
+      const a = new Audio(url)
+      a.play().then(() => setAudioPlaying(true)).catch(() => {})
+      audioRef.current = a
+      audioCardId.current = nextCard.id
+    } else {
+      audioCardId.current = null
+    }
+    setAudioPlaying(false)
     setCurrentIndex(idx)
     setPreviewCard(null)
     setMergeMode(false)
     setMergeSel(new Set())
-  }, [cards.length])
+  }, [cards])
 
   // ── Merge actions ──
   function enterMerge() {
