@@ -27,9 +27,10 @@ function tokenizeAmis(text: string): Array<{ display: string; key: string }> {
 function shortGloss(wordCh: string): string {
   const first = (wordCh.split(' \u00B7 ')[0] ?? '')
     .replace(/\uFF08[^\uFF09]*\uFF09|\([^)]*\)/g, '')
+    .replace(/^[)\uFF09\s]+/, '')
     .trim()
   const chars = [...first]
-  return chars.length <= 5 ? first : chars.slice(0, 4).join('') + '\u2026'
+  return chars.length <= 10 ? first : chars.slice(0, 8).join('') + '\u2026'
 }
 
 // ─── Card shell ───────────────────────────────────────────────────────────────
@@ -152,9 +153,9 @@ function VideoCardDisplay({
               }}>{tok.display}</span>
               {glossMode && (
                 <span style={{
-                  fontSize: 9, color: T.inkMute,
+                  fontSize: 13, color: T.inkMute,
                   fontFamily: '"JetBrains Mono", monospace',
-                  letterSpacing: '0.03em', lineHeight: 1,
+                  letterSpacing: '0.02em', lineHeight: 1,
                 }}>
                   {glossLoading ? '...' : (glosses[tok.key] ?? (tok.key.length < 3 ? tok.key : '?'))}
                 </span>
