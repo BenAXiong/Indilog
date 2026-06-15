@@ -14,7 +14,6 @@ import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import { getStudyStats, type StudyStats, type CollectionStat } from '@/lib/db/srs/stats-client'
 import BrowserView from '@/components/study/BrowserView'
-import VideoPage from '@/components/video/VideoPage'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
 import CustomSessionSheet from '@/components/sheets/CustomSessionSheet'
 
@@ -386,7 +385,6 @@ const SUBTABS = [
   { id: 'decks'   as const, label: 'Decks'   },
   { id: 'browser' as const, label: 'Browser' },
   { id: 'stats'   as const, label: 'Stats'   },
-  { id: 'video'   as const, label: 'Video'   },
 ]
 
 const btnStyle: CSSProperties = {
@@ -400,7 +398,7 @@ const btnStyle: CSSProperties = {
 
 export default function StudyPage() {
   const { lang, dialect, dialectLabel } = useLang()
-  const [activeTab, setActiveTab] = useState<'decks' | 'browser' | 'stats' | 'video'>('decks')
+  const [activeTab, setActiveTab] = useState<'decks' | 'browser' | 'stats'>('decks')
   const [collections, setCollections]     = useState<CollectionMeta[]>([])
   const [due, setDue]                     = useState<DueStats>({ total: 0, captures: 0, byCollection: {} })
   const [loading, setLoading]             = useState(true)
@@ -570,6 +568,11 @@ export default function StudyPage() {
             </button>
           )
         })}
+        <Link href="/video" style={{
+          position: 'relative', paddingBottom: 11, textDecoration: 'none',
+          fontSize: 15, fontWeight: 500,
+          color: T.inkMute, letterSpacing: '-0.01em',
+        }}>Video</Link>
       </div>
 
       {/* ── Decks ── */}
@@ -715,9 +718,6 @@ export default function StudyPage() {
           ? <StatsLoading />
           : <StudyStatsView stats={studyStats} />
       )}
-
-      {/* ── Video ── */}
-      {activeTab === 'video' && <VideoPage embedded />}
 
       <CustomSessionSheet open={customOpen} onClose={() => setCustomOpen(false)} />
 
