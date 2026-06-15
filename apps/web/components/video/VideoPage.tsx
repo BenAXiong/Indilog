@@ -29,6 +29,7 @@ function shortGloss(wordCh: string): string {
     .replace(/\uFF08[^\uFF09]*\uFF09|\([^)]*\)/g, '')
     .replace(/^[)\uFF09\s]+/, '')
     .trim()
+    .replace(/\u3002+$/, '')
   const chars = [...first]
   return chars.length <= 10 ? first : chars.slice(0, 8).join('') + '\u2026'
 }
