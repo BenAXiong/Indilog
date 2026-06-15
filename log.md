@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-15 | FIX | listBrowserCards: add secondary .order("id") to both paginated queries so offset boundaries are deterministic when created_at ties exist; dedup by id defensively — fixes 58 duplicate-key React warnings in BrowserView list mode (2034 collection items crossing the 1000-row page boundary) |
 | 2026-06-15 | FEATURE | VideoPage word lookup: tapping any interlinear token in gloss mode opens a bottom sheet with full Citadel entry (word_ab + all definition senses split on ·); results cached in lookupFullCache ref; short tokens show no-entry state; dismiss via backdrop or X; also adds gloss IconName and swaps header magnifier to custom gloss icon |
 | 2026-06-15 | FIX | FlagPicker: outer container now uses flexDirection:row when expandDir=row, so color swatches appear to the right of the flag button instead of below |
 | 2026-06-15 | FEATURE | VideoPage gloss mode: magnifier button toggles interlinear display; tokenizeAmis splits ab into word/key pairs; shortGloss extracts first CJK def from Citadel via /api/dict/search proxy; glosses fetched in parallel per card, cached in useRef; short tokens shown as-is; stacked word/gloss pairs flex-wrapped in VideoCardDisplay |
