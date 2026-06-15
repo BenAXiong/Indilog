@@ -456,8 +456,7 @@ export default function VideoPage({
     setVidSegIdx(0)
     setRevealed(false)
     setShowFlagPicker(false)
-    const best: 'video' | 'image' | 'audio' = videoSegs.length > 0 ? 'video' : imageUrl ? 'image' : 'audio'
-    setCardMode(prev => availableModes.includes(prev) ? prev : best)
+    setCardMode(videoSegs.length > 0 ? 'video' : imageUrl ? 'image' : 'audio')
 
     // goTo already started audio within the gesture — just attach listeners
     if (audioCardId.current === activeCard?.id && audioRef.current) {
