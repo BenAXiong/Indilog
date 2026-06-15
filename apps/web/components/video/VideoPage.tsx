@@ -353,7 +353,7 @@ export default function VideoPage({
   const [loading,        setLoading]        = useState(false)
   const [alwaysRevealed, setAlwaysRevealed] = useState(true)
   const [revealed,       setRevealed]       = useState(false)
-  const [viewMode,       setViewMode]       = useState<'video' | 'list'>('video')
+  const [viewMode,       setViewMode]       = useState<'landing' | 'video' | 'list'>('landing')
 
   // Merge
   const [mergeMode,   setMergeMode]   = useState(false)
@@ -421,15 +421,8 @@ export default function VideoPage({
 
   // ── Load collections on mount ──
   useEffect(() => {
-    if (demoCollections) {
-      setCollections(demoCollections)
-      if (demoCollections.length > 0) setCollectionId(demoCollections[0].id)
-      return
-    }
-    listVideoCollections().then(cols => {
-      setCollections(cols)
-      if (cols.length > 0) setCollectionId(cols[0].id)
-    })
+    if (demoCollections) { setCollections(demoCollections); return }
+    listVideoCollections().then(cols => setCollections(cols))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load cards when collection changes ──
@@ -699,6 +692,7 @@ export default function VideoPage({
 
   const hasPrev = currentIndex > 0
   const hasNext = currentIndex < cards.length - 1
+  const currentCollection = collections.find(c => c.id === collectionId) ?? null
 
   return (
     // Fullscreen fixed overlay — no layout scroll, no nav bar
@@ -716,121 +710,133 @@ export default function VideoPage({
       overflow: 'hidden',
     }}>
 
-      {/* ── Header: back · title · deck selector · counter · controls ── */}
+      {/* ── Header ── */}
       <div style={{
         flexShrink: 0,
         padding: '14px 18px 10px',
-        display: 'flex', flexDirection: 'column', gap: 10,
         borderBottom: `1px solid ${T.lineSoft}`,
       }}>
-        {/* Row 1: back · title · 3 controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link href={isDemo ? '/demo' : '/study'} style={{
-            width: 34, height: 34, borderRadius: 999,
-            border: `1px solid ${T.lineSoft}`, background: T.paperHi,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: T.inkSoft, textDecoration: 'none', flexShrink: 0,
-          }}>
-            <Icon name="arrow-l" size={16} strokeWidth={1.8} />
-          </Link>
+          {viewMode === 'landing' ? (
+            <Link href={isDemo ? '/demo' : '/study'} style={{
+              width: 34, height: 34, borderRadius: 999,
+              border: `1px solid ${T.lineSoft}`, background: T.paperHi,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: T.inkSoft, textDecoration: 'none', flexShrink: 0,
+            }}>
+              <Icon name="arrow-l" size={16} strokeWidth={1.8} />
+            </Link>
+          ) : (
+            <button onClick={() => setViewMode('landing')} style={{
+              width: 34, height: 34, borderRadius: 999,
+              border: `1px solid ${T.lineSoft}`, background: T.paperHi,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: T.inkSoft, cursor: 'pointer', flexShrink: 0,
+            }}>
+              <Icon name="arrow-l" size={16} strokeWidth={1.8} />
+            </button>
+          )}
 
           <span style={{
             fontFamily: 'Newsreader, Georgia, serif',
             fontSize: 20, fontWeight: 500, color: T.ink,
             letterSpacing: '-0.02em', lineHeight: 1.1, flex: 1,
-          }}>Video Decks</span>
-
-          {/* Card mode — cycles video → image → audio */}
-          <button onClick={cycleCardMode} disabled={availableModes.length <= 1} style={{
-            width: 34, height: 34, borderRadius: 10,
-            border: `1px solid ${T.lineSoft}`,
-            background: T.paperHi,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: availableModes.length > 1 ? 'pointer' : 'default',
-            color: T.inkSoft, opacity: availableModes.length > 1 ? 1 : 0.4,
           }}>
-            <Icon name={cardMode === 'video' ? 'film' : cardMode === 'image' ? 'mountain' : 'speaker'} size={14} strokeWidth={1.8} />
-          </button>
-
-          {/* Magnifier — gloss mode */}
-          <button onClick={() => setGlossMode(v => !v)} style={{
-            width: 34, height: 34, borderRadius: 10,
-            border: `1px solid ${glossMode ? T.ink : T.lineSoft}`,
-            background: glossMode ? T.ink : T.paperHi,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
-          }}>
-            <Icon name="gloss" size={14} strokeWidth={1.8} />
-          </button>
-
-          {/* Always-reveal toggle */}
-          <button onClick={() => setAlwaysRevealed(v => !v)} style={{
-            width: 34, height: 34, borderRadius: 10,
-            border: `1px solid ${!alwaysRevealed ? T.ink : T.lineSoft}`,
-            background: !alwaysRevealed ? T.ink : T.paperHi,
-            color: !alwaysRevealed ? T.cream : T.inkMute,
-            cursor: 'pointer', fontSize: 15, fontWeight: 600, lineHeight: 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            中
-            {!alwaysRevealed && (
-              <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 34 34">
-                <line x1="3" y1="31" x2="31" y2="3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-
-          {/* Layout toggle */}
-          <button onClick={() => setViewMode(v => v === 'video' ? 'list' : 'video')} style={{
-            width: 34, height: 34, borderRadius: 10,
-            border: `1px solid ${viewMode === 'list' ? T.ink : T.lineSoft}`,
-            background: viewMode === 'list' ? T.ink : T.paperHi,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: viewMode === 'list' ? T.cream : T.inkSoft,
-          }}>
-            <Icon name={viewMode === 'video' ? 'card' : 'word'} size={14} strokeWidth={1.8} />
-          </button>
-        </div>
-
-        {/* Row 2: deck selector · counter */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <select
-              value={collectionId ?? ''}
-              onChange={e => setCollectionId(e.target.value || null)}
-              disabled={collections.length === 0}
-              style={{
-                width: '100%', height: 34, borderRadius: 9,
-                border: `1px solid ${T.lineSoft}`, background: T.paperHi,
-                color: T.ink, fontSize: 13, fontWeight: 500,
-                fontFamily: 'Newsreader, Georgia, serif',
-                paddingLeft: 10, paddingRight: 28,
-                appearance: 'none', cursor: 'pointer', outline: 'none',
-              }}
-            >
-              {collections.length === 0
-                ? <option value="">No video decks</option>
-                : collections.map(col => <option key={col.id} value={col.id}>{col.name}</option>)
-              }
-            </select>
-            <div style={{
-              position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)',
-              pointerEvents: 'none', color: T.inkMute,
-            }}>
-              <Icon name="chev-d" size={12} />
-            </div>
-          </div>
-          <span style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: T.inkMute,
-            flexShrink: 0, minWidth: 48, textAlign: 'right',
-          }}>
-            {loading ? '…' : cards.length === 0 ? '—' : `${currentIndex + 1} / ${cards.length}`}
+            {viewMode === 'landing' ? 'Video Decks' : (currentCollection?.name ?? '…')}
           </span>
+
+          {viewMode !== 'landing' && (<>
+            <button onClick={cycleCardMode} disabled={availableModes.length <= 1} style={{
+              width: 34, height: 34, borderRadius: 10,
+              border: `1px solid ${T.lineSoft}`, background: T.paperHi,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: availableModes.length > 1 ? 'pointer' : 'default',
+              color: T.inkSoft, opacity: availableModes.length > 1 ? 1 : 0.4,
+            }}>
+              <Icon name={cardMode === 'video' ? 'film' : cardMode === 'image' ? 'mountain' : 'speaker'} size={14} strokeWidth={1.8} />
+            </button>
+
+            <button onClick={() => setGlossMode(v => !v)} style={{
+              width: 34, height: 34, borderRadius: 10,
+              border: `1px solid ${glossMode ? T.ink : T.lineSoft}`,
+              background: glossMode ? T.ink : T.paperHi,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: glossMode ? T.cream : T.inkSoft,
+            }}>
+              <Icon name="gloss" size={14} strokeWidth={1.8} />
+            </button>
+
+            <button onClick={() => setAlwaysRevealed(v => !v)} style={{
+              width: 34, height: 34, borderRadius: 10,
+              border: `1px solid ${!alwaysRevealed ? T.ink : T.lineSoft}`,
+              background: !alwaysRevealed ? T.ink : T.paperHi,
+              color: !alwaysRevealed ? T.cream : T.inkMute,
+              cursor: 'pointer', fontSize: 15, fontWeight: 600, lineHeight: 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              中
+              {!alwaysRevealed && (
+                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 34 34">
+                  <line x1="3" y1="31" x2="31" y2="3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
+
+            <button onClick={() => setViewMode(v => v === 'video' ? 'list' : 'video')} style={{
+              width: 34, height: 34, borderRadius: 10,
+              border: `1px solid ${viewMode === 'list' ? T.ink : T.lineSoft}`,
+              background: viewMode === 'list' ? T.ink : T.paperHi,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: viewMode === 'list' ? T.cream : T.inkSoft,
+            }}>
+              <Icon name={viewMode === 'video' ? 'card' : 'word'} size={14} strokeWidth={1.8} />
+            </button>
+          </>)}
         </div>
       </div>
 
       {/* ── Video mode ── */}
+      {/* ── Landing: deck selection ── */}
+      {viewMode === 'landing' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 18px' }}>
+          {collections.length === 0 ? (
+            <div style={{ textAlign: 'center', color: T.inkMute, fontSize: 14, paddingTop: 40 }}>
+              Loading…
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+              {collections.map(col => (
+                <button
+                  key={col.id}
+                  onClick={() => { setCollectionId(col.id); setViewMode('video') }}
+                  style={{
+                    display: 'flex', flexDirection: 'column',
+                    background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                    borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
+                    textAlign: 'left', padding: 0,
+                  }}
+                >
+                  <div style={{ aspectRatio: '16/9', background: T.lineSoft, overflow: 'hidden' }}>
+                    {col.first_image && (
+                      <img src={col.first_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    )}
+                  </div>
+                  <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: T.ink, fontFamily: 'Newsreader, Georgia, serif', lineHeight: 1.3 }}>
+                      {col.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace' }}>
+                      {col.item_count} sentences
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {viewMode === 'video' && (
         <>
           {/* Card area — fills remaining space, vertically centered */}
@@ -842,38 +848,45 @@ export default function VideoPage({
             {loading ? (
               <div className="animate-iv-shimmer" style={{ height: 380, borderRadius: 22, background: T.lineSoft }} />
             ) : activeCard ? (
-              <VideoCardDisplay
-                card={activeCard}
-                alwaysRevealed={alwaysRevealed}
-                revealed={revealed}
-                onReveal={() => setRevealed(true)}
-                videoRef={videoRef}
-                videoSegs={videoSegs as string[]}
-                vidSegIdx={vidSegIdx}
-                imageUrl={imageUrl}
-                cardMode={cardMode}
-                hasAudio={hasAudio}
-                audioPlaying={audioPlaying}
-                onAudioToggle={handleAudioToggle}
-                onVideoEnded={handleVideoEnded}
-                onVideoTap={handleVideoTap}
-                onSuspend={handleSuspend}
-                showFlagPicker={showFlagPicker}
-                onFlagToggle={() => setShowFlagPicker(v => !v)}
-                onFlagSelect={handleFlagSelect}
-                isPreview={!!previewCard}
-                isDemo={isDemo}
-                glossMode={glossMode}
-                glosses={glosses}
-                glossLoading={glossLoading}
-                isDesktop={isDesktop}
-                onTokenTap={handleTokenTap}
-                onTokenHover={handleTokenHover}
-                onTokenHoverEnd={handleTokenHoverEnd}
-              />
+              <>
+                {!previewCard && cards.length > 0 && (
+                  <div style={{ textAlign: 'right', fontSize: 11, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', paddingBottom: 6 }}>
+                    {currentIndex + 1} / {cards.length}
+                  </div>
+                )}
+                <VideoCardDisplay
+                  card={activeCard}
+                  alwaysRevealed={alwaysRevealed}
+                  revealed={revealed}
+                  onReveal={() => setRevealed(true)}
+                  videoRef={videoRef}
+                  videoSegs={videoSegs as string[]}
+                  vidSegIdx={vidSegIdx}
+                  imageUrl={imageUrl}
+                  cardMode={cardMode}
+                  hasAudio={hasAudio}
+                  audioPlaying={audioPlaying}
+                  onAudioToggle={handleAudioToggle}
+                  onVideoEnded={handleVideoEnded}
+                  onVideoTap={handleVideoTap}
+                  onSuspend={handleSuspend}
+                  showFlagPicker={showFlagPicker}
+                  onFlagToggle={() => setShowFlagPicker(v => !v)}
+                  onFlagSelect={handleFlagSelect}
+                  isPreview={!!previewCard}
+                  isDemo={isDemo}
+                  glossMode={glossMode}
+                  glosses={glosses}
+                  glossLoading={glossLoading}
+                  isDesktop={isDesktop}
+                  onTokenTap={handleTokenTap}
+                  onTokenHover={handleTokenHover}
+                  onTokenHoverEnd={handleTokenHoverEnd}
+                />
+              </>
             ) : (
               <div style={{ textAlign: 'center', color: T.inkMute, fontSize: 14 }}>
-                {collectionId ? 'No video cards in this deck.' : 'Select a deck above.'}
+                No video cards in this deck.
               </div>
             )}
           </div>

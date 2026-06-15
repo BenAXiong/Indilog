@@ -30,18 +30,25 @@ function transformCards(raws: RawCard[]): {
   collections: VideoCollection[]
   cardsByCollection: Record<string, VideoCard[]>
 } {
-  const colOrder: string[] = []
-  const colNames: Record<string, string> = {}
-  const groups: Record<string, VideoCard[]> = {}
+  const colOrder:      string[]                       = []
+  const colNames:      Record<string, string>         = {}
+  const colCount:      Record<string, number>         = {}
+  const colFirstImage: Record<string, string | null>  = {}
+  const groups:        Record<string, VideoCard[]>    = {}
 
   for (const raw of raws) {
     const colId = String(raw.ilrdf_id)
+    const seg   = String(raw.seg_n).padStart(4, '0')
+    const image = VIDEO_BASE + `ilrdf/${raw.ilrdf_id}/seg_${seg}.jpg`
+
     if (!groups[colId]) {
-      groups[colId] = []
+      groups[colId]        = []
       colOrder.push(colId)
-      colNames[colId] = raw.metadata.title_zh ?? `Video ${raw.ilrdf_id}`
+      colNames[colId]      = raw.metadata.title_zh ?? `Video ${raw.ilrdf_id}`
+      colFirstImage[colId] = image
     }
-    const seg = String(raw.seg_n).padStart(4, '0')
+    colCount[colId] = (colCount[colId] ?? 0) + 1
+
     groups[colId].push({
       id:          raw.id,
       ab:          raw.ab,
@@ -52,7 +59,7 @@ function transformCards(raws: RawCard[]): {
       created_at:  DEMO_DATE,
       metadata: {
         video_clip: raw.metadata.video_clip ? VIDEO_BASE + raw.metadata.video_clip : null,
-        image:      VIDEO_BASE + `ilrdf/${raw.ilrdf_id}/seg_${seg}.jpg`,
+        image,
       },
       flashcard_id: null,
       flag_color:   null,
@@ -61,7 +68,12 @@ function transformCards(raws: RawCard[]): {
   }
 
   return {
-    collections:       colOrder.map(id => ({ id, name: colNames[id] })),
+    collections: colOrder.map(id => ({
+      id,
+      name:        colNames[id],
+      item_count:  colCount[id]      ?? 0,
+      first_image: colFirstImage[id] ?? null,
+    })),
     cardsByCollection: groups,
   }
 }

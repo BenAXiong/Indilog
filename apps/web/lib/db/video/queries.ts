@@ -27,8 +27,10 @@ export type VideoCard = {
 }
 
 export type VideoCollection = {
-  id:   string
-  name: string
+  id:          string
+  name:        string
+  item_count:  number
+  first_image: string | null
 }
 
 export async function listVideoCollections(): Promise<VideoCollection[]> {
@@ -38,16 +40,23 @@ export async function listVideoCollections(): Promise<VideoCollection[]> {
 
   const { data: videoItems } = await supabase
     .from('ind_items')
-    .select('collection_id')
+    .select('collection_id, metadata')
     .eq('user_id', user.id)
     .or('metadata->>video_clip.not.is.null,metadata->>image.not.is.null')
     .is('metadata->>merged_into', null)
+    .order('created_at', { ascending: true })
 
-  const collectionIds = [...new Set(
-    (videoItems ?? [])
-      .map(r => r.collection_id as string | null)
-      .filter((id): id is string => !!id)
-  )]
+  const countByCol:      Record<string, number>          = {}
+  const firstImageByCol: Record<string, string | null>   = {}
+  for (const item of videoItems ?? []) {
+    const colId = item.collection_id as string | null
+    if (!colId) continue
+    countByCol[colId] = (countByCol[colId] ?? 0) + 1
+    if (!(colId in firstImageByCol))
+      firstImageByCol[colId] = (item.metadata as any)?.image ?? null
+  }
+
+  const collectionIds = Object.keys(countByCol)
   if (collectionIds.length === 0) return []
 
   const { data } = await supabase
@@ -56,7 +65,13 @@ export async function listVideoCollections(): Promise<VideoCollection[]> {
     .eq('user_id', user.id)
     .in('id', collectionIds)
     .order('created_at', { ascending: true })
-  return (data ?? []) as VideoCollection[]
+
+  return (data ?? []).map(col => ({
+    id:          col.id,
+    name:        col.name,
+    item_count:  countByCol[col.id]      ?? 0,
+    first_image: firstImageByCol[col.id] ?? null,
+  }))
 }
 
 export async function listCollectionVideoCards(collectionId: string): Promise<VideoCard[]> {
