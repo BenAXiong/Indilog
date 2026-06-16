@@ -6,7 +6,7 @@ import Icon from '@/components/ui/Icon'
 import type { Item } from '@/lib/db/notebook/items'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import type { ZhMode } from './SettingsPanel'
-import type { LayoutMode } from '@/lib/eparkTokens'
+import { EP, type LayoutMode } from '@/lib/eparkTokens'
 
 type Props = {
   row: CurriculumRow
@@ -50,6 +50,65 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, in
     }
   }
 
+  // ── A2 · Quiet editorial (standard) ────────────────────────────────────────
+  if (layout === 'standard') {
+    return (
+      <div style={{
+        padding: index === 1 ? '4px 0 12px' : '13px 0 12px',
+        borderBottom: '1.5px dashed #cfc7b7',
+      }}>
+        <span style={{ fontFamily: EP.fontMono, fontSize: 11, color: T.inkSoft }}>{index}</span>
+
+        <div style={{
+          fontFamily: EP.fontAb, fontWeight: 700, fontSize: 21,
+          lineHeight: 1.15, color: T.ink, margin: '4px 0 0', overflowWrap: 'break-word',
+        }}>
+          {tokens.map((tok, i) => (
+            <span key={i}
+              onClick={lookupOn && onLookup ? e => onLookup(tok, (e.target as HTMLElement).getBoundingClientRect()) : undefined}
+              style={{ marginRight: 4, cursor: lookupOn ? 'pointer' : 'text', borderBottom: lookupOn ? `1px dashed ${T.inkFaint}` : 'none' }}
+            >{tok}</span>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 7 }}>
+          {(row.zh || zhMode === 'hidden') ? (
+            <div
+              onClick={() => zhMode !== 'visible' && setZhRevealed(v => !v)}
+              style={{
+                flex: 1, minWidth: 0,
+                fontFamily: EP.fontTrans, fontSize: 13.5, color: T.inkSoft, lineHeight: 1.4,
+                filter: zhBlurred ? 'blur(4px)' : 'none',
+                cursor: zhMode !== 'visible' ? 'pointer' : 'default',
+                userSelect: zhBlurred ? 'none' : 'text',
+              }}
+            >
+              {zhRendered
+                ? (row.zh || <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>)
+                : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
+            </div>
+          ) : (
+            <div style={{ flex: 1 }} />
+          )}
+
+          {row.audio_url && (
+            <button onClick={() => onPlay(row.audio_url!)} style={ghostBtn}>
+              <Icon name="speaker" size={15} strokeWidth={1.8} />
+            </button>
+          )}
+          <button onClick={copy} style={ghostBtn}>
+            <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
+          </button>
+          <button onClick={handleSave} style={{ ...ghostBtn, color: savedId ? T.crimson : T.inkSoft }}>
+            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8}
+              color={savedId ? T.crimson : T.inkSoft} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Fallback (compact + single — not yet implemented) ────────────────────────
   return (
     <div style={{ position: 'relative', paddingTop: 10 }}>
       {/* Index — floated outside card, top-left */}
@@ -142,4 +201,11 @@ const btnStyle: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 999, flexShrink: 0,
   background: 'transparent', border: `1px solid ${T.lineSoft}`,
   color: T.inkMute, cursor: 'pointer', fontFamily: 'inherit',
+}
+
+const ghostBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: 26, height: 26, borderRadius: 999, flexShrink: 0,
+  background: 'transparent', border: 'none', padding: 0,
+  color: T.inkSoft, cursor: 'pointer', fontFamily: 'inherit',
 }
