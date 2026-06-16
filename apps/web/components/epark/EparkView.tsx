@@ -431,6 +431,8 @@ export default function EparkView({ source }: Props) {
       <div style={{
         padding: '66px 18px 100px',
         display: 'flex', flexDirection: 'column', gap: layoutMode === 'single' ? 12 : 0,
+        justifyContent: layoutMode === 'single' ? 'center' : 'flex-start',
+        minHeight: layoutMode === 'single' ? 'calc(100dvh - 166px)' : undefined,
       }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
@@ -481,7 +483,7 @@ export default function EparkView({ source }: Props) {
                 disabled={cardIdx === 0}
                 style={arrowBtn(cardIdx === 0)}
               >
-                <Icon name="arrow-l" size={20} strokeWidth={2} />
+                <Icon name="chev-l" size={22} strokeWidth={2.2} />
               </button>
 
               {/* Swipe wrapper */}
@@ -520,7 +522,7 @@ export default function EparkView({ source }: Props) {
                 disabled={cardIdx === results.length - 1}
                 style={arrowBtn(cardIdx === results.length - 1)}
               >
-                <Icon name="arrow-r" size={20} strokeWidth={2} />
+                <Icon name="chevron" size={22} strokeWidth={2.2} />
               </button>
             </div>
 
