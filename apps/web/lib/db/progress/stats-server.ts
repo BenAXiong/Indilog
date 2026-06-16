@@ -25,12 +25,13 @@ export type DashboardStats = {
   tomorrowLearnTarget: number | null
   tomorrowReviewTarget: number | null
   simulationActive: boolean
-  heatmap: number[][]       // [week 0..15][day 0..6], level 0-4, week 0 = oldest
+  heatmap: number[][]       // [week 0..19][day 0..6], level 0-9, week 0 = oldest
+  heatmapCounts: { r: number; l: number }[][]  // parallel array — reviewed + learned per cell
   monthLabels: (string | null)[]  // label per week column, null if mid-month
   simGoalRemaining: number   // non-Rooted active cards in sim decks (temporary x/y counter)
   reviewMoreN: number        // session size for "Review more" — matches session formula
-  daysStudied: number        // days with ≥1 review in 16-week window
-  dailyAverage: number       // total reviews in 16-week window / daysStudied
+  daysStudied: number        // days with ≥1 review in 20-week window
+  dailyAverage: number       // total reviews in 20-week window / daysStudied
   mastered: number          // ease_factor >= 2.5 AND interval_days >= 21
   active: number            // total flashcards
   thisWeek: number          // sum reviewed_count last 7 days
@@ -50,8 +51,9 @@ const EMPTY: DashboardStats = {
   reviewedToday: 0, learnedToday: 0,
   dueCount: 0, totalDue: 0, newCount: 0, dueTomorrow: 0,
   learnTarget: 10, reviewTarget: 100, tomorrowLearnTarget: null, tomorrowReviewTarget: null, simulationActive: false,
-  heatmap: Array.from({ length: 16 }, () => new Array(7).fill(0) as number[]),
-  monthLabels: new Array(16).fill(null) as (string | null)[],
+  heatmap: Array.from({ length: 20 }, () => new Array(7).fill(0) as number[]),
+  heatmapCounts: Array.from({ length: 20 }, () => new Array(7).fill({ r: 0, l: 0 })) as { r: number; l: number }[][],
+  monthLabels: new Array(20).fill(null) as (string | null)[],
   simGoalRemaining: 0,
   reviewMoreN: 10,
   daysStudied: 0,
@@ -62,10 +64,15 @@ const EMPTY: DashboardStats = {
 }
 
 function reviewLevel(count: number): number {
-  if (count >= 30) return 4
-  if (count >= 15) return 3
-  if (count >= 6)  return 2
-  if (count >= 1)  return 1
+  if (count >= 200) return 9
+  if (count >= 100) return 8
+  if (count >= 80)  return 7
+  if (count >= 60)  return 6
+  if (count >= 40)  return 5
+  if (count >= 20)  return 4
+  if (count >= 10)  return 3
+  if (count >= 5)   return 2
+  if (count >= 1)   return 1
   return 0
 }
 
@@ -92,9 +99,9 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   nextResetDate.setHours(resetHour, 0, 0, 0)
   const nextReset = nextResetDate.toISOString()
 
-  // 120-day window covers 16-week heatmap + streak computation
+  // 150-day window covers 20-week heatmap + streak computation
   const from120 = new Date()
-  from120.setDate(from120.getDate() - 119)
+  from120.setDate(from120.getDate() - 149)
   const fromDate = localDateStr(from120)
 
   const [
@@ -208,22 +215,29 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     .filter(r => r.date >= weekAgoStr)
     .reduce((sum, r) => sum + (r.reviewed_count ?? 0), 0)
 
-  // 16-week heatmap [week][day], week 0 = oldest, day 0 = oldest in week
+  // 20-week heatmap [week][day], week 0 = oldest, day 0 = oldest in week
   const heatmap: number[][] = []
+  const heatmapCounts: { r: number; l: number }[][] = []
   const monthLabels: (string | null)[] = []
   let lastMonth = -1
 
-  for (let w = 0; w < 16; w++) {
+  for (let w = 0; w < 20; w++) {
     const week: number[] = []
+    const weekCounts: { r: number; l: number }[] = []
     for (let d = 0; d < 7; d++) {
-      const daysAgo = 111 - (w * 7 + d)   // 111 = oldest, 0 = today
+      const daysAgo = 139 - (w * 7 + d)   // 139 = oldest, 0 = today
       const dateStr = dateStep(today, -daysAgo)
-      week.push(reviewLevel(statsMap.get(dateStr)?.reviewed ?? 0))
+      const row = statsMap.get(dateStr)
+      const r = row?.reviewed ?? 0
+      const l = row?.learned  ?? 0
+      week.push(reviewLevel(r))
+      weekCounts.push({ r, l })
     }
     heatmap.push(week)
+    heatmapCounts.push(weekCounts)
 
     // Month label: first week of each new month
-    const firstDayOfWeekStr = dateStep(today, -(111 - w * 7))
+    const firstDayOfWeekStr = dateStep(today, -(139 - w * 7))
     const firstDayOfWeek = new Date(firstDayOfWeekStr + 'T12:00:00')
     const month = firstDayOfWeek.getMonth()
     if (month === lastMonth) {
@@ -235,10 +249,10 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   }
 
 
-  // 16-week (112-day) aggregate stats for heatmap header
+  // 20-week (140-day) aggregate stats for heatmap header
   let periodReviews = 0
   let daysStudied   = 0
-  for (let i = 0; i <= 111; i++) {
+  for (let i = 0; i <= 139; i++) {
     const reviews = statsMap.get(dateStep(today, -i))?.reviewed ?? 0
     if (reviews > 0) { periodReviews += reviews; daysStudied++ }
   }
@@ -292,6 +306,7 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
     tomorrowReviewTarget: sim.fromSimulation ? sim.reviewTarget : null,
     simulationActive: sim.fromSimulation,
     heatmap,
+    heatmapCounts,
     monthLabels,
     mastered:       masteredRes.count ?? 0,
     active:         activeRes.count   ?? 0,

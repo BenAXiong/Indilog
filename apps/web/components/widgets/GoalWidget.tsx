@@ -58,19 +58,14 @@ export default function GoalWidget() {
           display: 'flex', flexDirection: 'column', textAlign: 'left',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+        {/* Row 1: Goal label | deck title */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, flexShrink: 0 }}>
             Goal
           </span>
-          {loaded && isActive && (
-            <span style={{
-              padding: '2px 7px', borderRadius: 999,
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-              letterSpacing: '0.05em', textTransform: 'uppercase',
-              background: simActive ? T.crimsonBg : T.sageBg,
-              color: simActive ? T.crimson : '#566234',
-            }}>
-              {simActive ? 'Simulated' : 'Manual'}
+          {loaded && isActive && deckName && (
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+              {deckName}
             </span>
           )}
         </div>
@@ -81,11 +76,9 @@ export default function GoalWidget() {
           </div>
         ) : isActive ? (
           <>
-            <div style={{ flex: 1, marginTop: 5, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {deckName}
-              </div>
-              <div style={{ fontSize: 11, marginTop: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
+            {/* Row 2: percentages | type pill */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 5, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 {grades && grades.total > 0
                   ? (['seed', 'planted', 'rooted', 'blooming'] as const).map((g, i) => (
                     <span key={g} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -98,6 +91,15 @@ export default function GoalWidget() {
                   : <span style={{ color: T.inkFaint }}>…</span>
                 }
               </div>
+              <span style={{
+                padding: '2px 7px', borderRadius: 999, flexShrink: 0,
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+                letterSpacing: '0.05em', textTransform: 'uppercase',
+                background: simActive ? T.crimsonBg : T.sageBg,
+                color: simActive ? T.crimson : '#566234',
+              }}>
+                {simActive ? 'Sim' : 'Manual'}
+              </span>
             </div>
             <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 8, overflow: 'hidden', display: 'flex' }}>
               {grades && grades.total > 0 && (['blooming', 'rooted', 'planted', 'seed'] as const).map(g => (
