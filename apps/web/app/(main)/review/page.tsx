@@ -11,7 +11,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import {
   ensureFlashcards, listDueFlashcards, getExcludeFromReview,
   rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
-  suspendCard, unsuspendCard, setFlagColor, deferCard, undoRating, undoDefer, localDateStr, getStudyDate,
+  suspendCard, unsuspendCard, setFlagColor, deferCard, setDueAt, undoRating, undoDefer, localDateStr, getStudyDate,
   type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { getLangName } from '@/lib/lang/lang-bridge'
@@ -147,7 +147,7 @@ type PrevSMState = { ease_factor: number; interval_days: number; repetitions: nu
 
 type UndoEntry =
   | { type: 'rate';    cardId: string; prevState: PrevSMState; wasLapsed: boolean; lapsedInterval?: number }
-  | { type: 'again';   cardId: string; insertedAt: number; lapsedInterval: number }
+  | { type: 'again';   cardId: string; insertedAt: number; lapsedInterval: number; prevDueAt: string | null }
   | { type: 'defer';   cardId: string; prevDueAt: string | null }
   | { type: 'suspend'; cardId: string; appendedOverflow: FlashcardWithItem | null; appendedAt: number | null }
 
@@ -336,18 +336,24 @@ function ReviewSession({
     const isLapsed = entry.lapsedInterval !== undefined
 
     if (rating === 'again') {
-      // Any Again: buffer event + requeue +10; preserve original pre-lapse interval across retries
+      // Any Again: buffer event + requeue at end; write due_at=now+10min so card is genuinely
+      // not available for 10 min if the session ends before it resurfaces.
+      // Preserve original pre-lapse interval across retries.
       gradeHistoryRef.current.set(card.id, [...(gradeHistoryRef.current.get(card.id) ?? []), 'again'])
       const lapsedInterval = entry.lapsedInterval ?? card.interval_days ?? 1
+      const prevDueAt = card.due_at ?? null
       pendingEventsRef.current.push({
         flashcard_id: card.id, rating: 'again',
         due_at: card.due_at ?? null, mode: effectiveMode,
         phase: 'review_requeue', reviewed_at: new Date().toISOString(),
       })
-      const insertedAt = Math.min(qIdx + 11, queueRef.current.length)
-      updateQueue(q => [...q.slice(0, insertedAt), { card, lapsedInterval }, ...q.slice(insertedAt)])
-      pushUndo({ type: 'again', cardId: card.id, insertedAt, lapsedInterval })
-      await new Promise<void>(r => setTimeout(r, ANIM_MS))
+      const insertedAt = queueRef.current.length
+      updateQueue(q => [...q, { card, lapsedInterval }])
+      pushUndo({ type: 'again', cardId: card.id, insertedAt, lapsedInterval, prevDueAt })
+      await Promise.all([
+        setDueAt(card.id, new Date(Date.now() + 600_000).toISOString()),
+        new Promise<void>(r => setTimeout(r, ANIM_MS)),
+      ])
       setGradingFly(null)
       setRevealed(false)
       setShowFlagPicker(false)
@@ -420,6 +426,7 @@ function ReviewSession({
       if (idx !== -1) pendingEventsRef.current.splice(idx, 1)
       const prevGrades = gradeHistoryRef.current.get(top.cardId) ?? []
       gradeHistoryRef.current.set(top.cardId, prevGrades.slice(0, -1))
+      await undoDefer(top.cardId, top.prevDueAt)
       setRevealed(false)
       setQIdx(qi => qi - 1)
       return

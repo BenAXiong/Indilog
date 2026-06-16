@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-16 | FIX | Review Again: requeue at end of deck (was N+10); write due_at=now+10min to DB immediately so card is genuinely deferred if session ends early; undo restores original due_at |
 | 2026-06-16 | REFACTOR | Rename components/learn → epark; StudyCard → EparkSentence; StudyView → EparkView; 6 page imports updated; lib/eparkTokens.ts (Caveat/Kalam/Space Mono scoped to epark); fonts added to layout.tsx |
 | 2026-06-16 | FEATURE | ePark layout scaffolding: LayoutMode type (standard/compact/single), cycle button in header, iv_epark_layout localStorage persistence, layout prop on EparkSentence (stub), navbar hidden on /study/* routes |
 | 2026-06-16 | FEATURE | ePark A2 standard layout: no card shell, dashed separators, Caveat/Kalam/Space Mono fonts, ghost inline icon buttons on baseline row |

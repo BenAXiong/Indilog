@@ -444,6 +444,11 @@ export async function deferCard(cardId: string): Promise<void> {
   await supabase.from('ind_flashcards').update({ due_at: tomorrow.toISOString() }).eq('id', cardId)
 }
 
+export async function setDueAt(cardId: string, dueAt: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_flashcards').update({ due_at: dueAt }).eq('id', cardId)
+}
+
 type PrevSMState = { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null }
 
 export async function undoRating(cardId: string, prevState: PrevSMState): Promise<void> {
