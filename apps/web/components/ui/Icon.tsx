@@ -9,6 +9,7 @@ export type IconName =
   | 'play' | 'stop' | 'card' | 'note' | 'word' | 'logout' | 'library'
   | 'layers' | 'globe' | 'archive' | 'share' | 'download' | 'trash' | 'tag' | 'more-v'
   | 'rotate-ccw' | 'rotate-cw' | 'skip-fwd' | 'pause'
+  | 'square'
   | 'flag' | 'flagF'
   | 'info'
   | 'film'
@@ -88,6 +89,7 @@ const ICONS: Record<IconName, (p: SVGProps) => ReactNode> = {
   'bar-chart':  p => S(p, <><path d="M5 20V10M9 20V4M13 20v-8M17 20v-6"/><path d="M3 20h18"/></>),
   'skip-fwd':   p => S(p, <><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/><path d="M21 6v12"/></>),
   'pause':      p => S(p, <><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></>),
+  'square':     p => S(p, <rect x="4" y="4" width="16" height="16" rx="2"/>),
   'flag':       p => S(p, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   'flagF':      p => S({ ...p, fill: p.stroke }, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   'info':       p => S(p, <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>),

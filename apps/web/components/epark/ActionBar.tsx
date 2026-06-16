@@ -36,7 +36,7 @@ export default function ActionBar({
       <button onClick={onToggleComplete} style={completeStyle(completed)}>
         {completed
           ? <><Icon name="check" size={15} strokeWidth={2.5} color="#fff" /> Complete</>
-          : 'Complete'}
+          : <><Icon name="square" size={15} strokeWidth={2} /> Mark as done</>}
       </button>
 
       <button
