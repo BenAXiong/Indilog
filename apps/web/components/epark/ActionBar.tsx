@@ -19,10 +19,11 @@ export default function ActionBar({
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
       display: 'flex', alignItems: 'center', gap: 8,
-      padding: '10px 16px',
-      paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+      padding: '12px 16px',
+      paddingBottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
       background: T.cream,
       borderTop: `1px solid ${T.lineSoft}`,
+      boxShadow: '0 -4px 16px rgba(80,40,20,0.06)',
       zIndex: 40,
     }}>
       <button
@@ -50,7 +51,7 @@ export default function ActionBar({
 
 const navStyle = (disabled: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', gap: 5,
-  height: 40, padding: '0 14px', borderRadius: 10, flexShrink: 0,
+  height: 46, padding: '0 16px', borderRadius: 12, flexShrink: 0,
   background: T.paperHi, border: `1px solid ${T.line}`,
   fontSize: 13.5, fontWeight: 600, color: T.inkSoft,
   fontFamily: 'inherit', cursor: disabled ? 'default' : 'pointer',
@@ -59,7 +60,7 @@ const navStyle = (disabled: boolean): React.CSSProperties => ({
 
 const completeStyle = (completed: boolean): React.CSSProperties => ({
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flex: 1,
-  height: 40, padding: '0 12px', borderRadius: 10,
+  height: 46, padding: '0 12px', borderRadius: 12,
   background: completed ? T.crimson : T.paperHi,
   border: `1px solid ${completed ? T.crimsonDp : T.line}`,
   fontSize: 13.5, fontWeight: 600,

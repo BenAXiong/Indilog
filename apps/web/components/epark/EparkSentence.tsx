@@ -80,6 +80,7 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, in
         <div style={{
           fontFamily: EP.fontAb, fontWeight: 700, fontSize: 21,
           lineHeight: 1.15, color: T.ink, margin: '2px 0 0',
+          overflowWrap: 'break-word',
         }}>
           {tokens.map((tok, i) => (
             <span key={i}
@@ -95,8 +96,8 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, in
             onClick={() => zhMode !== 'visible' && setZhRevealed(v => !v)}
             style={{
               fontFamily: EP.fontTrans, fontSize: 13.5, color: T.inkSoft,
-              lineHeight: 1.4, marginTop: 5,
-              filter: zhBlurred ? 'blur(4px)' : 'none',
+              lineHeight: 1.4, marginTop: 8,
+              filter: zhBlurred ? 'blur(3px)' : 'none',
               cursor: zhMode !== 'visible' ? 'pointer' : 'default',
               userSelect: zhBlurred ? 'none' : 'text',
             }}
