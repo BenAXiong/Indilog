@@ -11,6 +11,7 @@ import { EP, type LayoutMode } from '@/lib/eparkTokens'
 type Props = {
   row: CurriculumRow
   index: number
+  total?: number
   layout: LayoutMode
   zhMode: ZhMode
   lookupOn: boolean
@@ -23,7 +24,7 @@ type Props = {
   onSaveWarning: () => void
 }
 
-export default function EparkSentence({ row, index, layout, zhMode, lookupOn, isActive, onActivate, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
+export default function EparkSentence({ row, index, total, layout, zhMode, lookupOn, isActive, onActivate, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
   const [savedId,    setSavedId]    = useState<string | null>(initialSavedId ?? null)
@@ -182,7 +183,74 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, is
     )
   }
 
-  // ── Fallback (single — not yet implemented) ───────────────────────────────
+  // ── B · Immersive single ──────────────────────────────────────────────────
+  if (layout === 'single') {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return (
+      <div style={{
+        background: T.paperHi, borderRadius: 22,
+        border: `1px solid ${T.lineSoft}`,
+        padding: '28px 22px 22px',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', textAlign: 'center', gap: 16,
+        boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
+        minHeight: 260,
+      }}>
+        {/* Counter */}
+        <div style={{ fontFamily: EP.fontMono, fontSize: 11, letterSpacing: '0.08em', color: T.inkFaint }}>
+          {pad(index)} / {pad(total ?? index)}
+        </div>
+
+        {/* ab text */}
+        <div style={{ fontFamily: EP.fontAb, fontWeight: 700, fontSize: 30, lineHeight: 1.15, color: T.ink, overflowWrap: 'break-word' }}>
+          {tokens.map((tok, i) => (
+            <span key={i}
+              onClick={lookupOn && onLookup ? e => onLookup(tok, (e.target as HTMLElement).getBoundingClientRect()) : undefined}
+              style={{ marginRight: 4, cursor: lookupOn ? 'pointer' : 'text', borderBottom: lookupOn ? `1px dashed ${T.inkFaint}` : 'none' }}
+            >{tok}</span>
+          ))}
+        </div>
+
+        {/* Play button */}
+        {row.audio_url && (
+          <button onClick={() => onPlay(row.audio_url!)} style={{
+            width: 60, height: 60, borderRadius: 999, flexShrink: 0,
+            background: T.crimson, border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 14px rgba(180,40,30,0.22)',
+          }}>
+            <Icon name="play" size={24} color="#fff" />
+          </button>
+        )}
+
+        {/* zh */}
+        {row.zh && zhMode !== 'hidden' && (
+          <div
+            onClick={() => zhMode === 'blurred' && setZhRevealed(v => !v)}
+            style={{
+              fontFamily: EP.fontTrans, fontSize: 15, color: T.inkSoft, lineHeight: 1.5,
+              filter: zhBlurred ? 'blur(4px)' : 'none',
+              cursor: zhMode === 'blurred' ? 'pointer' : 'default',
+              userSelect: zhBlurred ? 'none' : 'text',
+            }}
+          >{row.zh}</div>
+        )}
+
+        {/* Copy + save */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+          <button onClick={copy} style={btnStyle}>
+            <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
+          </button>
+          <button onClick={handleSave} style={{ ...btnStyle, color: savedId ? T.crimson : T.inkMute }}>
+            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} color={savedId ? T.crimson : T.inkMute} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Legacy (card shell) ────────────────────────────────────────────────────
   return (
     <div style={{ position: 'relative', paddingTop: 10 }}>
       {/* Index — floated outside card, top-left */}

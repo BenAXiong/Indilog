@@ -47,6 +47,7 @@ export default function EparkView({ source }: Props) {
   const [lookupOn,    setLookupOnState]  = useState(false)
   const [layoutMode,  setLayoutMode]     = useState<LayoutMode>('standard')
   const [activeIdx,   setActiveIdx]      = useState(0)
+  const [cardIdx,     setCardIdx]        = useState(0)
 
   // ── Selection state ─────────────────────────────────────────────────────────
   const [level,   setLevel]   = useState('1')
@@ -67,8 +68,9 @@ export default function EparkView({ source }: Props) {
   const [saveMsg,      setSaveMsg]      = useState<string | null>(null)
   const [saveMsgWarn,  setSaveMsgWarn]  = useState(false)
 
-  const audioRef    = useRef<HTMLAudioElement | null>(null)
-  const settingsRef = useRef<HTMLDivElement>(null)
+  const audioRef       = useRef<HTMLAudioElement | null>(null)
+  const settingsRef    = useRef<HTMLDivElement>(null)
+  const swipeSingleRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!settingsOpen) return
@@ -168,6 +170,9 @@ export default function EparkView({ source }: Props) {
       .catch(() => setResults([]))
       .finally(() => setLoading(false))
   }, [source, dialect, level, lesson, titleZh, pattern, navItems])
+
+  // Reset card index when lesson changes
+  useEffect(() => { setCardIdx(0) }, [results])
 
   // ── Pre-load saved status for current lesson's sentences ───────────────────
   useEffect(() => {
@@ -467,6 +472,73 @@ export default function EparkView({ source }: Props) {
               />
             ))}
           </div>
+        ) : layoutMode === 'single' ? (
+          <div>
+            {/* Card row: left arrow · card · right arrow */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                onClick={() => setCardIdx(i => Math.max(0, i - 1))}
+                disabled={cardIdx === 0}
+                style={arrowBtn(cardIdx === 0)}
+              >
+                <Icon name="arrow-l" size={20} strokeWidth={2} />
+              </button>
+
+              {/* Swipe wrapper */}
+              <div
+                style={{ flex: 1, minWidth: 0 }}
+                onTouchStart={e => { swipeSingleRef.current = e.touches[0].clientX }}
+                onTouchEnd={e => {
+                  if (swipeSingleRef.current === null) return
+                  const dx = e.changedTouches[0].clientX - swipeSingleRef.current
+                  swipeSingleRef.current = null
+                  if (Math.abs(dx) < 40) return
+                  if (dx < 0) setCardIdx(i => Math.min(results.length - 1, i + 1))
+                  else        setCardIdx(i => Math.max(0, i - 1))
+                }}
+              >
+                {results[cardIdx] && (
+                  <EparkSentence
+                    key={results[cardIdx].original_uuid}
+                    row={results[cardIdx]}
+                    index={cardIdx + 1}
+                    total={results.length}
+                    layout="single"
+                    zhMode={zhMode}
+                    lookupOn={lookupOn}
+                    initialSavedId={savedItemMap.get(results[cardIdx].ab) ?? null}
+                    onLookup={(word, rect) => setLookup({ word, rect })}
+                    onPlay={handlePlay}
+                    onSave={handleSave}
+                    onSaveWarning={handleSaveWarning}
+                  />
+                )}
+              </div>
+
+              <button
+                onClick={() => setCardIdx(i => Math.min(results.length - 1, i + 1))}
+                disabled={cardIdx === results.length - 1}
+                style={arrowBtn(cardIdx === results.length - 1)}
+              >
+                <Icon name="arrow-r" size={20} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Dots */}
+            <div style={{ display: 'flex', gap: 5, justifyContent: 'center', flexWrap: 'wrap', marginTop: 16, padding: '0 22px' }}>
+              {results.map((_, i) => (
+                <div
+                  key={i}
+                  onClick={() => setCardIdx(i)}
+                  style={{
+                    width: 14, height: 5, borderRadius: 4, cursor: 'pointer',
+                    background: i === cardIdx ? T.crimson : i < cardIdx ? `${T.crimson}4D` : T.line,
+                    transition: 'background 0.15s',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         ) : (
           results.map((row, i) => (
             <EparkSentence
@@ -571,3 +643,10 @@ export default function EparkView({ source }: Props) {
     </div>
   )
 }
+
+const arrowBtn = (disabled: boolean): React.CSSProperties => ({
+  background: 'none', border: 'none', padding: 6, flexShrink: 0,
+  cursor: disabled ? 'default' : 'pointer',
+  color: T.inkSoft,
+  opacity: disabled ? 0.15 : 0.55,
+})

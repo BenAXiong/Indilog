@@ -7,13 +7,14 @@ export const EP = {
   fontMono:  '"Space Mono", monospace',
 } as const
 
-export type LayoutMode = 'standard' | 'compact' | 'single'
+export type LayoutMode = 'standard' | 'compact' | 'single' | 'legacy'
 
-export const LAYOUT_CYCLE: LayoutMode[] = ['standard', 'compact', 'single']
+export const LAYOUT_CYCLE: LayoutMode[] = ['standard', 'compact', 'single', 'legacy']
 
 // Icon name and label shown on the cycle button for each mode (shows current mode)
-export const LAYOUT_META: Record<LayoutMode, { icon: 'word' | 'layers' | 'card'; label: string }> = {
+export const LAYOUT_META: Record<LayoutMode, { icon: 'word' | 'layers' | 'card' | 'note'; label: string }> = {
   standard: { icon: 'word',   label: 'Standard' },
   compact:  { icon: 'layers', label: 'Compact'  },
   single:   { icon: 'card',   label: 'Single'   },
+  legacy:   { icon: 'note',   label: 'Legacy'   },
 }
