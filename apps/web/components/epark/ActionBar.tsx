@@ -17,10 +17,12 @@ export default function ActionBar({
 }: Props) {
   return (
     <div style={{
-      position: 'fixed', bottom: 100, left: 0, right: 0,
-      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
-      background: 'rgba(251,245,231,0.85)',
-      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '10px 16px',
+      paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+      background: T.cream,
+      borderTop: `1px solid ${T.lineSoft}`,
       zIndex: 40,
     }}>
       <button

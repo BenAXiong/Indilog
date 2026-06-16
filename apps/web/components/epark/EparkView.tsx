@@ -412,7 +412,7 @@ export default function EparkView({ source }: Props) {
 
       {/* Card scroll area — top padding compensates for fixed header (~52px) */}
       <div style={{
-        padding: '66px 18px 180px',
+        padding: '66px 18px 100px',
         display: 'flex', flexDirection: 'column', gap: layoutMode === 'standard' ? 0 : 12,
       }}>
         {loading ? (

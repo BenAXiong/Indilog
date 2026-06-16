@@ -57,11 +57,29 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, in
         padding: index === 1 ? '4px 0 12px' : '13px 0 12px',
         borderBottom: '1.5px dashed #cfc7b7',
       }}>
-        <span style={{ fontFamily: EP.fontMono, fontSize: 11, color: T.inkSoft }}>{index}</span>
+        {/* Header row: index left, action buttons right */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: EP.fontMono, fontSize: 11, color: T.inkSoft }}>{index}</span>
+          <div style={{ display: 'flex', gap: 0 }}>
+            {row.audio_url && (
+              <button onClick={() => onPlay(row.audio_url!)} style={ghostBtn}>
+                <Icon name="speaker" size={15} strokeWidth={1.8} />
+              </button>
+            )}
+            <button onClick={copy} style={ghostBtn}>
+              <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
+            </button>
+            <button onClick={handleSave} style={{ ...ghostBtn, color: savedId ? T.crimson : T.inkSoft }}>
+              <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8}
+                color={savedId ? T.crimson : T.inkSoft} />
+            </button>
+          </div>
+        </div>
 
+        {/* ab text */}
         <div style={{
           fontFamily: EP.fontAb, fontWeight: 700, fontSize: 21,
-          lineHeight: 1.15, color: T.ink, margin: '4px 0 0', overflowWrap: 'break-word',
+          lineHeight: 1.15, color: T.ink, margin: '2px 0 0',
         }}>
           {tokens.map((tok, i) => (
             <span key={i}
@@ -71,39 +89,23 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, in
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 7 }}>
-          {(row.zh || zhMode === 'hidden') ? (
-            <div
-              onClick={() => zhMode !== 'visible' && setZhRevealed(v => !v)}
-              style={{
-                flex: 1, minWidth: 0,
-                fontFamily: EP.fontTrans, fontSize: 13.5, color: T.inkSoft, lineHeight: 1.4,
-                filter: zhBlurred ? 'blur(4px)' : 'none',
-                cursor: zhMode !== 'visible' ? 'pointer' : 'default',
-                userSelect: zhBlurred ? 'none' : 'text',
-              }}
-            >
-              {zhRendered
-                ? (row.zh || <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>)
-                : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
-            </div>
-          ) : (
-            <div style={{ flex: 1 }} />
-          )}
-
-          {row.audio_url && (
-            <button onClick={() => onPlay(row.audio_url!)} style={ghostBtn}>
-              <Icon name="speaker" size={15} strokeWidth={1.8} />
-            </button>
-          )}
-          <button onClick={copy} style={ghostBtn}>
-            <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
-          </button>
-          <button onClick={handleSave} style={{ ...ghostBtn, color: savedId ? T.crimson : T.inkSoft }}>
-            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8}
-              color={savedId ? T.crimson : T.inkSoft} />
-          </button>
-        </div>
+        {/* Translation */}
+        {(row.zh || zhMode === 'hidden') && (
+          <div
+            onClick={() => zhMode !== 'visible' && setZhRevealed(v => !v)}
+            style={{
+              fontFamily: EP.fontTrans, fontSize: 13.5, color: T.inkSoft,
+              lineHeight: 1.4, marginTop: 5,
+              filter: zhBlurred ? 'blur(4px)' : 'none',
+              cursor: zhMode !== 'visible' ? 'pointer' : 'default',
+              userSelect: zhBlurred ? 'none' : 'text',
+            }}
+          >
+            {zhRendered
+              ? (row.zh || <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>)
+              : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
+          </div>
+        )}
       </div>
     )
   }
