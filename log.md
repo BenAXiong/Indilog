@@ -10,6 +10,7 @@
 | 2026-06-16 | FEATURE | ePark C compact layout: transcript rail with vertical line, node circles, tap-to-expand active item toolbar |
 | 2026-06-16 | FIX | ePark compact tweaks: audio always in right column, save reveals below audio when active, copy button removed |
 | 2026-06-16 | FIX | zh hidden mode now hides row completely; blurred is tap-to-reveal; removed zhRendered derived state |
+| 2026-06-16 | FIX | settings panel now closes on outside click; removed broken backdrop (backdropFilter on header made fixed children viewport-scoped to header only) |
 | 2026-06-16 | FEATURE | Dashboard: heatmap tappable squares with tooltip (date/total/learned/reviewed); 20-week range; 10 intensity levels (0–200 reps); GoalWidget — deck title inline with Goal label, type pill inline with percentages, "Simulated"→"Sim"; Heatmap extracted to client component |
 | 2026-06-16 | FEATURE | Dashboard: lang card + streak side-by-side; GoalWidget full width; StatsButton (bar-chart icon → bottom sheet) in header; change-language button → rotate-cw icon; Stats subtab extracted from Study page into shared StatsButton/StudyStatsView components |
 | 2026-06-16 | FIX | Captured deck review link: add custom=1 so capturesOnly param is actually read by the review page (was silently ignored without it) |
