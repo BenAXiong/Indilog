@@ -291,22 +291,29 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
             )}
           </div>
 
-          {/* Bubble */}
-          <div style={{
-            background: isLeft ? T.paperHi : T.paper,
-            borderRadius: isLeft ? '4px 18px 18px 18px' : '18px 4px 18px 18px',
-            border: `1px solid ${isLeft ? T.lineSoft : T.line}`,
-            padding: '10px 13px',
-            overflowWrap: 'break-word',
-          }}>
+          {/* Bubble — click to play */}
+          <div
+            onClick={() => { if (!lookupOn && row.audio_url) onPlay(row.audio_url) }}
+            style={{
+              background: isLeft ? T.paperHi : T.paper,
+              borderRadius: isLeft ? '4px 18px 18px 18px' : '18px 4px 18px 18px',
+              border: `1px solid ${isLeft ? T.lineSoft : T.line}`,
+              padding: '10px 13px',
+              cursor: row.audio_url && !lookupOn ? 'pointer' : 'default',
+            }}
+          >
             <div style={{
               fontFamily: EP.fontAb, fontWeight: 700, fontSize: 18, lineHeight: 1.2,
-              color: T.ink, overflowWrap: 'break-word',
+              color: T.ink,
             }}>
               {tokens.map((tok, i) => (
                 <span key={i}
                   onClick={lookupOn && onLookup ? e => { e.stopPropagation(); onLookup(tok, (e.target as HTMLElement).getBoundingClientRect()) } : undefined}
-                  style={{ marginRight: 3, cursor: lookupOn ? 'pointer' : 'text', borderBottom: lookupOn ? `1px dashed ${T.inkFaint}` : 'none' }}
+                  style={{
+                    display: 'inline-block', whiteSpace: 'nowrap',
+                    marginRight: 3, cursor: lookupOn ? 'pointer' : 'inherit',
+                    borderBottom: lookupOn ? `1px dashed ${T.inkFaint}` : 'none',
+                  }}
                 >{tok}</span>
               ))}
             </div>
