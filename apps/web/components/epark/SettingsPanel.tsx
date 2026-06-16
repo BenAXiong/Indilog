@@ -15,7 +15,6 @@ type Props = {
 export default function SettingsPanel({ zhMode, lookupOn, onZhMode, onLookup, onClose }: Props) {
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
       <div style={{
         position: 'absolute', top: '100%', right: 0, marginTop: 4,
         background: T.paperHi, border: `1px solid ${T.line}`,

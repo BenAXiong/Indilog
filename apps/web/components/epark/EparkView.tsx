@@ -67,8 +67,19 @@ export default function EparkView({ source }: Props) {
   const [saveMsg,      setSaveMsg]      = useState<string | null>(null)
   const [saveMsgWarn,  setSaveMsgWarn]  = useState(false)
 
-  const audioRef  = useRef<HTMLAudioElement | null>(null)
+  const audioRef    = useRef<HTMLAudioElement | null>(null)
   const settingsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!settingsOpen) return
+    const handler = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [settingsOpen])
 
   // ── Init from localStorage ──────────────────────────────────────────────────
   useEffect(() => {
