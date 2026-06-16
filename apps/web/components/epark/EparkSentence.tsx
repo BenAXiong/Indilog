@@ -6,10 +6,12 @@ import Icon from '@/components/ui/Icon'
 import type { Item } from '@/lib/db/notebook/items'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import type { ZhMode } from './SettingsPanel'
+import type { LayoutMode } from '@/lib/eparkTokens'
 
 type Props = {
   row: CurriculumRow
   index: number
+  layout: LayoutMode
   zhMode: ZhMode
   lookupOn: boolean
   initialSavedId?: string | null
@@ -19,7 +21,7 @@ type Props = {
   onSaveWarning: () => void
 }
 
-export default function EparkSentence({ row, index, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
+export default function EparkSentence({ row, index, layout, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
   const [savedId,    setSavedId]    = useState<string | null>(initialSavedId ?? null)

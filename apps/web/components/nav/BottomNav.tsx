@@ -64,7 +64,8 @@ export default function BottomNav() {
     }
   }, [activeId, router])
 
-  if (videoMode || pathname === '/video') return null
+  const eparkActive = pathname.startsWith('/study/') && pathname !== '/study/'
+  if (videoMode || pathname === '/video' || eparkActive) return null
 
   return (
     <div

@@ -23,6 +23,7 @@ import ActionBar from './ActionBar'
 import ContentSheet from './ContentSheet'
 import LookupInline from '@/components/lookup/LookupInline'
 import SettingsPanel, { type ZhMode } from './SettingsPanel'
+import { type LayoutMode, LAYOUT_CYCLE, LAYOUT_META } from '@/lib/eparkTokens'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
 
@@ -36,14 +37,15 @@ const SOURCE_STORAGE_KEY: Partial<Record<Source, string>> = {
 
 type Props = { source: Source }
 
-export default function StudyView({ source }: Props) {
+export default function EparkView({ source }: Props) {
   const { lang, dialect: profileDialect } = useLang()
   const langCode = lang.code
   const glid     = getGlid(langCode) ?? '01'
 
   // ── Persistent settings ─────────────────────────────────────────────────────
-  const [zhMode,   setZhModeState]   = useState<ZhMode>('blurred')
-  const [lookupOn, setLookupOnState] = useState(false)
+  const [zhMode,      setZhModeState]    = useState<ZhMode>('blurred')
+  const [lookupOn,    setLookupOnState]  = useState(false)
+  const [layoutMode,  setLayoutMode]     = useState<LayoutMode>('standard')
 
   // ── Selection state ─────────────────────────────────────────────────────────
   const [level,   setLevel]   = useState('1')
@@ -72,8 +74,10 @@ export default function StudyView({ source }: Props) {
     // Settings
     const savedZhMode = (localStorage.getItem('iv_learn_zh_mode') ?? 'blurred') as ZhMode
     const savedLookup = localStorage.getItem('iv_learn_lookup') === 'true'
+    const savedLayout = (localStorage.getItem('iv_epark_layout') ?? 'standard') as LayoutMode
     setZhModeState(savedZhMode)
     setLookupOnState(savedLookup)
+    setLayoutMode(savedLayout)
 
     // Dialect — grmpts uses language-level dialect; others use profile (set in Settings)
 
@@ -187,6 +191,11 @@ export default function StudyView({ source }: Props) {
   const setLookup_ = (on: boolean) => {
     setLookupOnState(on)
     localStorage.setItem('iv_learn_lookup', String(on))
+  }
+  const cycleLayout = () => {
+    const next = LAYOUT_CYCLE[(LAYOUT_CYCLE.indexOf(layoutMode) + 1) % LAYOUT_CYCLE.length]
+    setLayoutMode(next)
+    localStorage.setItem('iv_epark_layout', next)
   }
 
   // ── Toggle completion ───────────────────────────────────────────────────────
@@ -362,6 +371,20 @@ export default function StudyView({ source }: Props) {
           <Icon name="chev-d" size={12} strokeWidth={2} />
         </button>
 
+        {/* Layout cycle button */}
+        <button
+          onClick={cycleLayout}
+          title={LAYOUT_META[layoutMode].label}
+          style={{
+            width: 34, height: 34, borderRadius: 999, flexShrink: 0,
+            background: T.paperHi, border: `1px solid ${T.line}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: T.inkMute, cursor: 'pointer',
+          }}
+        >
+          <Icon name={LAYOUT_META[layoutMode].icon} size={16} strokeWidth={1.6} />
+        </button>
+
         {/* Settings gear */}
         <div ref={settingsRef} style={{ position: 'relative', flexShrink: 0 }}>
           <button
@@ -413,6 +436,7 @@ export default function StudyView({ source }: Props) {
               key={row.original_uuid}
               row={row}
               index={i + 1}
+              layout={layoutMode}
               zhMode={zhMode}
               lookupOn={lookupOn}
               initialSavedId={savedItemMap.get(row.ab) ?? null}
