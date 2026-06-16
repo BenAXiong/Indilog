@@ -190,9 +190,10 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Add rewind to review Again and Learn tests
 
 - [x] Dashboard — improve goal card remove recent captures and labels
-- [-] Curriculum deck: fix UI, esp progress indicators. Add play + number?
-- [ ] Curriculum content layout options — compact / standard / flashcard view; toggled per-section or globally
-- [ ] Study tab decks: on click, add in sheet review now, open in browser, etc
+- [x] Curriculum decks: fix UI, esp progress indicators
+- [x] Curriculum content layouts — compact / standard / immersion / bubble
+- [x] Study tab revamp - One tab per type of deck
+- [x] Study tab - subdecks
 
 ### M5-C — Feature refinement
 
@@ -201,9 +202,13 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] 2-step review entry — resolved by Learn/Review split + priority list (DEC-M5-01)
 - [x] Refine simulation of dailies from custom goals
 - [x] Set smart session size defaults for Learn. 10-15-20 depending on target.
+- [x] FIX: db wiring (pyu displays in ami 1-1-4)
+
+- [x] Tune the Again grading in Reviews: min(10min, requeue to last)
+- [x] (aborted) Tune the fuzz so that cards don't cling
 - [ ] Enable non-priority reps deck-by-deck in the Study tab.
-- [ ] Rework goal-target-cap confusing semantics and update the ADRs.
-- [ ] Mod Again in Reviews: min(10min, requeue to last)
+- [-] Desambiguiate goal-target-cap confusing semantics and update ADRs.
+- [ ] Improve Study content loading latency
 
 ---
 
@@ -301,7 +306,6 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 
 - **Set per-deck card types** — STS auto-generation requires a `target_word` per note which can't be automated without AI; realistically means "mark deck as STS, set targets manually in browser." Under-designed for v1.
 - **Dummy user profile for testing (stats)** — dev tooling, not user-facing; separate dev track.
-- consider tab split for curriculum & collections (captures + custom)
 
 
 ---

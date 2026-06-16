@@ -8,6 +8,10 @@ Ideas, deferred features, and future directions not yet scoped into a milestone.
     see if learn 12 units content corresponds to eassays and dialogue
     Find how many gaoji vocab have exsent in ePark
 
+- Curriculum: add "play all" buttons
+- Improve tooltips: speed, info and save (app-wide)
+- Fix curriculum default layout according to deck
+- Study goal for curriculum with on-track/late pills and progression graphs
 - consider nice mining reports
     https://github.com/L-M-Sherlock/japanese-mining-report
 - FSRS
