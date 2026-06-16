@@ -4,6 +4,7 @@
 |-----------|------|-------------|
 | 2026-06-16 | REFACTOR | Rename components/learn → epark; StudyCard → EparkSentence; StudyView → EparkView; 6 page imports updated; lib/eparkTokens.ts (Caveat/Kalam/Space Mono scoped to epark); fonts added to layout.tsx |
 | 2026-06-16 | FEATURE | ePark layout scaffolding: LayoutMode type (standard/compact/single), cycle button in header, iv_epark_layout localStorage persistence, layout prop on EparkSentence (stub), navbar hidden on /study/* routes |
+| 2026-06-16 | FEATURE | ePark A2 standard layout: no card shell, dashed separators, Caveat/Kalam/Space Mono fonts, ghost inline icon buttons on baseline row |
 | 2026-06-16 | FEATURE | Dashboard: heatmap tappable squares with tooltip (date/total/learned/reviewed); 20-week range; 10 intensity levels (0–200 reps); GoalWidget — deck title inline with Goal label, type pill inline with percentages, "Simulated"→"Sim"; Heatmap extracted to client component |
 | 2026-06-16 | FEATURE | Dashboard: lang card + streak side-by-side; GoalWidget full width; StatsButton (bar-chart icon → bottom sheet) in header; change-language button → rotate-cw icon; Stats subtab extracted from Study page into shared StatsButton/StudyStatsView components |
 | 2026-06-16 | FIX | Captured deck review link: add custom=1 so capturesOnly param is actually read by the review page (was silently ignored without it) |
