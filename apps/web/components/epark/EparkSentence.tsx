@@ -281,12 +281,12 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
             </span>
             {row.audio_url && (
               <button onClick={() => onPlay(row.audio_url!)} style={{
-                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                background: T.crimson, border: 'none',
+                width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                background: T.line, border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}>
-                <Icon name="speaker" size={11} strokeWidth={2} color="#fff" />
+                <Icon name="speaker" size={9} strokeWidth={2} color={T.inkSoft} />
               </button>
             )}
           </div>
@@ -297,6 +297,7 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
             borderRadius: isLeft ? '4px 18px 18px 18px' : '18px 4px 18px 18px',
             border: `1px solid ${isLeft ? T.lineSoft : T.line}`,
             padding: '10px 13px',
+            overflowWrap: 'break-word',
           }}>
             <div style={{
               fontFamily: EP.fontAb, fontWeight: 700, fontSize: 18, lineHeight: 1.2,
@@ -328,7 +329,7 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
         {/* Save — bottom edge, inside */}
         <button onClick={handleSave} style={{
           width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-          background: 'none', border: 'none',
+          background: T.paperHi, border: `1.5px solid ${T.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', marginBottom: 2,
         }}>
