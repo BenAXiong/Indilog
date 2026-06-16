@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
@@ -15,7 +14,6 @@ import { createClient } from '@/lib/supabase/client'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import BrowserView from '@/components/study/BrowserView'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
-import CustomSessionSheet from '@/components/sheets/CustomSessionSheet'
 
 // ─── Due badge ───────────────────────────────────────────────────────────────
 
@@ -120,95 +118,109 @@ function DeckRow({ icon, iconColor, iconBg, name, sub, due, href, pinned = false
   )
 }
 
-// ─── Curriculum row ──────────────────────────────────────────────────────────
+// ─── Curriculum section (collapsible) ───────────────────────────────────────
 
-function CurriculumRow({ icon, name, href, meta, last }: {
-  icon: IconName; name: string; href: string
-  meta: CurriculumProgressItem | null; last?: boolean
-}) {
-  const pct = meta && meta.total > 0 ? Math.round(meta.completed / meta.total * 100) : 0
-  const fillRgba = pct >= 80 ? 'rgba(74,112,51,0.09)' : pct >= 40 ? 'rgba(196,143,52,0.09)' : 'rgba(180,40,40,0.07)'
-  return (
-    <Link href={href} style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '13px 14px',
-      borderBottom: last ? 'none' : `1px solid ${T.lineSoft}`,
-      textDecoration: 'none',
-      background: pct > 0
-        ? `linear-gradient(to right, ${fillRgba} ${pct}%, transparent ${pct}%)`
-        : 'transparent',
-    }}>
-      {/* Icon */}
-      <div style={{
-        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-        background: '#F9E8E6',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Icon name={icon} size={19} color={T.crimson} strokeWidth={1.6} />
-      </div>
-
-      {/* Central column */}
-      <div style={{ flex: '1 1 0', minWidth: 0 }}>
-        <div style={{
-          fontFamily: 'Newsreader, Georgia, serif',
-          fontSize: 16, fontWeight: 500, color: T.ink,
-          letterSpacing: '-0.015em', lineHeight: 1.15,
-        }}>{name}</div>
-        {meta && meta.total > 0 && (
-          <div style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 10.5, color: T.inkMute, marginTop: 3,
-          }}>
-            {meta.nextLabel ? `Next: ${meta.nextLabel.replace(/\s*…+$/, '')}` : 'All done ✓'}
-          </div>
-        )}
-      </div>
-
-      {/* Counter + chevron */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-        <span style={{
-          fontFamily: '"JetBrains Mono", monospace',
-          fontSize: 11.5, color: T.inkMute, fontWeight: 500,
-        }}>
-          {meta && meta.total > 0 ? `${meta.completed}/${meta.total}` : ''}
-        </span>
-        <Icon name="chevron" size={15} color={T.inkFaint} strokeWidth={2} />
-      </div>
-    </Link>
-  )
+function progressFill(pct: number) {
+  if (pct >= 80) return 'rgba(74,112,51,0.09)'
+  if (pct >= 40) return 'rgba(196,143,52,0.09)'
+  return 'rgba(180,40,40,0.07)'
 }
 
-// ─── Empty subtab placeholder ────────────────────────────────────────────────
+function CurriculumSection({ icon, name, href, meta, last, open, onToggle }: {
+  icon: IconName; name: string; href: string
+  meta: CurriculumProgressItem | null; last?: boolean
+  open: boolean; onToggle: () => void
+}) {
+  const pct    = meta && meta.total > 0 ? Math.round(meta.completed / meta.total * 100) : 0
+  const levels = meta?.levels ?? []
+  const hasLevels = levels.length > 0
 
-function EmptyTab({ icon, title, line1, line2 }: { icon: IconName; title: string; line1: string; line2: string }) {
   return (
-    <div style={{ padding: '48px 30px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+    <>
+      {/* Header row */}
       <div style={{
-        width: 96, height: 96, borderRadius: 22, marginBottom: 22,
-        background: `repeating-linear-gradient(45deg, ${T.lineSoft}, ${T.lineSoft} 6px, ${T.paper} 6px, ${T.paper} 12px)`,
-        border: `1px solid ${T.line}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '13px 14px',
+        borderBottom: `1px solid ${T.lineSoft}`,
+        background: pct > 0
+          ? `linear-gradient(to right, ${progressFill(pct)} ${pct}%, transparent ${pct}%)`
+          : 'transparent',
       }}>
         <div style={{
-          width: 52, height: 52, borderRadius: 999, background: T.paperHi,
-          border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+          background: '#F9E8E6',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Icon name={icon} size={24} strokeWidth={1.6} color={T.inkMute} />
+          <Icon name={icon} size={19} color={T.crimson} strokeWidth={1.6} />
+        </div>
+
+        <button
+          onClick={hasLevels ? onToggle : undefined}
+          style={{
+            flex: '1 1 0', minWidth: 0, background: 'none', border: 'none',
+            cursor: hasLevels ? 'pointer' : 'default', padding: 0, textAlign: 'left',
+          }}
+        >
+          <div style={{
+            fontFamily: 'Newsreader, Georgia, serif',
+            fontSize: 16, fontWeight: 500, color: T.ink,
+            letterSpacing: '-0.015em', lineHeight: 1.15,
+          }}>{name}</div>
+          {meta && meta.total > 0 && (
+            <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, marginTop: 3 }}>
+              {meta.completed}/{meta.total}
+            </div>
+          )}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <Link href={href} style={{
+            width: 30, height: 30, borderRadius: 999,
+            background: T.crimson,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            textDecoration: 'none',
+            boxShadow: '0 1px 6px rgba(120,30,15,0.22)',
+          }}>
+            <Icon name="play" size={12} color="#fff" />
+          </Link>
         </div>
       </div>
-      <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em' }}>
-        {title}
-      </div>
-      <div style={{ fontSize: 14, color: T.inkSoft, marginTop: 8, lineHeight: 1.45 }}>
-        {line1}<br />{line2}
-      </div>
-      <div style={{
-        marginTop: 18, fontSize: 10.5, color: T.inkMute, textTransform: 'uppercase',
-        letterSpacing: '0.1em', padding: '6px 12px', borderRadius: 999,
-        background: T.paper, border: `1px solid ${T.lineSoft}`,
-        fontFamily: '"JetBrains Mono", monospace',
-      }}>coming soon</div>
-    </div>
+
+      {/* Sub-level rows */}
+      {open && levels.map((lv, i) => {
+        const lvPct = lv.total > 0 ? Math.round(lv.completed / lv.total * 100) : 0
+        const isLastSub = last && i === levels.length - 1
+        return (
+          <div key={lv.key} style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px 10px 62px',
+            borderBottom: isLastSub ? 'none' : `1px solid ${T.lineSoft}`,
+            background: lvPct > 0
+              ? `linear-gradient(to right, ${progressFill(lvPct)} ${lvPct}%, transparent ${lvPct}%)`
+              : 'transparent',
+          }}>
+            <div style={{ flex: '1 1 0', minWidth: 0 }}>
+              <div style={{
+                fontFamily: 'Newsreader, Georgia, serif',
+                fontSize: 14, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em',
+              }}>{lv.name}</div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, marginTop: 2 }}>
+                {lv.completed}/{lv.total}
+              </div>
+            </div>
+            <Link href={href} style={{
+              width: 26, height: 26, borderRadius: 999,
+              background: T.crimson,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none',
+              boxShadow: '0 1px 4px rgba(120,30,15,0.18)',
+            }}>
+              <Icon name="play" size={10} color="#fff" />
+            </Link>
+          </div>
+        )
+      })}
+    </>
   )
 }
 
@@ -223,28 +235,22 @@ const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] =
 ]
 
 const SUBTABS = [
-  { id: 'decks'   as const, label: 'Decks'   },
-  { id: 'browser' as const, label: 'Browser' },
+  { id: 'epark'       as const, label: 'ePark'    },
+  { id: 'collections' as const, label: 'Decks'    },
+  { id: 'captures'    as const, label: 'Captures' },
+  { id: 'browser'     as const, label: 'Browser'   },
 ]
-
-const btnStyle: CSSProperties = {
-  width: 36, height: 36, borderRadius: 999,
-  background: T.paperHi, border: `1px solid ${T.line}`,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  color: T.inkSoft, flexShrink: 0, textDecoration: 'none',
-}
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function StudyPage() {
   const { lang, dialect, dialectLabel } = useLang()
-  const [activeTab, setActiveTab] = useState<'decks' | 'browser'>('decks')
+  const [activeTab, setActiveTab] = useState<'epark' | 'collections' | 'captures' | 'browser'>('epark')
   const [collections, setCollections]     = useState<CollectionMeta[]>([])
   const [due, setDue]                     = useState<DueStats>({ total: 0, captures: 0, byCollection: {} })
   const [loading, setLoading]             = useState(true)
   const [actionDeck,        setActionDeck]        = useState<CollectionMeta | null>(null)
   const [capturesIncluded,  setCapturesIncluded]  = useState(true)
-  const [customOpen,   setCustomOpen]       = useState(false)
   const [showAllLangs, setShowAllLangs]     = useState<boolean>(() =>
     typeof window === 'undefined' ? true : localStorage.getItem('srs_show_all_langs') !== 'false'
   )
@@ -254,15 +260,7 @@ export default function StudyPage() {
   })
   const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
   const [captureStats, setCaptureStats] = useState<{ total: number; withAudio: number } | null>(null)
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    const base: Record<string, boolean> = { curriculum: false, captures: false, collections: false }
-    if (typeof window === 'undefined') return base
-    return {
-      curriculum:  localStorage.getItem('study_collapse_curriculum')  === 'true',
-      captures:    localStorage.getItem('study_collapse_captures')    === 'true',
-      collections: localStorage.getItem('study_collapse_collections') === 'true',
-    }
-  })
+  const [openDecks, setOpenDecks] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const sb = createClient()
@@ -357,14 +355,6 @@ export default function StudyPage() {
     await pinCollection(id, pinned)
   }
 
-  function toggleSection(key: string) {
-    setCollapsed(prev => {
-      const next = !prev[key]
-      localStorage.setItem(`study_collapse_${key}`, String(next))
-      return { ...prev, [key]: next }
-    })
-  }
-
   // Sync language filter state when SettingsSheet changes prefs
   useEffect(() => {
     function onPrefsChanged() {
@@ -418,150 +408,95 @@ export default function StudyPage() {
           position: 'relative', paddingBottom: 11, textDecoration: 'none',
           fontSize: 15, fontWeight: 500,
           color: T.inkMute, letterSpacing: '-0.01em',
-        }}>Video</Link>
+        }}>Videos</Link>
       </div>
 
-      {/* ── Decks ── */}
-      {activeTab === 'decks' && (
-        <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* ── ePARK ── */}
+      {activeTab === 'epark' && (
+        <div style={{ padding: '0 18px' }}>
+          <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+            {CURRICULUM.map((deck, i) => (
+              <CurriculumSection
+                key={deck.id}
+                icon={deck.icon}
+                name={deck.name}
+                href={deck.href}
+                meta={curriculumMeta?.[deck.id as keyof typeof curriculumMeta] ?? null}
+                last={i === CURRICULUM.length - 1}
+                open={openDecks[deck.id] ?? false}
+                onToggle={() => setOpenDecks((prev: Record<string, boolean>) => ({ ...prev, [deck.id]: !prev[deck.id] }))}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
-          {/* Review all CTA + Custom session button — disabled pending rework */}
-          <div style={{ display: 'none' }}>
-            <Link href="/review" style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-              height: 54, borderRadius: 15, textDecoration: 'none',
-              background: due.total > 0 ? T.crimson : T.lineSoft,
-              color: due.total > 0 ? '#fff' : T.inkFaint,
-              boxShadow: due.total > 0
-                ? '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)'
-                : 'none',
-            }}>
-              <Icon name="play" size={14} color={due.total > 0 ? '#fff' : T.inkFaint} />
-              <span style={{ fontSize: 16, fontWeight: 600 }}>
-                {due.total > 0 ? 'Review all' : 'All caught up'}
-              </span>
-              {due.total > 0 && (
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, opacity: 0.85, marginLeft: 2 }}>
-                  {due.total} due
-                </span>
-              )}
-            </Link>
-            <button onClick={() => setCustomOpen(true)} aria-label="Custom session" style={{
-              width: 54, height: 54, borderRadius: 15, flexShrink: 0,
-              background: T.paperHi, border: `1px solid ${T.line}`,
+      {/* ── Decks (collections) ── */}
+      {activeTab === 'collections' && (
+        <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Link href="/study/new" aria-label="Import collection" style={{
+              width: 28, height: 28, borderRadius: 999,
+              border: `1.5px solid ${T.lineSoft}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: T.inkSoft,
+              color: T.inkMute, textDecoration: 'none', flexShrink: 0,
             }}>
-              <Icon name="filter" size={18} strokeWidth={1.8} />
-            </button>
+              <Icon name="plus" size={13} strokeWidth={2.2} />
+            </Link>
           </div>
-
-          {/* Curriculum */}
-          <div>
-            <button onClick={() => toggleSection('curriculum')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0 4px', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}>
-              <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1, textAlign: 'left' }}>Curriculum</span>
-              <span style={{
-                fontSize: 9.5, fontFamily: '"JetBrains Mono", monospace',
-                padding: '2px 7px', borderRadius: 999, flexShrink: 0,
-                background: '#F9E8E6', color: T.crimson,
-                fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
-              }}>{lang.name}</span>
-            </button>
-            {!collapsed.curriculum && (
-              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
-                {CURRICULUM.map((deck, i) => (
-                  <CurriculumRow
-                    key={deck.id}
-                    icon={deck.icon}
-                    name={deck.name}
-                    href={deck.href}
-                    meta={curriculumMeta?.[deck.id as keyof typeof curriculumMeta] ?? null}
-                    last={i === CURRICULUM.length - 1}
-                  />
-                ))}
+          <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+            {loading ? (
+              <div style={{ padding: '16px 14px' }}>
+                <div className="animate-iv-shimmer" style={{ height: 14, borderRadius: 6, background: T.lineSoft, width: '60%' }} />
               </div>
-            )}
-          </div>
-
-          {/* Captures */}
-          <div>
-            <button onClick={() => toggleSection('captures')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '0 4px', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}>
-              <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1, textAlign: 'left' }}>Captured</span>
-              <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.captures ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
-            </button>
-            {!collapsed.captures && (
-              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+            ) : (
+              collections.map((col, i) => (
                 <DeckRow
-                  icon="bookmark"
-                  iconColor={T.sage}
-                  iconBg={T.sageBg}
-                  name="Captured"
-                  sub={captureStats ? `${captureStats.total} cards, ${captureStats.withAudio} with audio` : undefined}
-                  href="/review?custom=1&capturesOnly=true"
+                  key={col.id}
+                  icon="archive"
+                  iconColor={T.amber}
+                  iconBg={T.amberBg}
+                  name={col.name}
+                  sub={`${col.card_count} cards`}
+                  due={due.byCollection[col.id] ?? 0}
+                  href={`/study/collection/${col.id}`}
+                  pinned={col.pinned}
+                  onPin={() => handlePinInline(col.id, !col.pinned)}
                   kebab
-                  onKebab={() => setActionDeck({
-                    id: CAPTURES_DECK_ID, name: 'Captured',
-                    language: '', created_at: '', card_count: 0, pinned: false,
-                    include_in_review: capturesIncluded,
-                  })}
-                  last
+                  onKebab={() => setActionDeck(col)}
+                  last={i === collections.length - 1}
                 />
-              </div>
+              ))
             )}
           </div>
+        </div>
+      )}
 
-          {/* My Collections */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginBottom: 10 }}>
-              <button onClick={() => toggleSection('collections')} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <span style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11, fontWeight: 500, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>My collections</span>
-                <Icon name="chev-d" size={12} color={T.inkFaint} style={{ transform: collapsed.collections ? 'rotate(-90deg)' : 'none', transition: 'transform 0.2s' }} />
-              </button>
-              <Link href="/study/new" aria-label="Import collection" style={{
-                width: 22, height: 22, borderRadius: 999,
-                border: `1.5px solid ${T.lineSoft}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: T.inkMute, textDecoration: 'none', flexShrink: 0,
-              }}>
-                <Icon name="plus" size={12} strokeWidth={2.2} />
-              </Link>
-            </div>
-            {!collapsed.collections && (
-              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
-                {loading ? (
-                  <div style={{ padding: '16px 14px' }}>
-                    <div className="animate-iv-shimmer" style={{ height: 14, borderRadius: 6, background: T.lineSoft, width: '60%' }} />
-                  </div>
-                ) : (
-                  collections.map((col, i) => (
-                    <DeckRow
-                      key={col.id}
-                      icon="archive"
-                      iconColor={T.amber}
-                      iconBg={T.amberBg}
-                      name={col.name}
-                      sub={`${col.card_count} cards`}
-                      due={due.byCollection[col.id] ?? 0}
-                      href={`/study/collection/${col.id}`}
-                      pinned={col.pinned}
-                      onPin={() => handlePinInline(col.id, !col.pinned)}
-                      kebab
-                      onKebab={() => setActionDeck(col)}
-                      last={i === collections.length - 1}
-                    />
-                  ))
-                )}
-              </div>
-            )}
+      {/* ── Captures ── */}
+      {activeTab === 'captures' && (
+        <div style={{ padding: '0 18px' }}>
+          <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+            <DeckRow
+              icon="bookmark"
+              iconColor={T.sage}
+              iconBg={T.sageBg}
+              name="Captured"
+              sub={captureStats ? `${captureStats.total} cards, ${captureStats.withAudio} with audio` : undefined}
+              href="/review?custom=1&capturesOnly=true"
+              kebab
+              onKebab={() => setActionDeck({
+                id: CAPTURES_DECK_ID, name: 'Captured',
+                language: '', created_at: '', card_count: 0, pinned: false,
+                include_in_review: capturesIncluded,
+              })}
+              last
+            />
           </div>
-
         </div>
       )}
 
       {/* ── Browser ── */}
       {activeTab === 'browser' && <BrowserView />}
-
-      <CustomSessionSheet open={customOpen} onClose={() => setCustomOpen(false)} />
 
       {actionDeck && (
         <DeckActionSheet

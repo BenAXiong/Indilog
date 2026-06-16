@@ -1,13 +1,14 @@
-export const GRMPTS_LEVEL_NAMES: Record<string, string> = {
-  '1': '初級', '2': '中級', '3': '中高級', '4': '高級',
-}
-
 export const LESSON_DIFFICULTIES: { name: string; levels: string[] }[] = [
   { name: '初級',   levels: ['1','2','3'] },
   { name: '中級',   levels: ['4','5','6'] },
   { name: '中高級', levels: ['7','8','9'] },
   { name: '高級',   levels: ['10','11','12'] },
 ]
+
+// Grmpts levels 1–4 map 1-to-1 to the same tier names
+export const GRMPTS_LEVEL_NAMES: Record<string, string> = Object.fromEntries(
+  LESSON_DIFFICULTIES.map((d, i) => [String(i + 1), d.name])
+)
 
 const ZH_ORDINALS: Record<string, string> = {
   '1':'一','2':'二','3':'三','4':'四','5':'五','6':'六',
@@ -19,19 +20,7 @@ export function stageName(level: string): string {
 }
 
 export function lessonDifficultyOf(level: string): string {
-  const n = Number.parseInt(level)
-  if (n <= 3) return '初級'
-  if (n <= 6) return '中級'
-  if (n <= 9) return '中高級'
-  return '高級'
-}
-
-export function lessonDifficultyIdxOf(level: string): number {
-  const n = Number.parseInt(level)
-  if (n <= 3) return 0
-  if (n <= 6) return 1
-  if (n <= 9) return 2
-  return 3
+  return LESSON_DIFFICULTIES.find(d => d.levels.includes(level))?.name ?? '高級'
 }
 
 export const ESSAY_GROUP_LABELS = ['初級', '中級', '中高級']

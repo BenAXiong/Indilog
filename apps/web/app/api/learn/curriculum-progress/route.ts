@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import geoRaw from '@/lib/learn/corpus_geometry.json'
 import labelsRaw from '@/lib/learn/grmpts_type_labels.json'
 import { getGlid } from '@/lib/lang/lang-bridge'
-import { GRMPTS_LEVEL_NAMES, stageName, lessonDifficultyOf } from '@/lib/lang/dialects'
+import { GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, stageName, lessonDifficultyOf } from '@/lib/lang/dialects'
 
 type GeoType = {
   twelve: {
@@ -31,10 +31,18 @@ function numSort(a: string, b: string) {
   return Number.parseInt(a.slice(1)) - Number.parseInt(b.slice(1))
 }
 
+export type CurriculumProgressLevel = {
+  key:       string
+  name:      string
+  completed: number
+  total:     number
+}
+
 export type CurriculumProgressItem = {
   completed: number
   total:     number
   nextLabel: string
+  levels:    CurriculumProgressLevel[]
 }
 
 export type CurriculumProgressResponse = {
@@ -45,7 +53,7 @@ export type CurriculumProgressResponse = {
   conversations: CurriculumProgressItem
 }
 
-const EMPTY: CurriculumProgressItem = { completed: 0, total: 0, nextLabel: '' }
+const EMPTY: CurriculumProgressItem = { completed: 0, total: 0, nextLabel: '', levels: [] }
 
 export async function GET(req: NextRequest) {
   const p       = req.nextUrl.searchParams
@@ -84,12 +92,19 @@ export async function GET(req: NextRequest) {
     }
   }
   const twelveNext = twelveItems.find(i => !tc.has(i.key))
+
+  const lessonLevels: CurriculumProgressLevel[] = LESSON_DIFFICULTIES.map(({ name, levels: lvs }) => {
+    const items = twelveItems.filter(i => lvs.includes(i.lv))
+    return { key: name, name, completed: items.filter(i => tc.has(i.key)).length, total: items.length }
+  })
+
   const lessons: CurriculumProgressItem = {
     completed: twelveItems.filter(i => tc.has(i.key)).length,
     total:     twelveItems.length,
     nextLabel: twelveNext
       ? `${lessonDifficultyOf(twelveNext.lv)} · ${stageName(twelveNext.lv)} · ${twelveNext.cl}`
       : '',
+    levels: lessonLevels,
   }
 
   // ── Grmpts (Patterns) ───────────────────────────────────────────────────────
@@ -103,21 +118,60 @@ export async function GET(req: NextRequest) {
     }
   }
   const grmptsNext = grmptsItems.find(i => !gc.has(i.key))
+
+  const grmptsLevels: CurriculumProgressLevel[] = geo.grmpts.levels.map(lv => {
+    const items = grmptsItems.filter(i => i.lv === lv)
+    return {
+      key: lv, name: GRMPTS_LEVEL_NAMES[lv] ?? lv,
+      completed: items.filter(i => gc.has(i.key)).length,
+      total: items.length,
+    }
+  })
+
   const patterns: CurriculumProgressItem = {
     completed: grmptsItems.filter(i => gc.has(i.key)).length,
     total:     grmptsItems.length,
     nextLabel: grmptsNext
       ? `${GRMPTS_LEVEL_NAMES[grmptsNext.lv] ?? grmptsNext.lv} · ${parseInt(grmptsNext.pt.slice(1))} ${cleanLabels[grmptsNext.pt] ?? grmptsNext.pt}`
       : '',
+    levels: grmptsLevels,
   }
 
-  // ── Text sources (Essays / Dialogs / Conversations) ─────────────────────────
-  function textProgress(
-    source: 'essay' | 'dialogue' | 'con_practice',
+  // ── Text sources (Essays / Dialogues) ───────────────────────────────────────
+  function textProgressGrouped(
+    source: 'essay' | 'dialogue',
     done: Set<string>,
   ): CurriculumProgressItem {
     const items = geo[source]
-    // Filter by dialect; fall back to all items if dialect doesn't match anything
+    const filtered = dialect ? items.filter(i => dialect in i.alignment) : items
+    const all = filtered.length > 0 ? filtered : items
+    if (!all.length) return EMPTY
+
+    // Group by topic (first part of title_zh before ' · ')
+    const groupMap = new Map<string, typeof all>()
+    for (const item of all) {
+      const group = item.title_zh.split(' · ')[0]
+      if (!groupMap.has(group)) groupMap.set(group, [])
+      groupMap.get(group)!.push(item)
+    }
+    const levels: CurriculumProgressLevel[] = [...groupMap.entries()].map(([name, grpItems]) => ({
+      key: name, name,
+      completed: grpItems.filter(i => done.has(i.title_zh)).length,
+      total:     grpItems.length,
+    }))
+
+    const next = all.find(i => !done.has(i.title_zh))
+    return {
+      completed: all.filter(i => done.has(i.title_zh)).length,
+      total:     all.length,
+      nextLabel: next ? `${next.index + 1} · ${next.title_zh}` : '',
+      levels,
+    }
+  }
+
+  // Conversations: flat list, no difficulty grouping
+  function textProgressFlat(done: Set<string>): CurriculumProgressItem {
+    const items = geo.con_practice
     const filtered = dialect ? items.filter(i => dialect in i.alignment) : items
     const all = filtered.length > 0 ? filtered : items
     if (!all.length) return EMPTY
@@ -126,15 +180,16 @@ export async function GET(req: NextRequest) {
       completed: all.filter(i => done.has(i.title_zh)).length,
       total:     all.length,
       nextLabel: next ? `${next.index + 1} · ${next.title_zh}` : '',
+      levels: [],
     }
   }
 
   const result: CurriculumProgressResponse = {
     lessons,
     patterns,
-    essays:        textProgress('essay',        bySource.essay),
-    dialogues:     textProgress('dialogue',     bySource.dialogue),
-    conversations: textProgress('con_practice', bySource.con_practice),
+    essays:        textProgressGrouped('essay',    bySource.essay),
+    dialogues:     textProgressGrouped('dialogue', bySource.dialogue),
+    conversations: textProgressFlat(bySource.con_practice),
   }
 
   return NextResponse.json(result)
