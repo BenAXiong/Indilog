@@ -13,19 +13,25 @@ Requires: Supabase CLI linked to the project (npx supabase db query --linked)
 """
 
 import sys
+import io
 import json
 import subprocess
 import datetime
 from collections import defaultdict
 
+# Force UTF-8 output on Windows (default terminal may be cp1252)
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 
 def run_query(sql: str) -> list:
     result = subprocess.run(
-        ['npx', 'supabase', 'db', 'query', '--linked'],
+        'npx supabase db query --linked',
         input=sql,
         capture_output=True,
         text=True,
         encoding='utf-8',
+        shell=True,
     )
     if result.returncode != 0:
         print(f"DB error:\n{result.stderr}", file=sys.stderr)
@@ -54,7 +60,7 @@ SELECT
   o2.category         AS dup_category
 FROM corpus_occurrences o1
 JOIN corpus_sentences s1 ON o1.sentence_id = s1.id
-JOIN corpus_sentences s2 ON s2.logic_hash = s1.logic_hash AND s2.id != s1.id
+JOIN corpus_sentences s2 ON s2.ab = s1.ab AND s2.id != s1.id
 JOIN corpus_occurrences o2
   ON o2.sentence_id = s2.id
   AND o2.dialect_name != o1.dialect_name
