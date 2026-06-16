@@ -46,6 +46,7 @@ export default function EparkView({ source }: Props) {
   const [zhMode,      setZhModeState]    = useState<ZhMode>('blurred')
   const [lookupOn,    setLookupOnState]  = useState(false)
   const [layoutMode,  setLayoutMode]     = useState<LayoutMode>('standard')
+  const [activeIdx,   setActiveIdx]      = useState(0)
 
   // ── Selection state ─────────────────────────────────────────────────────────
   const [level,   setLevel]   = useState('1')
@@ -413,7 +414,7 @@ export default function EparkView({ source }: Props) {
       {/* Card scroll area — top padding compensates for fixed header (~52px) */}
       <div style={{
         padding: '66px 18px 100px',
-        display: 'flex', flexDirection: 'column', gap: layoutMode === 'standard' ? 0 : 12,
+        display: 'flex', flexDirection: 'column', gap: layoutMode === 'single' ? 12 : 0,
       }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
@@ -429,6 +430,31 @@ export default function EparkView({ source }: Props) {
             <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 4 }}>
               Try a different dialect or lesson.
             </div>
+          </div>
+        ) : layoutMode === 'compact' ? (
+          <div style={{ position: 'relative', paddingLeft: 30 }}>
+            {/* Vertical rail line */}
+            <div style={{
+              position: 'absolute', left: 11, top: 6, bottom: 6,
+              width: 2, background: '#cfc7b7', borderRadius: 2,
+            }} />
+            {results.map((row, i) => (
+              <EparkSentence
+                key={row.original_uuid}
+                row={row}
+                index={i + 1}
+                layout={layoutMode}
+                zhMode={zhMode}
+                lookupOn={lookupOn}
+                isActive={activeIdx === i}
+                onActivate={() => setActiveIdx(i)}
+                initialSavedId={savedItemMap.get(row.ab) ?? null}
+                onLookup={(word, rect) => setLookup({ word, rect })}
+                onPlay={handlePlay}
+                onSave={handleSave}
+                onSaveWarning={handleSaveWarning}
+              />
+            ))}
           </div>
         ) : (
           results.map((row, i) => (

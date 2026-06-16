@@ -14,6 +14,8 @@ type Props = {
   layout: LayoutMode
   zhMode: ZhMode
   lookupOn: boolean
+  isActive?: boolean
+  onActivate?: () => void
   initialSavedId?: string | null
   onLookup?: (word: string, rect: DOMRect) => void
   onPlay: (url: string) => void
@@ -21,7 +23,7 @@ type Props = {
   onSaveWarning: () => void
 }
 
-export default function EparkSentence({ row, index, layout, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
+export default function EparkSentence({ row, index, layout, zhMode, lookupOn, isActive, onActivate, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
   const [savedId,    setSavedId]    = useState<string | null>(initialSavedId ?? null)
@@ -111,7 +113,93 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, in
     )
   }
 
-  // ── Fallback (compact + single — not yet implemented) ────────────────────────
+  // ── C · Transcript rail (compact) ───────────────────────────────────────────
+  if (layout === 'compact') {
+    return (
+      <div
+        style={{ position: 'relative', padding: '0 0 16px', cursor: isActive ? 'default' : 'pointer' }}
+        onClick={!isActive ? onActivate : undefined}
+      >
+        {/* Node circle */}
+        <span style={{
+          position: 'absolute', left: -30, top: 1,
+          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+          border: `2px solid ${isActive ? T.crimson : T.line}`,
+          background: isActive ? T.crimson : T.paper,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: EP.fontMono, fontSize: 9,
+          color: isActive ? '#fff' : T.inkSoft,
+        }}>{index}</span>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          {/* Text column */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontFamily: EP.fontAb, fontWeight: 700, fontSize: 19,
+              lineHeight: 1.15, color: T.ink, overflowWrap: 'break-word',
+            }}>
+              {tokens.map((tok, i) => (
+                <span key={i}
+                  onClick={lookupOn && onLookup ? e => { e.stopPropagation(); onLookup(tok, (e.target as HTMLElement).getBoundingClientRect()) } : undefined}
+                  style={{ marginRight: 4, cursor: lookupOn ? 'pointer' : 'text', borderBottom: lookupOn ? `1px dashed ${T.inkFaint}` : 'none' }}
+                >{tok}</span>
+              ))}
+            </div>
+
+            {(row.zh || zhMode === 'hidden') && (
+              <div
+                onClick={e => { e.stopPropagation(); zhMode !== 'visible' && setZhRevealed(v => !v) }}
+                style={{
+                  fontFamily: EP.fontTrans, fontSize: 13, color: T.inkSoft,
+                  lineHeight: 1.4, marginTop: 3,
+                  filter: zhBlurred ? 'blur(3px)' : 'none',
+                  cursor: zhMode !== 'visible' ? 'pointer' : 'default',
+                  userSelect: zhBlurred ? 'none' : 'text',
+                }}
+              >
+                {zhRendered
+                  ? (row.zh || <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>)
+                  : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
+              </div>
+            )}
+
+            {/* Expanded toolbar — active item only */}
+            {isActive && (
+              <div style={{ display: 'flex', gap: 7, marginTop: 8 }} onClick={e => e.stopPropagation()}>
+                {row.audio_url && (
+                  <button style={smActBtn} onClick={() => onPlay(row.audio_url!)}>
+                    <Icon name="speaker" size={13} strokeWidth={1.8} />
+                  </button>
+                )}
+                <button style={smActBtn} onClick={copy}>
+                  <Icon name={copied ? 'check' : 'copy'} size={13} strokeWidth={1.8} />
+                </button>
+                <button
+                  style={{ ...smActBtn, borderColor: savedId ? T.crimson : T.line, color: savedId ? T.crimson : T.ink }}
+                  onClick={handleSave}
+                >
+                  <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={13} strokeWidth={1.8}
+                    color={savedId ? T.crimson : T.ink} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Mini audio button — inactive items only */}
+          {!isActive && row.audio_url && (
+            <button
+              style={smActBtn}
+              onClick={e => { e.stopPropagation(); onPlay(row.audio_url!) }}
+            >
+              <Icon name="speaker" size={13} strokeWidth={1.8} />
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Fallback (single — not yet implemented) ───────────────────────────────
   return (
     <div style={{ position: 'relative', paddingTop: 10 }}>
       {/* Index — floated outside card, top-left */}
@@ -204,6 +292,13 @@ const btnStyle: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 999, flexShrink: 0,
   background: 'transparent', border: `1px solid ${T.lineSoft}`,
   color: T.inkMute, cursor: 'pointer', fontFamily: 'inherit',
+}
+
+const smActBtn: React.CSSProperties = {
+  width: 26, height: 26, borderRadius: '50%', flexShrink: 0, padding: 0,
+  border: `2px solid ${T.line}`, background: T.paperHi,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: T.ink, cursor: 'pointer', fontFamily: 'inherit',
 }
 
 const ghostBtn: React.CSSProperties = {
