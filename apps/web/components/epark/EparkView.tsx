@@ -476,51 +476,48 @@ export default function EparkView({ source }: Props) {
           </div>
         ) : layoutMode === 'single' ? (
           <div>
-            {/* Card row: left arrow · card · right arrow */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* Full-width card with chevrons floating in the side padding */}
+            <div
+              style={{ position: 'relative' }}
+              onTouchStart={e => { swipeSingleRef.current = e.touches[0].clientX }}
+              onTouchEnd={e => {
+                if (swipeSingleRef.current === null) return
+                const dx = e.changedTouches[0].clientX - swipeSingleRef.current
+                swipeSingleRef.current = null
+                if (Math.abs(dx) < 40) return
+                if (dx < 0) setCardIdx(i => Math.min(results.length - 1, i + 1))
+                else        setCardIdx(i => Math.max(0, i - 1))
+              }}
+            >
               <button
                 onClick={() => setCardIdx(i => Math.max(0, i - 1))}
                 disabled={cardIdx === 0}
-                style={arrowBtn(cardIdx === 0)}
+                style={{ ...arrowBtn(cardIdx === 0), position: 'absolute', left: -16, top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Icon name="chev-l" size={22} strokeWidth={2.2} />
               </button>
 
-              {/* Swipe wrapper */}
-              <div
-                style={{ flex: 1, minWidth: 0 }}
-                onTouchStart={e => { swipeSingleRef.current = e.touches[0].clientX }}
-                onTouchEnd={e => {
-                  if (swipeSingleRef.current === null) return
-                  const dx = e.changedTouches[0].clientX - swipeSingleRef.current
-                  swipeSingleRef.current = null
-                  if (Math.abs(dx) < 40) return
-                  if (dx < 0) setCardIdx(i => Math.min(results.length - 1, i + 1))
-                  else        setCardIdx(i => Math.max(0, i - 1))
-                }}
-              >
-                {results[cardIdx] && (
-                  <EparkSentence
-                    key={results[cardIdx].original_uuid}
-                    row={results[cardIdx]}
-                    index={cardIdx + 1}
-                    total={results.length}
-                    layout="single"
-                    zhMode={zhMode}
-                    lookupOn={lookupOn}
-                    initialSavedId={savedItemMap.get(results[cardIdx].ab) ?? null}
-                    onLookup={(word, rect) => setLookup({ word, rect })}
-                    onPlay={handlePlay}
-                    onSave={handleSave}
-                    onSaveWarning={handleSaveWarning}
-                  />
-                )}
-              </div>
+              {results[cardIdx] && (
+                <EparkSentence
+                  key={results[cardIdx].original_uuid}
+                  row={results[cardIdx]}
+                  index={cardIdx + 1}
+                  total={results.length}
+                  layout="single"
+                  zhMode={zhMode}
+                  lookupOn={lookupOn}
+                  initialSavedId={savedItemMap.get(results[cardIdx].ab) ?? null}
+                  onLookup={(word, rect) => setLookup({ word, rect })}
+                  onPlay={handlePlay}
+                  onSave={handleSave}
+                  onSaveWarning={handleSaveWarning}
+                />
+              )}
 
               <button
                 onClick={() => setCardIdx(i => Math.min(results.length - 1, i + 1))}
                 disabled={cardIdx === results.length - 1}
-                style={arrowBtn(cardIdx === results.length - 1)}
+                style={{ ...arrowBtn(cardIdx === results.length - 1), position: 'absolute', right: -16, top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Icon name="chevron" size={22} strokeWidth={2.2} />
               </button>

@@ -240,15 +240,6 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
           >{row.zh}</div>
         )}
 
-        {/* Copy + save */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={copy} style={ghostBtn}>
-            <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
-          </button>
-          <button onClick={handleSave} style={{ ...ghostBtn, color: savedId ? T.crimson : T.inkSoft }}>
-            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} color={savedId ? T.crimson : T.inkSoft} />
-          </button>
-        </div>
       </div>
     )
   }
