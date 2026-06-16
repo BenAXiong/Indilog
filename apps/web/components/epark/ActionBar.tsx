@@ -14,7 +14,7 @@ type Props = {
 
 export default function ActionBar({
   onPrev, onNext, onToggleComplete, completed, prevDisabled, nextDisabled,
-}: Props) {
+}: Readonly<Props>) {
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -35,8 +35,8 @@ export default function ActionBar({
 
       <button onClick={onToggleComplete} style={completeStyle(completed)}>
         {completed
-          ? <><Icon name="check" size={15} strokeWidth={2.5} color="#fff" /> Completed</>
-          : '✓ Mark complete'}
+          ? <><Icon name="check" size={15} strokeWidth={2.5} color="#fff" /> Complete</>
+          : 'Complete'}
       </button>
 
       <button
