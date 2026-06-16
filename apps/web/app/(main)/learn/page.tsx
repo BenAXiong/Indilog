@@ -38,7 +38,7 @@ type LearnEntry = {
 
 type LearnContext = {
   learnedToday:          number
-  learnCap:              number
+  learnTarget:           number
   priorityCollectionIds: string[]
 }
 
@@ -53,7 +53,7 @@ type LearnUndoEntry =
 async function loadLearnContext(): Promise<LearnContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { learnedToday: 0, learnCap: 10, priorityCollectionIds: [] }
+  if (!user) return { learnedToday: 0, learnTarget: 10, priorityCollectionIds: [] }
 
   const today = getStudyDate()
   const [profileRes, statsRes, priorityDecks] = await Promise.all([
@@ -63,12 +63,12 @@ async function loadLearnContext(): Promise<LearnContext> {
   ])
 
   const prefs      = profileRes.data?.preferences as Record<string, unknown> | null
-  const prefCap    = typeof prefs?.learn_cap === 'number' ? prefs.learn_cap : 10
+  const prefLearnTarget = typeof prefs?.learn_target === 'number' ? prefs.learn_target : 10
 
   // Use frozen learn_target from ind_daily_stats when available (set by dashboard on first load).
   // Fall back to live simulation rate, or bare pref cap when no sim is active.
   const frozenLearnTarget = (statsRes.data as Record<string, unknown> | null)?.learn_target as number | null ?? null
-  let learnCap = frozenLearnTarget ?? prefCap
+  let learnTarget = frozenLearnTarget ?? prefLearnTarget
   if (frozenLearnTarget === null) {
     const simDecks = priorityDecks.filter(d => d.in_simulation && d.simulation_deadline)
     if (simDecks.length > 0) {
@@ -87,13 +87,13 @@ async function loadLearnContext(): Promise<LearnContext> {
         .eq('repetitions', 0)
         .is('suspended_at', null)
       const effectiveWindow = Math.max(1, daysLeft - 21)
-      learnCap = Math.max(1, Math.ceil((newCards ?? 0) / effectiveWindow))
+      learnTarget = Math.max(1, Math.ceil((newCards ?? 0) / effectiveWindow))
     }
   }
 
   return {
     learnedToday:          (statsRes.data as Record<string, unknown> | null)?.learned_count as number ?? 0,
-    learnCap,
+    learnTarget,
     priorityCollectionIds: priorityDecks.map(d => d.collection_id),
   }
 }
@@ -632,7 +632,7 @@ function LearnPage() {
   const [mode,         setMode]         = useState<'landing' | 'learning' | 'done'>('landing')
   const [cards,        setCards]        = useState<FlashcardWithItem[]>([])
   const [overflow,     setOverflow]     = useState<FlashcardWithItem[]>([])
-  const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnCap: 10, priorityCollectionIds: [] })
+  const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnTarget: 10, priorityCollectionIds: [] })
   const [loading,      setLoading]      = useState(true)
   const [learnedCount, setLearnedCount] = useState(0)
   const [sessionKey,   setSessionKey]   = useState(0)
@@ -646,9 +646,9 @@ function LearnPage() {
     const filtered = excludeLangs.length
       ? allCards.filter(c => !excludeLangs.includes(c.ind_items?.language ?? ''))
       : allCards
-    const remaining = Math.max(0, context.learnedToday >= context.learnCap
-      ? context.learnCap
-      : context.learnCap - context.learnedToday)
+    const remaining = Math.max(0, context.learnedToday >= context.learnTarget
+      ? context.learnTarget
+      : context.learnTarget - context.learnedToday)
     const toLearn = nParam ?? remaining
     const sessionCards = filtered.slice(0, toLearn)
     setCards(sessionCards)
@@ -688,7 +688,7 @@ function LearnPage() {
   if (mode === 'done') {
     return <LearnEnd
       learnedCount={learnedCount}
-      tomorrowTarget={ctx.learnCap}
+      tomorrowTarget={ctx.learnTarget}
       onDone={autostart ? () => router.push('/') : () => setMode('landing')}
     />
   }

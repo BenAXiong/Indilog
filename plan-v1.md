@@ -206,8 +206,8 @@ Personal library of sources (people, media, references) linked to captured items
 
 - [x] Tune the Again grading in Reviews: min(10min, requeue to last)
 - [x] (aborted) Tune the fuzz so that cards don't cling
-- [ ] Enable non-priority reps deck-by-deck in the Study tab.
 - [-] Desambiguiate goal-target-cap confusing semantics and update ADRs.
+- [ ] Enable non-priority reps deck-by-deck in the Study tab.
 - [ ] Improve Study content loading latency
 
 ---

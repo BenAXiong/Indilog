@@ -56,8 +56,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [autoLookup,       setAutoLookup]       = useState(true)
   const [dictSources,      setDictSources]      = useState<string[]>(['moe'])
   const [resetHour,        setResetHourRaw]     = useState(4)
-  const [dailyCap,            setDailyCapRaw]         = useState(100)
-  const [learnSessionSize,    setLearnSessionSizeRaw]  = useState(10)
+  const [prefReviewTarget,    setPrefReviewTargetRaw]  = useState(100)
+  const [prefLearnTarget,     setPrefLearnTargetRaw]   = useState(10)
   const [editingLearnSession,  setEditingLearnSession]  = useState(false)
   const [editingReviewSession, setEditingReviewSession] = useState(false)
   const [overrideSim,          setOverrideSim]          = useState(false)
@@ -82,10 +82,10 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     if (ss) try { setDictSources(JSON.parse(ss)) } catch {}
     const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
-    const cap = parseInt(localStorage.getItem('srs_review_cap') ?? '100')
-    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(999, Math.max(5, cap)))
-    const lc = parseInt(localStorage.getItem('srs_learn_cap') ?? '10')
-    setLearnSessionSizeRaw(isNaN(lc) ? 10 : Math.min(50, Math.max(1, lc)))
+    const cap = parseInt(localStorage.getItem('srs_review_target') ?? '100')
+    setPrefReviewTargetRaw(isNaN(cap) ? 100 : Math.min(999, Math.max(5, cap)))
+    const lc = parseInt(localStorage.getItem('srs_learn_target') ?? '10')
+    setPrefLearnTargetRaw(isNaN(lc) ? 10 : Math.min(50, Math.max(1, lc)))
     const rt = parseInt(localStorage.getItem('srs_review_target') ?? '100')
     setReviewTargetHint(isNaN(rt) ? 100 : rt)
     const lth = localStorage.getItem('srs_learn_target')
@@ -110,8 +110,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
           if (!data) return
           if (data.ui_locale) setLocale(data.ui_locale)
           const p = { ...DEFAULT_PREFERENCES, ...(data.preferences ?? {}) } as UserPreferences
-          setDailyCapRaw(p.review_cap);          localStorage.setItem('srs_review_cap',     String(p.review_cap))
-          setLearnSessionSizeRaw(p.learn_cap); localStorage.setItem('srs_learn_cap',      String(p.learn_cap))
+          setPrefReviewTargetRaw(p.review_target);       localStorage.setItem('srs_review_target',    String(p.review_target))
+          setPrefLearnTargetRaw(p.learn_target);         localStorage.setItem('srs_learn_target',     String(p.learn_target))
           setReviewModeRaw(p.review_mode);     localStorage.setItem('srs_review_mode',     p.review_mode)
           setResetHourRaw(p.reset_hour);       localStorage.setItem('srs_reset_hour',      String(p.reset_hour))
           setShowHardEasyRaw(p.show_hard_easy);localStorage.setItem('srs_show_hard_easy',  String(p.show_hard_easy))
@@ -187,15 +187,15 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     })
   }
 
-  function setLearnSessionSize(n: number) {
+  function setPrefLearnTarget(n: number) {
     const v = Math.min(50, Math.max(1, n))
-    setLearnSessionSizeRaw(v); localStorage.setItem('srs_learn_cap', String(v)); saveToCloud({ learn_cap: v })
+    setPrefLearnTargetRaw(v); localStorage.setItem('srs_learn_target', String(v)); saveToCloud({ learn_target: v })
   }
 
   function buildPrefs(patch: Partial<UserPreferences> = {}): UserPreferences {
     return {
-      review_cap:        dailyCap,
-      learn_cap:         learnSessionSize,
+      review_target:     prefReviewTarget,
+      learn_target:      prefLearnTarget,
       review_more_size:  null,
       review_mode:      reviewMode,
       reset_hour:       resetHour,
@@ -409,8 +409,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                     {/* Reset to defaults */}
                     <button
                       onClick={() => {
-                        setLearnSessionSize(10)
-                        const v = 100; setDailyCapRaw(v); localStorage.setItem('srs_review_cap', String(v)); saveToCloud({ review_cap: v })
+                        setPrefLearnTarget(10)
+                        const v = 100; setPrefReviewTargetRaw(v); localStorage.setItem('srs_review_target', String(v)); saveToCloud({ review_target: v })
                       }}
                       title="Reset to defaults"
                       style={{ width: 26, height: 26, borderRadius: 7, background: 'none', border: `1px solid transparent`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -452,12 +452,12 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
 
                   {/* Learn + Review in one card */}
                   {(() => {
-                    const learnGoal  = simActiveHint && learnTargetHint !== null ? learnTargetHint : learnSessionSize
+                    const learnGoal  = simActiveHint && learnTargetHint !== null ? learnTargetHint : prefLearnTarget
                     const goalMode   = simActiveHint ? 'calculated' : 'manual'
-                    const displayVal = dailyCap >= 999 ? 'All' : String(dailyCap)
+                    const displayVal = prefReviewTarget >= 999 ? 'All' : String(prefReviewTarget)
                     function saveReviewSession(n: number) {
                       const v = Math.min(999, Math.max(5, Math.round(n / 5) * 5))
-                      setDailyCapRaw(v); localStorage.setItem('srs_review_cap', String(v)); saveToCloud({ review_cap: v })
+                      setPrefReviewTargetRaw(v); localStorage.setItem('srs_review_target', String(v)); saveToCloud({ review_target: v })
                     }
                     const stepBtn = (label: string, disabled: boolean, onClick: () => void) => (
                       <button disabled={disabled} onClick={onClick}
@@ -476,11 +476,11 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             {editingLearnSession && canEdit && (<>
-                              {stepBtn('−', learnSessionSize <= 1,  () => setLearnSessionSize(learnSessionSize - 1))}
-                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{learnSessionSize}</span>
-                              {stepBtn('+', learnSessionSize >= 50, () => setLearnSessionSize(learnSessionSize + 1))}
+                              {stepBtn('−', prefLearnTarget <= 1,  () => setPrefLearnTarget(prefLearnTarget - 1))}
+                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 26, textAlign: 'center' }}>{prefLearnTarget}</span>
+                              {stepBtn('+', prefLearnTarget >= 50, () => setPrefLearnTarget(prefLearnTarget + 1))}
                             </>)}
-                            {(!editingLearnSession || !canEdit) && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{learnSessionSize}</span>}
+                            {(!editingLearnSession || !canEdit) && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{prefLearnTarget}</span>}
                             {canEdit && (
                               <button onClick={() => setEditingLearnSession(v => !v)}
                                 style={{ width: 26, height: 26, borderRadius: 7, background: editingLearnSession ? T.paperHi : 'none', border: `1px solid ${editingLearnSession ? T.lineSoft : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -497,9 +497,9 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             {editingReviewSession && canEdit && (<>
-                              {stepBtn('−', dailyCap <= 5,   () => saveReviewSession(dailyCap - 5))}
+                              {stepBtn('−', prefReviewTarget <= 5,   () => saveReviewSession(prefReviewTarget - 5))}
                               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink, minWidth: 28, textAlign: 'center' }}>{displayVal}</span>
-                              {stepBtn('+', dailyCap >= 999, () => saveReviewSession(dailyCap + 5))}
+                              {stepBtn('+', prefReviewTarget >= 999, () => saveReviewSession(prefReviewTarget + 5))}
                             </>)}
                             {(!editingReviewSession || !canEdit) && <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, fontWeight: 700, color: T.ink }}>{displayVal}</span>}
                             {canEdit && (

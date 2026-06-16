@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/client'
 
 export type UserPreferences = {
-  review_cap:        number
-  learn_cap:         number
+  review_target:     number
+  learn_target:      number
   review_more_size:  number | null
   review_mode:       string
   reset_hour:        number
@@ -19,8 +19,8 @@ export type UserPreferences = {
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
-  review_cap:        100,
-  learn_cap:         10,
+  review_target:     100,
+  learn_target:      10,
   review_more_size:  null,
   review_mode:      'forward',
   reset_hour:       4,

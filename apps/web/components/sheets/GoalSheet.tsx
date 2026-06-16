@@ -83,8 +83,8 @@ function ProgressBar({ pct, color }: { pct: number; color: string }) {
 export default function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [tab,          setTab]          = useState<Tab>('goals')
   const [mode,         setMode]         = useState<GoalMode>('manual')
-  const [learnCap,     setLearnCapRaw]  = useState(10)
-  const [reviewCap,    setReviewCapRaw] = useState(100)
+  const [learnTarget,  setLearnTargetRaw]  = useState(10)
+  const [reviewTarget, setReviewTargetRaw] = useState(100)
   const [simOutput,    setSimOutput]    = useState<TodayTarget | null>(null)
   const [simLoading,   setSimLoading]   = useState(false)
 
@@ -125,12 +125,12 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     if (!user) return
     const { data } = await supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle()
     const prefs = data?.preferences as Record<string, unknown> | null
-    const lc = typeof prefs?.learn_cap === 'number' ? prefs.learn_cap : 10
-    const rc = typeof prefs?.review_cap === 'number' ? prefs.review_cap : 100
-    setLearnCapRaw(lc)
-    setReviewCapRaw(rc)
-    localStorage.setItem('srs_learn_cap', String(lc))
-    localStorage.setItem('srs_review_cap', String(rc))
+    const lc = typeof prefs?.learn_target === 'number' ? prefs.learn_target : 10
+    const rc = typeof prefs?.review_target === 'number' ? prefs.review_target : 100
+    setLearnTargetRaw(lc)
+    setReviewTargetRaw(rc)
+    localStorage.setItem('srs_learn_target', String(lc))
+    localStorage.setItem('srs_review_target', String(rc))
   }
 
   async function loadPriority() {
@@ -156,15 +156,15 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     if (firstSim?.simulation_deadline) setSimDeadline(firstSim.simulation_deadline)
   }
 
-  function setLearnCap(v: number) {
-    setLearnCapRaw(v)
-    localStorage.setItem('srs_learn_cap', String(v))
-    patchPreferences({ learn_cap: v })
+  function setLearnTarget(v: number) {
+    setLearnTargetRaw(v)
+    localStorage.setItem('srs_learn_target', String(v))
+    patchPreferences({ learn_target: v })
   }
-  function setReviewCap(v: number) {
-    setReviewCapRaw(v)
-    localStorage.setItem('srs_review_cap', String(v))
-    patchPreferences({ review_cap: v })
+  function setReviewTarget(v: number) {
+    setReviewTargetRaw(v)
+    localStorage.setItem('srs_review_target', String(v))
+    patchPreferences({ review_target: v })
   }
 
   // ── Goals tab ──────────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     const result = await projectSimulation({
       collectionIds: simDecks.map(d => d.collection_id),
       deadline,
-      learnCap,
+      learnTarget,
     })
     if (result) setSimOutput({ learnTarget: result.days[0]?.learn ?? result.learnTarget, reviewTarget: result.days[0]?.review ?? 0 })
     setSimLoading(false)
@@ -217,17 +217,17 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <label style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Learn cap / day
+                  Learn target / day
                 </label>
-                <Stepper value={learnCap} onChange={setLearnCap} min={1} max={20} />
+                <Stepper value={learnTarget} onChange={setLearnTarget} min={1} max={20} />
               </div>
               {/* Level labels */}
               <div style={{ display: 'flex', gap: 4 }}>
                 {LEARN_LEVELS.map(lv => (
-                  <button key={lv.label} onClick={() => setLearnCap(lv.value)} style={{
-                    flex: 1, padding: '5px 0', borderRadius: 7, border: `1px solid ${learnCap === lv.value ? T.sage : T.lineSoft}`,
-                    background: learnCap === lv.value ? T.sageBg : T.paper,
-                    color: learnCap === lv.value ? '#566234' : T.inkMute,
+                  <button key={lv.label} onClick={() => setLearnTarget(lv.value)} style={{
+                    flex: 1, padding: '5px 0', borderRadius: 7, border: `1px solid ${learnTarget === lv.value ? T.sage : T.lineSoft}`,
+                    background: learnTarget === lv.value ? T.sageBg : T.paper,
+                    color: learnTarget === lv.value ? '#566234' : T.inkMute,
                     fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 600,
                     textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
                   }}>
@@ -237,7 +237,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                 ))}
               </div>
               <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 6, lineHeight: 1.5 }}>
-                Projected review load: ~{learnCap * 2}/day after 1w · ~{learnCap * 3}/day after 2w · ~{learnCap * 2}/day long-term
+                Projected review load: ~{learnTarget * 2}/day after 1w · ~{learnTarget * 3}/day after 2w · ~{learnTarget * 2}/day long-term
               </div>
             </div>
 
@@ -245,9 +245,9 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <label style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, fontWeight: 600, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Review cap / day
+                  Review target / day
                 </label>
-                <Stepper value={reviewCap} onChange={setReviewCap} min={10} max={300} step={10} />
+                <Stepper value={reviewTarget} onChange={setReviewTarget} min={10} max={300} step={10} />
               </div>
             </div>
           </>
@@ -443,7 +443,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     const result = await projectSimulation({
       collectionIds: simDecks.map(d => d.collection_id),
       deadline:      simDeadline,
-      learnCap,
+      learnTarget,
     })
     if (result) setSimResult(buildCurveFromDays(result.days))
     setSimRunning(false)
@@ -451,8 +451,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   async function handleApplySimulation() {
     if (!simResult) return
-    // Apply the learnTarget from today's row; leave reviewCap under user control
-    setLearnCap(simResult[0].learnTarget)
+    // Apply the learnTarget from today's row; leave review_target pref under user control
+    setLearnTarget(simResult[0].learnTarget)
     setMode('calculated')
     setSimOutput({ learnTarget: simResult[0].learnTarget, reviewTarget: simResult[0].reviewTarget })
     // Persist deadline to all in-simulation decks

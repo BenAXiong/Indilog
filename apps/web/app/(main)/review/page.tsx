@@ -35,7 +35,7 @@ import { useUndoStack } from '@/lib/hooks/useUndoStack'
 type SessionContext = {
   reviewedToday:         number
   reviewTarget:          number
-  dailyCap:              number
+  prefReviewTarget:      number
   streak:                number
   priorityCollectionIds: string[]
   reviewMoreSize:        number | null
@@ -50,7 +50,7 @@ function cardSMState(card: FlashcardWithItem): SMState {
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { reviewedToday: 0, reviewTarget: 100, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null }
+  if (!user) return { reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null }
 
   const today   = getStudyDate()
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
@@ -71,14 +71,14 @@ async function loadSessionContext(): Promise<SessionContext> {
   while (reviewSet.has(cur)) { streak++; const [y,m,d] = cur.split('-').map(Number); const p = new Date(y,m-1,d-1); cur = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}` as typeof today }
 
   const prefs = profileRes.data?.preferences as Record<string, unknown> | null
-  const dailyCap = typeof prefs?.review_cap === 'number' ? prefs.review_cap : 100
+  const prefReviewTarget = typeof prefs?.review_target === 'number' ? prefs.review_target : 100
   const reviewMoreSize = typeof prefs?.review_more_size === 'number' ? prefs.review_more_size : null
-  if (typeof window !== 'undefined') localStorage.setItem('srs_review_cap', String(dailyCap))
+  if (typeof window !== 'undefined') localStorage.setItem('srs_review_target', String(prefReviewTarget))
 
   return {
     reviewedToday:         todayRes.data?.reviewed_count ?? 0,
-    reviewTarget:          todayRes.data?.review_target ?? dailyCap,
-    dailyCap,
+    reviewTarget:          todayRes.data?.review_target ?? prefReviewTarget,
+    prefReviewTarget,
     streak,
     priorityCollectionIds: priorityDecks.map(d => d.collection_id),
     reviewMoreSize,
@@ -90,7 +90,7 @@ async function loadSessionContext(): Promise<SessionContext> {
 function OptionsSheet({
   showHardEasy, setShowHardEasy,
   showButtons, setShowButtons,
-  dailyCap, setDailyCap,
+  prefReviewTarget, setPrefReviewTarget,
   reviewMode, setReviewMode,
   shuffleNew, setShuffleNew,
   showAllLangs, setShowAllLangs,
@@ -100,7 +100,7 @@ function OptionsSheet({
 }: {
   showHardEasy: boolean; setShowHardEasy: (v: boolean) => void
   showButtons:  boolean; setShowButtons:  (v: boolean) => void
-  dailyCap:     number;  setDailyCap:     (v: number) => void
+  prefReviewTarget: number; setPrefReviewTarget: (v: number) => void
   reviewMode:   string;  setReviewMode:   (v: string) => void
   shuffleNew:   boolean; setShuffleNew:   (v: boolean) => void
   showAllLangs:  boolean; setShowAllLangs:  (v: boolean) => void
@@ -177,7 +177,7 @@ function ReviewSession({
   const [showButtons,    setShowButtonsRaw]  = useState(true)
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
   const [showFlagPicker, setShowFlagPicker] = useState(false)
-  const [dailyCap,       setDailyCapRaw]    = useState(100)
+  const [prefReviewTarget, setPrefReviewTargetRaw] = useState(100)
   const [reviewMode,     setReviewModeRaw]  = useState('forward')
   const [shuffleNew,     setShuffleNewRaw]  = useState(false)
   const [showAllLangs,   setShowAllLangsRaw] = useState(true)
@@ -233,8 +233,8 @@ function ReviewSession({
   useEffect(() => {
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
     setShowButtonsRaw(localStorage.getItem('srs_show_buttons') !== 'false')
-    const cap = parseInt(localStorage.getItem('srs_review_cap') ?? '100')
-    setDailyCapRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
+    const cap = parseInt(localStorage.getItem('srs_review_target') ?? '100')
+    setPrefReviewTargetRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
     setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
@@ -244,9 +244,9 @@ function ReviewSession({
   function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new',    String(v)); patchPreferences({ shuffle_new: v }) }
   function setShowHardEasy(v: boolean) { setShowHardEasyRaw(v); localStorage.setItem('srs_show_hard_easy', String(v)); patchPreferences({ show_hard_easy: v }) }
   function setShowButtons(v: boolean)  { setShowButtonsRaw(v);  localStorage.setItem('srs_show_buttons',   String(v)); patchPreferences({ show_buttons: v }) }
-  function setDailyCap(v: number) {
+  function setPrefReviewTarget(v: number) {
     const n = Math.min(999, Math.max(5, v))
-    setDailyCapRaw(n); localStorage.setItem('srs_review_cap', String(n)); patchPreferences({ review_cap: n })
+    setPrefReviewTargetRaw(n); localStorage.setItem('srs_review_target', String(n)); patchPreferences({ review_target: n })
   }
   function setReviewMode(v: string) { setReviewModeRaw(v); localStorage.setItem('srs_review_mode', v); patchPreferences({ review_mode: v }) }
   function setShowAllLangs(v: boolean) { setShowAllLangsRaw(v) }
@@ -834,7 +834,7 @@ function ReviewSession({
         <OptionsSheet
           showHardEasy={showHardEasy}       setShowHardEasy={setShowHardEasy}
           showButtons={showButtons}         setShowButtons={setShowButtons}
-          dailyCap={dailyCap}               setDailyCap={setDailyCap}
+          prefReviewTarget={prefReviewTarget} setPrefReviewTarget={setPrefReviewTarget}
           reviewMode={reviewMode}           setReviewMode={setReviewMode}
           shuffleNew={shuffleNew}           setShuffleNew={setShuffleNew}
           showAllLangs={showAllLangs}       setShowAllLangs={setShowAllLangs}
@@ -876,7 +876,7 @@ function ReviewPage() {
   const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,    setCards]    = useState<FlashcardWithItem[]>([])
   const [overflow, setOverflow] = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, dailyCap: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount,    setSessionCount]    = useState(0)
   const [sessionKey,      setSessionKey]      = useState(0)

@@ -12,7 +12,7 @@ export type SimulationResult = {
 
 export async function computeSimulation(
   userId: string,
-  prefs: { learn_cap: number; review_cap: number },
+  prefs: { learn_target: number; review_target: number },
 ): Promise<SimulationResult> {
   const supabase = await createClient()
 
@@ -23,7 +23,7 @@ export async function computeSimulation(
     .eq('in_simulation', true)
 
   if (!simDecks?.length) {
-    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false, simTotalActive: 0, simRootedCount: 0 }
+    return { learnTarget: prefs.learn_target, reviewTarget: prefs.review_target, tomorrowLearnTarget: null, fromSimulation: false, simTotalActive: 0, simRootedCount: 0 }
   }
 
   const collectionIds = simDecks.map(d => d.collection_id as string)
@@ -83,7 +83,7 @@ export async function computeSimulation(
   }
 
   if (minDaysRemaining === Infinity) {
-    return { learnTarget: prefs.learn_cap, reviewTarget: prefs.review_cap, tomorrowLearnTarget: null, fromSimulation: false, simTotalActive, simRootedCount }
+    return { learnTarget: prefs.learn_target, reviewTarget: prefs.review_target, tomorrowLearnTarget: null, fromSimulation: false, simTotalActive, simRootedCount }
   }
 
   // Subtract the minimum ripening window (21d = Rooted threshold) so we only
@@ -91,7 +91,7 @@ export async function computeSimulation(
   const TIME_TO_ROOTED = 21
   const effectiveWindow       = Math.max(1, minDaysRemaining - TIME_TO_ROOTED)
   const learnTarget = Math.max(1, Math.ceil(totalNewCards / effectiveWindow))
-  const reviewTarget = Math.max(prefs.review_cap ?? 100, existingReviewDue)
+  const reviewTarget = Math.max(prefs.review_target ?? 100, existingReviewDue)
 
   // Tomorrow: one day consumed, learnTarget fewer new cards remaining
   const tomorrowNewCards        = Math.max(0, totalNewCards - learnTarget)

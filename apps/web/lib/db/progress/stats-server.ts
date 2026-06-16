@@ -20,8 +20,8 @@ export type DashboardStats = {
   totalDue: number
   newCount: number          // repetitions===0, not suspended
   dueTomorrow: number
-  learnTarget: number       // frozen for today, from simulation or learn_cap pref
-  reviewTarget: number      // frozen for today, from simulation or review_cap pref
+  learnTarget: number       // frozen for today, from simulation or learn_target pref
+  reviewTarget: number      // frozen for today, from simulation or review_target pref
   tomorrowLearnTarget: number | null
   tomorrowReviewTarget: number | null
   simulationActive: boolean
@@ -261,12 +261,12 @@ export async function getDashboardStats(language = 'ami'): Promise<DashboardStat
   const todayStats    = statsMap.get(today)
   const reviewedToday = todayStats?.reviewed ?? 0
   const learnedToday  = todayStats?.learned  ?? 0
-  const reviewCap     = (prefs.review_cap as number) ?? 100
+  const prefReviewTarget = (prefs.review_target as number) ?? 100
 
-  // 2E: simulation targets (falls back to pref caps when no sim decks)
+  // 2E: simulation targets (falls back to pref targets when no sim decks)
   const sim = await computeSimulation(user.id, {
-    learn_cap:  (prefs.learn_cap  as number) ?? 10,
-    review_cap: reviewCap,
+    learn_target:  (prefs.learn_target  as number) ?? 10,
+    review_target: prefReviewTarget,
   })
 
   // Frozen targets: read from the raw daily row (statsMap only stores reviewed/captured/learned).

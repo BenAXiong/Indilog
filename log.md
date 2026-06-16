@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-17 01:15 | REFACTOR | cap exorcism: rename review_cap/learn_cap → review_target/learn_target across all 9 files (preferences.ts, simulation.ts, simulation-client.ts, GoalSheet.tsx, SettingsSheet.tsx, review/page.tsx, learn/page.tsx, stats-server.ts); DB prefs already had new keys; UI labels updated to "target / day" |
 | 2026-06-17 01:01 | CONFIG | pre-rename commit: plan-v1/v+ progress updates; update DEC-SRS08 — reframe as two-layer target model, add terminology history (daily_cap→review_cap→review_target), add future consideration for collapsing layers via begin_day RPC |
 | 2026-06-16 | FIX | Review Again: requeue at end of deck (was N+10); write due_at=now+10min to DB immediately so card is genuinely deferred if session ends early; undo restores original due_at |
 | 2026-06-16 | REFACTOR | Rename components/learn → epark; StudyCard → EparkSentence; StudyView → EparkView; 6 page imports updated; lib/eparkTokens.ts (Caveat/Kalam/Space Mono scoped to epark); fonts added to layout.tsx |

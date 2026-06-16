@@ -44,9 +44,9 @@ function reviewDaysFrom(
 export async function projectSimulation(params: {
   collectionIds: string[]
   deadline:      string
-  learnCap:      number
+  learnTarget:      number
 }): Promise<{ days: SimulationDay[]; learnTarget: number } | null> {
-  const { collectionIds, deadline, learnCap } = params
+  const { collectionIds, deadline, learnTarget } = params
   if (!collectionIds.length || !deadline) return null
 
   const supabase = createClient()
@@ -90,7 +90,7 @@ export async function projectSimulation(params: {
   // introduced today can still reach Rooted (interval >= 21d) by the deadline.
   const TIME_TO_ROOTED  = 21
   const effectiveWindow = Math.max(1, daysLeft - TIME_TO_ROOTED)
-  const learnTarget = Math.max(1, Math.min(learnCap, Math.ceil(newCards.length / effectiveWindow)))
+  const effectiveLearnTarget = Math.max(1, Math.min(learnTarget, Math.ceil(newCards.length / effectiveWindow)))
 
   // Per-day counters
   const learnLoad  = new Array<number>(daysLeft).fill(0)
@@ -116,7 +116,7 @@ export async function projectSimulation(params: {
   // once and multiply — avoids O(n_cards) loops for large decks.
   let remaining = newCards.length
   for (let g = 0; g < daysLeft && remaining > 0; g++) {
-    const graduating = Math.min(learnTarget, remaining)
+    const graduating = Math.min(effectiveLearnTarget, remaining)
     remaining    -= graduating
     learnLoad[g]  = graduating
 
@@ -136,7 +136,7 @@ export async function projectSimulation(params: {
     review: reviewLoad[d],
   }))
 
-  return { days, learnTarget }
+  return { days, learnTarget: effectiveLearnTarget }
 }
 
 // ─── Curve table for GoalSheet ────────────────────────────────────────────────
