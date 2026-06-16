@@ -431,8 +431,6 @@ export default function EparkView({ source }: Props) {
       <div style={{
         padding: '66px 18px 100px',
         display: 'flex', flexDirection: 'column', gap: layoutMode === 'single' ? 12 : 0,
-        justifyContent: layoutMode === 'single' ? 'center' : 'flex-start',
-        minHeight: layoutMode === 'single' ? 'calc(100dvh - 166px)' : undefined,
       }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
@@ -475,7 +473,10 @@ export default function EparkView({ source }: Props) {
             ))}
           </div>
         ) : layoutMode === 'single' ? (
-          <div>
+          <div style={{
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            minHeight: 'calc(100svh - 166px)',
+          }}>
             {/* Full-width card with chevrons floating in the side padding */}
             <div
               style={{ position: 'relative' }}
@@ -492,7 +493,7 @@ export default function EparkView({ source }: Props) {
               <button
                 onClick={() => setCardIdx(i => Math.max(0, i - 1))}
                 disabled={cardIdx === 0}
-                style={{ ...arrowBtn(cardIdx === 0), position: 'absolute', left: -16, top: '50%', transform: 'translateY(-50%)' }}
+                style={{ ...arrowBtn(cardIdx === 0), position: 'absolute', left: -20, top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Icon name="chev-l" size={22} strokeWidth={2.2} />
               </button>
@@ -517,7 +518,7 @@ export default function EparkView({ source }: Props) {
               <button
                 onClick={() => setCardIdx(i => Math.min(results.length - 1, i + 1))}
                 disabled={cardIdx === results.length - 1}
-                style={{ ...arrowBtn(cardIdx === results.length - 1), position: 'absolute', right: -16, top: '50%', transform: 'translateY(-50%)' }}
+                style={{ ...arrowBtn(cardIdx === results.length - 1), position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Icon name="chevron" size={22} strokeWidth={2.2} />
               </button>

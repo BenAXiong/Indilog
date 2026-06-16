@@ -202,6 +202,17 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
         alignItems: 'center', textAlign: 'center', gap: 14,
         boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
       }}>
+        {/* Top row: copy left · save right */}
+        <div style={{ display: 'flex', width: '100%' }}>
+          <button onClick={copy} style={ghostBtn}>
+            <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
+          </button>
+          <div style={{ flex: 1 }} />
+          <button onClick={handleSave} style={{ ...ghostBtn, color: savedId ? T.crimson : T.inkSoft }}>
+            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} color={savedId ? T.crimson : T.inkSoft} />
+          </button>
+        </div>
+
         {/* Play button */}
         {row.audio_url && (
           <button onClick={() => onPlay(row.audio_url!)} style={{
