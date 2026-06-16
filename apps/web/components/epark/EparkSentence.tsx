@@ -33,8 +33,7 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, is
 
   const tokens = row.ab.split(/\s+/).filter(Boolean)
 
-  const zhRendered = zhMode !== 'hidden' || zhRevealed
-  const zhBlurred  = zhMode === 'blurred' && !zhRevealed
+  const zhBlurred = zhMode === 'blurred' && !zhRevealed
 
   const copy = async () => {
     const text = row.zh ? `${row.ab}\n${row.zh}` : row.ab
@@ -93,20 +92,18 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, is
         </div>
 
         {/* Translation */}
-        {(row.zh || zhMode === 'hidden') && (
+        {row.zh && zhMode !== 'hidden' && (
           <div
-            onClick={() => zhMode !== 'visible' && setZhRevealed(v => !v)}
+            onClick={() => zhMode === 'blurred' && setZhRevealed(v => !v)}
             style={{
               fontFamily: EP.fontTrans, fontSize: 13.5, color: T.inkSoft,
               lineHeight: 1.4, marginTop: 8,
               filter: zhBlurred ? 'blur(3px)' : 'none',
-              cursor: zhMode !== 'visible' ? 'pointer' : 'default',
+              cursor: zhMode === 'blurred' ? 'pointer' : 'default',
               userSelect: zhBlurred ? 'none' : 'text',
             }}
           >
-            {zhRendered
-              ? (row.zh || <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>)
-              : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
+            {row.zh}
           </div>
         )}
       </div>
@@ -146,20 +143,18 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, is
               ))}
             </div>
 
-            {(row.zh || zhMode === 'hidden') && (
+            {row.zh && zhMode !== 'hidden' && (
               <div
-                onClick={e => { e.stopPropagation(); zhMode !== 'visible' && setZhRevealed(v => !v) }}
+                onClick={e => { e.stopPropagation(); zhMode === 'blurred' && setZhRevealed(v => !v) }}
                 style={{
                   fontFamily: EP.fontTrans, fontSize: 13, color: T.inkSoft,
                   lineHeight: 1.4, marginTop: 3,
                   filter: zhBlurred ? 'blur(3px)' : 'none',
-                  cursor: zhMode !== 'visible' ? 'pointer' : 'default',
+                  cursor: zhMode === 'blurred' ? 'pointer' : 'default',
                   userSelect: zhBlurred ? 'none' : 'text',
                 }}
               >
-                {zhRendered
-                  ? (row.zh || <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>)
-                  : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
+                {row.zh}
               </div>
             )}
           </div>
@@ -228,21 +223,19 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, is
           <div style={{ height: 1, background: T.lineSoft }} />
 
           {/* zh — respects zhMode */}
-          {(row.zh || zhMode === 'hidden') && (
+          {row.zh && zhMode !== 'hidden' && (
             <div
-              onClick={() => zhMode !== 'visible' && setZhRevealed(v => !v)}
+              onClick={() => zhMode === 'blurred' && setZhRevealed(v => !v)}
               style={{
                 fontFamily: 'Newsreader, Georgia, serif', fontSize: 15,
                 color: T.inkSoft, lineHeight: 1.5,
                 filter: zhBlurred ? 'blur(5px)' : 'none',
-                cursor: zhMode !== 'visible' ? 'pointer' : 'default',
+                cursor: zhMode === 'blurred' ? 'pointer' : 'default',
                 userSelect: zhBlurred ? 'none' : 'text',
                 minHeight: 22,
               }}
             >
-              {zhRendered
-                ? (row.zh || <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>)
-                : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
+              {row.zh}
             </div>
           )}
         </div>
