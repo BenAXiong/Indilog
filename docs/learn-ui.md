@@ -402,14 +402,14 @@ After file selected — preview panel:
 
 | Component | Path | Notes |
 |---|---|---|
-| `LearnHubCard` | `components/learn/LearnHubCard.tsx` | Source card + custom card + "+" card |
-| `StudyCard` | `components/learn/StudyCard.tsx` | Single sentence card with all actions |
-| `ContentSheet` | `components/learn/ContentSheet.tsx` | Bottom sheet wrapper + per-source selectors |
-| `ActionBar` | `components/learn/ActionBar.tsx` | Prev / Mark complete / Next bar |
-| `SettingsPanel` | `components/learn/SettingsPanel.tsx` | ⚙ dropdown |
-| `LookupInline` | `components/learn/LookupInline.tsx` | Inline word result panel |
-| `CollectionEditor` | `components/learn/CollectionEditor.tsx` | Manual card entry form |
-| `ImportDropzone` | `components/learn/ImportDropzone.tsx` | File drop + preview |
+| `LearnHubCard` | `components/epark/LearnHubCard.tsx` | Source card + custom card + "+" card |
+| `EparkSentence` | `components/epark/EparkSentence.tsx` | Single ePark curriculum sentence with all actions |
+| `ContentSheet` | `components/epark/ContentSheet.tsx` | Bottom sheet wrapper + per-source selectors |
+| `ActionBar` | `components/epark/ActionBar.tsx` | Prev / Mark complete / Next bar |
+| `SettingsPanel` | `components/epark/SettingsPanel.tsx` | ⚙ dropdown |
+| `LookupInline` | `components/epark/LookupInline.tsx` | Inline word result panel |
+| `CollectionEditor` | `components/epark/CollectionEditor.tsx` | Manual card entry form |
+| `ImportDropzone` | `components/epark/ImportDropzone.tsx` | File drop + preview |
 
 ### Reused from existing UI
 

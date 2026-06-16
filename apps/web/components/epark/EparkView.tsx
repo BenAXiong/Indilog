@@ -18,7 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/progress/completions'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import Icon from '@/components/ui/Icon'
-import StudyCard from './StudyCard'
+import EparkSentence from './EparkSentence'
 import ActionBar from './ActionBar'
 import ContentSheet from './ContentSheet'
 import LookupInline from '@/components/lookup/LookupInline'
@@ -409,7 +409,7 @@ export default function StudyView({ source }: Props) {
           </div>
         ) : (
           results.map((row, i) => (
-            <StudyCard
+            <EparkSentence
               key={row.original_uuid}
               row={row}
               index={i + 1}

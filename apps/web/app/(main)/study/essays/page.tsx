@@ -1,7 +1,7 @@
 'use client'
 
-import StudyView from '@/components/learn/StudyView'
+import EparkView from '@/components/epark/EparkView'
 
 export default function EssaysPage() {
-  return <StudyView source="essay" />
+  return <EparkView source="essay" />
 }

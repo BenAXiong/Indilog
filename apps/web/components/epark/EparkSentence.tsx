@@ -19,7 +19,7 @@ type Props = {
   onSaveWarning: () => void
 }
 
-export default function StudyCard({ row, index, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
+export default function EparkSentence({ row, index, zhMode, lookupOn, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
   const [savedId,    setSavedId]    = useState<string | null>(initialSavedId ?? null)

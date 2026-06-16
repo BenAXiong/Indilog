@@ -99,7 +99,7 @@ Before creating any new file in `apps/web/lib/` or `apps/web/components/`, check
 | New Supabase helper | `lib/db/<subdomain>/` — `notebook/` `srs/` `progress/` `profile/` |
 | New SQLite query | `lib/corpus/dict.ts` or `lib/corpus/curriculum.ts` (or a new file in `lib/corpus/`) |
 | Static YCM / dialect metadata | `lib/lang/` |
-| Cross-app UI component | `components/lookup/` or a new `components/<domain>/` — **never** inside a feature folder like `components/learn/` |
+| Cross-app UI component | `components/lookup/` or a new `components/<domain>/` — **never** inside a feature folder like `components/epark/` |
 | Utility imported by 3+ features | `lib/lang/` or another neutral `lib/` folder — never inside a feature folder |
 
 **Lang/dialect state:** Never write a new profile fetch. Use `useLang()` from `lib/context/LangDialectProvider`. If `setLang` / `setDialect` don't cover the use case, extend the provider — don't bypass it.
