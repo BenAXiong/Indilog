@@ -493,7 +493,7 @@ export default function EparkView({ source }: Props) {
               <button
                 onClick={() => setCardIdx(i => Math.max(0, i - 1))}
                 disabled={cardIdx === 0}
-                style={{ ...arrowBtn(cardIdx === 0), position: 'absolute', left: -20, top: '50%', transform: 'translateY(-50%)' }}
+                style={{ ...arrowBtn(cardIdx === 0), position: 'absolute', left: -8, top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Icon name="chev-l" size={22} strokeWidth={2.2} />
               </button>
@@ -518,7 +518,7 @@ export default function EparkView({ source }: Props) {
               <button
                 onClick={() => setCardIdx(i => Math.min(results.length - 1, i + 1))}
                 disabled={cardIdx === results.length - 1}
-                style={{ ...arrowBtn(cardIdx === results.length - 1), position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)' }}
+                style={{ ...arrowBtn(cardIdx === results.length - 1), position: 'absolute', right: -8, top: '50%', transform: 'translateY(-50%)' }}
               >
                 <Icon name="chevron" size={22} strokeWidth={2.2} />
               </button>
@@ -538,6 +538,24 @@ export default function EparkView({ source }: Props) {
                 />
               ))}
             </div>
+          </div>
+        ) : layoutMode === 'bubbles' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+            {results.map((row, i) => (
+              <EparkSentence
+                key={row.original_uuid}
+                row={row}
+                index={i + 1}
+                layout="bubbles"
+                zhMode={zhMode}
+                lookupOn={lookupOn}
+                initialSavedId={savedItemMap.get(row.ab) ?? null}
+                onLookup={(word, rect) => setLookup({ word, rect })}
+                onPlay={handlePlay}
+                onSave={handleSave}
+                onSaveWarning={handleSaveWarning}
+              />
+            ))}
           </div>
         ) : (
           results.map((row, i) => (

@@ -255,6 +255,90 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
     )
   }
 
+  // ── D · Chat bubbles ──────────────────────────────────────────────────────
+  if (layout === 'bubbles') {
+    const isLeft = index % 2 === 1
+    const whoLabel = `${isLeft ? 'A' : 'B'} · ${String(index).padStart(2, '0')}`
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: isLeft ? 'row' : 'row-reverse',
+        alignItems: 'flex-end',
+        alignSelf: isLeft ? 'flex-start' : 'flex-end',
+        gap: 6,
+        maxWidth: '85%',
+      }}>
+        {/* Bubble column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+          {/* Who chip + audio (audio always on the inside) */}
+          <div style={{
+            display: 'flex',
+            flexDirection: isLeft ? 'row' : 'row-reverse',
+            alignItems: 'center', gap: 5,
+          }}>
+            <span style={{ fontFamily: EP.fontMono, fontSize: 10, color: T.inkFaint, letterSpacing: '0.06em' }}>
+              {whoLabel}
+            </span>
+            {row.audio_url && (
+              <button onClick={() => onPlay(row.audio_url!)} style={{
+                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                background: T.crimson, border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}>
+                <Icon name="speaker" size={11} strokeWidth={2} color="#fff" />
+              </button>
+            )}
+          </div>
+
+          {/* Bubble */}
+          <div style={{
+            background: isLeft ? T.paperHi : T.paper,
+            borderRadius: isLeft ? '4px 18px 18px 18px' : '18px 4px 18px 18px',
+            border: `1px solid ${isLeft ? T.lineSoft : T.line}`,
+            padding: '10px 13px',
+          }}>
+            <div style={{
+              fontFamily: EP.fontAb, fontWeight: 700, fontSize: 18, lineHeight: 1.2,
+              color: T.ink, overflowWrap: 'break-word',
+            }}>
+              {tokens.map((tok, i) => (
+                <span key={i}
+                  onClick={lookupOn && onLookup ? e => { e.stopPropagation(); onLookup(tok, (e.target as HTMLElement).getBoundingClientRect()) } : undefined}
+                  style={{ marginRight: 3, cursor: lookupOn ? 'pointer' : 'text', borderBottom: lookupOn ? `1px dashed ${T.inkFaint}` : 'none' }}
+                >{tok}</span>
+              ))}
+            </div>
+
+            {row.zh && zhMode !== 'hidden' && (
+              <div
+                onClick={() => zhMode === 'blurred' && setZhRevealed(v => !v)}
+                style={{
+                  fontFamily: EP.fontTrans, fontSize: 12.5, color: T.inkSoft,
+                  lineHeight: 1.4, marginTop: 6,
+                  filter: zhBlurred ? 'blur(3px)' : 'none',
+                  cursor: zhMode === 'blurred' ? 'pointer' : 'default',
+                  userSelect: zhBlurred ? 'none' : 'text',
+                }}
+              >{row.zh}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Save — bottom edge, inside */}
+        <button onClick={handleSave} style={{
+          width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+          background: 'none', border: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', marginBottom: 2,
+        }}>
+          <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={14} strokeWidth={1.8}
+            color={savedId ? T.crimson : T.inkFaint} />
+        </button>
+      </div>
+    )
+  }
+
   // ── Legacy (card shell) ────────────────────────────────────────────────────
   return (
     <div style={{ position: 'relative', paddingTop: 10 }}>

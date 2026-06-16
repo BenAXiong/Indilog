@@ -9,7 +9,7 @@ export type IconName =
   | 'play' | 'stop' | 'card' | 'note' | 'word' | 'logout' | 'library'
   | 'layers' | 'globe' | 'archive' | 'share' | 'download' | 'trash' | 'tag' | 'more-v'
   | 'rotate-ccw' | 'rotate-cw' | 'skip-fwd' | 'pause'
-  | 'square' | 'chev-l'
+  | 'square' | 'chev-l' | 'chat'
   | 'flag' | 'flagF'
   | 'info'
   | 'film'
@@ -91,6 +91,7 @@ const ICONS: Record<IconName, (p: SVGProps) => ReactNode> = {
   'pause':      p => S(p, <><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></>),
   'square':     p => S(p, <rect x="4" y="4" width="16" height="16" rx="2"/>),
   'chev-l':     p => S(p, <path d="M15 6l-6 6 6 6"/>),
+  'chat':       p => S(p, <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>),
   'flag':       p => S(p, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   'flagF':      p => S({ ...p, fill: p.stroke }, <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>),
   'info':       p => S(p, <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>),
