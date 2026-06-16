@@ -162,38 +162,26 @@ export default function EparkSentence({ row, index, layout, zhMode, lookupOn, is
                   : <span style={{ color: T.inkFaint, fontSize: 12 }}>tap to reveal</span>}
               </div>
             )}
-
-            {/* Expanded toolbar — active item only */}
-            {isActive && (
-              <div style={{ display: 'flex', gap: 7, marginTop: 8 }} onClick={e => e.stopPropagation()}>
-                {row.audio_url && (
-                  <button style={smActBtn} onClick={() => onPlay(row.audio_url!)}>
-                    <Icon name="speaker" size={13} strokeWidth={1.8} />
-                  </button>
-                )}
-                <button style={smActBtn} onClick={copy}>
-                  <Icon name={copied ? 'check' : 'copy'} size={13} strokeWidth={1.8} />
-                </button>
-                <button
-                  style={{ ...smActBtn, borderColor: savedId ? T.crimson : T.line, color: savedId ? T.crimson : T.ink }}
-                  onClick={handleSave}
-                >
-                  <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={13} strokeWidth={1.8}
-                    color={savedId ? T.crimson : T.ink} />
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Mini audio button — inactive items only */}
-          {!isActive && row.audio_url && (
-            <button
-              style={smActBtn}
-              onClick={e => { e.stopPropagation(); onPlay(row.audio_url!) }}
-            >
-              <Icon name="speaker" size={13} strokeWidth={1.8} />
-            </button>
-          )}
+          {/* Right column: audio always, save revealed when active */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}
+            onClick={e => e.stopPropagation()}>
+            {row.audio_url && (
+              <button style={smActBtn} onClick={() => onPlay(row.audio_url!)}>
+                <Icon name="speaker" size={13} strokeWidth={1.8} />
+              </button>
+            )}
+            {isActive && (
+              <button
+                style={{ ...smActBtn, borderColor: savedId ? T.crimson : T.line, color: savedId ? T.crimson : T.ink }}
+                onClick={handleSave}
+              >
+                <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={13} strokeWidth={1.8}
+                  color={savedId ? T.crimson : T.ink} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )
