@@ -24,6 +24,13 @@ type Props = {
   onSaveWarning: () => void
 }
 
+function singleFontSize(text: string): number {
+  const len = text.length
+  if (len <= 60)  return 30
+  if (len >= 200) return 15
+  return Math.round(30 - ((len - 60) / 140) * 15)
+}
+
 export default function EparkSentence({ row, index, total, layout, zhMode, lookupOn, isActive, onActivate, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
@@ -185,30 +192,17 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
 
   // ── B · Immersive single ──────────────────────────────────────────────────
   if (layout === 'single') {
-    const pad = (n: number) => String(n).padStart(2, '0')
+    const abFontSize = singleFontSize(row.ab)
     return (
       <div style={{
         background: T.paperHi, borderRadius: 22,
         border: `1px solid ${T.lineSoft}`,
-        padding: '16px 20px 22px',
+        padding: '8px 10px 12px',
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', textAlign: 'center', gap: 16,
+        alignItems: 'center', textAlign: 'center', gap: 14,
         boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 8px rgba(80,40,20,0.05), 0 16px 36px rgba(80,40,20,0.1)',
       }}>
-        {/* Counter row: copy · counter · save */}
-        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-          <button onClick={copy} style={ghostBtn}>
-            <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
-          </button>
-          <div style={{ flex: 1, fontFamily: EP.fontMono, fontSize: 11, letterSpacing: '0.08em', color: T.inkFaint }}>
-            {pad(index)} / {pad(total ?? index)}
-          </div>
-          <button onClick={handleSave} style={{ ...ghostBtn, color: savedId ? T.crimson : T.inkSoft }}>
-            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} color={savedId ? T.crimson : T.inkSoft} />
-          </button>
-        </div>
-
-        {/* Play button — above ab */}
+        {/* Play button */}
         {row.audio_url && (
           <button onClick={() => onPlay(row.audio_url!)} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -220,9 +214,9 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
           </button>
         )}
 
-        {/* ab text */}
+        {/* ab text — font scales down for longer sentences */}
         <div style={{
-          fontFamily: EP.fontAb, fontWeight: 700, fontSize: 30, lineHeight: 1.15,
+          fontFamily: EP.fontAb, fontWeight: 700, fontSize: abFontSize, lineHeight: 1.15,
           color: T.ink, overflowWrap: 'break-word', width: '100%',
         }}>
           {tokens.map((tok, i) => (
@@ -245,6 +239,16 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
             }}
           >{row.zh}</div>
         )}
+
+        {/* Copy + save */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={copy} style={ghostBtn}>
+            <Icon name={copied ? 'check' : 'copy'} size={15} strokeWidth={1.8} />
+          </button>
+          <button onClick={handleSave} style={{ ...ghostBtn, color: savedId ? T.crimson : T.inkSoft }}>
+            <Icon name={savedId ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} color={savedId ? T.crimson : T.inkSoft} />
+          </button>
+        </div>
       </div>
     )
   }
