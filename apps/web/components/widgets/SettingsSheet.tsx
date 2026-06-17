@@ -707,6 +707,12 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
               </div>
             </div>
           )}
+
+          <div style={{ textAlign: 'center', paddingTop: 4 }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.inkFaint, letterSpacing: '0.06em' }}>
+              {process.env.NEXT_PUBLIC_BUILD_TIME ?? 'dev'}
+            </span>
+          </div>
         </div>
       </div>
 
