@@ -872,8 +872,9 @@ function ReviewPage() {
   const customDueOnly      = searchParams.get('dueOnly') !== 'false'
   const customIncludeUnseen = searchParams.get('includeUnseen') === 'true'
 
-  const isAdvance  = searchParams.get('advance') === '1'
-  const autostart = searchParams.get('start') === '1' && !isCustom
+  const isAdvance    = searchParams.get('advance') === '1'
+  const autostart    = searchParams.get('start') === '1' && !isCustom
+  const reviewNParam = (() => { const v = parseInt(searchParams.get('n') ?? '', 10); return Number.isFinite(v) && v > 0 ? v : null })()
 
   const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,    setCards]    = useState<FlashcardWithItem[]>([])
@@ -943,7 +944,8 @@ function ReviewPage() {
     }
 
     const reviewMoreN  = context.reviewMoreSize ?? Math.max(20, Math.round(context.reviewTarget / 50) * 5)
-    const sessionCap   = isCustom || isAdvance ? c.length
+    const sessionCap   = reviewNParam !== null ? Math.min(c.length, reviewNParam)
+      : isCustom || isAdvance ? c.length
       : isMore         ? reviewMoreN
       : Math.max(0, context.reviewTarget - context.reviewedToday)
     setCards(c.slice(0, sessionCap))

@@ -83,6 +83,10 @@ export default function DualRingCard({
   const [showNoCardsPopup,  setShowNoCardsPopup]  = useState(false)
   const [showSimGoal,       setShowSimGoal]       = useState(false)
   const [simGoalDontShow,   setSimGoalDontShow]   = useState(false)
+  const [showLearnPicker,   setShowLearnPicker]   = useState(false)
+  const [learnPickerN,      setLearnPickerN]      = useState(0)
+  const [showReviewPicker,  setShowReviewPicker]  = useState(false)
+  const [reviewPickerN,     setReviewPickerN]     = useState(0)
 
   useEffect(() => { localStorage.setItem('srs_learn_target',  String(learnTarget))  }, [learnTarget])
   useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
@@ -190,16 +194,29 @@ export default function DualRingCard({
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <RingWithCount pct={learnPct} color={T.sage} count={learnedToday} target={learnTarget} />
           {learnedToday < learnTarget && newCount > 0 ? (
-            <Link href={`/learn?start=1&n=${learnN}`} style={{
-              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
-              background: T.sage, color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              fontSize: 13.5, fontWeight: 600,
-              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(80,120,30,0.22)',
-            }}>
-              <Icon name="play" size={12} color="#fff" />
-              Learn {learnN}
-            </Link>
+            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+              <Link href={`/learn?start=1&n=${learnN}`} style={{
+                flex: 1, height: 44, borderRadius: 12, textDecoration: 'none',
+                background: T.sage, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                fontSize: 13.5, fontWeight: 600,
+                boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(80,120,30,0.22)',
+              }}>
+                <Icon name="play" size={12} color="#fff" />
+                Learn {learnN}
+              </Link>
+              <button
+                onClick={() => { setLearnPickerN(learnN); setShowLearnPicker(true) }}
+                style={{
+                  width: 38, height: 44, borderRadius: 12, flexShrink: 0,
+                  background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <Icon name="pen" size={13} color={T.inkMute} strokeWidth={1.8} />
+              </button>
+            </div>
           ) : learnedToday >= learnTarget && newCount > 0 ? (
             <Link href={`/learn?n=${learnMoreN}`} style={{
               width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
@@ -240,16 +257,29 @@ export default function DualRingCard({
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <RingWithCount pct={reviewPct} color={T.crimson} count={reviewedToday} target={reviewTarget} />
           {dueCount > 0 && reviewedToday < reviewTarget ? (
-            <Link href="/review?start=1" style={{
-              width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
-              background: T.crimson, color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              fontSize: 13.5, fontWeight: 600,
-              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
-            }}>
-              <Icon name="play" size={12} color="#fff" />
-              Review {dueCount}
-            </Link>
+            <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+              <Link href="/review?start=1" style={{
+                flex: 1, height: 44, borderRadius: 12, textDecoration: 'none',
+                background: T.crimson, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                fontSize: 13.5, fontWeight: 600,
+                boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
+              }}>
+                <Icon name="play" size={12} color="#fff" />
+                Review {dueCount}
+              </Link>
+              <button
+                onClick={() => { setReviewPickerN(dueCount); setShowReviewPicker(true) }}
+                style={{
+                  width: 38, height: 44, borderRadius: 12, flexShrink: 0,
+                  background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <Icon name="pen" size={13} color={T.inkMute} strokeWidth={1.8} />
+              </button>
+            </div>
           ) : reviewedToday >= reviewTarget && totalDue > 0 ? (
             <Link href="/review?start=1&more=1" style={{
               width: '100%', height: 44, borderRadius: 12, textDecoration: 'none',
@@ -279,6 +309,88 @@ export default function DualRingCard({
           )}
         </div>
       </div>
+
+      {/* ── Learn session size picker ────────────────────────────────────────── */}
+      {showLearnPicker && (
+        <CenteredPopup onClose={() => setShowLearnPicker(false)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Session size</span>
+            <button onClick={() => setShowLearnPicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+              <Icon name="close" size={16} color={T.inkMute} strokeWidth={2} />
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 10 }}>
+            <button
+              onClick={() => setLearnPickerN(n => Math.max(1, n - 5))}
+              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+            >−</button>
+            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 52, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', minWidth: 64, textAlign: 'center', lineHeight: 1 }}>
+              {learnPickerN}
+            </span>
+            <button
+              onClick={() => setLearnPickerN(n => Math.min(newCount, n + 5))}
+              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+            >+</button>
+          </div>
+          <div style={{ fontSize: 11.5, color: T.inkMute, textAlign: 'center', marginBottom: 20 }}>
+            {newCount} new cards available · step 5
+          </div>
+          <Link
+            href={`/learn?start=1&n=${learnPickerN}`}
+            onClick={() => setShowLearnPicker(false)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.sage, color: '#fff', fontSize: 14, fontWeight: 600,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(80,120,30,0.22)',
+            }}
+          >
+            <Icon name="play" size={12} color="#fff" />
+            Start {learnPickerN}
+          </Link>
+        </CenteredPopup>
+      )}
+
+      {/* ── Review session size picker ───────────────────────────────────────── */}
+      {showReviewPicker && (
+        <CenteredPopup onClose={() => setShowReviewPicker(false)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>Session size</span>
+            <button onClick={() => setShowReviewPicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+              <Icon name="close" size={16} color={T.inkMute} strokeWidth={2} />
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 10 }}>
+            <button
+              onClick={() => setReviewPickerN(n => Math.max(5, n - 5))}
+              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+            >−</button>
+            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 52, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', minWidth: 64, textAlign: 'center', lineHeight: 1 }}>
+              {reviewPickerN}
+            </span>
+            <button
+              onClick={() => setReviewPickerN(n => Math.min(totalDue, n + 5))}
+              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+            >+</button>
+          </div>
+          <div style={{ fontSize: 11.5, color: T.inkMute, textAlign: 'center', marginBottom: 20 }}>
+            {totalDue} cards due · step 5
+          </div>
+          <Link
+            href={`/review?start=1&n=${reviewPickerN}`}
+            onClick={() => setShowReviewPicker(false)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              height: 44, borderRadius: 12, textDecoration: 'none',
+              background: T.crimson, color: '#fff', fontSize: 14, fontWeight: 600,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 10px rgba(120,30,15,0.22)',
+            }}
+          >
+            <Icon name="play" size={12} color="#fff" />
+            Start {reviewPickerN}
+          </Link>
+        </CenteredPopup>
+      )}
 
       {/* ── "Add new cards" popup ─────────────────────────────────────────────── */}
       {showNoCardsPopup && (
