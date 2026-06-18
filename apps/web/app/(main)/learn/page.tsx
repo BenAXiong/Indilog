@@ -624,8 +624,9 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
 function LearnPage() {
   const router       = useRouter()
-  const searchParams = useSearchParams()
-  const autostart    = searchParams.get('start') === '1'
+  const searchParams  = useSearchParams()
+  const autostart     = searchParams.get('start') === '1'
+  const collectionId  = searchParams.get('collectionId') ?? undefined
 
   const nParam = (() => { const v = parseInt(searchParams.get('n') ?? '', 10); return Number.isFinite(v) && v > 0 ? v : null })()
 
@@ -639,8 +640,8 @@ function LearnPage() {
   const autostartedRef = useRef(false)
 
   async function reload() {
-    const [allCards, context] = await Promise.all([listLearnFlashcards(), loadLearnContext()])
-    const excludeLangs: string[] = localStorage.getItem('srs_show_all_langs') === 'false'
+    const [allCards, context] = await Promise.all([listLearnFlashcards(collectionId ? { collectionId } : {}), loadLearnContext()])
+    const excludeLangs: string[] = !collectionId && localStorage.getItem('srs_show_all_langs') === 'false'
       ? (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
       : []
     const filtered = excludeLangs.length
@@ -649,7 +650,7 @@ function LearnPage() {
     const remaining = Math.max(0, context.learnedToday >= context.learnTarget
       ? context.learnTarget
       : context.learnTarget - context.learnedToday)
-    const toLearn = nParam ?? remaining
+    const toLearn = nParam ?? (collectionId ? filtered.length : remaining)
     const sessionCards = filtered.slice(0, toLearn)
     setCards(sessionCards)
     setOverflow(filtered.slice(toLearn))

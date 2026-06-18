@@ -319,41 +319,45 @@ export async function graduateLearnCard(
   if (error) throw new Error(`graduateLearnCard: ${error.message}`)
 }
 
-export async function listLearnFlashcards(): Promise<FlashcardWithItem[]> {
+export async function listLearnFlashcards(opts: { collectionId?: string } = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
   const pages = await paginate<FlashcardWithItem>(
-    () => supabase.from('ind_flashcards').select(CARD_SEL).eq('user_id', user.id).eq('repetitions', 0).is('suspended_at', null),
+    () => {
+      let q = supabase.from('ind_flashcards').select(CARD_SEL).eq('user_id', user.id).eq('repetitions', 0).is('suspended_at', null)
+      if (opts.collectionId) q = q.filter('ind_items.collection_id', 'eq', opts.collectionId)
+      return q
+    },
     'listLearnFlashcards',
   )
 
   if (!pages.length) return []
+
+  const byPos = (a: FlashcardWithItem, b: FlashcardWithItem) => {
+    const aLv = a.ind_items?.level ?? 0,    bLv = b.ind_items?.level ?? 0
+    const aLe = a.ind_items?.lesson ?? 0,   bLe = b.ind_items?.lesson ?? 0
+    const aPo = a.ind_items?.position ?? 0, bPo = b.ind_items?.position ?? 0
+    return aLv !== bLv ? aLv - bLv : aLe !== bLe ? aLe - bLe : aPo - bPo
+  }
+
+  if (opts.collectionId) return pages.sort(byPos)
 
   // Priority sort: deck position → level → lesson → position; non-priority last
   const priorityDecks = await listPriorityDecks(user.id)
   const priorityMap = new Map<string, number>()
   for (const deck of priorityDecks) priorityMap.set(deck.collection_id, deck.position)
 
-  pages.sort((a, b) => {
+  return pages.sort((a, b) => {
     const aCol = a.ind_items?.collection_id ?? null
     const bCol = b.ind_items?.collection_id ?? null
     const aPri = aCol != null ? (priorityMap.get(aCol) ?? Infinity) : Infinity
     const bPri = bCol != null ? (priorityMap.get(bCol) ?? Infinity) : Infinity
     if (aPri !== bPri) return aPri - bPri
-    if (aPri !== Infinity) {
-      const aLv = a.ind_items?.level   ?? 0; const bLv = b.ind_items?.level   ?? 0
-      const aLe = a.ind_items?.lesson  ?? 0; const bLe = b.ind_items?.lesson  ?? 0
-      const aPo = a.ind_items?.position ?? 0; const bPo = b.ind_items?.position ?? 0
-      if (aLv !== bLv) return aLv - bLv
-      if (aLe !== bLe) return aLe - bLe
-      return aPo - bPo
-    }
+    if (aPri !== Infinity) return byPos(a, b)
     return 0
   })
-
-  return pages
 }
 
 // Used when a mature card completes its relearn burst (Good/Easy = 50% recovery).
