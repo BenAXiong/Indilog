@@ -2,6 +2,10 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-19 | CONFIG | transcript analysis (scrap/): add B9_1–B9_4 baselines (top 20/40/60/80% accessible videos by B6 tok%, per-dialect); two-pass batch script; b9_info section in output; B9 expandable panel in video_rec.html (per active dialect: stats + top tokens + video IDs); video_rec.html layout: tight non-title columns, oral-type color dot + legend, Tok/min intensity col, merged Frust.T/W column; regenerated transcript_results_amis.js (11 MB)
+| 2026-06-19 | CONFIG | transcript analysis (scrap/): add frustration columns to video_rec.html — Frust.T (type-based: % new types not in MoE) and Frust.W (token-weighted); transcript_batch.py extended with load_moe_strict (42,620 Amis tokens) and per-BID moe_n/moe_tok_n/new_tok_n stats; regenerated transcript_results_amis.js (10 MB, 186 transcripts × 5 combos); "Least frustrating" sort added |
+| 2026-06-18 | CONFIG | transcript analysis (scrap/): add B6_apos + B6_pfx extended baselines (24 affixes + apostrophe-stripped variants); regenerate transcript_results_amis.js (465 transcripts × 10 baselines); transcript_analysis_amis.html: Strict/+Norm toggle, B6_apos/B6_pfx tier colors, intersection logic updated; transcript_uncovered_amis.html: add B6_pfx to SHOW_BLS, update cross-table to cover B6_apos/B6_pfx tiers |
+| 2026-06-19 04:27 | CONFIG | update plan-v1/v+: mark cap rename done, add bugs.md ref, new study/capture TODOs, scrape candidates |
 | 2026-06-17 01:15 | REFACTOR | cap exorcism: rename review_cap/learn_cap → review_target/learn_target across all 9 files (preferences.ts, simulation.ts, simulation-client.ts, GoalSheet.tsx, SettingsSheet.tsx, review/page.tsx, learn/page.tsx, stats-server.ts); DB prefs already had new keys; UI labels updated to "target / day" |
 | 2026-06-17 01:01 | CONFIG | pre-rename commit: plan-v1/v+ progress updates; update DEC-SRS08 — reframe as two-layer target model, add terminology history (daily_cap→review_cap→review_target), add future consideration for collapsing layers via begin_day RPC |
 | 2026-06-16 | FIX | Review Again: requeue at end of deck (was N+10); write due_at=now+10min to DB immediately so card is genuinely deferred if session ends early; undo restores original due_at |
@@ -470,3 +474,4 @@
 | 2026-05-28 01:37 | FIX | cross-env for Windows-compatible NODE_OPTIONS in build script; Toast position:fixed (was absolute, clipped by scroll containers); flashcards use meaning column for card back with notes fallback; commit previously untracked meaning + audio_url migration files |
  
 | 2026-06-10 22:15 | FEATURE | Simulation learnTarget now uses effectiveWindow = max(1, daysLeft - 21) — cards introduced within 21 days of deadline can't reach Rooted; updated simulation.ts, simulation-client.ts, loadLearnContext; ADR DEC-SRS10 updated |
+| 2026-06-18 13:45 | FEATURE | Inscribe build timestamp (YYMMDD - HHMM UTC) at bottom of SettingsSheet; baked at build time via next.config.ts |

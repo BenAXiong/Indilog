@@ -2,12 +2,16 @@
 
 Ideas, deferred features, and future directions not yet scoped into a milestone. Nothing here is committed or prioritised.
 
+**Known bugs awaiting diagnosis/fix → [`docs/bugs.md`](docs/bugs.md)**
+
 - Refactor (see skill and doc)
 
 - Amis 1k: create v1 from ePark content. Save broad then filter on indi ws
     see if learn 12 units content corresponds to eassays and dialogue
     Find how many gaoji vocab have exsent in ePark
 
+- Study/browser: rename and revamp
+- Study subtabs: rework decks and captures UI
 - Curriculum: add "play all" buttons
 - Improve tooltips: speed, info and save (app-wide)
 - Fix curriculum default layout according to deck
