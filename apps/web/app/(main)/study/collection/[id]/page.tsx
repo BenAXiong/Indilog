@@ -107,7 +107,7 @@ export default function CollectionPage() {
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
-        <Link href="/study" style={{
+        <Link href="/study?tab=collections" style={{
           ...iconBtn, background: T.paperHi, border: `1px solid ${T.line}`,
           textDecoration: 'none', color: T.inkSoft,
         }}>

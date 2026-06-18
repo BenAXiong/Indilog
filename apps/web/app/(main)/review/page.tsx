@@ -869,7 +869,8 @@ function ReviewPage() {
   const customFlagRaw    = searchParams.get('flag') ?? ''
   const customFlagColors = customFlagRaw ? customFlagRaw.split(',').filter(Boolean) : undefined
   const customPlaceHeard = searchParams.get('placeHeard') ?? undefined
-  const customDueOnly    = searchParams.get('dueOnly') !== 'false'
+  const customDueOnly      = searchParams.get('dueOnly') !== 'false'
+  const customIncludeUnseen = searchParams.get('includeUnseen') === 'true'
 
   const isAdvance  = searchParams.get('advance') === '1'
   const autostart = searchParams.get('start') === '1' && !isCustom
@@ -904,6 +905,7 @@ function ReviewPage() {
             includeCollectionId: customCollection,
             capturesOnly:        customCaptures,
             includeNoteSource:   customNoteSource,
+            includeUnseen:       customIncludeUnseen || undefined,
             includeNoteTypes:    customNoteType ? [customNoteType] : undefined,
             includeTags:         customTags,
             dueOnly:             customDueOnly,
@@ -1022,7 +1024,12 @@ function ReviewPage() {
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
-        <Link href={isCustom ? '/study' : '/'} style={{
+        <Link href={
+          !isCustom ? '/' :
+          customCollection ? '/study?tab=collections' :
+          (customCaptures || (customNoteSource && customNoteSource !== 'curriculum')) ? '/study?tab=captures' :
+          '/study'
+        } style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: T.inkSoft, textDecoration: 'none',

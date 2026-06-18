@@ -241,6 +241,7 @@ export type ListDueOpts = {
   includeCollectionId?: string
   capturesOnly?:        boolean
   includeNoteSource?:   string     // filter by ind_items.note_source (exact match)
+  includeUnseen?:       boolean    // include rep=0 items (skips SRS "new" gate); use with dueOnly:false for full-pool review
   includeNoteTypes?:    string[]   // filter by ind_items.type
   includeTags?:        string[]   // OR logic: any of these tags
   includeFlagColors?:  string[]   // OR logic: any of these colors (post-filter; flagColor handles single/any/none at DB level)
@@ -256,9 +257,11 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
   function buildQ() {
     let q = supabase.from('ind_flashcards').select(CARD_SEL)
       .is('suspended_at', null)
-      // advance mode: rep>=2 (exclude freshly-graduated New cards); normal: rep>=1
-      .gt('repetitions', opts.advanceUntil ? 1 : 0)
       .order('due_at', { ascending: true, nullsFirst: false })
+    if (!opts.includeUnseen) {
+      // advance mode: rep>=2 (exclude freshly-graduated New cards); normal: rep>=1
+      q = q.gt('repetitions', opts.advanceUntil ? 1 : 0)
+    }
     if (opts.advanceUntil)           q = q.gt('due_at', now).lte('due_at', opts.advanceUntil)
     else if (opts.dueOnly !== false)  q = q.lte('due_at', now)
     if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
