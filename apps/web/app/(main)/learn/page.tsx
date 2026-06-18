@@ -698,7 +698,7 @@ function LearnPage() {
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
-        <Link href="/" style={{ width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft, textDecoration: 'none' }}>
+        <Link href={collectionId ? '/study' : '/'} style={{ width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft, textDecoration: 'none' }}>
           <Icon name="arrow-l" size={17} strokeWidth={1.8} />
         </Link>
         <h1 style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, margin: 0, letterSpacing: '-0.025em', lineHeight: 1.1, marginTop: 2 }}>

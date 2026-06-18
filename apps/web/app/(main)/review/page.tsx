@@ -862,6 +862,7 @@ function ReviewPage() {
   const customDialect    = searchParams.get('dialect') ?? undefined
   const customCollection = searchParams.get('collectionId') ?? undefined
   const customCaptures   = searchParams.get('capturesOnly') === 'true'
+  const customNoteSource = searchParams.get('noteSource') ?? undefined
   const customNoteType   = searchParams.get('noteType') ?? undefined
   const customTagsRaw    = searchParams.get('tags')
   const customTags       = customTagsRaw ? customTagsRaw.split(',').filter(Boolean) : undefined
@@ -902,6 +903,7 @@ function ReviewPage() {
             includeDialect:      customDialect,
             includeCollectionId: customCollection,
             capturesOnly:        customCaptures,
+            includeNoteSource:   customNoteSource,
             includeNoteTypes:    customNoteType ? [customNoteType] : undefined,
             includeTags:         customTags,
             dueOnly:             customDueOnly,
@@ -1020,7 +1022,7 @@ function ReviewPage() {
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
-        <Link href="/" style={{
+        <Link href={isCustom ? '/study' : '/'} style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: T.inkSoft, textDecoration: 'none',

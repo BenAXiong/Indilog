@@ -259,18 +259,42 @@ export default function StudyPage() {
     try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] }
   })
   const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
-  const [captureStats, setCaptureStats] = useState<{ total: number; withAudio: number } | null>(null)
+  const [captureSourceCounts, setCaptureSourceCounts] = useState<{
+    captured: { total: number; due: number }
+    dict:     { total: number; due: number }
+    import:   { total: number; due: number }
+  } | null>(null)
+  const [curriculumDue, setCurriculumDue] = useState<number | null>(null)
   const [openDecks, setOpenDecks] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const sb = createClient()
     sb.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      const now = new Date().toISOString()
+      const sources = ['captured', 'dict', 'import'] as const
       Promise.all([
-        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('note_source', 'collection'),
-        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('note_source', 'collection').not('audio', 'is', null),
-      ]).then(([{ count: total }, { count: withAudio }]) => {
-        setCaptureStats({ total: total ?? 0, withAudio: withAudio ?? 0 })
+        ...sources.map(src =>
+          sb.from('ind_items').select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id).eq('note_source', src)
+        ),
+        ...sources.map(src =>
+          sb.from('ind_flashcards')
+            .select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
+            .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
+            .lte('due_at', now).filter('ind_items.note_source', 'eq', src)
+        ),
+        sb.from('ind_flashcards')
+          .select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
+          .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
+          .lte('due_at', now).filter('ind_items.note_source', 'eq', 'curriculum'),
+      ]).then(([captTot, dictTot, impTot, captDue, dictDue, impDue, currDue]) => {
+        setCaptureSourceCounts({
+          captured: { total: captTot.count ?? 0, due: captDue.count ?? 0 },
+          dict:     { total: dictTot.count ?? 0, due: dictDue.count ?? 0 },
+          import:   { total: impTot.count ?? 0,  due: impDue.count ?? 0  },
+        })
+        setCurriculumDue(currDue.count ?? 0)
       })
     })
   }, [])
@@ -413,7 +437,21 @@ export default function StudyPage() {
 
       {/* ── ePARK ── */}
       {activeTab === 'epark' && (
-        <div style={{ padding: '0 18px' }}>
+        <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {curriculumDue !== null && (
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+              <DeckRow
+                icon="bookmark"
+                iconColor={T.crimson}
+                iconBg="#F9E8E6"
+                name="Saved"
+                sub="Vocabulary saved from ePark"
+                due={curriculumDue}
+                href="/review?noteSource=curriculum&custom=1"
+                last
+              />
+            </div>
+          )}
           <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
             {CURRICULUM.map((deck, i) => (
               <CurriculumSection
@@ -481,14 +519,33 @@ export default function StudyPage() {
               iconColor={T.sage}
               iconBg={T.sageBg}
               name="Captured"
-              sub={captureStats ? `${captureStats.total} cards, ${captureStats.withAudio} with audio` : undefined}
-              href="/review?custom=1&capturesOnly=true"
+              sub={captureSourceCounts ? `${captureSourceCounts.captured.total} cards` : undefined}
+              due={captureSourceCounts?.captured.due}
+              href="/review?noteSource=captured&custom=1"
               kebab
               onKebab={() => setActionDeck({
                 id: CAPTURES_DECK_ID, name: 'Captured',
                 language: '', created_at: '', card_count: 0, pinned: false,
                 include_in_review: capturesIncluded,
               })}
+            />
+            <DeckRow
+              icon="dict"
+              iconColor={T.amber}
+              iconBg={T.amberBg}
+              name="Dict saves"
+              sub={captureSourceCounts ? `${captureSourceCounts.dict.total} cards` : undefined}
+              due={captureSourceCounts?.dict.due}
+              href="/review?noteSource=dict&custom=1"
+            />
+            <DeckRow
+              icon="download"
+              iconColor={T.ink}
+              iconBg={T.lineSoft}
+              name="Imports"
+              sub={captureSourceCounts ? `${captureSourceCounts.import.total} cards` : undefined}
+              due={captureSourceCounts?.import.due}
+              href="/review?noteSource=import&custom=1"
               last
             />
           </div>

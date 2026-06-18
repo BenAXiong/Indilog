@@ -240,6 +240,7 @@ export type ListDueOpts = {
   includeDialect?:      string
   includeCollectionId?: string
   capturesOnly?:        boolean
+  includeNoteSource?:   string     // filter by ind_items.note_source (exact match)
   includeNoteTypes?:    string[]   // filter by ind_items.type
   includeTags?:        string[]   // OR logic: any of these tags
   includeFlagColors?:  string[]   // OR logic: any of these colors (post-filter; flagColor handles single/any/none at DB level)
@@ -282,7 +283,9 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
     if (opts.includeCollectionId)
       q = q.filter('ind_items.collection_id', 'eq', opts.includeCollectionId)
     else if (opts.capturesOnly)
-      q = q.filter('ind_items.note_source', 'neq', 'collection')
+      q = q.filter('ind_items.note_source', 'in', '(captured,dict,import)')
+    if (opts.includeNoteSource)
+      q = q.filter('ind_items.note_source', 'eq', opts.includeNoteSource)
     if (opts.includeNoteTypes?.length)
       q = q.filter('ind_items.type', 'in', `(${opts.includeNoteTypes.join(',')})`)
     if (opts.includeFlagColors?.length)
