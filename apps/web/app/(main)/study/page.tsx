@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
@@ -224,6 +225,69 @@ function CurriculumSection({ icon, name, href, meta, last, open, onToggle }: {
   )
 }
 
+// ─── Capture section (collapsible) ──────────────────────────────────────────
+
+type CaptureCounts = { captured: { total: number; due: number }; dict: { total: number; due: number } }
+
+function SubCaptureRow({ name, total, due, href, last }: {
+  name: string; total: number; due: number; href: string; last?: boolean
+}) {
+  return (
+    <Link href={href} style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 14px 10px 62px',
+      borderBottom: last ? 'none' : `1px solid ${T.lineSoft}`,
+      textDecoration: 'none',
+    }}>
+      <div style={{ flex: '1 1 0', minWidth: 0 }}>
+        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 14, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em' }}>{name}</div>
+        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, marginTop: 2 }}>{total} cards</div>
+      </div>
+      <DueBadge n={due} />
+    </Link>
+  )
+}
+
+function CaptureSection({ counts, open, onToggle, onKebab }: {
+  counts: CaptureCounts | null
+  open: boolean
+  onToggle: () => void
+  onKebab: () => void
+}) {
+  const totalDue   = counts ? counts.captured.due + counts.dict.due : null
+  const totalCards = counts ? counts.captured.total + counts.dict.total : null
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderBottom: open ? `1px solid ${T.lineSoft}` : 'none' }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: T.sageBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="capture" size={19} color={T.sage} strokeWidth={1.6} />
+        </div>
+        <button onClick={onToggle} style={{ flex: '1 1 0', minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.15 }}>Captures</div>
+          {totalCards !== null && (
+            <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, marginTop: 3 }}>{totalCards} cards</div>
+          )}
+        </button>
+        {totalDue !== null && <DueBadge n={totalDue} />}
+        <button
+          aria-label="Capture settings"
+          onClick={e => { e.stopPropagation(); onKebab() }}
+          style={{ width: 30, height: 30, borderRadius: 8, color: T.inkMute, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          <Icon name="more-v" size={17} strokeWidth={2} />
+        </button>
+      </div>
+      {open && counts && (
+        <>
+          <SubCaptureRow name="Captured" total={counts.captured.total} due={counts.captured.due} href="/review?noteSource=captured&custom=1" />
+          <SubCaptureRow name="Dictionary" total={counts.dict.total} due={counts.dict.due} href="/review?noteSource=dict&custom=1" last />
+        </>
+      )}
+    </>
+  )
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] = [
@@ -245,7 +309,11 @@ const SUBTABS = [
 
 export default function StudyPage() {
   const { lang, dialect, dialectLabel } = useLang()
-  const [activeTab, setActiveTab] = useState<'epark' | 'collections' | 'captures' | 'browser'>('epark')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<'epark' | 'collections' | 'captures' | 'browser'>(() => {
+    const t = searchParams.get('tab')
+    return (t === 'collections' || t === 'captures' || t === 'browser') ? t : 'epark'
+  })
   const [collections, setCollections]     = useState<CollectionMeta[]>([])
   const [due, setDue]                     = useState<DueStats>({ total: 0, captures: 0, byCollection: {} })
   const [loading, setLoading]             = useState(true)
@@ -259,18 +327,33 @@ export default function StudyPage() {
     try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] }
   })
   const [curriculumMeta, setCurriculumMeta] = useState<CurriculumProgressResponse | null>(null)
-  const [captureStats, setCaptureStats] = useState<{ total: number; withAudio: number } | null>(null)
+  const [captureSourceCounts, setCaptureSourceCounts] = useState<CaptureCounts | null>(null)
+  const [curriculumDue, setCurriculumDue] = useState<number | null>(null)
   const [openDecks, setOpenDecks] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const sb = createClient()
     sb.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      const now = new Date().toISOString()
       Promise.all([
-        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('note_source', 'collection'),
-        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('note_source', 'collection').not('audio', 'is', null),
-      ]).then(([{ count: total }, { count: withAudio }]) => {
-        setCaptureStats({ total: total ?? 0, withAudio: withAudio ?? 0 })
+        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('note_source', 'captured'),
+        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('note_source', 'dict'),
+        sb.from('ind_flashcards').select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
+          .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
+          .lte('due_at', now).filter('ind_items.note_source', 'eq', 'captured'),
+        sb.from('ind_flashcards').select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
+          .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
+          .lte('due_at', now).filter('ind_items.note_source', 'eq', 'dict'),
+        sb.from('ind_flashcards').select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
+          .eq('user_id', user.id).is('suspended_at', null)
+          .filter('ind_items.note_source', 'eq', 'curriculum'),
+      ]).then(([captTot, dictTot, captDue, dictDue, currDue]) => {
+        setCaptureSourceCounts({
+          captured: { total: captTot.count ?? 0, due: captDue.count ?? 0 },
+          dict:     { total: dictTot.count ?? 0, due: dictDue.count ?? 0 },
+        })
+        setCurriculumDue(currDue.count ?? 0)
       })
     })
   }, [])
@@ -413,7 +496,20 @@ export default function StudyPage() {
 
       {/* ── ePARK ── */}
       {activeTab === 'epark' && (
-        <div style={{ padding: '0 18px' }}>
+        <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {curriculumDue !== null && (
+            <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
+              <DeckRow
+                icon="bookmark"
+                iconColor={T.crimson}
+                iconBg="#F9E8E6"
+                name="Saved"
+                due={curriculumDue}
+                href="/review?noteSource=curriculum&dueOnly=false&includeUnseen=true&custom=1"
+                last
+              />
+            </div>
+          )}
           <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
             {CURRICULUM.map((deck, i) => (
               <CurriculumSection
@@ -476,20 +572,15 @@ export default function StudyPage() {
       {activeTab === 'captures' && (
         <div style={{ padding: '0 18px' }}>
           <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, overflow: 'hidden' }}>
-            <DeckRow
-              icon="bookmark"
-              iconColor={T.sage}
-              iconBg={T.sageBg}
-              name="Captured"
-              sub={captureStats ? `${captureStats.total} cards, ${captureStats.withAudio} with audio` : undefined}
-              href="/review?custom=1&capturesOnly=true"
-              kebab
+            <CaptureSection
+              counts={captureSourceCounts}
+              open={openDecks['captures'] ?? false}
+              onToggle={() => setOpenDecks(prev => ({ ...prev, captures: !prev['captures'] }))}
               onKebab={() => setActionDeck({
                 id: CAPTURES_DECK_ID, name: 'Captured',
                 language: '', created_at: '', card_count: 0, pinned: false,
                 include_in_review: capturesIncluded,
               })}
-              last
             />
           </div>
         </div>

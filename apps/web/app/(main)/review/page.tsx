@@ -862,16 +862,19 @@ function ReviewPage() {
   const customDialect    = searchParams.get('dialect') ?? undefined
   const customCollection = searchParams.get('collectionId') ?? undefined
   const customCaptures   = searchParams.get('capturesOnly') === 'true'
+  const customNoteSource = searchParams.get('noteSource') ?? undefined
   const customNoteType   = searchParams.get('noteType') ?? undefined
   const customTagsRaw    = searchParams.get('tags')
   const customTags       = customTagsRaw ? customTagsRaw.split(',').filter(Boolean) : undefined
   const customFlagRaw    = searchParams.get('flag') ?? ''
   const customFlagColors = customFlagRaw ? customFlagRaw.split(',').filter(Boolean) : undefined
   const customPlaceHeard = searchParams.get('placeHeard') ?? undefined
-  const customDueOnly    = searchParams.get('dueOnly') !== 'false'
+  const customDueOnly      = searchParams.get('dueOnly') !== 'false'
+  const customIncludeUnseen = searchParams.get('includeUnseen') === 'true'
 
-  const isAdvance  = searchParams.get('advance') === '1'
-  const autostart = searchParams.get('start') === '1' && !isCustom
+  const isAdvance    = searchParams.get('advance') === '1'
+  const autostart    = searchParams.get('start') === '1' && !isCustom
+  const reviewNParam = (() => { const v = parseInt(searchParams.get('n') ?? '', 10); return Number.isFinite(v) && v > 0 ? v : null })()
 
   const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,    setCards]    = useState<FlashcardWithItem[]>([])
@@ -902,6 +905,8 @@ function ReviewPage() {
             includeDialect:      customDialect,
             includeCollectionId: customCollection,
             capturesOnly:        customCaptures,
+            includeNoteSource:   customNoteSource,
+            includeUnseen:       customIncludeUnseen || undefined,
             includeNoteTypes:    customNoteType ? [customNoteType] : undefined,
             includeTags:         customTags,
             dueOnly:             customDueOnly,
@@ -939,7 +944,8 @@ function ReviewPage() {
     }
 
     const reviewMoreN  = context.reviewMoreSize ?? Math.max(20, Math.round(context.reviewTarget / 50) * 5)
-    const sessionCap   = isCustom || isAdvance ? c.length
+    const sessionCap   = reviewNParam !== null ? Math.min(c.length, reviewNParam)
+      : isCustom || isAdvance ? c.length
       : isMore         ? reviewMoreN
       : Math.max(0, context.reviewTarget - context.reviewedToday)
     setCards(c.slice(0, sessionCap))
@@ -1020,7 +1026,12 @@ function ReviewPage() {
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
-        <Link href="/" style={{
+        <Link href={
+          !isCustom ? '/' :
+          customCollection ? '/study?tab=collections' :
+          (customCaptures || (customNoteSource && customNoteSource !== 'curriculum')) ? '/study?tab=captures' :
+          '/study'
+        } style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi,
           border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: T.inkSoft, textDecoration: 'none',

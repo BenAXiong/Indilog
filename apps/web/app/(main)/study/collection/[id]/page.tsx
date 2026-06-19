@@ -11,6 +11,7 @@ import {
   type CollectionCard,
 } from '@/lib/db/progress/collections'
 import { ensureFlashcards } from '@/lib/db/srs/flashcards'
+import { createClient } from '@/lib/supabase/client'
 
 type LessonGroup = { lesson: number; cards: CollectionCard[] }
 type LevelGroup  = { level: number; lessons: LessonGroup[] }
@@ -32,11 +33,12 @@ export default function CollectionPage() {
   const [renaming,   setRenaming]   = useState(false)
   const [nameEdit,   setNameEdit]   = useState('')
   const [confirmDel, setConfirmDel] = useState(false)
-  const [queueing, setQueueing] = useState(false)
+  const [counts,     setCounts]     = useState<{ newCount: number; dueCount: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    Promise.all([listCollections(), listCollectionCards(id)]).then(([cols, cards]) => {
+    async function load() {
+      const [cols, cards] = await Promise.all([listCollections(), listCollectionCards(id)])
       const col = cols.find(c => c.id === id)
       if (col) { setName(col.name); setNameEdit(col.name) }
 
@@ -57,7 +59,26 @@ export default function CollectionPage() {
               .map(([lesson, cards]) => ({ lesson, cards })),
           }))
       )
-    })
+
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await ensureFlashcards()
+      const now = new Date().toISOString()
+      const [newRes, dueRes] = await Promise.all([
+        supabase.from('ind_flashcards')
+          .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
+          .eq('user_id', user.id).eq('repetitions', 0).is('suspended_at', null)
+          .filter('ind_items.collection_id', 'eq', id),
+        supabase.from('ind_flashcards')
+          .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
+          .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
+          .lte('due_at', now)
+          .filter('ind_items.collection_id', 'eq', id),
+      ])
+      setCounts({ newCount: newRes.count ?? 0, dueCount: dueRes.count ?? 0 })
+    }
+    load()
   }, [id])
 
   useEffect(() => { if (renaming) inputRef.current?.focus() }, [renaming])
@@ -79,13 +100,6 @@ export default function CollectionPage() {
     router.push('/study')
   }
 
-  async function handleStartReview() {
-    setQueueing(true)
-    await ensureFlashcards()
-    setQueueing(false)
-    router.push('/review')
-  }
-
   const totalCards   = levels.reduce((s, lv) => s + lv.lessons.reduce((ss, ls) => ss + ls.cards.length, 0), 0)
   const totalLessons = levels.reduce((s, lv) => s + lv.lessons.length, 0)
 
@@ -93,7 +107,7 @@ export default function CollectionPage() {
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
-        <Link href="/study" style={{
+        <Link href="/study?tab=collections" style={{
           ...iconBtn, background: T.paperHi, border: `1px solid ${T.line}`,
           textDecoration: 'none', color: T.inkSoft,
         }}>
@@ -158,21 +172,38 @@ export default function CollectionPage() {
         )}
       </div>
 
-      {/* Start reviewing */}
-      <button
-        onClick={handleStartReview}
-        disabled={queueing}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          height: 46, borderRadius: 14, fontSize: 15, fontWeight: 600,
-          background: queueing ? T.lineSoft : T.crimson,
-          color: queueing ? T.inkFaint : '#fff',
-          border: 'none', cursor: queueing ? 'default' : 'pointer',
-        }}
-      >
-        <Icon name="review" size={18} strokeWidth={1.8} color={queueing ? T.inkFaint : '#fff'} />
-        {queueing ? 'Preparing…' : 'Study this collection'}
-      </button>
+      {/* Learn + Review CTAs */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        {(['learn', 'review'] as const).map(type => {
+          const count    = type === 'learn' ? counts?.newCount : counts?.dueCount
+          const label    = type === 'learn' ? 'Learn' : 'Review'
+          const sublabel = type === 'learn'
+            ? (counts !== null ? `${counts.newCount} new` : '…')
+            : (counts !== null ? `${counts.dueCount} due` : '…')
+          const active   = counts !== null && count! > 0
+          const color    = type === 'learn' ? T.sage : T.crimson
+          const href     = type === 'learn'
+            ? `/learn?collectionId=${id}`
+            : `/review?collectionId=${id}&custom=1`
+          return (
+            <button key={type}
+              onClick={() => active && router.push(href)}
+              disabled={!active}
+              style={{
+                flex: 1, height: 52, borderRadius: 14, fontSize: 14, fontWeight: 600,
+                background: active ? color : T.lineSoft,
+                color: active ? '#fff' : T.inkFaint,
+                border: 'none', cursor: active ? 'pointer' : 'default',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+                boxShadow: active ? '0 1px 0 rgba(255,255,255,0.18) inset, 0 3px 8px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              <span>{label}</span>
+              <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.8 }}>{sublabel}</span>
+            </button>
+          )
+        })}
+      </div>
 
       {/* Level / lesson groups */}
       {levels.map(lv => (
