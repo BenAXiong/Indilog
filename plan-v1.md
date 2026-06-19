@@ -210,13 +210,14 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] FIX: db wiring (pyu displays in ami 1-1-4)
 - [x] (deferred) FIX: vercel error on session completion
 - [ ] FIX: decks content capped at 1000 (at least custom)
+- [ ] FIX: ePark Review page amount
 
 - [x] Tune the Again grading in Reviews: min(10min, requeue to last)
 - [x] (deferred) Tune the fuzz so that cards don't cling
 - [x] Desambiguate goal-target-cap confusing semantics and update ADRs.
 - [x] Enable non-priority reps deck-by-deck in the Study tab.
-- [-] Review session CTA: add size override
-- [ ] Priority decks: add captures with filters
+- [x] Review session CTA: add size override
+- [-] Priority decks: add captures with filters
 - [ ] Improve Study content loading latency
 - [ ] Record curriculum completion time per unit
 
