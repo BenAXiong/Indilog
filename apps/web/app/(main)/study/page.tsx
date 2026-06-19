@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
@@ -308,6 +308,10 @@ const SUBTABS = [
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function StudyPage() {
+  return <Suspense><StudyPageInner /></Suspense>
+}
+
+function StudyPageInner() {
   const { lang, dialect, dialectLabel } = useLang()
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState<'epark' | 'collections' | 'captures' | 'browser'>(() => {
