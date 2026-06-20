@@ -16,7 +16,7 @@ import {
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { createClient } from '@/lib/supabase/client'
-import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { listPriorityDecks, type PriorityDeck } from '@/lib/db/srs/priority'
 import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
@@ -37,9 +37,9 @@ type LearnEntry = {
 }
 
 type LearnContext = {
-  learnedToday:          number
-  learnTarget:           number
-  priorityCollectionIds: string[]
+  learnedToday: number
+  learnTarget:  number
+  priorityDecks: PriorityDeck[]
 }
 
 type LearnUndoEntry =
@@ -53,7 +53,7 @@ type LearnUndoEntry =
 async function loadLearnContext(): Promise<LearnContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { learnedToday: 0, learnTarget: 10, priorityCollectionIds: [] }
+  if (!user) return { learnedToday: 0, learnTarget: 10, priorityDecks: [] }
 
   const today = getStudyDate()
   const [profileRes, statsRes, priorityDecks] = await Promise.all([
@@ -83,7 +83,7 @@ async function loadLearnContext(): Promise<LearnContext> {
         .from('ind_flashcards')
         .select('id, ind_items!inner(collection_id)', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .in('ind_items.collection_id', simDecks.map(d => d.collection_id))
+        .in('ind_items.collection_id', simDecks.map(d => d.collection_id).filter(Boolean))
         .eq('repetitions', 0)
         .is('suspended_at', null)
       const effectiveWindow = Math.max(1, daysLeft - 21)
@@ -94,7 +94,7 @@ async function loadLearnContext(): Promise<LearnContext> {
   return {
     learnedToday:          (statsRes.data as Record<string, unknown> | null)?.learned_count as number ?? 0,
     learnTarget,
-    priorityCollectionIds: priorityDecks.map(d => d.collection_id),
+    priorityDecks,
   }
 }
 
@@ -233,10 +233,15 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   useEffect(() => {
     const e = queue[qIdx]
     if (!e || priorityToastRef.current) return
-    if (ctx.priorityCollectionIds.length === 0) return
+    if (ctx.priorityDecks.length === 0) return
     if (graduatedRef.current.size === 0) return  // no cards graduated yet → still in first sweep
     const colId = e.card.ind_items?.collection_id
-    if (!colId || !ctx.priorityCollectionIds.includes(colId)) {
+    const src   = e.card.ind_items?.note_source
+    const inPriority = ctx.priorityDecks.some(d =>
+      (d.collection_id && d.collection_id === colId) ||
+      (d.note_source   && d.note_source   === src)
+    )
+    if (!inPriority) {
       priorityToastRef.current = true
       setShowPriorityToast(true)
       setTimeout(() => setShowPriorityToast(false), 3500)
@@ -633,7 +638,7 @@ function LearnPage() {
   const [mode,         setMode]         = useState<'landing' | 'learning' | 'done'>('landing')
   const [cards,        setCards]        = useState<FlashcardWithItem[]>([])
   const [overflow,     setOverflow]     = useState<FlashcardWithItem[]>([])
-  const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnTarget: 10, priorityCollectionIds: [] })
+  const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnTarget: 10, priorityDecks: [] })
   const [loading,      setLoading]      = useState(true)
   const [learnedCount, setLearnedCount] = useState(0)
   const [sessionKey,   setSessionKey]   = useState(0)

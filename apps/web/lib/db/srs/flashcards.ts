@@ -353,7 +353,7 @@ export async function listLearnFlashcards(opts: { collectionId?: string } = {}):
   // Priority sort: deck position → level → lesson → position; non-priority last
   const priorityDecks = await listPriorityDecks(user.id)
   const priorityMap = new Map<string, number>()
-  for (const deck of priorityDecks) priorityMap.set(deck.collection_id, deck.position)
+  for (const deck of priorityDecks) if (deck.collection_id) priorityMap.set(deck.collection_id, deck.position)
 
   return pages.sort((a, b) => {
     const aCol = a.ind_items?.collection_id ?? null

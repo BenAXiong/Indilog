@@ -3,10 +3,17 @@ import { createClient } from '@/lib/supabase/client'
 export type PriorityDeck = {
   id: string
   user_id: string
-  collection_id: string
+  collection_id: string | null
+  note_source: string | null
   position: number
   in_simulation: boolean
   simulation_deadline: string | null
+}
+
+export const VIRTUAL_DECK_LABELS: Record<string, string> = {
+  captured:   'Captures',
+  dict:       'Dictionary',
+  curriculum: 'ePark Saved',
 }
 
 export async function listPriorityDecks(userId: string): Promise<PriorityDeck[]> {
@@ -19,7 +26,7 @@ export async function listPriorityDecks(userId: string): Promise<PriorityDeck[]>
   return (data ?? []) as PriorityDeck[]
 }
 
-export async function addPriorityDeck(userId: string, collectionId: string): Promise<void> {
+async function nextPosition(userId: string): Promise<number> {
   const supabase = createClient()
   const { data } = await supabase
     .from('ind_priority_decks')
@@ -27,22 +34,34 @@ export async function addPriorityDeck(userId: string, collectionId: string): Pro
     .eq('user_id', userId)
     .order('position', { ascending: false })
     .limit(1)
-  const maxPos = (data?.[0]?.position as number) ?? 0
+  return ((data?.[0]?.position as number) ?? 0) + 1
+}
+
+export async function addPriorityDeck(userId: string, collectionId: string): Promise<void> {
+  const supabase = createClient()
   await supabase.from('ind_priority_decks').insert({
     user_id: userId,
     collection_id: collectionId,
-    position: maxPos + 1,
+    position: await nextPosition(userId),
   })
 }
 
-export async function removePriorityDeck(userId: string, collectionId: string): Promise<void> {
+export async function addVirtualPriorityDeck(userId: string, noteSource: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_priority_decks').insert({
+    user_id: userId,
+    note_source: noteSource,
+    position: await nextPosition(userId),
+  })
+}
+
+export async function removePriorityDeckById(userId: string, id: string): Promise<void> {
   const supabase = createClient()
   await supabase
     .from('ind_priority_decks')
     .delete()
     .eq('user_id', userId)
-    .eq('collection_id', collectionId)
-  // Re-sequence remaining rows to close the gap
+    .eq('id', id)
   const { data: remaining } = await supabase
     .from('ind_priority_decks')
     .select('id')
@@ -59,8 +78,6 @@ export async function removePriorityDeck(userId: string, collectionId: string): 
 
 export async function reorderPriorityDecks(userId: string, orderedIds: string[]): Promise<void> {
   const supabase = createClient()
-  // Two-pass to avoid UNIQUE (user_id, position) violations mid-update.
-  // Pass 1: shift to high offset range.
   for (let i = 0; i < orderedIds.length; i++) {
     await supabase
       .from('ind_priority_decks')
@@ -68,7 +85,6 @@ export async function reorderPriorityDecks(userId: string, orderedIds: string[])
       .eq('id', orderedIds[i])
       .eq('user_id', userId)
   }
-  // Pass 2: set final positions.
   for (let i = 0; i < orderedIds.length; i++) {
     await supabase
       .from('ind_priority_decks')

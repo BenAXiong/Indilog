@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import GoalSheet from '@/components/sheets/GoalSheet'
-import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { listPriorityDecks, VIRTUAL_DECK_LABELS } from '@/lib/db/srs/priority'
 import { getDeckMasteryStats, type DeckMasteryStats } from '@/lib/db/profile/goal'
 import { listCollections } from '@/lib/db/progress/collections'
 import { createClient } from '@/lib/supabase/client'
@@ -30,9 +30,14 @@ export default function GoalWidget() {
       const decks = await listPriorityDecks(user.id)
       if (!decks.length) { setLoaded(true); return }
       const top = decks[0]
+      if (top.note_source) {
+        setDeckName(VIRTUAL_DECK_LABELS[top.note_source] ?? top.note_source)
+        setLoaded(true)
+        return
+      }
       const [cols, stats] = await Promise.all([
         listCollections(),
-        getDeckMasteryStats(top.collection_id),
+        getDeckMasteryStats(top.collection_id!),
       ])
       const col = cols.find(c => c.id === top.collection_id)
       setDeckName(col?.name ?? null)

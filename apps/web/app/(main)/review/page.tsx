@@ -18,7 +18,7 @@ import { getLangName } from '@/lib/lang/lang-bridge'
 import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 import { patchPreferences } from '@/lib/db/profile/preferences'
-import { listPriorityDecks } from '@/lib/db/srs/priority'
+import { listPriorityDecks, type PriorityDeck } from '@/lib/db/srs/priority'
 import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
@@ -33,12 +33,12 @@ import { useUndoStack } from '@/lib/hooks/useUndoStack'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SessionContext = {
-  reviewedToday:         number
-  reviewTarget:          number
-  prefReviewTarget:      number
-  streak:                number
-  priorityCollectionIds: string[]
-  reviewMoreSize:        number | null
+  reviewedToday:  number
+  reviewTarget:   number
+  prefReviewTarget: number
+  streak:         number
+  priorityDecks:  PriorityDeck[]
+  reviewMoreSize: number | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ function cardSMState(card: FlashcardWithItem): SMState {
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null }
+  if (!user) return { reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null }
 
   const today   = getStudyDate()
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
@@ -80,7 +80,7 @@ async function loadSessionContext(): Promise<SessionContext> {
     reviewTarget:          todayRes.data?.review_target ?? prefReviewTarget,
     prefReviewTarget,
     streak,
-    priorityCollectionIds: priorityDecks.map(d => d.collection_id),
+    priorityDecks,
     reviewMoreSize,
   }
 }
@@ -879,7 +879,7 @@ function ReviewPage() {
   const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,    setCards]    = useState<FlashcardWithItem[]>([])
   const [overflow, setOverflow] = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityCollectionIds: [], reviewMoreSize: null })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null })
   const [loading, setLoading] = useState(true)
   const [sessionCount,    setSessionCount]    = useState(0)
   const [sessionKey,      setSessionKey]      = useState(0)
@@ -932,12 +932,14 @@ function ReviewPage() {
     ])
 
     // Priority sort: deck 1 first, then deck 2, …, then non-priority. Stable — preserves due_at order within each group.
-    const priorityIds = context.priorityCollectionIds
-    if (!isCustom && priorityIds.length > 0) {
+    if (!isCustom && context.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
         const colId = x.ind_items?.collection_id
-        if (!colId) return Infinity
-        const i = priorityIds.indexOf(colId)
+        const src   = x.ind_items?.note_source
+        const i = context.priorityDecks.findIndex(d =>
+          (d.collection_id && d.collection_id === colId) ||
+          (d.note_source   && d.note_source   === src)
+        )
         return i === -1 ? Infinity : i
       }
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
@@ -983,17 +985,19 @@ function ReviewPage() {
   async function handleReviewMore(n: number) {
     const exclude = await getExcludeFromReview()
     const more = await listDueFlashcards({
-      excludeLangs:       ctx.priorityCollectionIds.length === 0 && localStorage.getItem('srs_show_all_langs') !== 'false'
+      excludeLangs:       ctx.priorityDecks.length === 0 && localStorage.getItem('srs_show_all_langs') !== 'false'
         ? [] : JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]'),
       excludeCollections: exclude.collections,
       excludeCaptures:    exclude.captures,
     })
-    const priorityIds = ctx.priorityCollectionIds
-    if (priorityIds.length > 0) {
+    if (ctx.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
         const colId = x.ind_items?.collection_id
-        if (!colId) return Infinity
-        const i = priorityIds.indexOf(colId)
+        const src   = x.ind_items?.note_source
+        const i = ctx.priorityDecks.findIndex(d =>
+          (d.collection_id && d.collection_id === colId) ||
+          (d.note_source   && d.note_source   === src)
+        )
         return i === -1 ? Infinity : i
       }
       more.sort((a, b) => priorityIdx(a) - priorityIdx(b))

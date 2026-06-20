@@ -5,9 +5,9 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import {
-  listPriorityDecks, addPriorityDeck, removePriorityDeck,
-  reorderPriorityDecks, setPriorityDeckSimulation,
-  type PriorityDeck,
+  listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck,
+  removePriorityDeckById, reorderPriorityDecks, setPriorityDeckSimulation,
+  VIRTUAL_DECK_LABELS, type PriorityDeck,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { localDateStr } from '@/lib/db/srs/flashcards'
@@ -145,10 +145,12 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     setDecks(decksData)
     setCollections(cols)
     setPriorityLoading(false)
-    // Lazily load rooted stats for each deck
+    // Lazily load rooted stats for collection decks only
     for (const d of decksData) {
-      getDeckRootedStats(d.collection_id).then(stats => {
-        setDeckStats(prev => ({ ...prev, [d.collection_id]: stats }))
+      if (!d.collection_id) continue
+      const colId = d.collection_id
+      getDeckRootedStats(colId).then(stats => {
+        setDeckStats(prev => ({ ...prev, [colId]: stats }))
       })
     }
     // Pre-populate simulate deadlines from first sim deck
@@ -176,7 +178,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     const deadline = simDecks.find(d => d.simulation_deadline)?.simulation_deadline
       ?? localDateStr(new Date(Date.now() + 30 * 86400000))
     const result = await projectSimulation({
-      collectionIds: simDecks.map(d => d.collection_id),
+      collectionIds: simDecks.map(d => d.collection_id).filter((id): id is string => id !== null),
       deadline,
       learnTarget,
     })
@@ -290,7 +292,14 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   // ── Priority tab ───────────────────────────────────────────────────────────
 
+  const addedVirtualSources = new Set(decks.map(d => d.note_source).filter(Boolean))
+  const availableVirtual = Object.keys(VIRTUAL_DECK_LABELS).filter(src => !addedVirtualSources.has(src))
   const availableToAdd = collections.filter(c => !decks.some(d => d.collection_id === c.id))
+
+  function deckDisplayName(deck: PriorityDeck): string {
+    if (deck.note_source) return VIRTUAL_DECK_LABELS[deck.note_source] ?? deck.note_source
+    return collections.find(c => c.id === deck.collection_id)?.name ?? '…'
+  }
 
   async function handleMoveUp(userId: string, idx: number) {
     if (idx === 0) return
@@ -314,9 +323,15 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     await loadPriority()
   }
 
-  async function handleRemove(userId: string, collectionId: string) {
-    setDecks(prev => prev.filter(d => d.collection_id !== collectionId))
-    await removePriorityDeck(userId, collectionId)
+  async function handleAddVirtual(userId: string, noteSource: string) {
+    setAddPicker(false)
+    await addVirtualPriorityDeck(userId, noteSource)
+    await loadPriority()
+  }
+
+  async function handleRemove(userId: string, id: string) {
+    setDecks(prev => prev.filter(d => d.id !== id))
+    await removePriorityDeckById(userId, id)
   }
 
   async function handleToggleSim(userId: string, collectionId: string, inSim: boolean) {
@@ -343,9 +358,9 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
           </div>
         )}
         {decks.map((deck, idx) => {
-          const col = collections.find(c => c.id === deck.collection_id)
-          const stat = deckStats[deck.collection_id]
+          const stat = deck.collection_id ? deckStats[deck.collection_id] : null
           const rootedPct = stat && stat.total > 0 ? stat.rooted / stat.total : 0
+          const isVirtual = !deck.collection_id
           return (
             <div key={deck.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12 }}>
               {/* Position arrows */}
@@ -361,29 +376,36 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
               {/* Name + progress */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {col?.name ?? '…'}
+                  {deckDisplayName(deck)}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
-                  <ProgressBar pct={rootedPct} color="#7B8C46" />
-                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, flexShrink: 0 }}>
-                    {stat ? `${Math.round(rootedPct * 100)}% rooted` : '…'}
-                  </span>
-                </div>
+                {!isVirtual && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
+                    <ProgressBar pct={rootedPct} color="#7B8C46" />
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, flexShrink: 0 }}>
+                      {stat ? `${Math.round(rootedPct * 100)}% rooted` : '…'}
+                    </span>
+                  </div>
+                )}
+                {isVirtual && (
+                  <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 3 }}>review only</div>
+                )}
               </div>
 
-              {/* Sim toggle */}
-              <button onClick={() => userId && handleToggleSim(userId, deck.collection_id, !deck.in_simulation)} style={{
-                width: 36, height: 20, borderRadius: 999, flexShrink: 0, position: 'relative',
-                background: deck.in_simulation ? T.crimson : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
-              }}>
-                <span style={{
-                  position: 'absolute', top: 2, left: deck.in_simulation ? 18 : 2, width: 16, height: 16,
-                  borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
-                }} />
-              </button>
+              {/* Sim toggle — collection decks only */}
+              {!isVirtual && (
+                <button onClick={() => userId && deck.collection_id && handleToggleSim(userId, deck.collection_id, !deck.in_simulation)} style={{
+                  width: 36, height: 20, borderRadius: 999, flexShrink: 0, position: 'relative',
+                  background: deck.in_simulation ? T.crimson : T.line, border: 'none', cursor: 'pointer', transition: 'background .15s',
+                }}>
+                  <span style={{
+                    position: 'absolute', top: 2, left: deck.in_simulation ? 18 : 2, width: 16, height: 16,
+                    borderRadius: 999, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left .15s',
+                  }} />
+                </button>
+              )}
 
               {/* Remove */}
-              <button onClick={() => userId && handleRemove(userId, deck.collection_id)} style={{
+              <button onClick={() => userId && handleRemove(userId, deck.id)} style={{
                 width: 26, height: 26, borderRadius: 7, border: `1px solid ${T.lineSoft}`, background: 'none',
                 color: T.inkFaint, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}>
@@ -394,20 +416,44 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         })}
 
         {/* Add deck */}
-        {availableToAdd.length > 0 && (
+        {(availableToAdd.length > 0 || availableVirtual.length > 0) && (
           <div>
             {addPicker ? (
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
-                {availableToAdd.map(c => (
-                  <button key={c.id} onClick={() => { if (!userId) return; handleAdd(userId, c.id) }} style={{
-                    display: 'block', width: '100%', padding: '11px 14px', background: 'none', border: 'none',
-                    borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
-                    fontSize: 14, color: T.ink,
-                  }}>
-                    {c.name}
-                    <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>{c.card_count} cards</span>
-                  </button>
-                ))}
+                {availableVirtual.length > 0 && (
+                  <>
+                    <div style={{ padding: '8px 14px 4px', fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      Virtual decks
+                    </div>
+                    {availableVirtual.map(src => (
+                      <button key={src} onClick={() => { if (!userId) return; handleAddVirtual(userId, src) }} style={{
+                        display: 'block', width: '100%', padding: '11px 14px', background: 'none', border: 'none',
+                        borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                        fontSize: 14, color: T.ink,
+                      }}>
+                        {VIRTUAL_DECK_LABELS[src]}
+                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {availableToAdd.length > 0 && (
+                  <>
+                    <div style={{ padding: '8px 14px 4px', fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      Collections
+                    </div>
+                    {availableToAdd.map(c => (
+                      <button key={c.id} onClick={() => { if (!userId) return; handleAdd(userId, c.id) }} style={{
+                        display: 'block', width: '100%', padding: '11px 14px', background: 'none', border: 'none',
+                        borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                        fontSize: 14, color: T.ink,
+                      }}>
+                        {c.name}
+                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>{c.card_count} cards</span>
+                      </button>
+                    ))}
+                  </>
+                )}
                 <button onClick={() => setAddPicker(false)} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
                   Cancel
                 </button>
@@ -441,7 +487,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     if (!simDecks.length || !simDeadline) return
     setSimRunning(true)
     const result = await projectSimulation({
-      collectionIds: simDecks.map(d => d.collection_id),
+      collectionIds: simDecks.map(d => d.collection_id).filter((id): id is string => id !== null),
       deadline:      simDeadline,
       learnTarget,
     })
@@ -459,8 +505,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    for (const d of decks.filter(dk => dk.in_simulation)) {
-      await setPriorityDeckSimulation(user.id, d.collection_id, true, simDeadline)
+    for (const d of decks.filter(dk => dk.in_simulation && dk.collection_id)) {
+      await setPriorityDeckSimulation(user.id, d.collection_id!, true, simDeadline)
     }
     setDecks(prev => prev.map(d => d.in_simulation ? { ...d, simulation_deadline: simDeadline } : d))
     setTab('goals')
@@ -485,7 +531,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
           ) : simDecks.map(d => (
             <div key={d.id} style={{ fontSize: 13, color: T.ink, padding: '5px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 6, height: 6, borderRadius: 999, background: T.crimson, flexShrink: 0 }} />
-              {collections.find(c => c.id === d.collection_id)?.name ?? '…'}
+              {deckDisplayName(d)}
             </div>
           ))}
         </div>
