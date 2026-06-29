@@ -940,7 +940,8 @@ function ReviewPage() {
         const lesson   = x.ind_items?.lesson
         const language = x.ind_items?.language
         const dialect  = x.ind_items?.dialect
-        const i = context.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect))
+        const tags     = x.ind_items?.tags
+        const i = context.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect, tags))
         return i === -1 ? Infinity : i
       }
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
@@ -999,7 +1000,8 @@ function ReviewPage() {
         const lesson   = x.ind_items?.lesson
         const language = x.ind_items?.language
         const dialect  = x.ind_items?.dialect
-        const i = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect))
+        const tags     = x.ind_items?.tags
+        const i = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect, tags))
         return i === -1 ? Infinity : i
       }
       more.sort((a, b) => priorityIdx(a) - priorityIdx(b))

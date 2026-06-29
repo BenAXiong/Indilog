@@ -7,6 +7,7 @@ export type PriorityDeckFilterConfig = {
   curriculum_source?: string
   language?: string
   dialect?: string | null
+  tag?: string
   label: string
 }
 
@@ -25,6 +26,13 @@ export type CaptureLangOption = {
   language: string
   dialect: string | null
   label: string
+}
+
+export type CaptureLangGroup = {
+  language: string
+  label: string
+  dialects: CaptureLangOption[]
+  tags: string[]
 }
 
 export const VIRTUAL_DECK_LABELS: Record<string, string> = {
@@ -51,6 +59,7 @@ export function matchesPriorityDeck(
   lesson?: number | null,
   language?: string | null,
   dialect?: string | null,
+  tags?: string[] | null,
 ): boolean {
   if (deck.collection_id) return deck.collection_id === colId
   if (!deck.note_source || deck.note_source !== src) return false
@@ -63,6 +72,7 @@ export function matchesPriorityDeck(
     if (fc.language) {
       if (fc.language !== language) return false
       if (fc.dialect && fc.dialect !== dialect) return false
+      if (fc.tag && !(tags ?? []).includes(fc.tag)) return false
       return true
     }
     return false
@@ -80,23 +90,34 @@ export async function listPriorityDecks(userId: string): Promise<PriorityDeck[]>
   return (data ?? []) as PriorityDeck[]
 }
 
-// Returns distinct (language, dialect) pairs from the user's capture items, sorted by count desc.
-export async function listCaptureLanguages(): Promise<CaptureLangOption[]> {
+// Returns capture items grouped by language, each with distinct dialects and tags.
+export async function listCaptureLangGroups(): Promise<CaptureLangGroup[]> {
   const supabase = createClient()
   const { data } = await supabase
     .from('ind_items')
-    .select('language, dialect')
+    .select('language, dialect, tags')
     .eq('note_source', 'captured')
   if (!data) return []
-  const seen = new Map<string, CaptureLangOption>()
-  for (const row of data as { language: string; dialect: string | null }[]) {
-    const key = `${row.language}:${row.dialect ?? ''}`
-    if (seen.has(key)) continue
-    const langName = getLanguage(row.language)?.name ?? row.language
-    const label = row.dialect ?? langName
-    seen.set(key, { language: row.language, dialect: row.dialect, label })
+  const groups = new Map<string, CaptureLangGroup>()
+  for (const row of data as { language: string; dialect: string | null; tags: string[] | null }[]) {
+    if (!groups.has(row.language)) {
+      const langName = getLanguage(row.language)?.name ?? row.language
+      groups.set(row.language, { language: row.language, label: langName, dialects: [], tags: [] })
+    }
+    const group = groups.get(row.language)!
+    if (row.dialect && !group.dialects.some(d => d.dialect === row.dialect)) {
+      group.dialects.push({ language: row.language, dialect: row.dialect, label: row.dialect })
+    }
+    for (const tag of (row.tags ?? [])) {
+      if (!group.tags.includes(tag)) group.tags.push(tag)
+    }
   }
-  return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label))
+  const result = [...groups.values()]
+  result.forEach(g => {
+    g.dialects.sort((a, b) => a.label.localeCompare(b.label))
+    g.tags.sort()
+  })
+  return result.sort((a, b) => a.label.localeCompare(b.label))
 }
 
 async function nextPosition(userId: string): Promise<number> {
@@ -147,12 +168,18 @@ export async function addCaptureFilterDeck(
   language: string,
   dialect: string | null,
   label: string,
+  tag?: string,
 ): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_priority_decks').insert({
     user_id: userId,
     note_source: 'captured',
-    filter_config: { language, ...(dialect ? { dialect } : {}), label },
+    filter_config: {
+      language,
+      ...(dialect ? { dialect } : {}),
+      ...(tag ? { tag } : {}),
+      label,
+    },
     position: await nextPosition(userId),
   })
 }

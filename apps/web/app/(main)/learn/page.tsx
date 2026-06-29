@@ -241,7 +241,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     const lesson   = e.card.ind_items?.lesson
     const language = e.card.ind_items?.language
     const dialect  = e.card.ind_items?.dialect
-    const inPriority = ctx.priorityDecks.some(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect))
+    const tags     = e.card.ind_items?.tags
+    const inPriority = ctx.priorityDecks.some(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect, tags))
     if (!inPriority) {
       priorityToastRef.current = true
       setShowPriorityToast(true)

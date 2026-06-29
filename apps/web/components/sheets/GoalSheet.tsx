@@ -6,9 +6,9 @@ import { Icon } from '@/components/ui'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import {
   listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck,
-  addCurriculumSourceDeck, addCaptureFilterDeck, listCaptureLanguages,
+  addCurriculumSourceDeck, addCaptureFilterDeck, listCaptureLangGroups,
   removePriorityDeckById, reorderPriorityDecks, setPriorityDeckSimulation,
-  VIRTUAL_DECK_LABELS, EPARK_SOURCES, type PriorityDeck, type CaptureLangOption,
+  VIRTUAL_DECK_LABELS, EPARK_SOURCES, type PriorityDeck, type CaptureLangGroup,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { localDateStr, getStudyDate } from '@/lib/db/srs/flashcards'
@@ -96,8 +96,9 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [addPicker,       setAddPicker]       = useState(false)
   const [eparkExpanded,   setEparkExpanded]   = useState(false)
   const [capturesExpanded, setCapturesExpanded] = useState(false)
-  const [captureOptions,  setCaptureOptions]  = useState<CaptureLangOption[] | null>(null)
-  const [captureLoading,  setCaptureLoading]  = useState(false)
+  const [captureLangGroups,    setCaptureLangGroups]    = useState<CaptureLangGroup[] | null>(null)
+  const [captureLoading,       setCaptureLoading]       = useState(false)
+  const [expandedCaptureLangs, setExpandedCaptureLangs] = useState<Set<string>>(new Set())
   const [priorityLoading, setPriorityLoading] = useState(false)
 
   // Simulate tab
@@ -123,12 +124,12 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     loadPrefs().then(({ mode, learnTarget: lt }) => loadPriority(mode, lt))
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lazy-load capture language options the first time the captures section expands
+  // Lazy-load capture groups the first time the captures section expands
   useEffect(() => {
-    if (!capturesExpanded || captureOptions !== null || captureLoading) return
+    if (!capturesExpanded || captureLangGroups !== null || captureLoading) return
     setCaptureLoading(true)
-    listCaptureLanguages().then(opts => { setCaptureOptions(opts); setCaptureLoading(false) })
-  }, [capturesExpanded, captureOptions, captureLoading])
+    listCaptureLangGroups().then(groups => { setCaptureLangGroups(groups); setCaptureLoading(false) })
+  }, [capturesExpanded, captureLangGroups, captureLoading])
 
   async function loadPrefs(): Promise<{ mode: GoalMode; learnTarget: number }> {
     const supabase = createClient()
@@ -334,14 +335,21 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   const hasGenericCapturesDeck = decks.some(d => d.note_source === 'captured' && !d.filter_config)
   const addedCaptureKeys = new Set(
-    decks.filter(d => d.note_source === 'captured' && d.filter_config)
-      .map(d => `${d.filter_config!.language}:${d.filter_config!.dialect ?? ''}`)
+    decks.filter(d => d.note_source === 'captured' && d.filter_config?.language)
+      .map(d => {
+        const fc = d.filter_config!
+        return `${fc.language}:${fc.dialect ?? ''}:${fc.tag ?? ''}`
+      })
   )
-  const availableCaptureOptions = (captureOptions ?? []).filter(
-    o => !addedCaptureKeys.has(`${o.language}:${o.dialect ?? ''}`)
+  function captureKey(language: string, dialect?: string | null, tag?: string): string {
+    return `${language}:${dialect ?? ''}:${tag ?? ''}`
+  }
+  const allCaptureGroupsExhausted = captureLangGroups !== null && captureLangGroups.every(g =>
+    addedCaptureKeys.has(captureKey(g.language)) &&
+    g.dialects.every(d => addedCaptureKeys.has(captureKey(g.language, d.dialect))) &&
+    g.tags.every(t => addedCaptureKeys.has(captureKey(g.language, null, t)))
   )
-  // Captures section shows if generic deck not yet added, or if any language option remains
-  const showCapturesSection = !hasGenericCapturesDeck || captureOptions === null || availableCaptureOptions.length > 0
+  const showCapturesSection = !hasGenericCapturesDeck || !allCaptureGroupsExhausted
 
   function deckDisplayName(deck: PriorityDeck): string {
     if (deck.filter_config) return deck.filter_config.label
@@ -375,6 +383,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     setAddPicker(false)
     setEparkExpanded(false)
     setCapturesExpanded(false)
+    setExpandedCaptureLangs(new Set())
   }
 
   async function handleAddVirtual(userId: string, noteSource: string) {
@@ -389,9 +398,15 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     await loadPriority()
   }
 
-  async function handleAddCaptureFilter(userId: string, opt: CaptureLangOption) {
+  async function handleAddCaptureFilter(
+    userId: string,
+    language: string,
+    dialect: string | null,
+    label: string,
+    tag?: string,
+  ) {
     closePicker()
-    await addCaptureFilterDeck(userId, opt.language, opt.dialect, opt.label)
+    await addCaptureFilterDeck(userId, language, dialect, label, tag)
     await loadPriority()
   }
 
@@ -562,7 +577,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
-                {/* Captures — collapsible; "All" entry + language/dialect sub-options */}
+                {/* Captures — collapsible; "All" + per-language (collapsible into dialects + tags) */}
                 {showCapturesSection && (
                   <>
                     <button
@@ -581,7 +596,6 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     </button>
                     {capturesExpanded && (
                       <>
-                        {/* Generic "all captures" entry — only if not already added */}
                         {!hasGenericCapturesDeck && (
                           <button onClick={() => { if (!userId) return; handleAddVirtual(userId, 'captured') }} style={{
                             display: 'block', width: '100%', padding: '10px 14px 10px 22px', background: 'none', border: 'none',
@@ -594,19 +608,68 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                         )}
                         {captureLoading
                           ? <div style={{ padding: '10px 22px', fontSize: 13, color: T.inkMute }}>Loading…</div>
-                          : availableCaptureOptions.map(opt => (
-                            <button key={`${opt.language}:${opt.dialect ?? ''}`}
-                              onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, opt) }}
-                              style={{
-                                display: 'block', width: '100%', padding: '10px 14px 10px 22px',
-                                background: 'none', border: 'none',
-                                borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
-                                fontSize: 14, color: T.ink,
-                              }}>
-                              {opt.label}
-                              <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
-                            </button>
-                          ))
+                          : (captureLangGroups ?? []).map(group => {
+                              const langExpanded = expandedCaptureLangs.has(group.language)
+                              const langAlreadyAdded = addedCaptureKeys.has(captureKey(group.language))
+                              const availDialects = group.dialects.filter(d => !addedCaptureKeys.has(captureKey(group.language, d.dialect)))
+                              const availTags = group.tags.filter(t => !addedCaptureKeys.has(captureKey(group.language, null, t)))
+                              if (langAlreadyAdded && availDialects.length === 0 && availTags.length === 0) return null
+                              return (
+                                <div key={group.language}>
+                                  <button
+                                    onClick={() => setExpandedCaptureLangs(prev => {
+                                      const next = new Set(prev)
+                                      if (next.has(group.language)) next.delete(group.language)
+                                      else next.add(group.language)
+                                      return next
+                                    })}
+                                    style={{
+                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                      width: '100%', padding: '10px 14px 10px 22px', background: 'none', border: 'none',
+                                      borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                    }}
+                                  >
+                                    <span style={{ fontSize: 14, color: T.ink }}>{group.label}</span>
+                                    <Icon name={langExpanded ? 'chev-d' : 'chevron'} size={11} color={T.inkFaint} strokeWidth={2}
+                                      style={langExpanded ? undefined : { transform: 'rotate(90deg)' }} />
+                                  </button>
+                                  {langExpanded && (
+                                    <>
+                                      {!langAlreadyAdded && (
+                                        <button onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, null, group.label) }} style={{
+                                          display: 'block', width: '100%', padding: '10px 14px 10px 32px', background: 'none', border: 'none',
+                                          borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                          fontSize: 13.5, color: T.ink,
+                                        }}>
+                                          All {group.label}
+                                          <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                        </button>
+                                      )}
+                                      {availDialects.map(d => (
+                                        <button key={d.dialect} onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, d.dialect, d.label) }} style={{
+                                          display: 'block', width: '100%', padding: '10px 14px 10px 32px', background: 'none', border: 'none',
+                                          borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                          fontSize: 13.5, color: T.ink,
+                                        }}>
+                                          {d.label}
+                                          <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                        </button>
+                                      ))}
+                                      {availTags.map(tag => (
+                                        <button key={tag} onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, null, `${group.label} #${tag}`, tag) }} style={{
+                                          display: 'block', width: '100%', padding: '10px 14px 10px 32px', background: 'none', border: 'none',
+                                          borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                          fontSize: 13.5, color: T.ink,
+                                        }}>
+                                          #{tag}
+                                          <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                        </button>
+                                      ))}
+                                    </>
+                                  )}
+                                </div>
+                              )
+                            })
                         }
                       </>
                     )}
