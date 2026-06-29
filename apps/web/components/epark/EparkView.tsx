@@ -321,6 +321,11 @@ export default function EparkView({ source }: Props) {
       ab, zh: zh || undefined, type: 'sentence', language: langCode,
       dialect, note_source: 'curriculum',
       audio: audioUrl || undefined,
+      ...(source === 'twelve' ? {
+        level:        parseInt(level),
+        lesson:       parseInt(lesson),
+        lesson_title: `Level ${level} Lesson ${lesson}`,
+      } : {}),
     })
     if (item) {
       setSaveMsgWarn(false)
