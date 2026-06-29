@@ -332,6 +332,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   )
   const availableEparkSources = EPARK_SOURCES.filter(s => !addedCurriculumSources.has(s.id))
 
+  const hasGenericCapturesDeck = decks.some(d => d.note_source === 'captured' && !d.filter_config)
   const addedCaptureKeys = new Set(
     decks.filter(d => d.note_source === 'captured' && d.filter_config)
       .map(d => `${d.filter_config!.language}:${d.filter_config!.dialect ?? ''}`)
@@ -339,6 +340,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const availableCaptureOptions = (captureOptions ?? []).filter(
     o => !addedCaptureKeys.has(`${o.language}:${o.dialect ?? ''}`)
   )
+  // Captures section shows if generic deck not yet added, or if any language option remains
+  const showCapturesSection = !hasGenericCapturesDeck || captureOptions === null || availableCaptureOptions.length > 0
 
   function deckDisplayName(deck: PriorityDeck): string {
     if (deck.filter_config) return deck.filter_config.label
@@ -363,27 +366,31 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   }
 
   async function handleAdd(userId: string, collectionId: string) {
-    setAddPicker(false)
+    closePicker()
     await addPriorityDeck(userId, collectionId)
     await loadPriority()
   }
 
-  async function handleAddVirtual(userId: string, noteSource: string) {
+  function closePicker() {
     setAddPicker(false)
+    setEparkExpanded(false)
+    setCapturesExpanded(false)
+  }
+
+  async function handleAddVirtual(userId: string, noteSource: string) {
+    closePicker()
     await addVirtualPriorityDeck(userId, noteSource)
     await loadPriority()
   }
 
   async function handleAddCurriculumSource(userId: string, id: string, label: string) {
-    setAddPicker(false)
-    setEparkExpanded(false)
+    closePicker()
     await addCurriculumSourceDeck(userId, id, label)
     await loadPriority()
   }
 
   async function handleAddCaptureFilter(userId: string, opt: CaptureLangOption) {
-    setAddPicker(false)
-    setCapturesExpanded(false)
+    closePicker()
     await addCaptureFilterDeck(userId, opt.language, opt.dialect, opt.label)
     await loadPriority()
   }
@@ -505,8 +512,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         })}
 
         {/* Add deck — show unless nothing is available in any category */}
-        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableEparkSources.length > 0
-          || captureOptions === null || availableCaptureOptions.length > 0) && (
+        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableEparkSources.length > 0 || showCapturesSection) && (
           <div>
             {addPicker ? (
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
@@ -556,8 +562,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
-                {/* Captures — language/dialect filter decks, collapsed by default */}
-                {(captureOptions === null || availableCaptureOptions.length > 0) && (
+                {/* Captures — collapsible; "All" entry + language/dialect sub-options */}
+                {showCapturesSection && (
                   <>
                     <button
                       onClick={() => setCapturesExpanded(p => !p)}
@@ -574,21 +580,35 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                         style={capturesExpanded ? undefined : { transform: 'rotate(90deg)' }} />
                     </button>
                     {capturesExpanded && (
-                      captureLoading
-                        ? <div style={{ padding: '10px 22px', fontSize: 13, color: T.inkMute }}>Loading…</div>
-                        : availableCaptureOptions.map(opt => (
-                          <button key={`${opt.language}:${opt.dialect ?? ''}`}
-                            onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, opt) }}
-                            style={{
-                              display: 'block', width: '100%', padding: '10px 14px 10px 22px',
-                              background: 'none', border: 'none',
-                              borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
-                              fontSize: 14, color: T.ink,
-                            }}>
-                            {opt.label}
+                      <>
+                        {/* Generic "all captures" entry — only if not already added */}
+                        {!hasGenericCapturesDeck && (
+                          <button onClick={() => { if (!userId) return; handleAddVirtual(userId, 'captured') }} style={{
+                            display: 'block', width: '100%', padding: '10px 14px 10px 22px', background: 'none', border: 'none',
+                            borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                            fontSize: 14, color: T.ink,
+                          }}>
+                            All captures
                             <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
                           </button>
-                        ))
+                        )}
+                        {captureLoading
+                          ? <div style={{ padding: '10px 22px', fontSize: 13, color: T.inkMute }}>Loading…</div>
+                          : availableCaptureOptions.map(opt => (
+                            <button key={`${opt.language}:${opt.dialect ?? ''}`}
+                              onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, opt) }}
+                              style={{
+                                display: 'block', width: '100%', padding: '10px 14px 10px 22px',
+                                background: 'none', border: 'none',
+                                borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                fontSize: 14, color: T.ink,
+                              }}>
+                              {opt.label}
+                              <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                            </button>
+                          ))
+                        }
+                      </>
                     )}
                   </>
                 )}
@@ -609,7 +629,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
-                <button onClick={() => { setAddPicker(false); setEparkExpanded(false); setCapturesExpanded(false) }} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
+                <button onClick={closePicker} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
                   Cancel
                 </button>
               </div>

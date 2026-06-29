@@ -28,8 +28,7 @@ export type CaptureLangOption = {
 }
 
 export const VIRTUAL_DECK_LABELS: Record<string, string> = {
-  captured: 'Captures',
-  dict:     'Dictionary',
+  dict: 'Dictionary',
 }
 
 export const EPARK_SOURCES: { id: string; label: string }[] = [

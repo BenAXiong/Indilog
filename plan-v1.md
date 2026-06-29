@@ -204,6 +204,9 @@ Personal library of sources (people, media, references) linked to captured items
 - [ ] Browser: 
 - [ ] Browser: 
 
+- [ ] Dash: add counter to goal widget
+- [ ] Dash/prio: add counters to each deck
+
 ### M5-C — Feature refinement
 
 - [x] Instore max reviews/learn per day — daily cap stepper (10–300) in OptionsSheet; srs_daily_cap localStorage
@@ -223,13 +226,13 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Enable non-priority reps deck-by-deck in the Study tab.
 - [x] Review session CTA: add size override
 - [x] Priority decks: add captures and curriculum + update goal and queue logic
-- [-] Priority decks: add filters for capturesand curriculum
+- [-] Priority decks: add filters for captures and curriculum
 - [ ] Record curriculum completion time per unit
 - [ ] Improve Study content loading latency
 
 - [x] Dict: enable non-amis ab search with dialects
-- [ ] Dict: 
-- [ ] Dict: 
+- [ ] Dict: compare words vs merge and keep best
+- [ ] Dict: compare word search with MoE and improve results
 - [ ] Dict: 
 
 - [ ] 
