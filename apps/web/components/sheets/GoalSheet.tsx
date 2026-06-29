@@ -99,6 +99,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [captureLangGroups,    setCaptureLangGroups]    = useState<CaptureLangGroup[] | null>(null)
   const [captureLoading,       setCaptureLoading]       = useState(false)
   const [expandedCaptureLangs, setExpandedCaptureLangs] = useState<Set<string>>(new Set())
+  const [expandedTagFor,       setExpandedTagFor]       = useState<string | null>(null)
   const [priorityLoading, setPriorityLoading] = useState(false)
 
   // Simulate tab
@@ -344,11 +345,15 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   function captureKey(language: string, dialect?: string | null, tag?: string): string {
     return `${language}:${dialect ?? ''}:${tag ?? ''}`
   }
-  const allCaptureGroupsExhausted = captureLangGroups !== null && captureLangGroups.every(g =>
-    addedCaptureKeys.has(captureKey(g.language)) &&
-    g.dialects.every(d => addedCaptureKeys.has(captureKey(g.language, d.dialect))) &&
-    g.tags.every(t => addedCaptureKeys.has(captureKey(g.language, null, t)))
-  )
+  const allCaptureGroupsExhausted = captureLangGroups !== null && captureLangGroups.every(g => {
+    if (!addedCaptureKeys.has(captureKey(g.language))) return false
+    if (g.tags.some(t => !addedCaptureKeys.has(captureKey(g.language, null, t)))) return false
+    for (const d of g.dialects) {
+      if (!addedCaptureKeys.has(captureKey(g.language, d.dialect))) return false
+      if (g.tags.some(t => !addedCaptureKeys.has(captureKey(g.language, d.dialect, t)))) return false
+    }
+    return true
+  })
   const showCapturesSection = !hasGenericCapturesDeck || !allCaptureGroupsExhausted
 
   function deckDisplayName(deck: PriorityDeck): string {
@@ -384,6 +389,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     setEparkExpanded(false)
     setCapturesExpanded(false)
     setExpandedCaptureLangs(new Set())
+    setExpandedTagFor(null)
   }
 
   async function handleAddVirtual(userId: string, noteSource: string) {
@@ -610,10 +616,16 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                           ? <div style={{ padding: '10px 22px', fontSize: 13, color: T.inkMute }}>Loading…</div>
                           : (captureLangGroups ?? []).map(group => {
                               const langExpanded = expandedCaptureLangs.has(group.language)
-                              const langAlreadyAdded = addedCaptureKeys.has(captureKey(group.language))
-                              const availDialects = group.dialects.filter(d => !addedCaptureKeys.has(captureKey(group.language, d.dialect)))
-                              const availTags = group.tags.filter(t => !addedCaptureKeys.has(captureKey(group.language, null, t)))
-                              if (langAlreadyAdded && availDialects.length === 0 && availTags.length === 0) return null
+                              const allLangAdded = addedCaptureKeys.has(captureKey(group.language))
+                              const allLangTagOpts = group.tags.filter(t => !addedCaptureKeys.has(captureKey(group.language, null, t)))
+                              const hasAnyDialectOption = group.dialects.some(d => {
+                                const da = addedCaptureKeys.has(captureKey(group.language, d.dialect))
+                                return !da || group.tags.some(t => !addedCaptureKeys.has(captureKey(group.language, d.dialect, t)))
+                              })
+                              if (allLangAdded && allLangTagOpts.length === 0 && !hasAnyDialectOption) return null
+
+                              const tagToggleKey = (dialect: string | null) => captureKey(group.language, dialect)
+
                               return (
                                 <div key={group.language}>
                                   <button
@@ -635,36 +647,83 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                                   </button>
                                   {langExpanded && (
                                     <>
-                                      {!langAlreadyAdded && (
-                                        <button onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, null, group.label) }} style={{
-                                          display: 'block', width: '100%', padding: '10px 14px 10px 32px', background: 'none', border: 'none',
-                                          borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
-                                          fontSize: 13.5, color: T.ink,
-                                        }}>
-                                          All {group.label}
-                                          <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
-                                        </button>
+                                      {/* All [Language] row with optional +tag toggle */}
+                                      {(!allLangAdded || allLangTagOpts.length > 0) && (
+                                        <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            {!allLangAdded ? (
+                                              <button onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, null, group.label) }} style={{
+                                                flex: 1, padding: '10px 8px 10px 32px', background: 'none', border: 'none',
+                                                cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
+                                              }}>
+                                                All {group.label}
+                                                <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                              </button>
+                                            ) : (
+                                              <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>All {group.label}</span>
+                                            )}
+                                            {group.tags.length > 0 && (
+                                              <button onClick={() => setExpandedTagFor(prev => prev === tagToggleKey(null) ? null : tagToggleKey(null))} style={{
+                                                padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                                                fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5,
+                                                color: expandedTagFor === tagToggleKey(null) ? T.crimson : T.inkFaint,
+                                              }}>
+                                                #tag
+                                              </button>
+                                            )}
+                                          </div>
+                                          {expandedTagFor === tagToggleKey(null) && allLangTagOpts.map(tag => (
+                                            <button key={tag} onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, null, `${group.label} #${tag}`, tag) }} style={{
+                                              display: 'block', width: '100%', padding: '8px 14px 8px 40px', background: 'none', border: 'none',
+                                              borderTop: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                              fontSize: 12.5, color: T.inkSoft,
+                                            }}>
+                                              #{tag}
+                                            </button>
+                                          ))}
+                                        </div>
                                       )}
-                                      {availDialects.map(d => (
-                                        <button key={d.dialect} onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, d.dialect, d.label) }} style={{
-                                          display: 'block', width: '100%', padding: '10px 14px 10px 32px', background: 'none', border: 'none',
-                                          borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
-                                          fontSize: 13.5, color: T.ink,
-                                        }}>
-                                          {d.label}
-                                          <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
-                                        </button>
-                                      ))}
-                                      {availTags.map(tag => (
-                                        <button key={tag} onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, null, `${group.label} #${tag}`, tag) }} style={{
-                                          display: 'block', width: '100%', padding: '10px 14px 10px 32px', background: 'none', border: 'none',
-                                          borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
-                                          fontSize: 13.5, color: T.ink,
-                                        }}>
-                                          #{tag}
-                                          <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
-                                        </button>
-                                      ))}
+                                      {/* Dialect rows with +tag toggles */}
+                                      {group.dialects.map(d => {
+                                        const dialAdded = addedCaptureKeys.has(captureKey(group.language, d.dialect))
+                                        const dialTagOpts = group.tags.filter(t => !addedCaptureKeys.has(captureKey(group.language, d.dialect, t)))
+                                        if (dialAdded && dialTagOpts.length === 0) return null
+                                        return (
+                                          <div key={d.dialect} style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                              {!dialAdded ? (
+                                                <button onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, d.dialect, d.label) }} style={{
+                                                  flex: 1, padding: '10px 8px 10px 32px', background: 'none', border: 'none',
+                                                  cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
+                                                }}>
+                                                  {d.label}
+                                                  <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                                </button>
+                                              ) : (
+                                                <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>{d.label}</span>
+                                              )}
+                                              {group.tags.length > 0 && (
+                                                <button onClick={() => setExpandedTagFor(prev => prev === tagToggleKey(d.dialect) ? null : tagToggleKey(d.dialect))} style={{
+                                                  padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                                                  fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5,
+                                                  color: expandedTagFor === tagToggleKey(d.dialect) ? T.crimson : T.inkFaint,
+                                                }}>
+                                                  #tag
+                                                </button>
+                                              )}
+                                            </div>
+                                            {expandedTagFor === tagToggleKey(d.dialect) && dialTagOpts.map(tag => (
+                                              <button key={tag} onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, group.language, d.dialect, `${d.label} #${tag}`, tag) }} style={{
+                                                display: 'block', width: '100%', padding: '8px 14px 8px 40px', background: 'none', border: 'none',
+                                                borderTop: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                                fontSize: 12.5, color: T.inkSoft,
+                                              }}>
+                                                #{tag}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )
+                                      })}
                                     </>
                                   )}
                                 </div>

@@ -226,7 +226,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Enable non-priority reps deck-by-deck in the Study tab.
 - [x] Review session CTA: add size override
 - [x] Priority decks: add captures and curriculum + update goal and queue logic
-- [-] Priority decks: add filters for captures and curriculum
+- [x] Priority decks: add filters for captures and curriculum
 - [ ] Record curriculum completion time per unit
 - [ ] Improve Study content loading latency
 
