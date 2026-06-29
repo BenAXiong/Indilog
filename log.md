@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-29 12:15 | FIX | GoalSheet: when last sim deck goes off and no reviews done yet today, clear frozen learn_target/review_target in ind_daily_stats so next dashboard load re-computes from current (manual) preferences |
 | 2026-06-29 11:54 | FIX | GoalSheet: auto-revert to manual mode when the last sim-toggled deck is turned off or removed |
 | 2026-06-21 06:35 | FEATURE | Priority decks expanded to all 3 deck types: DB adds nullable note_source to ind_priority_decks; GoalSheet picker shows virtual decks (Captures, Dictionary, ePark Saved) and collections; priority sort in review/learn matches on collection_id OR note_source; simulation toggle hidden for virtual decks |
 | 2026-06-19 | CONFIG | transcript analysis (scrap/): add B9_1–B9_4 baselines (top 20/40/60/80% accessible videos by B6 tok%, per-dialect); two-pass batch script; b9_info section in output; B9 expandable panel in video_rec.html (per active dialect: stats + top tokens + video IDs); video_rec.html layout: tight non-title columns, oral-type color dot + legend, Tok/min intensity col, merged Frust.T/W column; regenerated transcript_results_amis.js (11 MB)
