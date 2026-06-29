@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-30 02:30 | FEATURE | Dictionary picker: collapsible section with language subdecks + dialect/#tag toggles, mirrors Captures; listVirtualDeckLangGroups(noteSource)/addVirtualDeckFilterDeck generalize both; NOTE_SOURCE_LABELS replaces VIRTUAL_DECK_LABELS for display |
 | 2026-06-30 02:05 | REFACTOR | Capture picker: tags as extra toggles per row — each All/dialect row has a #tag button that expands tag sub-options inline; dialect+tag combos supported; stale rows (base+all tags added) hidden |
 | 2026-06-30 01:42 | FEATURE | Capture picker: language rows collapsible into dialects + tags; listCaptureLangGroups() returns CaptureLangGroup[] with dialects+tags per language; tag field in PriorityDeckFilterConfig; matchesPriorityDeck 8th param tags[]; review/learn pages pass tags |
 | 2026-06-30 19:08 | FIX | GoalSheet picker: remove captured from VIRTUAL_DECK_LABELS so clicking Captures expands instead of instantly adding; closePicker() helper resets addPicker+eparkExpanded+capturesExpanded; Cancel + handleAdd use closePicker() |

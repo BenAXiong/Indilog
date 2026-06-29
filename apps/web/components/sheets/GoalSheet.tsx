@@ -6,9 +6,9 @@ import { Icon } from '@/components/ui'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import {
   listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck,
-  addCurriculumSourceDeck, addCaptureFilterDeck, listCaptureLangGroups,
+  addCurriculumSourceDeck, addVirtualDeckFilterDeck, listVirtualDeckLangGroups,
   removePriorityDeckById, reorderPriorityDecks, setPriorityDeckSimulation,
-  VIRTUAL_DECK_LABELS, EPARK_SOURCES, type PriorityDeck, type CaptureLangGroup,
+  VIRTUAL_DECK_LABELS, NOTE_SOURCE_LABELS, EPARK_SOURCES, type PriorityDeck, type CaptureLangGroup,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { localDateStr, getStudyDate } from '@/lib/db/srs/flashcards'
@@ -100,6 +100,11 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [captureLoading,       setCaptureLoading]       = useState(false)
   const [expandedCaptureLangs, setExpandedCaptureLangs] = useState<Set<string>>(new Set())
   const [expandedTagFor,       setExpandedTagFor]       = useState<string | null>(null)
+  const [dictExpanded,         setDictExpanded]         = useState(false)
+  const [dictLangGroups,       setDictLangGroups]       = useState<CaptureLangGroup[] | null>(null)
+  const [dictLoading,          setDictLoading]          = useState(false)
+  const [expandedDictLangs,    setExpandedDictLangs]    = useState<Set<string>>(new Set())
+  const [expandedDictTagFor,   setExpandedDictTagFor]   = useState<string | null>(null)
   const [priorityLoading, setPriorityLoading] = useState(false)
 
   // Simulate tab
@@ -129,8 +134,15 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   useEffect(() => {
     if (!capturesExpanded || captureLangGroups !== null || captureLoading) return
     setCaptureLoading(true)
-    listCaptureLangGroups().then(groups => { setCaptureLangGroups(groups); setCaptureLoading(false) })
+    listVirtualDeckLangGroups('captured').then(groups => { setCaptureLangGroups(groups); setCaptureLoading(false) })
   }, [capturesExpanded, captureLangGroups, captureLoading])
+
+  // Lazy-load dict groups the first time the dictionary section expands
+  useEffect(() => {
+    if (!dictExpanded || dictLangGroups !== null || dictLoading) return
+    setDictLoading(true)
+    listVirtualDeckLangGroups('dict').then(groups => { setDictLangGroups(groups); setDictLoading(false) })
+  }, [dictExpanded, dictLangGroups, dictLoading])
 
   async function loadPrefs(): Promise<{ mode: GoalMode; learnTarget: number }> {
     const supabase = createClient()
@@ -334,31 +346,39 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   )
   const availableEparkSources = EPARK_SOURCES.filter(s => !addedCurriculumSources.has(s.id))
 
+  function vdKey(language: string, dialect?: string | null, tag?: string): string {
+    return `${language}:${dialect ?? ''}:${tag ?? ''}`
+  }
+  function vdGroupsExhausted(groups: CaptureLangGroup[] | null, addedKeys: Set<string>): boolean {
+    if (groups === null) return false
+    return groups.every(g => {
+      if (!addedKeys.has(vdKey(g.language))) return false
+      if (g.tags.some(t => !addedKeys.has(vdKey(g.language, null, t)))) return false
+      for (const d of g.dialects) {
+        if (!addedKeys.has(vdKey(g.language, d.dialect))) return false
+        if (g.tags.some(t => !addedKeys.has(vdKey(g.language, d.dialect, t)))) return false
+      }
+      return true
+    })
+  }
+
   const hasGenericCapturesDeck = decks.some(d => d.note_source === 'captured' && !d.filter_config)
   const addedCaptureKeys = new Set(
     decks.filter(d => d.note_source === 'captured' && d.filter_config?.language)
-      .map(d => {
-        const fc = d.filter_config!
-        return `${fc.language}:${fc.dialect ?? ''}:${fc.tag ?? ''}`
-      })
+      .map(d => { const fc = d.filter_config!; return `${fc.language}:${fc.dialect ?? ''}:${fc.tag ?? ''}` })
   )
-  function captureKey(language: string, dialect?: string | null, tag?: string): string {
-    return `${language}:${dialect ?? ''}:${tag ?? ''}`
-  }
-  const allCaptureGroupsExhausted = captureLangGroups !== null && captureLangGroups.every(g => {
-    if (!addedCaptureKeys.has(captureKey(g.language))) return false
-    if (g.tags.some(t => !addedCaptureKeys.has(captureKey(g.language, null, t)))) return false
-    for (const d of g.dialects) {
-      if (!addedCaptureKeys.has(captureKey(g.language, d.dialect))) return false
-      if (g.tags.some(t => !addedCaptureKeys.has(captureKey(g.language, d.dialect, t)))) return false
-    }
-    return true
-  })
-  const showCapturesSection = !hasGenericCapturesDeck || !allCaptureGroupsExhausted
+  const showCapturesSection = !hasGenericCapturesDeck || !vdGroupsExhausted(captureLangGroups, addedCaptureKeys)
+
+  const hasGenericDictDeck = decks.some(d => d.note_source === 'dict' && !d.filter_config)
+  const addedDictKeys = new Set(
+    decks.filter(d => d.note_source === 'dict' && d.filter_config?.language)
+      .map(d => { const fc = d.filter_config!; return `${fc.language}:${fc.dialect ?? ''}:${fc.tag ?? ''}` })
+  )
+  const showDictSection = !hasGenericDictDeck || !vdGroupsExhausted(dictLangGroups, addedDictKeys)
 
   function deckDisplayName(deck: PriorityDeck): string {
     if (deck.filter_config) return deck.filter_config.label
-    if (deck.note_source) return VIRTUAL_DECK_LABELS[deck.note_source] ?? deck.note_source
+    if (deck.note_source) return NOTE_SOURCE_LABELS[deck.note_source] ?? deck.note_source
     return collections.find(c => c.id === deck.collection_id)?.name ?? '…'
   }
 
@@ -390,6 +410,9 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     setCapturesExpanded(false)
     setExpandedCaptureLangs(new Set())
     setExpandedTagFor(null)
+    setDictExpanded(false)
+    setExpandedDictLangs(new Set())
+    setExpandedDictTagFor(null)
   }
 
   async function handleAddVirtual(userId: string, noteSource: string) {
@@ -412,7 +435,19 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     tag?: string,
   ) {
     closePicker()
-    await addCaptureFilterDeck(userId, language, dialect, label, tag)
+    await addVirtualDeckFilterDeck(userId, 'captured', language, dialect, label, tag)
+    await loadPriority()
+  }
+
+  async function handleAddDictFilter(
+    userId: string,
+    language: string,
+    dialect: string | null,
+    label: string,
+    tag?: string,
+  ) {
+    closePicker()
+    await addVirtualDeckFilterDeck(userId, 'dict', language, dialect, label, tag)
     await loadPriority()
   }
 
@@ -533,7 +568,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         })}
 
         {/* Add deck — show unless nothing is available in any category */}
-        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableEparkSources.length > 0 || showCapturesSection) && (
+        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableEparkSources.length > 0 || showDictSection || showCapturesSection) && (
           <div>
             {addPicker ? (
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
@@ -583,6 +618,153 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
+                {/* Dictionary — collapsible; "All" + per-language (collapsible into dialects + tags) */}
+                {showDictSection && (
+                  <>
+                    <button
+                      onClick={() => setDictExpanded(p => !p)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                        borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        Dictionary
+                      </span>
+                      <Icon name={dictExpanded ? 'chev-d' : 'chevron'} size={12} color={T.inkFaint} strokeWidth={2}
+                        style={dictExpanded ? undefined : { transform: 'rotate(90deg)' }} />
+                    </button>
+                    {dictExpanded && (
+                      <>
+                        {!hasGenericDictDeck && (
+                          <button onClick={() => { if (!userId) return; handleAddVirtual(userId, 'dict') }} style={{
+                            display: 'block', width: '100%', padding: '10px 14px 10px 22px', background: 'none', border: 'none',
+                            borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                            fontSize: 14, color: T.ink,
+                          }}>
+                            All dictionary
+                            <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                          </button>
+                        )}
+                        {dictLoading
+                          ? <div style={{ padding: '10px 22px', fontSize: 13, color: T.inkMute }}>Loading…</div>
+                          : (dictLangGroups ?? []).map(group => {
+                              const langExpanded = expandedDictLangs.has(group.language)
+                              const allLangAdded = addedDictKeys.has(vdKey(group.language))
+                              const allLangTagOpts = group.tags.filter(t => !addedDictKeys.has(vdKey(group.language, null, t)))
+                              const hasAnyDialectOption = group.dialects.some(d => {
+                                const da = addedDictKeys.has(vdKey(group.language, d.dialect))
+                                return !da || group.tags.some(t => !addedDictKeys.has(vdKey(group.language, d.dialect, t)))
+                              })
+                              if (allLangAdded && allLangTagOpts.length === 0 && !hasAnyDialectOption) return null
+                              const tagToggleKey = (dialect: string | null) => vdKey(group.language, dialect)
+                              return (
+                                <div key={group.language}>
+                                  <button
+                                    onClick={() => setExpandedDictLangs(prev => {
+                                      const next = new Set(prev)
+                                      if (next.has(group.language)) next.delete(group.language)
+                                      else next.add(group.language)
+                                      return next
+                                    })}
+                                    style={{
+                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                      width: '100%', padding: '10px 14px 10px 22px', background: 'none', border: 'none',
+                                      borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                    }}
+                                  >
+                                    <span style={{ fontSize: 14, color: T.ink }}>{group.label}</span>
+                                    <Icon name={langExpanded ? 'chev-d' : 'chevron'} size={11} color={T.inkFaint} strokeWidth={2}
+                                      style={langExpanded ? undefined : { transform: 'rotate(90deg)' }} />
+                                  </button>
+                                  {langExpanded && (
+                                    <>
+                                      {(!allLangAdded || allLangTagOpts.length > 0) && (
+                                        <div style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            {!allLangAdded ? (
+                                              <button onClick={() => { if (!userId) return; handleAddDictFilter(userId, group.language, null, group.label) }} style={{
+                                                flex: 1, padding: '10px 8px 10px 32px', background: 'none', border: 'none',
+                                                cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
+                                              }}>
+                                                All {group.label}
+                                                <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                              </button>
+                                            ) : (
+                                              <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>All {group.label}</span>
+                                            )}
+                                            {group.tags.length > 0 && (
+                                              <button onClick={() => setExpandedDictTagFor(prev => prev === tagToggleKey(null) ? null : tagToggleKey(null))} style={{
+                                                padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                                                fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5,
+                                                color: expandedDictTagFor === tagToggleKey(null) ? T.crimson : T.inkFaint,
+                                              }}>
+                                                #tag
+                                              </button>
+                                            )}
+                                          </div>
+                                          {expandedDictTagFor === tagToggleKey(null) && allLangTagOpts.map(tag => (
+                                            <button key={tag} onClick={() => { if (!userId) return; handleAddDictFilter(userId, group.language, null, `${group.label} #${tag}`, tag) }} style={{
+                                              display: 'block', width: '100%', padding: '8px 14px 8px 40px', background: 'none', border: 'none',
+                                              borderTop: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                              fontSize: 12.5, color: T.inkSoft,
+                                            }}>
+                                              #{tag}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {group.dialects.map(d => {
+                                        const dialAdded = addedDictKeys.has(vdKey(group.language, d.dialect))
+                                        const dialTagOpts = group.tags.filter(t => !addedDictKeys.has(vdKey(group.language, d.dialect, t)))
+                                        if (dialAdded && dialTagOpts.length === 0) return null
+                                        return (
+                                          <div key={d.dialect} style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                              {!dialAdded ? (
+                                                <button onClick={() => { if (!userId) return; handleAddDictFilter(userId, group.language, d.dialect, d.label) }} style={{
+                                                  flex: 1, padding: '10px 8px 10px 32px', background: 'none', border: 'none',
+                                                  cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
+                                                }}>
+                                                  {d.label}
+                                                  <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                                </button>
+                                              ) : (
+                                                <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>{d.label}</span>
+                                              )}
+                                              {group.tags.length > 0 && (
+                                                <button onClick={() => setExpandedDictTagFor(prev => prev === tagToggleKey(d.dialect) ? null : tagToggleKey(d.dialect))} style={{
+                                                  padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                                                  fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5,
+                                                  color: expandedDictTagFor === tagToggleKey(d.dialect) ? T.crimson : T.inkFaint,
+                                                }}>
+                                                  #tag
+                                                </button>
+                                              )}
+                                            </div>
+                                            {expandedDictTagFor === tagToggleKey(d.dialect) && dialTagOpts.map(tag => (
+                                              <button key={tag} onClick={() => { if (!userId) return; handleAddDictFilter(userId, group.language, d.dialect, `${d.label} #${tag}`, tag) }} style={{
+                                                display: 'block', width: '100%', padding: '8px 14px 8px 40px', background: 'none', border: 'none',
+                                                borderTop: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                                                fontSize: 12.5, color: T.inkSoft,
+                                              }}>
+                                                #{tag}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )
+                                      })}
+                                    </>
+                                  )}
+                                </div>
+                              )
+                            })
+                        }
+                      </>
+                    )}
+                  </>
+                )}
                 {/* Captures — collapsible; "All" + per-language (collapsible into dialects + tags) */}
                 {showCapturesSection && (
                   <>
@@ -616,15 +798,15 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                           ? <div style={{ padding: '10px 22px', fontSize: 13, color: T.inkMute }}>Loading…</div>
                           : (captureLangGroups ?? []).map(group => {
                               const langExpanded = expandedCaptureLangs.has(group.language)
-                              const allLangAdded = addedCaptureKeys.has(captureKey(group.language))
-                              const allLangTagOpts = group.tags.filter(t => !addedCaptureKeys.has(captureKey(group.language, null, t)))
+                              const allLangAdded = addedCaptureKeys.has(vdKey(group.language))
+                              const allLangTagOpts = group.tags.filter(t => !addedCaptureKeys.has(vdKey(group.language, null, t)))
                               const hasAnyDialectOption = group.dialects.some(d => {
-                                const da = addedCaptureKeys.has(captureKey(group.language, d.dialect))
-                                return !da || group.tags.some(t => !addedCaptureKeys.has(captureKey(group.language, d.dialect, t)))
+                                const da = addedCaptureKeys.has(vdKey(group.language, d.dialect))
+                                return !da || group.tags.some(t => !addedCaptureKeys.has(vdKey(group.language, d.dialect, t)))
                               })
                               if (allLangAdded && allLangTagOpts.length === 0 && !hasAnyDialectOption) return null
 
-                              const tagToggleKey = (dialect: string | null) => captureKey(group.language, dialect)
+                              const tagToggleKey = (dialect: string | null) => vdKey(group.language, dialect)
 
                               return (
                                 <div key={group.language}>
@@ -685,8 +867,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                                       )}
                                       {/* Dialect rows with +tag toggles */}
                                       {group.dialects.map(d => {
-                                        const dialAdded = addedCaptureKeys.has(captureKey(group.language, d.dialect))
-                                        const dialTagOpts = group.tags.filter(t => !addedCaptureKeys.has(captureKey(group.language, d.dialect, t)))
+                                        const dialAdded = addedCaptureKeys.has(vdKey(group.language, d.dialect))
+                                        const dialTagOpts = group.tags.filter(t => !addedCaptureKeys.has(vdKey(group.language, d.dialect, t)))
                                         if (dialAdded && dialTagOpts.length === 0) return null
                                         return (
                                           <div key={d.dialect} style={{ borderBottom: `1px solid ${T.lineSoft}` }}>

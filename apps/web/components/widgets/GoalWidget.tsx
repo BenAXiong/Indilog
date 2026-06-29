@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import GoalSheet from '@/components/sheets/GoalSheet'
-import { listPriorityDecks, VIRTUAL_DECK_LABELS } from '@/lib/db/srs/priority'
+import { listPriorityDecks, NOTE_SOURCE_LABELS } from '@/lib/db/srs/priority'
 import { getDeckMasteryStats, type DeckMasteryStats } from '@/lib/db/profile/goal'
 import { listCollections } from '@/lib/db/progress/collections'
 import { createClient } from '@/lib/supabase/client'
@@ -53,7 +53,7 @@ export default function GoalWidget() {
         d.filter_config
           ? d.filter_config.label
           : d.note_source
-            ? (VIRTUAL_DECK_LABELS[d.note_source] ?? d.note_source)
+            ? (NOTE_SOURCE_LABELS[d.note_source] ?? d.note_source)
             : (cols.find(c => c.id === d.collection_id)?.name ?? '…')
       ))
       setHasMore(decks.length > 3)

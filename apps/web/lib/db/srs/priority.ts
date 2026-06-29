@@ -35,8 +35,13 @@ export type CaptureLangGroup = {
   tags: string[]
 }
 
-export const VIRTUAL_DECK_LABELS: Record<string, string> = {
-  dict: 'Dictionary',
+// Empty — no simple-button virtual decks remain; both dict and captured have collapsible sections
+export const VIRTUAL_DECK_LABELS: Record<string, string> = {}
+
+// Display names for virtual note_source decks (used in deck lists and GoalWidget)
+export const NOTE_SOURCE_LABELS: Record<string, string> = {
+  dict:     'Dictionary',
+  captured: 'All captures',
 }
 
 export const EPARK_SOURCES: { id: string; label: string }[] = [
@@ -90,13 +95,13 @@ export async function listPriorityDecks(userId: string): Promise<PriorityDeck[]>
   return (data ?? []) as PriorityDeck[]
 }
 
-// Returns capture items grouped by language, each with distinct dialects and tags.
-export async function listCaptureLangGroups(): Promise<CaptureLangGroup[]> {
+// Returns items for a virtual note_source grouped by language, each with distinct dialects and tags.
+export async function listVirtualDeckLangGroups(noteSource: string): Promise<CaptureLangGroup[]> {
   const supabase = createClient()
   const { data } = await supabase
     .from('ind_items')
     .select('language, dialect, tags')
-    .eq('note_source', 'captured')
+    .eq('note_source', noteSource)
   if (!data) return []
   const groups = new Map<string, CaptureLangGroup>()
   for (const row of data as { language: string; dialect: string | null; tags: string[] | null }[]) {
@@ -163,8 +168,9 @@ export async function addCurriculumSourceDeck(
   })
 }
 
-export async function addCaptureFilterDeck(
+export async function addVirtualDeckFilterDeck(
   userId: string,
+  noteSource: string,
   language: string,
   dialect: string | null,
   label: string,
@@ -173,7 +179,7 @@ export async function addCaptureFilterDeck(
   const supabase = createClient()
   await supabase.from('ind_priority_decks').insert({
     user_id: userId,
-    note_source: 'captured',
+    note_source: noteSource,
     filter_config: {
       language,
       ...(dialect ? { dialect } : {}),
