@@ -50,9 +50,11 @@ export default function GoalWidget() {
       if (cancelled) return
 
       setDeckNames(top3.map(d =>
-        d.note_source
-          ? (VIRTUAL_DECK_LABELS[d.note_source] ?? d.note_source)
-          : (cols.find(c => c.id === d.collection_id)?.name ?? '…')
+        d.filter_config
+          ? d.filter_config.label
+          : d.note_source
+            ? (VIRTUAL_DECK_LABELS[d.note_source] ?? d.note_source)
+            : (cols.find(c => c.id === d.collection_id)?.name ?? '…')
       ))
       setHasMore(decks.length > 3)
       setGrades(stats)

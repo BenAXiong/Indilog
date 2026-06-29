@@ -6,8 +6,9 @@ import { Icon } from '@/components/ui'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import {
   listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck,
+  addCurriculumUnitDeck, listCurriculumUnits,
   removePriorityDeckById, reorderPriorityDecks, setPriorityDeckSimulation,
-  VIRTUAL_DECK_LABELS, type PriorityDeck,
+  VIRTUAL_DECK_LABELS, type PriorityDeck, type CurriculumUnit,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { localDateStr, getStudyDate } from '@/lib/db/srs/flashcards'
@@ -94,6 +95,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [collections,  setCollections]  = useState<CollectionMeta[]>([])
   const [addPicker,    setAddPicker]    = useState(false)
   const [priorityLoading, setPriorityLoading] = useState(false)
+  const [curriculumUnits, setCurriculumUnits] = useState<CurriculumUnit[] | null>(null)
+  const [unitsLoading,    setUnitsLoading]    = useState(false)
 
   // Simulate tab
   const [simDeadline,  setSimDeadline]  = useState('')
@@ -117,6 +120,13 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     if (!open) return
     loadPrefs().then(({ mode, learnTarget: lt }) => loadPriority(mode, lt))
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lazy-load curriculum units when the add-picker opens for the first time
+  useEffect(() => {
+    if (!addPicker || curriculumUnits !== null || unitsLoading) return
+    setUnitsLoading(true)
+    listCurriculumUnits().then(units => { setCurriculumUnits(units); setUnitsLoading(false) })
+  }, [addPicker, curriculumUnits, unitsLoading])
 
   async function loadPrefs(): Promise<{ mode: GoalMode; learnTarget: number }> {
     const supabase = createClient()
@@ -308,11 +318,23 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   // ── Priority tab ───────────────────────────────────────────────────────────
 
-  const addedVirtualSources = new Set(decks.map(d => d.note_source).filter(Boolean))
-  const availableVirtual = Object.keys(VIRTUAL_DECK_LABELS).filter(src => !addedVirtualSources.has(src))
+  // Generic virtual decks — blocked only if there's already a generic (no filter_config) row for that source.
+  // Curriculum unit rows (filter_config set) don't block the broad "ePark Saved" entry.
+  const blockedVirtualSources = new Set(
+    decks.filter(d => d.note_source && !d.filter_config).map(d => d.note_source!)
+  )
+  const availableVirtual = Object.keys(VIRTUAL_DECK_LABELS).filter(src => !blockedVirtualSources.has(src))
   const availableToAdd = collections.filter(c => !decks.some(d => d.collection_id === c.id))
 
+  // Curriculum units already added as specific rows
+  const addedUnitKeys = new Set(
+    decks.filter(d => d.note_source === 'curriculum' && d.filter_config)
+      .map(d => `${d.filter_config!.level}:${d.filter_config!.lesson}`)
+  )
+  const availableUnits = (curriculumUnits ?? []).filter(u => !addedUnitKeys.has(`${u.level}:${u.lesson}`))
+
   function deckDisplayName(deck: PriorityDeck): string {
+    if (deck.filter_config) return deck.filter_config.label
     if (deck.note_source) return VIRTUAL_DECK_LABELS[deck.note_source] ?? deck.note_source
     return collections.find(c => c.id === deck.collection_id)?.name ?? '…'
   }
@@ -342,6 +364,12 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   async function handleAddVirtual(userId: string, noteSource: string) {
     setAddPicker(false)
     await addVirtualPriorityDeck(userId, noteSource)
+    await loadPriority()
+  }
+
+  async function handleAddCurriculumUnit(userId: string, unit: CurriculumUnit) {
+    setAddPicker(false)
+    await addCurriculumUnitDeck(userId, unit.level, unit.lesson, unit.label)
     await loadPriority()
   }
 
@@ -462,7 +490,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         })}
 
         {/* Add deck */}
-        {(availableToAdd.length > 0 || availableVirtual.length > 0) && (
+        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableUnits.length > 0) && (
           <div>
             {addPicker ? (
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
@@ -478,6 +506,26 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                         fontSize: 14, color: T.ink,
                       }}>
                         {VIRTUAL_DECK_LABELS[src]}
+                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {/* ePark curriculum unit rows */}
+                {(availableUnits.length > 0 || unitsLoading) && (
+                  <>
+                    <div style={{ padding: '8px 14px 4px', fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      ePark units
+                    </div>
+                    {unitsLoading ? (
+                      <div style={{ padding: '10px 14px', fontSize: 13, color: T.inkMute }}>Loading…</div>
+                    ) : availableUnits.map(u => (
+                      <button key={`${u.level}:${u.lesson}`} onClick={() => { if (!userId) return; handleAddCurriculumUnit(userId, u) }} style={{
+                        display: 'block', width: '100%', padding: '11px 14px', background: 'none', border: 'none',
+                        borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                        fontSize: 14, color: T.ink,
+                      }}>
+                        {u.label}
                         <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
                       </button>
                     ))}

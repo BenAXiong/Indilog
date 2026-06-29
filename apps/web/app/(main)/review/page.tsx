@@ -18,7 +18,7 @@ import { getLangName } from '@/lib/lang/lang-bridge'
 import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 import { patchPreferences } from '@/lib/db/profile/preferences'
-import { listPriorityDecks, type PriorityDeck } from '@/lib/db/srs/priority'
+import { listPriorityDecks, matchesPriorityDeck, type PriorityDeck } from '@/lib/db/srs/priority'
 import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
@@ -934,12 +934,11 @@ function ReviewPage() {
     // Priority sort: deck 1 first, then deck 2, …, then non-priority. Stable — preserves due_at order within each group.
     if (!isCustom && context.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
-        const colId = x.ind_items?.collection_id
-        const src   = x.ind_items?.note_source
-        const i = context.priorityDecks.findIndex(d =>
-          (d.collection_id && d.collection_id === colId) ||
-          (d.note_source   && d.note_source   === src)
-        )
+        const colId  = x.ind_items?.collection_id
+        const src    = x.ind_items?.note_source
+        const level  = x.ind_items?.level
+        const lesson = x.ind_items?.lesson
+        const i = context.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson))
         return i === -1 ? Infinity : i
       }
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
@@ -992,12 +991,11 @@ function ReviewPage() {
     })
     if (ctx.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
-        const colId = x.ind_items?.collection_id
-        const src   = x.ind_items?.note_source
-        const i = ctx.priorityDecks.findIndex(d =>
-          (d.collection_id && d.collection_id === colId) ||
-          (d.note_source   && d.note_source   === src)
-        )
+        const colId  = x.ind_items?.collection_id
+        const src    = x.ind_items?.note_source
+        const level  = x.ind_items?.level
+        const lesson = x.ind_items?.lesson
+        const i = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson))
         return i === -1 ? Infinity : i
       }
       more.sort((a, b) => priorityIdx(a) - priorityIdx(b))

@@ -16,7 +16,7 @@ import {
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { getLangName } from '@/lib/lang/lang-bridge'
 import { createClient } from '@/lib/supabase/client'
-import { listPriorityDecks, type PriorityDeck } from '@/lib/db/srs/priority'
+import { listPriorityDecks, matchesPriorityDeck, type PriorityDeck } from '@/lib/db/srs/priority'
 import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
@@ -235,12 +235,11 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     if (!e || priorityToastRef.current) return
     if (ctx.priorityDecks.length === 0) return
     if (graduatedRef.current.size === 0) return  // no cards graduated yet → still in first sweep
-    const colId = e.card.ind_items?.collection_id
-    const src   = e.card.ind_items?.note_source
-    const inPriority = ctx.priorityDecks.some(d =>
-      (d.collection_id && d.collection_id === colId) ||
-      (d.note_source   && d.note_source   === src)
-    )
+    const colId  = e.card.ind_items?.collection_id
+    const src    = e.card.ind_items?.note_source
+    const level  = e.card.ind_items?.level
+    const lesson = e.card.ind_items?.lesson
+    const inPriority = ctx.priorityDecks.some(d => matchesPriorityDeck(d, colId, src, level, lesson))
     if (!inPriority) {
       priorityToastRef.current = true
       setShowPriorityToast(true)
