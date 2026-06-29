@@ -20,7 +20,8 @@ const GRADE_COLORS = {
 export default function GoalWidget() {
   const router = useRouter()
   const [sheetOpen,  setSheetOpen]  = useState(false)
-  const [deckName,   setDeckName]   = useState<string | null>(null)
+  const [deckNames,  setDeckNames]  = useState<string[]>([])
+  const [hasMore,    setHasMore]    = useState(false)
   const [grades,     setGrades]     = useState<DeckMasteryStats | null>(null)
   const [simActive,  setSimActive]  = useState(false)
   const [loaded,     setLoaded]     = useState(false)
@@ -38,22 +39,23 @@ export default function GoalWidget() {
       const decks = await listPriorityDecks(user.id)
       if (cancelled) return
       if (!decks.length) { setLoaded(true); return }
-      const top = decks[0]
-      if (top.note_source) {
-        if (!cancelled) {
-          setDeckName(VIRTUAL_DECK_LABELS[top.note_source] ?? top.note_source)
-          setSimActive(decks.some(d => d.in_simulation))
-          setLoaded(true)
-        }
-        return
-      }
+
+      const top3 = decks.slice(0, 3)
+      const topCollectionDeck = top3.find(d => d.collection_id)
+
       const [cols, stats] = await Promise.all([
         listCollections(),
-        getDeckMasteryStats(top.collection_id!),
+        topCollectionDeck ? getDeckMasteryStats(topCollectionDeck.collection_id!) : Promise.resolve(null),
       ])
       if (cancelled) return
-      const col = cols.find(c => c.id === top.collection_id)
-      setDeckName(col?.name ?? null)
+
+      const names = top3.map(d => {
+        if (d.note_source) return VIRTUAL_DECK_LABELS[d.note_source] ?? d.note_source
+        return cols.find(c => c.id === d.collection_id)?.name ?? '…'
+      })
+
+      setDeckNames(names)
+      setHasMore(decks.length > 3)
       setGrades(stats)
       setSimActive(decks.some(d => d.in_simulation))
       setLoaded(true)
@@ -61,7 +63,7 @@ export default function GoalWidget() {
     return () => { cancelled = true }
   }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isActive = deckName !== null
+  const isActive = deckNames.length > 0
 
   return (
     <>
@@ -77,14 +79,20 @@ export default function GoalWidget() {
           display: 'flex', flexDirection: 'column', textAlign: 'left',
         }}
       >
-        {/* Row 1: Goal label | deck title */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, flexShrink: 0 }}>
+        {/* Row 1: Goal label | Sim/Manual pill */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10, color: T.inkMute, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
             Goal
           </span>
-          {loaded && isActive && deckName && (
-            <span style={{ fontSize: 13, fontWeight: 600, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
-              {deckName}
+          {loaded && isActive && (
+            <span style={{
+              padding: '2px 7px', borderRadius: 999,
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
+              letterSpacing: '0.05em', textTransform: 'uppercase',
+              background: simActive ? T.crimsonBg : T.sageBg,
+              color: simActive ? T.crimson : '#566234',
+            }}>
+              {simActive ? 'Sim' : 'Manual'}
             </span>
           )}
         </div>
@@ -95,32 +103,35 @@ export default function GoalWidget() {
           </div>
         ) : isActive ? (
           <>
-            {/* Row 2: percentages | type pill */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 5, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                {grades && grades.total > 0
-                  ? (['seed', 'planted', 'rooted', 'blooming'] as const).map((g, i) => (
-                    <span key={g} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      {i > 0 && <span style={{ color: T.inkFaint }}>·</span>}
-                      <span style={{ color: GRADE_COLORS[g], fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: 10 }}>
-                        {Math.round(grades[g] / grades.total * 100)}%
-                      </span>
-                    </span>
-                  ))
-                  : <span style={{ color: T.inkFaint }}>…</span>
-                }
-              </div>
-              <span style={{
-                padding: '2px 7px', borderRadius: 999, flexShrink: 0,
-                fontFamily: '"JetBrains Mono", monospace', fontSize: 9, fontWeight: 700,
-                letterSpacing: '0.05em', textTransform: 'uppercase',
-                background: simActive ? T.crimsonBg : T.sageBg,
-                color: simActive ? T.crimson : '#566234',
-              }}>
-                {simActive ? 'Sim' : 'Manual'}
-              </span>
+            {/* Row 2: Deck chain — up to 3 decks with arrows, "···" if more */}
+            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 5 }}>
+              {deckNames.flatMap((name, i) =>
+                i > 0
+                  ? [
+                      <span key={`a${i}`} style={{ color: T.inkFaint, fontWeight: 400, fontSize: 11, margin: '0 4px' }}>→</span>,
+                      <span key={`n${i}`} style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{name}</span>,
+                    ]
+                  : [<span key={`n${i}`} style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{name}</span>]
+              )}
+              {hasMore && <span style={{ color: T.inkFaint, fontWeight: 400, fontSize: 11, marginLeft: 4 }}>···</span>}
             </div>
-            <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 8, overflow: 'hidden', display: 'flex' }}>
+
+            {/* Row 3: Grade percentages (for the top collection deck) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 5 }}>
+              {grades && grades.total > 0
+                ? (['seed', 'planted', 'rooted', 'blooming'] as const).map((g, i) => (
+                  <span key={g} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    {i > 0 && <span style={{ color: T.inkFaint }}>·</span>}
+                    <span style={{ color: GRADE_COLORS[g], fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: 10 }}>
+                      {Math.round(grades[g] / grades.total * 100)}%
+                    </span>
+                  </span>
+                ))
+                : <span style={{ color: T.inkFaint, fontSize: 10 }}>…</span>
+              }
+            </div>
+
+            <div style={{ height: 5, background: T.lineSoft, borderRadius: 999, marginTop: 7, overflow: 'hidden', display: 'flex' }}>
               {grades && grades.total > 0 && (['blooming', 'rooted', 'planted', 'seed'] as const).map(g => (
                 <div key={g} style={{
                   height: '100%',
