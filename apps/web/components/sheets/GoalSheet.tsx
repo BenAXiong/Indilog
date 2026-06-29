@@ -5,10 +5,9 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import {
-  listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck,
-  addCurriculumUnitDeck, listCurriculumUnits,
+  listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck, addCurriculumSourceDeck,
   removePriorityDeckById, reorderPriorityDecks, setPriorityDeckSimulation,
-  VIRTUAL_DECK_LABELS, type PriorityDeck, type CurriculumUnit,
+  VIRTUAL_DECK_LABELS, EPARK_SOURCES, type PriorityDeck,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { localDateStr, getStudyDate } from '@/lib/db/srs/flashcards'
@@ -94,9 +93,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [deckStats,    setDeckStats]    = useState<Record<string, DeckStat>>({})
   const [collections,  setCollections]  = useState<CollectionMeta[]>([])
   const [addPicker,    setAddPicker]    = useState(false)
+  const [eparkExpanded, setEparkExpanded] = useState(false)
   const [priorityLoading, setPriorityLoading] = useState(false)
-  const [curriculumUnits, setCurriculumUnits] = useState<CurriculumUnit[] | null>(null)
-  const [unitsLoading,    setUnitsLoading]    = useState(false)
 
   // Simulate tab
   const [simDeadline,  setSimDeadline]  = useState('')
@@ -120,13 +118,6 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     if (!open) return
     loadPrefs().then(({ mode, learnTarget: lt }) => loadPriority(mode, lt))
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Lazy-load curriculum units when the add-picker opens for the first time
-  useEffect(() => {
-    if (!addPicker || curriculumUnits !== null || unitsLoading) return
-    setUnitsLoading(true)
-    listCurriculumUnits().then(units => { setCurriculumUnits(units); setUnitsLoading(false) })
-  }, [addPicker, curriculumUnits, unitsLoading])
 
   async function loadPrefs(): Promise<{ mode: GoalMode; learnTarget: number }> {
     const supabase = createClient()
@@ -318,20 +309,17 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   // ── Priority tab ───────────────────────────────────────────────────────────
 
-  // Generic virtual decks — blocked only if there's already a generic (no filter_config) row for that source.
-  // Curriculum unit rows (filter_config set) don't block the broad "ePark Saved" entry.
-  const blockedVirtualSources = new Set(
+  const addedVirtualSources = new Set(
     decks.filter(d => d.note_source && !d.filter_config).map(d => d.note_source!)
   )
-  const availableVirtual = Object.keys(VIRTUAL_DECK_LABELS).filter(src => !blockedVirtualSources.has(src))
+  const availableVirtual = Object.keys(VIRTUAL_DECK_LABELS).filter(src => !addedVirtualSources.has(src))
   const availableToAdd = collections.filter(c => !decks.some(d => d.collection_id === c.id))
 
-  // Curriculum units already added as specific rows
-  const addedUnitKeys = new Set(
+  const addedCurriculumSources = new Set(
     decks.filter(d => d.note_source === 'curriculum' && d.filter_config)
-      .map(d => `${d.filter_config!.level}:${d.filter_config!.lesson}`)
+      .map(d => d.filter_config!.curriculum_source)
   )
-  const availableUnits = (curriculumUnits ?? []).filter(u => !addedUnitKeys.has(`${u.level}:${u.lesson}`))
+  const availableEparkSources = EPARK_SOURCES.filter(s => !addedCurriculumSources.has(s.id))
 
   function deckDisplayName(deck: PriorityDeck): string {
     if (deck.filter_config) return deck.filter_config.label
@@ -367,9 +355,10 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     await loadPriority()
   }
 
-  async function handleAddCurriculumUnit(userId: string, unit: CurriculumUnit) {
+  async function handleAddCurriculumSource(userId: string, id: string, label: string) {
     setAddPicker(false)
-    await addCurriculumUnitDeck(userId, unit.level, unit.lesson, unit.label)
+    setEparkExpanded(false)
+    await addCurriculumSourceDeck(userId, id, label)
     await loadPriority()
   }
 
@@ -490,7 +479,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         })}
 
         {/* Add deck */}
-        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableUnits.length > 0) && (
+        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableEparkSources.length > 0) && (
           <div>
             {addPicker ? (
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
@@ -511,21 +500,30 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
-                {/* ePark curriculum unit rows */}
-                {(availableUnits.length > 0 || unitsLoading) && (
+                {/* ePark curriculum sources — collapsed by default */}
+                {availableEparkSources.length > 0 && (
                   <>
-                    <div style={{ padding: '8px 14px 4px', fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                      ePark units
-                    </div>
-                    {unitsLoading ? (
-                      <div style={{ padding: '10px 14px', fontSize: 13, color: T.inkMute }}>Loading…</div>
-                    ) : availableUnits.map(u => (
-                      <button key={`${u.level}:${u.lesson}`} onClick={() => { if (!userId) return; handleAddCurriculumUnit(userId, u) }} style={{
-                        display: 'block', width: '100%', padding: '11px 14px', background: 'none', border: 'none',
+                    <button
+                      onClick={() => setEparkExpanded(p => !p)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                        borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        ePark curriculum
+                      </span>
+                      <Icon name={eparkExpanded ? 'chev-d' : 'chevron'} size={12} color={T.inkFaint} strokeWidth={2}
+                        style={eparkExpanded ? undefined : { transform: 'rotate(90deg)' }} />
+                    </button>
+                    {eparkExpanded && availableEparkSources.map(s => (
+                      <button key={s.id} onClick={() => { if (!userId) return; handleAddCurriculumSource(userId, s.id, s.label) }} style={{
+                        display: 'block', width: '100%', padding: '10px 14px 10px 22px', background: 'none', border: 'none',
                         borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
                         fontSize: 14, color: T.ink,
                       }}>
-                        {u.label}
+                        {s.label}
                         <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
                       </button>
                     ))}
@@ -548,7 +546,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
-                <button onClick={() => setAddPicker(false)} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
+                <button onClick={() => { setAddPicker(false); setEparkExpanded(false) }} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
                   Cancel
                 </button>
               </div>

@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 
 export type PriorityDeckFilterConfig = {
-  level: number
-  lesson: number
+  curriculum_source: string  // 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
   label: string
 }
 
@@ -17,21 +16,23 @@ export type PriorityDeck = {
   filter_config: PriorityDeckFilterConfig | null
 }
 
-export type CurriculumUnit = {
-  level: number
-  lesson: number
-  label: string
+export const VIRTUAL_DECK_LABELS: Record<string, string> = {
+  captured: 'Captures',
+  dict:     'Dictionary',
 }
 
-export const VIRTUAL_DECK_LABELS: Record<string, string> = {
-  captured:   'Captures',
-  dict:       'Dictionary',
-  curriculum: 'ePark Saved',
-}
+export const EPARK_SOURCES: { id: string; label: string }[] = [
+  { id: 'twelve',       label: 'Lessons'       },
+  { id: 'grmpts',       label: 'Patterns'      },
+  { id: 'essay',        label: 'Essays'         },
+  { id: 'dialogue',     label: 'Dialogues'      },
+  { id: 'con_practice', label: 'Conversations'  },
+]
 
 // Consistent priority match used by review and learn pages.
 // Generic virtual deck (filter_config=null) matches all cards with that note_source.
-// Unit rows match only cards whose level+lesson match the filter_config.
+// Curriculum source decks: 'twelve' matches items with level set; others match items
+// without level (grmpts/essay/dialogue share the same pool until item-level source tracking is added).
 export function matchesPriorityDeck(
   deck: PriorityDeck,
   colId: string | null | undefined,
@@ -41,7 +42,11 @@ export function matchesPriorityDeck(
 ): boolean {
   if (deck.collection_id) return deck.collection_id === colId
   if (!deck.note_source || deck.note_source !== src) return false
-  if (deck.filter_config) return deck.filter_config.level === level && deck.filter_config.lesson === lesson
+  if (deck.filter_config) {
+    const cs = deck.filter_config.curriculum_source
+    if (cs === 'twelve') return level != null
+    return level == null
+  }
   return true
 }
 
@@ -53,28 +58,6 @@ export async function listPriorityDecks(userId: string): Promise<PriorityDeck[]>
     .eq('user_id', userId)
     .order('position', { ascending: true })
   return (data ?? []) as PriorityDeck[]
-}
-
-// Returns distinct (level, lesson) pairs for curriculum items, sorted by level then lesson.
-// Relies on RLS; no user_id filter needed client-side.
-export async function listCurriculumUnits(): Promise<CurriculumUnit[]> {
-  const supabase = createClient()
-  const { data } = await supabase
-    .from('ind_items')
-    .select('level, lesson, lesson_title')
-    .eq('note_source', 'curriculum')
-    .not('level', 'is', null)
-    .not('lesson', 'is', null)
-  if (!data) return []
-  const seen = new Set<string>()
-  const units: CurriculumUnit[] = []
-  for (const row of data as { level: number; lesson: number; lesson_title: string | null }[]) {
-    const key = `${row.level}:${row.lesson}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    units.push({ level: row.level, lesson: row.lesson, label: row.lesson_title ?? `L${row.level}-${row.lesson}` })
-  }
-  return units.sort((a, b) => a.level - b.level || a.lesson - b.lesson)
 }
 
 async function nextPosition(userId: string): Promise<number> {
@@ -106,17 +89,16 @@ export async function addVirtualPriorityDeck(userId: string, noteSource: string)
   })
 }
 
-export async function addCurriculumUnitDeck(
+export async function addCurriculumSourceDeck(
   userId: string,
-  level: number,
-  lesson: number,
+  curriculumSource: string,
   label: string,
 ): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_priority_decks').insert({
     user_id: userId,
     note_source: 'curriculum',
-    filter_config: { level, lesson, label },
+    filter_config: { curriculum_source: curriculumSource, label },
     position: await nextPosition(userId),
   })
 }
