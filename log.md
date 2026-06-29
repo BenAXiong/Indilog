@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-29 12:37 | FEATURE | Two-slot preference system: add goal_mode (manual/calculated) to UserPreferences; GoalSheet persists mode to prefs and restores on open; handleApplySimulation no longer overwrites learn_target/review_target prefs — those stay as the user's manual values forever; auto-revert paths also persist goal_mode='manual' to prefs; opening in calculated mode auto-recalcs sim output |
 | 2026-06-29 12:15 | FIX | GoalSheet: when last sim deck goes off and no reviews done yet today, clear frozen learn_target/review_target in ind_daily_stats so next dashboard load re-computes from current (manual) preferences |
 | 2026-06-29 11:54 | FIX | GoalSheet: auto-revert to manual mode when the last sim-toggled deck is turned off or removed |
 | 2026-06-21 06:35 | FEATURE | Priority decks expanded to all 3 deck types: DB adds nullable note_source to ind_priority_decks; GoalSheet picker shows virtual decks (Captures, Dictionary, ePark Saved) and collections; priority sort in review/learn matches on collection_id OR note_source; simulation toggle hidden for virtual decks |

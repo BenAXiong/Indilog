@@ -16,6 +16,9 @@ export type UserPreferences = {
   translate_dialect: string
   shuffle_tests:     boolean
   shuffle_exposure:  boolean
+  // Two-slot goal system: learn_target/review_target = manual (never overwritten by simulation Apply).
+  // Optional so existing buildPrefs/spread code without the field still type-checks.
+  goal_mode?:        'manual' | 'calculated'
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -34,6 +37,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   translate_dialect: 'ami_Coas',
   shuffle_tests:    true,
   shuffle_exposure: true,
+  goal_mode:        'manual',
 }
 
 export async function patchPreferences(patch: Partial<UserPreferences>): Promise<void> {

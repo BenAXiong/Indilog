@@ -112,28 +112,30 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     return () => { document.body.style.overflow = prev }
   }, [open])
 
-  // Load on open
+  // Load on open — sequential so loadPriority can auto-recalc with correct learnTarget
   useEffect(() => {
     if (!open) return
-    loadPrefs()
-    loadPriority()
+    loadPrefs().then(({ mode, learnTarget: lt }) => loadPriority(mode, lt))
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadPrefs() {
+  async function loadPrefs(): Promise<{ mode: GoalMode; learnTarget: number }> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) return { mode: 'manual', learnTarget: 10 }
     const { data } = await supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle()
     const prefs = data?.preferences as Record<string, unknown> | null
     const lc = typeof prefs?.learn_target === 'number' ? prefs.learn_target : 10
     const rc = typeof prefs?.review_target === 'number' ? prefs.review_target : 100
+    const goalMode: GoalMode = prefs?.goal_mode === 'calculated' ? 'calculated' : 'manual'
     setLearnTargetRaw(lc)
     setReviewTargetRaw(rc)
+    setMode(goalMode)
     localStorage.setItem('srs_learn_target', String(lc))
     localStorage.setItem('srs_review_target', String(rc))
+    return { mode: goalMode, learnTarget: lc }
   }
 
-  async function loadPriority() {
+  async function loadPriority(initialMode?: GoalMode, initialLearnTarget?: number) {
     setPriorityLoading(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -156,6 +158,8 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     // Pre-populate simulate deadlines from first sim deck
     const firstSim = decksData.find(d => d.in_simulation && d.simulation_deadline)
     if (firstSim?.simulation_deadline) setSimDeadline(firstSim.simulation_deadline)
+    // Auto-recalculate when opening in calculated mode so Goals tab shows sim values
+    if (initialMode === 'calculated') recalcWithDecks(decksData, initialLearnTarget)
   }
 
   function setLearnTarget(v: number) {
@@ -171,19 +175,23 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   // ── Goals tab ──────────────────────────────────────────────────────────────
 
-  async function recalculate() {
+  async function recalcWithDecks(decksParam: PriorityDeck[], learnTargetOverride?: number) {
     setSimLoading(true)
-    const simDecks = decks.filter(d => d.in_simulation)
+    const simDecks = decksParam.filter(d => d.in_simulation)
     if (!simDecks.length) { setSimLoading(false); return }
     const deadline = simDecks.find(d => d.simulation_deadline)?.simulation_deadline
       ?? localDateStr(new Date(Date.now() + 30 * 86400000))
     const result = await projectSimulation({
       collectionIds: simDecks.map(d => d.collection_id).filter((id): id is string => id !== null),
       deadline,
-      learnTarget,
+      learnTarget: learnTargetOverride ?? learnTarget,
     })
     if (result) setSimOutput({ learnTarget: result.days[0]?.learn ?? result.learnTarget, reviewTarget: result.days[0]?.review ?? 0 })
     setSimLoading(false)
+  }
+
+  async function recalculate() {
+    return recalcWithDecks(decks)
   }
 
   const LEARN_LEVELS = [
@@ -199,7 +207,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
         {/* Mode toggle */}
         <div style={{ display: 'flex', gap: 6, background: T.lineSoft, borderRadius: 10, padding: 4 }}>
           {(['manual', 'calculated'] as const).map(m => (
-            <button key={m} onClick={() => { setMode(m); if (m === 'calculated') recalculate() }} style={{
+            <button key={m} onClick={() => { setMode(m); patchPreferences({ goal_mode: m }); if (m === 'calculated') recalculate() }} style={{
               flex: 1, height: 32, borderRadius: 7, border: 'none', cursor: 'pointer',
               background: mode === m ? T.paperHi : 'transparent',
               color: mode === m ? T.ink : T.inkMute,
@@ -355,7 +363,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
       return next
     })
     await removePriorityDeckById(userId, id)
-    if (noSimLeft) await unfreezeTodayIfNoReviews(userId)
+    if (noSimLeft) await Promise.all([unfreezeTodayIfNoReviews(userId), patchPreferences({ goal_mode: 'manual' })])
   }
 
   async function handleToggleSim(userId: string, collectionId: string, inSim: boolean) {
@@ -366,7 +374,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
       return next
     })
     await setPriorityDeckSimulation(userId, collectionId, inSim)
-    if (noSimLeft) await unfreezeTodayIfNoReviews(userId)
+    if (noSimLeft) await Promise.all([unfreezeTodayIfNoReviews(userId), patchPreferences({ goal_mode: 'manual' })])
   }
 
   function PriorityTab() {
@@ -527,11 +535,10 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   async function handleApplySimulation() {
     if (!simResult) return
-    // Apply the learnTarget from today's row; leave review_target pref under user control
-    setLearnTarget(simResult[0].learnTarget)
     setMode('calculated')
     setSimOutput({ learnTarget: simResult[0].learnTarget, reviewTarget: simResult[0].reviewTarget })
-    // Persist deadline to all in-simulation decks
+    // Persist mode and deadline — learn_target/review_target prefs stay as the user's manual values
+    await patchPreferences({ goal_mode: 'calculated' })
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
