@@ -10,7 +10,7 @@ import {
   VIRTUAL_DECK_LABELS, type PriorityDeck,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
-import { localDateStr } from '@/lib/db/srs/flashcards'
+import { localDateStr, getStudyDate } from '@/lib/db/srs/flashcards'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
 import { projectSimulation, buildCurveFromDays, type SimulationCurve, type TodayTarget } from '@/lib/db/srs/simulation-client'
 import { createClient } from '@/lib/supabase/client'
@@ -329,22 +329,44 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     await loadPriority()
   }
 
+  async function unfreezeTodayIfNoReviews(userId: string) {
+    const supabase = createClient()
+    const today = getStudyDate()
+    const { data } = await supabase
+      .from('ind_daily_stats')
+      .select('reviewed_count')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .maybeSingle()
+    if ((data?.reviewed_count ?? 0) === 0) {
+      supabase.from('ind_daily_stats')
+        .update({ learn_target: null, review_target: null })
+        .eq('user_id', userId)
+        .eq('date', today)
+        .then(() => {})
+    }
+  }
+
   async function handleRemove(userId: string, id: string) {
+    let noSimLeft = false
     setDecks(prev => {
       const next = prev.filter(d => d.id !== id)
-      if (next.every(d => !d.in_simulation)) setMode('manual')
+      if (next.every(d => !d.in_simulation)) { setMode('manual'); noSimLeft = true }
       return next
     })
     await removePriorityDeckById(userId, id)
+    if (noSimLeft) await unfreezeTodayIfNoReviews(userId)
   }
 
   async function handleToggleSim(userId: string, collectionId: string, inSim: boolean) {
+    let noSimLeft = false
     setDecks(prev => {
       const next = prev.map(d => d.collection_id === collectionId ? { ...d, in_simulation: inSim } : d)
-      if (!inSim && next.every(d => !d.in_simulation)) setMode('manual')
+      if (!inSim && next.every(d => !d.in_simulation)) { setMode('manual'); noSimLeft = true }
       return next
     })
     await setPriorityDeckSimulation(userId, collectionId, inSim)
+    if (noSimLeft) await unfreezeTodayIfNoReviews(userId)
   }
 
   function PriorityTab() {
