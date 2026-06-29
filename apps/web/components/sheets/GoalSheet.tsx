@@ -330,12 +330,20 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   }
 
   async function handleRemove(userId: string, id: string) {
-    setDecks(prev => prev.filter(d => d.id !== id))
+    setDecks(prev => {
+      const next = prev.filter(d => d.id !== id)
+      if (next.every(d => !d.in_simulation)) setMode('manual')
+      return next
+    })
     await removePriorityDeckById(userId, id)
   }
 
   async function handleToggleSim(userId: string, collectionId: string, inSim: boolean) {
-    setDecks(prev => prev.map(d => d.collection_id === collectionId ? { ...d, in_simulation: inSim } : d))
+    setDecks(prev => {
+      const next = prev.map(d => d.collection_id === collectionId ? { ...d, in_simulation: inSim } : d)
+      if (!inSim && next.every(d => !d.in_simulation)) setMode('manual')
+      return next
+    })
     await setPriorityDeckSimulation(userId, collectionId, inSim)
   }
 
