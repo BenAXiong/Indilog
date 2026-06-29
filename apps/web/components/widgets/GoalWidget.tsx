@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import GoalSheet from '@/components/sheets/GoalSheet'
@@ -17,35 +18,48 @@ const GRADE_COLORS = {
 }
 
 export default function GoalWidget() {
+  const router = useRouter()
   const [sheetOpen,  setSheetOpen]  = useState(false)
   const [deckName,   setDeckName]   = useState<string | null>(null)
   const [grades,     setGrades]     = useState<DeckMasteryStats | null>(null)
   const [simActive,  setSimActive]  = useState(false)
   const [loaded,     setLoaded]     = useState(false)
 
+  // Re-runs whenever loaded is set to false (e.g. after GoalSheet closes)
+  // Uses getSession() — reads from cookie without a network round-trip, so no auth race on first load
   useEffect(() => {
+    if (loaded) return
+    let cancelled = false
     const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return
+      const user = session?.user
       if (!user) { setLoaded(true); return }
       const decks = await listPriorityDecks(user.id)
+      if (cancelled) return
       if (!decks.length) { setLoaded(true); return }
       const top = decks[0]
       if (top.note_source) {
-        setDeckName(VIRTUAL_DECK_LABELS[top.note_source] ?? top.note_source)
-        setLoaded(true)
+        if (!cancelled) {
+          setDeckName(VIRTUAL_DECK_LABELS[top.note_source] ?? top.note_source)
+          setSimActive(decks.some(d => d.in_simulation))
+          setLoaded(true)
+        }
         return
       }
       const [cols, stats] = await Promise.all([
         listCollections(),
         getDeckMasteryStats(top.collection_id!),
       ])
+      if (cancelled) return
       const col = cols.find(c => c.id === top.collection_id)
       setDeckName(col?.name ?? null)
       setGrades(stats)
       setSimActive(decks.some(d => d.in_simulation))
       setLoaded(true)
     })
-  }, [])
+    return () => { cancelled = true }
+  }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isActive = deckName !== null
 
@@ -128,7 +142,7 @@ export default function GoalWidget() {
         )}
       </div>
 
-      <GoalSheet open={sheetOpen} onClose={() => { setSheetOpen(false); /* re-load on close */ setLoaded(false) }} />
+      <GoalSheet open={sheetOpen} onClose={() => { setSheetOpen(false); setLoaded(false); router.refresh() }} />
     </>
   )
 }

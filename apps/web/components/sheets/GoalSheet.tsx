@@ -166,6 +166,14 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     setLearnTargetRaw(v)
     localStorage.setItem('srs_learn_target', String(v))
     patchPreferences({ learn_target: v })
+    // Clear today's frozen learn_target so the dashboard re-computes on next refresh
+    ;(async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      supabase.from('ind_daily_stats')
+        .update({ learn_target: null }).eq('user_id', session.user.id).eq('date', getStudyDate()).then(() => {})
+    })()
   }
   function setReviewTarget(v: number) {
     setReviewTargetRaw(v)
