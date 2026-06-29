@@ -257,7 +257,7 @@ export default function DictionaryPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
 
-  // Sync source toggles from settings
+  // Sync source toggles and language override from settings
   useEffect(() => {
     try {
       const stored = localStorage.getItem('ind_dict_sources')
@@ -265,6 +265,36 @@ export default function DictionaryPage() {
       setMoeEnabled(sources.includes('moe'))
       setKlokahEnabled(sources.includes('klokah'))
     } catch {}
+    const savedLang    = localStorage.getItem('ind_dict_lang_glid')    ?? ''
+    const savedDialect = localStorage.getItem('ind_dict_lang_dialect') ?? ''
+    if (savedLang) {
+      setGlid(savedLang)
+      setDialectFilter(savedDialect)
+      setUserChangedGlid(true)
+    }
+  }, [])
+
+  // Live-update glid + dialect when changed from Settings/Dict
+  useEffect(() => {
+    function onLangChange(e: Event) {
+      const { glid: g, dialect: d } = (e as CustomEvent<{ glid: string; dialect: string }>).detail
+      setGlid(g)
+      setDialectFilter(d)
+      setUserChangedGlid(!!g)
+    }
+    window.addEventListener('ind-dict-lang-changed', onLangChange)
+    return () => window.removeEventListener('ind-dict-lang-changed', onLangChange)
+  }, [])
+
+  // Live-update source toggles when changed from Settings/Dict
+  useEffect(() => {
+    function onSourcesChange(e: Event) {
+      const sources = (e as CustomEvent<string[]>).detail
+      setMoeEnabled(sources.includes('moe'))
+      setKlokahEnabled(sources.includes('klokah'))
+    }
+    window.addEventListener('ind-dict-sources-changed', onSourcesChange)
+    return () => window.removeEventListener('ind-dict-sources-changed', onSourcesChange)
   }, [])
 
   // Load dialects once

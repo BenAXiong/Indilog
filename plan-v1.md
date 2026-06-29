@@ -199,6 +199,11 @@ Personal library of sources (people, media, references) linked to captured items
 - [ ] Study/Capture: prototype for expanded sub-decks
 - [ ] Session: minor mods, see screenshots
 
+- [ ] Browser: add all context fields, editable
+- [ ] Browser: enable swipe left/right for extanded options
+- [ ] Browser: 
+- [ ] Browser: 
+
 ### M5-C — Feature refinement
 
 - [x] Instore max reviews/learn per day — daily cap stepper (10–300) in OptionsSheet; srs_daily_cap localStorage
@@ -217,9 +222,17 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Desambiguate goal-target-cap confusing semantics and update ADRs.
 - [x] Enable non-priority reps deck-by-deck in the Study tab.
 - [x] Review session CTA: add size override
-- [-] Priority decks: add captures with filters
-- [ ] Improve Study content loading latency
+- [x] Priority decks: add captures and curriculum + update goal and queue logic
+- [-] Priority decks: add filters for capturesand curriculum
 - [ ] Record curriculum completion time per unit
+- [ ] Improve Study content loading latency
+
+- [x] Dict: enable non-amis ab search with dialects
+- [ ] Dict: 
+- [ ] Dict: 
+- [ ] Dict: 
+
+- [ ] 
 
 add to post v1
 scrape 

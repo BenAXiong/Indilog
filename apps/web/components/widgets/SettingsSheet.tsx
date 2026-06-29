@@ -6,10 +6,10 @@ import { T } from '@/lib/tokens'
 import { LangAvatar, Icon } from '@/components/ui'
 import { LANGUAGES } from '@/lib/languages'
 import { getGlid, getDialectsForLang, getLangName } from '@/lib/lang/lang-bridge'
-import { shortDialectLabel } from '@/lib/lang/dialects'
+import { shortDialectLabel, GLID_NAMES, GLID_NAMES_EN, GLID_FAMILIES, DIALECT_TO_EN } from '@/lib/lang/dialects'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { createClient } from '@/lib/supabase/client'
-import { listUserLanguages } from '@/lib/db/srs/flashcards'
+import { listUserLanguages, getStudyDate } from '@/lib/db/srs/flashcards'
 import { savePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/lib/db/profile/preferences'
 import type { User } from '@supabase/supabase-js'
 
@@ -55,6 +55,8 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [accountMenuOpen,setAccountMenuOpen]= useState(false)
   const [autoLookup,       setAutoLookup]       = useState(true)
   const [dictSources,      setDictSources]      = useState<string[]>(['moe'])
+  const [dictLangGlid,     setDictLangGlidRaw]  = useState('')
+  const [dictLangDialect,  setDictLangDialectRaw] = useState('')
   const [resetHour,        setResetHourRaw]     = useState(4)
   const [prefReviewTarget,    setPrefReviewTargetRaw]  = useState(100)
   const [prefLearnTarget,     setPrefLearnTargetRaw]   = useState(10)
@@ -80,6 +82,10 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     if (stored !== null) setAutoLookup(stored === 'true')
     const ss = localStorage.getItem('ind_dict_sources')
     if (ss) try { setDictSources(JSON.parse(ss)) } catch {}
+    const dl = localStorage.getItem('ind_dict_lang_glid')
+    if (dl !== null) setDictLangGlidRaw(dl)
+    const dd = localStorage.getItem('ind_dict_lang_dialect')
+    if (dd !== null) setDictLangDialectRaw(dd)
     const h = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
     setResetHourRaw(isNaN(h) ? 4 : Math.min(6, Math.max(0, h)))
     const cap = parseInt(localStorage.getItem('srs_review_target') ?? '100')
@@ -190,6 +196,11 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   function setPrefLearnTarget(n: number) {
     const v = Math.min(50, Math.max(1, n))
     setPrefLearnTargetRaw(v); localStorage.setItem('srs_learn_target', String(v)); saveToCloud({ learn_target: v })
+    // Clear today's frozen learn_target so the dashboard re-computes on next refresh
+    if (userId) {
+      createClient().from('ind_daily_stats')
+        .update({ learn_target: null }).eq('user_id', userId).eq('date', getStudyDate()).then(() => {})
+    }
   }
 
   function buildPrefs(patch: Partial<UserPreferences> = {}): UserPreferences {
@@ -217,11 +228,26 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
     if (userId) savePreferences(userId, buildPrefs(patch))
   }
 
+  function setDictLangGlid(g: string) {
+    setDictLangGlidRaw(g)
+    setDictLangDialectRaw('')
+    localStorage.setItem('ind_dict_lang_glid', g)
+    localStorage.setItem('ind_dict_lang_dialect', '')
+    window.dispatchEvent(new CustomEvent('ind-dict-lang-changed', { detail: { glid: g, dialect: '' } }))
+  }
+
+  function setDictLangDialect(d: string) {
+    setDictLangDialectRaw(d)
+    localStorage.setItem('ind_dict_lang_dialect', d)
+    window.dispatchEvent(new CustomEvent('ind-dict-lang-changed', { detail: { glid: dictLangGlid, dialect: d } }))
+  }
+
   function toggleDictSource(id: string) {
     setDictSources(prev => {
       const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
       localStorage.setItem('ind_dict_sources', JSON.stringify(next))
       saveToCloud({ dict_sources: next })
+      window.dispatchEvent(new CustomEvent('ind-dict-sources-changed', { detail: next }))
       return next
     })
   }
@@ -686,27 +712,100 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
           )}
 
           {/* ── Dict ── */}
-          {tab === 'dict' && (
-            <div>
-              <div style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Dictionary source</div>
-              <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px' }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {([
-                    { id: 'klokah', label: 'ePark',        soon: false },
-                    { id: 'moe',    label: 'Kilang',       soon: false },
-                    { id: 'ytd',    label: '族語辭典', soon: true  },
-                  ] as const).map(o => (
-                    <button key={o.id} disabled={o.soon}
-                      onClick={() => { if (!o.soon) toggleDictSource(o.id) }}
-                      style={{ flex: 1, padding: '8px 6px', borderRadius: 9, background: dictSources.includes(o.id) ? T.ink : T.paper, border: `1px solid ${dictSources.includes(o.id) ? T.ink : T.lineSoft}`, cursor: o.soon ? 'not-allowed' : 'pointer', opacity: o.soon ? 0.5 : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: dictSources.includes(o.id) ? T.cream : T.ink, lineHeight: 1.2 }}>{o.label}</span>
-                      {o.soon && <span style={{ fontSize: 9.5, color: dictSources.includes(o.id) ? T.cream : T.inkFaint }}>soon</span>}
-                    </button>
-                  ))}
+          {tab === 'dict' && (() => {
+            const eparkActive = dictSources.includes('klokah')
+            const labelStyle: React.CSSProperties = { fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }
+            return (
+              <>
+                <div>
+                  <div style={labelStyle}>Dictionary source</div>
+                  <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {([
+                        { id: 'klokah', label: 'ePark',   soon: false },
+                        { id: 'moe',    label: 'Kilang',  soon: false },
+                        { id: 'ytd',    label: '族語辭典', soon: true  },
+                      ] as const).map(o => (
+                        <button key={o.id} disabled={o.soon}
+                          onClick={() => { if (!o.soon) toggleDictSource(o.id) }}
+                          style={{ flex: 1, padding: '8px 6px', borderRadius: 9, background: dictSources.includes(o.id) ? T.ink : T.paper, border: `1px solid ${dictSources.includes(o.id) ? T.ink : T.lineSoft}`, cursor: o.soon ? 'not-allowed' : 'pointer', opacity: o.soon ? 0.5 : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: dictSources.includes(o.id) ? T.cream : T.ink, lineHeight: 1.2 }}>{o.label}</span>
+                          {o.soon && <span style={{ fontSize: 9.5, color: dictSources.includes(o.id) ? T.cream : T.inkFaint }}>soon</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+
+                <div style={{ opacity: eparkActive ? 1 : 0.4, pointerEvents: eparkActive ? 'auto' : 'none' }}>
+                  <div style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>Search language</span>
+                    {!eparkActive && <span style={{ fontSize: 10, color: T.inkFaint, textTransform: 'none', letterSpacing: 0 }}>· enable ePark to use</span>}
+                  </div>
+                  <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                    <button
+                      onClick={() => setDictLangGlid('')}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 14px', background: 'none', border: 'none', borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      <div>
+                        <span style={{ fontSize: 13.5, fontWeight: !dictLangGlid ? 600 : 400, color: !dictLangGlid ? T.crimson : T.ink }}>Auto</span>
+                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>follows app language</span>
+                      </div>
+                      {!dictLangGlid && <Icon name="check" size={15} color={T.crimson} strokeWidth={2.4} />}
+                    </button>
+                    {Object.entries(GLID_NAMES).map(([g, name], i, arr) => {
+                      const active = dictLangGlid === g
+                      return (
+                        <button
+                          key={g}
+                          onClick={() => setDictLangGlid(g)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 14px', background: active ? T.crimsonBg : 'none', border: 'none', borderBottom: i < arr.length - 1 ? `1px solid ${T.lineSoft}` : 'none', cursor: 'pointer', textAlign: 'left' }}
+                        >
+                          <div>
+                            <span style={{ fontSize: 13.5, fontWeight: active ? 600 : 400, color: active ? T.crimson : T.ink }}>{name}</span>
+                            <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8, fontFamily: '"JetBrains Mono", monospace' }}>{GLID_NAMES_EN[g]}</span>
+                          </div>
+                          {active && <Icon name="check" size={15} color={T.crimson} strokeWidth={2.4} />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {dictLangGlid && eparkActive && (
+                  <div>
+                    <div style={labelStyle}>Dialect</div>
+                    <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14, overflow: 'hidden' }}>
+                      <button
+                        onClick={() => setDictLangDialect('')}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 14px', background: 'none', border: 'none', borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left' }}
+                      >
+                        <span style={{ fontSize: 13.5, fontWeight: !dictLangDialect ? 600 : 400, color: !dictLangDialect ? T.crimson : T.ink }}>All dialects</span>
+                        {!dictLangDialect && <Icon name="check" size={15} color={T.crimson} strokeWidth={2.4} />}
+                      </button>
+                      {(GLID_FAMILIES[dictLangGlid] ?? []).map((d, i, arr) => {
+                        const active = dictLangDialect === d
+                        const enName = DIALECT_TO_EN[d]
+                        return (
+                          <button
+                            key={d}
+                            onClick={() => setDictLangDialect(d)}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 14px', background: active ? T.crimsonBg : 'none', border: 'none', borderBottom: i < arr.length - 1 ? `1px solid ${T.lineSoft}` : 'none', cursor: 'pointer', textAlign: 'left' }}
+                          >
+                            <div>
+                              <span style={{ fontSize: 13.5, fontWeight: active ? 600 : 400, color: active ? T.crimson : T.ink }}>{d}</span>
+                              {enName && <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8, fontFamily: '"JetBrains Mono", monospace' }}>{enName}</span>}
+                            </div>
+                            {active && <Icon name="check" size={15} color={T.crimson} strokeWidth={2.4} />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          })()}
 
           <div style={{ textAlign: 'center', paddingTop: 4 }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9, color: T.inkFaint, letterSpacing: '0.06em' }}>

@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-06-29 17:02 | FEATURE | SettingsSheet Dict tab: language + dialect override for dictionary search; setDictLangGlid/Dialect helpers dispatch ind-dict-lang-changed event; dict/page.tsx listens for ind-dict-lang-changed and ind-dict-sources-changed to live-update without reload; SettingsSheet setPrefLearnTarget also clears today's frozen learn_target so router.refresh picks up the new value |
 | 2026-06-29 16:43 | FIX | GoalWidget: effect deps changed from [] to [loaded] so setLoaded(false) on GoalSheet close triggers a re-fetch; use getSession() to avoid auth race on first render; router.refresh() on close so DualRingCard also picks up sim changes. GoalSheet setLearnTarget: clear today's frozen learn_target in ind_daily_stats so dashboard re-computes on next refresh |
 | 2026-06-29 12:37 | FEATURE | Two-slot preference system: add goal_mode (manual/calculated) to UserPreferences; GoalSheet persists mode to prefs and restores on open; handleApplySimulation no longer overwrites learn_target/review_target prefs — those stay as the user's manual values forever; auto-revert paths also persist goal_mode='manual' to prefs; opening in calculated mode auto-recalcs sim output |
 | 2026-06-29 12:15 | FIX | GoalSheet: when last sim deck goes off and no reviews done yet today, clear frozen learn_target/review_target in ind_daily_stats so next dashboard load re-computes from current (manual) preferences |
