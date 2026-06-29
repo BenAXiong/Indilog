@@ -934,11 +934,13 @@ function ReviewPage() {
     // Priority sort: deck 1 first, then deck 2, …, then non-priority. Stable — preserves due_at order within each group.
     if (!isCustom && context.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
-        const colId  = x.ind_items?.collection_id
-        const src    = x.ind_items?.note_source
-        const level  = x.ind_items?.level
-        const lesson = x.ind_items?.lesson
-        const i = context.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson))
+        const colId    = x.ind_items?.collection_id
+        const src      = x.ind_items?.note_source
+        const level    = x.ind_items?.level
+        const lesson   = x.ind_items?.lesson
+        const language = x.ind_items?.language
+        const dialect  = x.ind_items?.dialect
+        const i = context.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect))
         return i === -1 ? Infinity : i
       }
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
@@ -991,11 +993,13 @@ function ReviewPage() {
     })
     if (ctx.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
-        const colId  = x.ind_items?.collection_id
-        const src    = x.ind_items?.note_source
-        const level  = x.ind_items?.level
-        const lesson = x.ind_items?.lesson
-        const i = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson))
+        const colId    = x.ind_items?.collection_id
+        const src      = x.ind_items?.note_source
+        const level    = x.ind_items?.level
+        const lesson   = x.ind_items?.lesson
+        const language = x.ind_items?.language
+        const dialect  = x.ind_items?.dialect
+        const i = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect))
         return i === -1 ? Infinity : i
       }
       more.sort((a, b) => priorityIdx(a) - priorityIdx(b))

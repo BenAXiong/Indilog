@@ -235,11 +235,13 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     if (!e || priorityToastRef.current) return
     if (ctx.priorityDecks.length === 0) return
     if (graduatedRef.current.size === 0) return  // no cards graduated yet → still in first sweep
-    const colId  = e.card.ind_items?.collection_id
-    const src    = e.card.ind_items?.note_source
-    const level  = e.card.ind_items?.level
-    const lesson = e.card.ind_items?.lesson
-    const inPriority = ctx.priorityDecks.some(d => matchesPriorityDeck(d, colId, src, level, lesson))
+    const colId    = e.card.ind_items?.collection_id
+    const src      = e.card.ind_items?.note_source
+    const level    = e.card.ind_items?.level
+    const lesson   = e.card.ind_items?.lesson
+    const language = e.card.ind_items?.language
+    const dialect  = e.card.ind_items?.dialect
+    const inPriority = ctx.priorityDecks.some(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect))
     if (!inPriority) {
       priorityToastRef.current = true
       setShowPriorityToast(true)

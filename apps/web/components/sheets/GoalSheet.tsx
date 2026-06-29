@@ -5,9 +5,10 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import {
-  listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck, addCurriculumSourceDeck,
+  listPriorityDecks, addPriorityDeck, addVirtualPriorityDeck,
+  addCurriculumSourceDeck, addCaptureFilterDeck, listCaptureLanguages,
   removePriorityDeckById, reorderPriorityDecks, setPriorityDeckSimulation,
-  VIRTUAL_DECK_LABELS, EPARK_SOURCES, type PriorityDeck,
+  VIRTUAL_DECK_LABELS, EPARK_SOURCES, type PriorityDeck, type CaptureLangOption,
 } from '@/lib/db/srs/priority'
 import { getDeckRootedStats } from '@/lib/db/profile/goal'
 import { localDateStr, getStudyDate } from '@/lib/db/srs/flashcards'
@@ -92,8 +93,11 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   const [decks,        setDecks]        = useState<PriorityDeck[]>([])
   const [deckStats,    setDeckStats]    = useState<Record<string, DeckStat>>({})
   const [collections,  setCollections]  = useState<CollectionMeta[]>([])
-  const [addPicker,    setAddPicker]    = useState(false)
-  const [eparkExpanded, setEparkExpanded] = useState(false)
+  const [addPicker,       setAddPicker]       = useState(false)
+  const [eparkExpanded,   setEparkExpanded]   = useState(false)
+  const [capturesExpanded, setCapturesExpanded] = useState(false)
+  const [captureOptions,  setCaptureOptions]  = useState<CaptureLangOption[] | null>(null)
+  const [captureLoading,  setCaptureLoading]  = useState(false)
   const [priorityLoading, setPriorityLoading] = useState(false)
 
   // Simulate tab
@@ -118,6 +122,13 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     if (!open) return
     loadPrefs().then(({ mode, learnTarget: lt }) => loadPriority(mode, lt))
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lazy-load capture language options the first time the captures section expands
+  useEffect(() => {
+    if (!capturesExpanded || captureOptions !== null || captureLoading) return
+    setCaptureLoading(true)
+    listCaptureLanguages().then(opts => { setCaptureOptions(opts); setCaptureLoading(false) })
+  }, [capturesExpanded, captureOptions, captureLoading])
 
   async function loadPrefs(): Promise<{ mode: GoalMode; learnTarget: number }> {
     const supabase = createClient()
@@ -321,6 +332,14 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   )
   const availableEparkSources = EPARK_SOURCES.filter(s => !addedCurriculumSources.has(s.id))
 
+  const addedCaptureKeys = new Set(
+    decks.filter(d => d.note_source === 'captured' && d.filter_config)
+      .map(d => `${d.filter_config!.language}:${d.filter_config!.dialect ?? ''}`)
+  )
+  const availableCaptureOptions = (captureOptions ?? []).filter(
+    o => !addedCaptureKeys.has(`${o.language}:${o.dialect ?? ''}`)
+  )
+
   function deckDisplayName(deck: PriorityDeck): string {
     if (deck.filter_config) return deck.filter_config.label
     if (deck.note_source) return VIRTUAL_DECK_LABELS[deck.note_source] ?? deck.note_source
@@ -359,6 +378,13 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     setAddPicker(false)
     setEparkExpanded(false)
     await addCurriculumSourceDeck(userId, id, label)
+    await loadPriority()
+  }
+
+  async function handleAddCaptureFilter(userId: string, opt: CaptureLangOption) {
+    setAddPicker(false)
+    setCapturesExpanded(false)
+    await addCaptureFilterDeck(userId, opt.language, opt.dialect, opt.label)
     await loadPriority()
   }
 
@@ -478,8 +504,9 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
           )
         })}
 
-        {/* Add deck */}
-        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableEparkSources.length > 0) && (
+        {/* Add deck — show unless nothing is available in any category */}
+        {(availableToAdd.length > 0 || availableVirtual.length > 0 || availableEparkSources.length > 0
+          || captureOptions === null || availableCaptureOptions.length > 0) && (
           <div>
             {addPicker ? (
               <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 12, overflow: 'hidden' }}>
@@ -529,6 +556,42 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
+                {/* Captures — language/dialect filter decks, collapsed by default */}
+                {(captureOptions === null || availableCaptureOptions.length > 0) && (
+                  <>
+                    <button
+                      onClick={() => setCapturesExpanded(p => !p)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                        borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                        Captures
+                      </span>
+                      <Icon name={capturesExpanded ? 'chev-d' : 'chevron'} size={12} color={T.inkFaint} strokeWidth={2}
+                        style={capturesExpanded ? undefined : { transform: 'rotate(90deg)' }} />
+                    </button>
+                    {capturesExpanded && (
+                      captureLoading
+                        ? <div style={{ padding: '10px 22px', fontSize: 13, color: T.inkMute }}>Loading…</div>
+                        : availableCaptureOptions.map(opt => (
+                          <button key={`${opt.language}:${opt.dialect ?? ''}`}
+                            onClick={() => { if (!userId) return; handleAddCaptureFilter(userId, opt) }}
+                            style={{
+                              display: 'block', width: '100%', padding: '10px 14px 10px 22px',
+                              background: 'none', border: 'none',
+                              borderBottom: `1px solid ${T.lineSoft}`, cursor: 'pointer', textAlign: 'left',
+                              fontSize: 14, color: T.ink,
+                            }}>
+                            {opt.label}
+                            <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                          </button>
+                        ))
+                    )}
+                  </>
+                )}
                 {availableToAdd.length > 0 && (
                   <>
                     <div style={{ padding: '8px 14px 4px', fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
@@ -546,7 +609,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                     ))}
                   </>
                 )}
-                <button onClick={() => { setAddPicker(false); setEparkExpanded(false) }} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
+                <button onClick={() => { setAddPicker(false); setEparkExpanded(false); setCapturesExpanded(false) }} style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: T.inkMute }}>
                   Cancel
                 </button>
               </div>

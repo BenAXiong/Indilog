@@ -1,7 +1,12 @@
 import { createClient } from '@/lib/supabase/client'
+import { getLanguage } from '@/lib/languages'
 
+// filter_config is a flexible bag — curriculum rows use curriculum_source; capture rows use language/dialect.
+// Optional fields allow both shapes without a DB migration.
 export type PriorityDeckFilterConfig = {
-  curriculum_source: string  // 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
+  curriculum_source?: string
+  language?: string
+  dialect?: string | null
   label: string
 }
 
@@ -14,6 +19,12 @@ export type PriorityDeck = {
   in_simulation: boolean
   simulation_deadline: string | null
   filter_config: PriorityDeckFilterConfig | null
+}
+
+export type CaptureLangOption = {
+  language: string
+  dialect: string | null
+  label: string
 }
 
 export const VIRTUAL_DECK_LABELS: Record<string, string> = {
@@ -31,21 +42,31 @@ export const EPARK_SOURCES: { id: string; label: string }[] = [
 
 // Consistent priority match used by review and learn pages.
 // Generic virtual deck (filter_config=null) matches all cards with that note_source.
-// Curriculum source decks: 'twelve' matches items with level set; others match items
-// without level (grmpts/essay/dialogue share the same pool until item-level source tracking is added).
+// Curriculum source: 'twelve' matches items with level set; others share the unlabelled pool.
+// Capture filter: matches by language, then optionally dialect (null = any dialect).
 export function matchesPriorityDeck(
   deck: PriorityDeck,
   colId: string | null | undefined,
   src: string | null | undefined,
   level?: number | null,
   lesson?: number | null,
+  language?: string | null,
+  dialect?: string | null,
 ): boolean {
   if (deck.collection_id) return deck.collection_id === colId
   if (!deck.note_source || deck.note_source !== src) return false
   if (deck.filter_config) {
-    const cs = deck.filter_config.curriculum_source
-    if (cs === 'twelve') return level != null
-    return level == null
+    const fc = deck.filter_config
+    if (fc.curriculum_source) {
+      if (fc.curriculum_source === 'twelve') return level != null
+      return level == null
+    }
+    if (fc.language) {
+      if (fc.language !== language) return false
+      if (fc.dialect && fc.dialect !== dialect) return false
+      return true
+    }
+    return false
   }
   return true
 }
@@ -58,6 +79,25 @@ export async function listPriorityDecks(userId: string): Promise<PriorityDeck[]>
     .eq('user_id', userId)
     .order('position', { ascending: true })
   return (data ?? []) as PriorityDeck[]
+}
+
+// Returns distinct (language, dialect) pairs from the user's capture items, sorted by count desc.
+export async function listCaptureLanguages(): Promise<CaptureLangOption[]> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('ind_items')
+    .select('language, dialect')
+    .eq('note_source', 'captured')
+  if (!data) return []
+  const seen = new Map<string, CaptureLangOption>()
+  for (const row of data as { language: string; dialect: string | null }[]) {
+    const key = `${row.language}:${row.dialect ?? ''}`
+    if (seen.has(key)) continue
+    const langName = getLanguage(row.language)?.name ?? row.language
+    const label = row.dialect ?? langName
+    seen.set(key, { language: row.language, dialect: row.dialect, label })
+  }
+  return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label))
 }
 
 async function nextPosition(userId: string): Promise<number> {
@@ -99,6 +139,21 @@ export async function addCurriculumSourceDeck(
     user_id: userId,
     note_source: 'curriculum',
     filter_config: { curriculum_source: curriculumSource, label },
+    position: await nextPosition(userId),
+  })
+}
+
+export async function addCaptureFilterDeck(
+  userId: string,
+  language: string,
+  dialect: string | null,
+  label: string,
+): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_priority_decks').insert({
+    user_id: userId,
+    note_source: 'captured',
+    filter_config: { language, ...(dialect ? { dialect } : {}), label },
     position: await nextPosition(userId),
   })
 }
