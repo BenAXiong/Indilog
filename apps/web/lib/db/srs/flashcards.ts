@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { nextFormoSRS1, nextRelearn, type SMState, type Rating } from './schedule'
-import { listPriorityDecks } from './priority'
+import { listPriorityDecks, matchesPriorityDeck } from './priority'
 
 export type { Rating } from './schedule'
 
@@ -350,16 +350,26 @@ export async function listLearnFlashcards(opts: { collectionId?: string } = {}):
 
   if (opts.collectionId) return pages.sort(byPos)
 
-  // Priority sort: deck position → level → lesson → position; non-priority last
+  // Priority sort: deck position → level → lesson → position; non-priority last.
+  // Matches the same deck (collection OR virtual note_source+filter_config) used by review/learn toast logic.
   const priorityDecks = await listPriorityDecks(user.id)
-  const priorityMap = new Map<string, number>()
-  for (const deck of priorityDecks) if (deck.collection_id) priorityMap.set(deck.collection_id, deck.position)
+  const priorityIdx = (c: FlashcardWithItem) => {
+    const i = priorityDecks.findIndex(d => matchesPriorityDeck(
+      d,
+      c.ind_items?.collection_id,
+      c.ind_items?.note_source,
+      c.ind_items?.level,
+      c.ind_items?.lesson,
+      c.ind_items?.language,
+      c.ind_items?.dialect,
+      c.ind_items?.tags,
+    ))
+    return i === -1 ? Infinity : i
+  }
 
   return pages.sort((a, b) => {
-    const aCol = a.ind_items?.collection_id ?? null
-    const bCol = b.ind_items?.collection_id ?? null
-    const aPri = aCol != null ? (priorityMap.get(aCol) ?? Infinity) : Infinity
-    const bPri = bCol != null ? (priorityMap.get(bCol) ?? Infinity) : Infinity
+    const aPri = priorityIdx(a)
+    const bPri = priorityIdx(b)
     if (aPri !== bPri) return aPri - bPri
     if (aPri !== Infinity) return byPos(a, b)
     return 0

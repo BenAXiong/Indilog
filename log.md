@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-01 01:29 | FIX | listLearnFlashcards priority sort only considered collection_id-based decks, ignoring virtual note_source decks (curriculum/captured/dict) entirely — Learn never actually prioritized them when picking new cards. Now uses matchesPriorityDeck for full collection+virtual-deck matching, same as Review/toast logic |
 | 2026-06-30 02:30 | FEATURE | Dictionary picker: collapsible section with language subdecks + dialect/#tag toggles, mirrors Captures; listVirtualDeckLangGroups(noteSource)/addVirtualDeckFilterDeck generalize both; NOTE_SOURCE_LABELS replaces VIRTUAL_DECK_LABELS for display |
 | 2026-06-30 02:05 | REFACTOR | Capture picker: tags as extra toggles per row — each All/dialect row has a #tag button that expands tag sub-options inline; dialect+tag combos supported; stale rows (base+all tags added) hidden |
 | 2026-06-30 01:42 | FEATURE | Capture picker: language rows collapsible into dialects + tags; listCaptureLangGroups() returns CaptureLangGroup[] with dialects+tags per language; tag field in PriorityDeckFilterConfig; matchesPriorityDeck 8th param tags[]; review/learn pages pass tags |
