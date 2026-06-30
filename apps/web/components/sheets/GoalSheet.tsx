@@ -539,7 +539,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                   </div>
                 )}
                 {isVirtual && (
-                  <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 3 }}>review only</div>
+                  <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 3 }}>no simulation</div>
                 )}
               </div>
 
@@ -584,7 +584,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                         fontSize: 14, color: T.ink,
                       }}>
                         {VIRTUAL_DECK_LABELS[src]}
-                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                       </button>
                     ))}
                   </>
@@ -613,7 +613,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                         fontSize: 14, color: T.ink,
                       }}>
                         {s.label}
-                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                        <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                       </button>
                     ))}
                   </>
@@ -644,7 +644,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                             fontSize: 14, color: T.ink,
                           }}>
                             All dictionary
-                            <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                            <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                           </button>
                         )}
                         {dictLoading
@@ -689,7 +689,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                                                 cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
                                               }}>
                                                 All {group.label}
-                                                <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                                <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                                               </button>
                                             ) : (
                                               <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>All {group.label}</span>
@@ -728,7 +728,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                                                   cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
                                                 }}>
                                                   {d.label}
-                                                  <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                                  <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                                                 </button>
                                               ) : (
                                                 <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>{d.label}</span>
@@ -791,7 +791,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                             fontSize: 14, color: T.ink,
                           }}>
                             All captures
-                            <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                            <span style={{ fontSize: 11.5, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                           </button>
                         )}
                         {captureLoading
@@ -839,7 +839,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                                                 cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
                                               }}>
                                                 All {group.label}
-                                                <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                                <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                                               </button>
                                             ) : (
                                               <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>All {group.label}</span>
@@ -879,7 +879,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
                                                   cursor: 'pointer', textAlign: 'left', fontSize: 13.5, color: T.ink,
                                                 }}>
                                                   {d.label}
-                                                  <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>review only</span>
+                                                  <span style={{ fontSize: 11, color: T.inkMute, marginLeft: 8 }}>no simulation</span>
                                                 </button>
                                               ) : (
                                                 <span style={{ flex: 1, padding: '10px 8px 10px 32px', fontSize: 13.5, color: T.inkFaint }}>{d.label}</span>
