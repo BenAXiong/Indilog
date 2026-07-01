@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-01 11:22 | FIX | EditCardSheet: stopPropagation on keyDown so Enter while editing doesn't trigger card flip/advance below |
 | 2026-07-01 11:13 | FEATURE | Session header: pen button (left of gear) opens EditCardSheet to edit ab/zh inline; updateItem writes to DB and patches in-memory queue entry; both learn and review sessions |
 | 2026-07-01 10:05 | FEATURE | Session header: dialect shown in English via shortDialectLabel/DIALECT_TO_EN (e.g. "Malan" not "馬蘭阿美語"); deck name shown below lang·dia as second line, ellipsable; both learn and review sessions updated |
 | 2026-07-01 09:48 | FEATURE | Learn shuffle exposure: Off/All/Per-deck 3-way control; "per deck" shuffles within each priority deck independently so deck order is preserved; srs_shuffle_exposure now stores 'none'/'all'/'deck' (legacy 'true' reads as 'all') |

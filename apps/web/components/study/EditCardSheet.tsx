@@ -30,7 +30,7 @@ export function EditCardSheet({
 
   return (
     <SessionOptionsSheet onClose={onClose}>
-      <div style={{ padding: '0 16px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div onKeyDown={e => e.stopPropagation()} style={{ padding: '0 16px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
           <label style={{ display: 'block', fontFamily: '"JetBrains Mono", monospace', fontSize: 9.5, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
             Aboriginal
