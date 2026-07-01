@@ -26,6 +26,7 @@ import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterS
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
 import { EditCardSheet, type EditCardPatch } from '@/components/study/EditCardSheet'
+import { GradeBadge } from '@/components/study/GradeBadge'
 import { SessionCard } from '@/components/study/SessionCard'
 import { ReviewEnd } from '@/components/study/ReviewEnd'
 import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
@@ -619,9 +620,9 @@ function ReviewSession({
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
           <div style={{ width: `${(handledCount / Math.max(totalCards, 1)) * 100}%`, height: '100%', background: T.crimson, borderRadius: 999, transition: 'width .3s' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 5, minHeight: 20 }}>
-          {/* Left: returning indicator */}
-          <div />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5, minHeight: 20 }}>
+          {/* Left: maturity pill */}
+          <GradeBadge card={card} />
           {/* Right: counter stacked above undo */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600, letterSpacing: '0.01em' }}>

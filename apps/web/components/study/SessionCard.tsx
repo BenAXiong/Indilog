@@ -2,7 +2,6 @@
 
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
-import { GradeBadge } from '@/components/study/GradeBadge'
 import { FlagPicker } from '@/components/study/FlagPicker'
 import { SwipeOverlay, computeSwipePhysics } from '@/components/study/SwipeOverlay'
 import { CardFront, type CardMode } from '@/components/study/CardContent'
@@ -69,8 +68,6 @@ export function SessionCard({
       }}
     >
       <SwipeOverlay drag={drag} gradingFly={gradingFly} horizontalLabels={horizontalLabels} />
-
-      <GradeBadge card={card} />
 
       <FlagPicker
         currentFlag={currentFlag}

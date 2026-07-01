@@ -24,6 +24,7 @@ import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterS
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
 import { EditCardSheet, type EditCardPatch } from '@/components/study/EditCardSheet'
+import { GradeBadge } from '@/components/study/GradeBadge'
 import { SessionCard } from '@/components/study/SessionCard'
 import { LearnEnd } from '@/components/study/LearnEnd'
 import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
@@ -569,20 +570,23 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
         <div style={{ height: 4, background: T.lineSoft, borderRadius: 999, overflow: 'hidden' }}>
           <div style={{ width: `${(graduatedCount / Math.max(totalInitial, 1)) * 100}%`, height: '100%', background: T.sage, borderRadius: 999, transition: 'width .4s' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 5 }}>
-          {undoCount > 0 && (
-            <button onClick={handleUndo} style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft,
-            }}>
-              <Icon name="rotate-ccw" size={13} strokeWidth={2} color={T.inkSoft} />
-              undo
-            </button>
-          )}
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600 }}>
-            {graduatedCount} / {totalInitial}
-          </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
+          <GradeBadge card={card} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {undoCount > 0 && (
+              <button onClick={handleUndo} style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft,
+              }}>
+                <Icon name="rotate-ccw" size={13} strokeWidth={2} color={T.inkSoft} />
+                undo
+              </button>
+            )}
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12.5, color: T.inkSoft, fontWeight: 600 }}>
+              {graduatedCount} / {totalInitial}
+            </span>
+          </div>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-01 12:03 | FEATURE | Move maturity pill (seed/planted/rooted/blooming) from card top-center to below progress bar, left-aligned opposite the session counter; both learn and review sessions |
 | 2026-07-01 11:22 | FIX | EditCardSheet: stopPropagation on keyDown so Enter while editing doesn't trigger card flip/advance below |
 | 2026-07-01 11:13 | FEATURE | Session header: pen button (left of gear) opens EditCardSheet to edit ab/zh inline; updateItem writes to DB and patches in-memory queue entry; both learn and review sessions |
 | 2026-07-01 10:05 | FEATURE | Session header: dialect shown in English via shortDialectLabel/DIALECT_TO_EN (e.g. "Malan" not "馬蘭阿美語"); deck name shown below lang·dia as second line, ellipsable; both learn and review sessions updated |
