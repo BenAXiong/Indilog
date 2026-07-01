@@ -14,9 +14,10 @@ import {
   type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { patchPreferences } from '@/lib/db/profile/preferences'
-import { getLangName } from '@/lib/lang/lang-bridge'
+import { getLangName, getGlid } from '@/lib/lang/lang-bridge'
+import { shortDialectLabel } from '@/lib/lang/dialects'
 import { createClient } from '@/lib/supabase/client'
-import { listPriorityDecks, matchesPriorityDeck, type PriorityDeck } from '@/lib/db/srs/priority'
+import { listPriorityDecks, matchesPriorityDeck, NOTE_SOURCE_LABELS, type PriorityDeck } from '@/lib/db/srs/priority'
 import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
@@ -332,6 +333,14 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   const { card, exposureDone, goodCount } = entry
   const lang = cardMeta(card)
+  const dialLabel = lang.dialect ? shortDialectLabel(lang.dialect, getGlid(lang.language) ?? '') : null
+  const deckName = (() => {
+    const deck = ctx.priorityDecks.find(d => matchesPriorityDeck(d, card.ind_items?.collection_id, card.ind_items?.note_source, card.ind_items?.level, card.ind_items?.lesson, card.ind_items?.language, card.ind_items?.dialect, card.ind_items?.tags))
+    if (!deck) return null
+    if (deck.filter_config?.label) return deck.filter_config.label
+    if (deck.note_source) return NOTE_SOURCE_LABELS[deck.note_source] ?? null
+    return card.ind_items?.ind_learn_collections?.name ?? null
+  })()
 
   const targetWord  = card.ind_items?.target_word ?? null
   const hasZh       = !!(card.ind_items?.zh)
@@ -518,9 +527,14 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
           <Icon name="close" size={16} strokeWidth={2} />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em' }}>
-            {getLangName(lang.language)}{lang.dialect ? ` · ${lang.dialect}` : ''}
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {getLangName(lang.language)}{dialLabel ? ` · ${dialLabel}` : ''}
           </div>
+          {deckName && (
+            <div style={{ fontSize: 11.5, color: T.inkMute, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {deckName}
+            </div>
+          )}
         </div>
         <button onClick={() => setShowOptions(true)} aria-label="Session options" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
