@@ -19,11 +19,13 @@ import { shortDialectLabel } from '@/lib/lang/dialects'
 import { estimateInterval, formatDays, computeMasteryGrade, type SMState } from '@/lib/db/srs/schedule'
 import { createClient } from '@/lib/supabase/client'
 import { patchPreferences } from '@/lib/db/profile/preferences'
+import { updateItem } from '@/lib/db/notebook/items'
 import { listPriorityDecks, matchesPriorityDeck, NOTE_SOURCE_LABELS, type PriorityDeck } from '@/lib/db/srs/priority'
 import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
+import { EditCardSheet, type EditCardPatch } from '@/components/study/EditCardSheet'
 import { SessionCard } from '@/components/study/SessionCard'
 import { ReviewEnd } from '@/components/study/ReviewEnd'
 import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
@@ -174,6 +176,7 @@ function ReviewSession({
   const gradeHistoryRef                    = useRef(new Map<string, Rating[]>())
   const [revealed,       setRevealed]      = useState(false)
   const [showOptions,    setShowOptions]   = useState(false)
+  const [showEdit,       setShowEdit]      = useState(false)
   const [showHardEasy,   setShowHardEasyRaw] = useState(true)
   const [showButtons,    setShowButtonsRaw]  = useState(true)
   const [cardFlags,      setCardFlags]     = useState<Record<string, string | null>>({})
@@ -494,6 +497,15 @@ function ReviewSession({
     setFlagColor(card.id, color)
   }
 
+  async function handleEditSave(patch: EditCardPatch) {
+    await updateItem(card.note_id, { ab: patch.ab || undefined, zh: patch.zh || undefined })
+    updateQueue(q => q.map((e, i) => i !== qIdx || !e.card.ind_items ? e : {
+      ...e,
+      card: { ...e.card, ind_items: { ...e.card.ind_items, ab: patch.ab, zh: patch.zh || null } },
+    }))
+    setShowEdit(false)
+  }
+
   const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
     flying:    !!gradingFly,
     setDrag,
@@ -536,6 +548,13 @@ function ReviewSession({
           )}
         </div>
 
+        <button onClick={() => setShowEdit(true)} aria-label="Edit card" style={{
+          width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
+        }}>
+          <Icon name="pen" size={15} strokeWidth={1.7} />
+        </button>
         <button onClick={() => setShowOptions(true)} aria-label="Session options" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -844,6 +863,9 @@ function ReviewSession({
       })()}
 
       {/* Options sheet */}
+      {showEdit && (
+        <EditCardSheet card={card} onSave={handleEditSave} onClose={() => setShowEdit(false)} />
+      )}
       {showOptions && (
         <OptionsSheet
           showHardEasy={showHardEasy}       setShowHardEasy={setShowHardEasy}

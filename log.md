@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-01 11:13 | FEATURE | Session header: pen button (left of gear) opens EditCardSheet to edit ab/zh inline; updateItem writes to DB and patches in-memory queue entry; both learn and review sessions |
 | 2026-07-01 10:05 | FEATURE | Session header: dialect shown in English via shortDialectLabel/DIALECT_TO_EN (e.g. "Malan" not "馬蘭阿美語"); deck name shown below lang·dia as second line, ellipsable; both learn and review sessions updated |
 | 2026-07-01 09:48 | FEATURE | Learn shuffle exposure: Off/All/Per-deck 3-way control; "per deck" shuffles within each priority deck independently so deck order is preserved; srs_shuffle_exposure now stores 'none'/'all'/'deck' (legacy 'true' reads as 'all') |
 | 2026-07-01 01:48 | FIX | GoalSheet: relabel misleading "review only" tag (on virtual/curriculum/dict deck rows) to "no simulation" — per DEC-M5-01 ALL cards including captures/curriculum go through Learn before Review (repetitions===0 boundary, no note_source exception); the old label only ever meant "no Simulation toggle" (Simulation requires collection_id) but read as "skips Learn", which it never did |

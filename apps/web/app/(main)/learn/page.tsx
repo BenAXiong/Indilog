@@ -13,6 +13,7 @@ import {
   flushReviewEvents, getStudyDate, undoGraduateLearnCard,
   type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
+import { updateItem } from '@/lib/db/notebook/items'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { getLangName, getGlid } from '@/lib/lang/lang-bridge'
 import { shortDialectLabel } from '@/lib/lang/dialects'
@@ -22,6 +23,7 @@ import { CardBack, resolveEffectiveMode } from '@/components/study/CardContent'
 import { LangFilterSection, SessionToggle } from '@/components/study/LangFilterSection'
 import { ReviewModeSelector } from '@/components/study/ReviewModeSelector'
 import { SessionOptionsSheet } from '@/components/study/SessionOptionsSheet'
+import { EditCardSheet, type EditCardPatch } from '@/components/study/EditCardSheet'
 import { SessionCard } from '@/components/study/SessionCard'
 import { LearnEnd } from '@/components/study/LearnEnd'
 import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
@@ -215,6 +217,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   })
   const testShuffledRef = useRef(false)
   const [showOptions,   setShowOptions]   = useState(false)
+  const [showEdit,      setShowEdit]      = useState(false)
   const [showAllLangs,  setShowAllLangsRaw]  = useState(true)
   const [excludedLangs, setExcludedLangsRaw] = useState<string[]>([])
   const [overflow,      setOverflow]      = useState<FlashcardWithItem[]>(initialOverflow)
@@ -226,6 +229,15 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     await setFlagColor(card.id, color)
     setCardFlags(prev => ({ ...prev, [card.id]: color }))
     setShowFlagPicker(false)
+  }
+
+  async function handleEditSave(patch: EditCardPatch) {
+    await updateItem(card.note_id, { ab: patch.ab || undefined, zh: patch.zh || undefined })
+    setQueue(q => q.map((e, i) => i !== qIdx || !e.card.ind_items ? e : {
+      ...e,
+      card: { ...e.card, ind_items: { ...e.card.ind_items, ab: patch.ab, zh: patch.zh || null } },
+    }))
+    setShowEdit(false)
   }
   const graduatedRef       = useRef(new Set<string>())
   const priorityToastRef   = useRef(false)
@@ -536,6 +548,13 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
             </div>
           )}
         </div>
+        <button onClick={() => setShowEdit(true)} aria-label="Edit card" style={{
+          width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: T.inkSoft, flexShrink: 0, cursor: 'pointer',
+        }}>
+          <Icon name="pen" size={15} strokeWidth={1.7} />
+        </button>
         <button onClick={() => setShowOptions(true)} aria-label="Session options" style={{
           width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -673,6 +692,11 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
           </div>
         ) : null}
       </div>
+
+      {/* Edit card sheet */}
+      {showEdit && (
+        <EditCardSheet card={card} onSave={handleEditSave} onClose={() => setShowEdit(false)} />
+      )}
 
       {/* Options sheet */}
       {showOptions && (
