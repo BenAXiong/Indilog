@@ -103,20 +103,25 @@ async function loadLearnContext(): Promise<LearnContext> {
 function LearnOptionsSheet({
   reviewMode, setReviewMode,
   shuffleTests, setShuffleTests,
-  shuffleExposure, setShuffleExposure,
+  shuffleExposureMode, setShuffleExposureMode,
   showAllLangs, setShowAllLangs,
   excludedLangs, setExcludedLangs,
   onReloadNeeded,
   onClose,
 }: {
-  reviewMode:      string;   setReviewMode:      (v: string) => void
-  shuffleTests:    boolean;  setShuffleTests:    (v: boolean) => void
-  shuffleExposure: boolean;  setShuffleExposure: (v: boolean) => void
-  showAllLangs:    boolean;  setShowAllLangs:    (v: boolean) => void
-  excludedLangs:   string[]; setExcludedLangs:   (v: string[]) => void
+  reviewMode:          string;                     setReviewMode:          (v: string) => void
+  shuffleTests:        boolean;                    setShuffleTests:        (v: boolean) => void
+  shuffleExposureMode: 'none' | 'all' | 'deck';   setShuffleExposureMode: (v: 'none' | 'all' | 'deck') => void
+  showAllLangs:        boolean;                    setShowAllLangs:        (v: boolean) => void
+  excludedLangs:       string[];                   setExcludedLangs:       (v: string[]) => void
   onReloadNeeded: () => void
   onClose: () => void
 }) {
+  const shuffleModes: { value: 'none' | 'all' | 'deck'; label: string }[] = [
+    { value: 'none', label: 'Off'      },
+    { value: 'all',  label: 'All'      },
+    { value: 'deck', label: 'Per deck' },
+  ]
   return (
     <SessionOptionsSheet onClose={onClose}>
       <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 16, margin: '0 14px', overflow: 'hidden' }}>
@@ -127,12 +132,30 @@ function LearnOptionsSheet({
           on={shuffleTests}
           onToggle={() => { const v = !shuffleTests; setShuffleTests(v); localStorage.setItem('srs_shuffle_tests', String(v)); patchPreferences({ shuffle_tests: v }) }}
         />
-        <SessionToggle
-          label="Shuffle exposure"
-          sub="Randomize exposure phase order"
-          on={shuffleExposure}
-          onToggle={() => { const v = !shuffleExposure; setShuffleExposure(v); localStorage.setItem('srs_shuffle_exposure', String(v)); patchPreferences({ shuffle_exposure: v }); onReloadNeeded() }}
-        />
+        {/* Shuffle exposure — 3-way: Off / All / Per deck */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: `1px solid ${T.lineSoft}` }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>Shuffle exposure</div>
+            <div style={{ fontSize: 12, color: T.inkMute, marginTop: 2 }}>
+              {shuffleExposureMode === 'none' ? 'Off — strict priority order' : shuffleExposureMode === 'all' ? 'All cards mixed together' : 'Random within each deck'}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 4, background: T.lineSoft, borderRadius: 8, padding: 3 }}>
+            {shuffleModes.map(m => (
+              <button key={m.value} onClick={() => { setShuffleExposureMode(m.value); localStorage.setItem('srs_shuffle_exposure', m.value); onReloadNeeded() }} style={{
+                padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                background: shuffleExposureMode === m.value ? T.paperHi : 'transparent',
+                color: shuffleExposureMode === m.value ? T.ink : T.inkMute,
+                fontFamily: '"JetBrains Mono", monospace', fontSize: 10, fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+                boxShadow: shuffleExposureMode === m.value ? '0 1px 3px rgba(40,20,10,0.1)' : 'none',
+                transition: 'background .12s',
+              }}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <LangFilterSection
           showAllLangs={showAllLangs}    setShowAllLangs={setShowAllLangs}
           excludedLangs={excludedLangs}  setExcludedLangs={setExcludedLangs}
@@ -153,15 +176,42 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   onReloadNeeded: () => void
 }) {
   const [queue, setQueue] = useState<LearnEntry[]>(() => {
-    const shuffleExp = localStorage.getItem('srs_shuffle_exposure') === 'true'
-    const ordered = shuffleExp ? [...cards].sort(() => Math.random() - 0.5) : cards
+    const raw = localStorage.getItem('srs_shuffle_exposure')
+    const mode: 'none' | 'all' | 'deck' = raw === 'deck' ? 'deck' : (raw === 'true' || raw === 'all') ? 'all' : 'none'
+    let ordered: FlashcardWithItem[]
+    if (mode === 'all') {
+      ordered = [...cards].sort(() => Math.random() - 0.5)
+    } else if (mode === 'deck') {
+      const groups = new Map<number, FlashcardWithItem[]>()
+      for (const c of cards) {
+        const idx = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(
+          d, c.ind_items?.collection_id, c.ind_items?.note_source,
+          c.ind_items?.level, c.ind_items?.lesson,
+          c.ind_items?.language, c.ind_items?.dialect, c.ind_items?.tags,
+        ))
+        const key = idx === -1 ? Infinity : idx
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(c)
+      }
+      const sortedKeys = [...groups.keys()].sort((a, b) => (a === Infinity ? 1 : b === Infinity ? -1 : a - b))
+      ordered = sortedKeys.flatMap(k => {
+        const g = [...groups.get(k)!]
+        for (let i = g.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [g[i], g[j]] = [g[j], g[i]] }
+        return g
+      })
+    } else {
+      ordered = cards
+    }
     return ordered.map(c => ({ card: c, exposureDone: false, goodCount: 0 }))
   })
   const [qIdx,           setQIdx]           = useState(0)
   const [revealed,       setRevealed]       = useState(false)
   const [reviewMode,     setReviewModeRaw]  = useState('forward')
   const [shuffleTests,   setShuffleTestsRaw]   = useState(() => localStorage.getItem('srs_shuffle_tests') !== 'false')
-  const [shuffleExposure, setShuffleExposureRaw] = useState(() => localStorage.getItem('srs_shuffle_exposure') === 'true')
+  const [shuffleExposureMode, setShuffleExposureModeRaw] = useState<'none' | 'all' | 'deck'>(() => {
+    const raw = localStorage.getItem('srs_shuffle_exposure')
+    return raw === 'deck' ? 'deck' : (raw === 'true' || raw === 'all') ? 'all' : 'none'
+  })
   const testShuffledRef = useRef(false)
   const [showOptions,   setShowOptions]   = useState(false)
   const [showAllLangs,  setShowAllLangsRaw]  = useState(true)
@@ -615,7 +665,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
         <LearnOptionsSheet
           reviewMode={reviewMode}             setReviewMode={setReviewMode}
           shuffleTests={shuffleTests}         setShuffleTests={setShuffleTestsRaw}
-          shuffleExposure={shuffleExposure}   setShuffleExposure={setShuffleExposureRaw}
+          shuffleExposureMode={shuffleExposureMode}   setShuffleExposureMode={setShuffleExposureModeRaw}
           showAllLangs={showAllLangs}         setShowAllLangs={setShowAllLangs}
           excludedLangs={excludedLangs}       setExcludedLangs={setExcludedLangs}
           onReloadNeeded={onReloadNeeded}

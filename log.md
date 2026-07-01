@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-01 09:48 | FEATURE | Learn shuffle exposure: Off/All/Per-deck 3-way control; "per deck" shuffles within each priority deck independently so deck order is preserved; srs_shuffle_exposure now stores 'none'/'all'/'deck' (legacy 'true' reads as 'all') |
 | 2026-07-01 01:48 | FIX | GoalSheet: relabel misleading "review only" tag (on virtual/curriculum/dict deck rows) to "no simulation" — per DEC-M5-01 ALL cards including captures/curriculum go through Learn before Review (repetitions===0 boundary, no note_source exception); the old label only ever meant "no Simulation toggle" (Simulation requires collection_id) but read as "skips Learn", which it never did |
 | 2026-07-01 01:29 | FIX | listLearnFlashcards priority sort only considered collection_id-based decks, ignoring virtual note_source decks (curriculum/captured/dict) entirely — Learn never actually prioritized them when picking new cards. Now uses matchesPriorityDeck for full collection+virtual-deck matching, same as Review/toast logic |
 | 2026-06-30 02:30 | FEATURE | Dictionary picker: collapsible section with language subdecks + dialect/#tag toggles, mirrors Captures; listVirtualDeckLangGroups(noteSource)/addVirtualDeckFilterDeck generalize both; NOTE_SOURCE_LABELS replaces VIRTUAL_DECK_LABELS for display |
