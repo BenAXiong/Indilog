@@ -82,29 +82,37 @@ async function newContext(browser) {
 const logLen = page =>
   page.evaluate(() => JSON.parse(localStorage.getItem('iv_perf_log') ?? '[]').length)
 
-async function waitSample(page, prevLen) {
-  await page.waitForFunction(
-    n => JSON.parse(localStorage.getItem('iv_perf_log') ?? '[]').length > n,
-    prevLen, { timeout: 30_000 },
-  )
-  const log = await page.evaluate(() => JSON.parse(localStorage.getItem('iv_perf_log') ?? '[]'))
-  return log[log.length - 1]
+// Waits for a sample of the EXPECTED flow, skipping unrelated ones — background
+// samples (queue-ready) land asynchronously and must not satisfy another flow's wait.
+async function waitSample(page, prevLen, flowMatch) {
+  const deadline = Date.now() + 30_000
+  while (Date.now() < deadline) {
+    const log = await page.evaluate(() => JSON.parse(localStorage.getItem('iv_perf_log') ?? '[]'))
+    for (let i = prevLen; i < log.length; i++) {
+      const s = log[i]
+      if (!flowMatch || s.flow === flowMatch || s.flow === `cold:${flowMatch}`) return s
+    }
+    await page.waitForTimeout(150)
+  }
+  throw new Error(`waitSample: timeout waiting for ${flowMatch ?? 'any sample'}`)
 }
 
 const results = []
 const record = s => { results.push({ flow: s.flow, ms: s.ms }); process.stdout.write(`  ${s.flow} ${s.ms}ms\n`) }
 
-async function clickFlow(page, selector) {
+async function clickFlow(page, selector, flow) {
   const n = await logLen(page)
   // .filter visible — the desktop sidebar duplicates nav links, hidden at mobile width
   await page.locator(selector).filter({ visible: true }).first().click()
-  record(await waitSample(page, n))
+  record(await waitSample(page, n, flow))
+  return n
 }
 
-async function gotoFlow(page, url) {
+async function gotoFlow(page, url, flow) {
   const n = await logLen(page)
   await page.goto(BASE + url)
-  record(await waitSample(page, n))
+  record(await waitSample(page, n, flow))
+  return n
 }
 
 // ── Run ───────────────────────────────────────────────────────────────────────
@@ -131,7 +139,7 @@ for (let i = 0; i < COLD; i++) {
   try {
     console.log(`cold run ${i + 1}/${COLD}`)
     await page.goto(`${BASE}/`)
-    record(await waitSample(page, 0))
+    record(await waitSample(page, 0, 'home'))
   } catch (e) { console.error(`  cold run failed: ${e.message.split('\n')[0]}`) }
   await ctx.close()
 }
@@ -140,23 +148,25 @@ for (let i = 0; i < COLD; i++) {
 const ctx = await newContext(browser)
 const page = await ctx.newPage()
 await page.goto(`${BASE}/`)
-await waitSample(page, 0).catch(() => {})   // absorb the initial cold:home
+await waitSample(page, 0, 'home').catch(() => {})   // absorb the initial cold:home
 
 for (let run = 1; run <= RUNS; run++) {
   console.log(`warm round ${run}/${RUNS}`)
   try {
-    await clickFlow(page, 'a[href="/study"]')                          // F1 study-hub
-    await clickFlow(page, 'a[href="/study/lessons"]')                  // F2 epark-twelve
+    await clickFlow(page, 'a[href="/study"]', 'study-hub')                          // F1
+    await clickFlow(page, 'a[href="/study/lessons"]', 'epark-twelve')               // F2
     for (let i = 0; i < 3; i++)
-      await clickFlow(page, 'button:has-text("Next")')                 // F3 next-lesson ×3
-    await clickFlow(page, 'a[href="/study"]')                          // back (study-hub again)
-    await clickFlow(page, 'a[href="/study/essays"]')                   // F4 epark-essay
-    await clickFlow(page, 'a[href="/study"]')                          // back
-    await clickFlow(page, 'a[href^="/review?noteSource=curriculum"]')  // F5 review-landing
-    await clickFlow(page, 'a[href="/dict"]')                           // F8 dict (control)
-    await clickFlow(page, 'a[href="/"]')                               // F7 home (RSC)
-    await gotoFlow(page, '/learn')                                     // F6 cold:learn-landing
-    await gotoFlow(page, '/')                                          // reset for next round
+      await clickFlow(page, 'button:has-text("Next")', 'epark-twelve')              // F3 ×3
+    await clickFlow(page, 'a[href="/study"]', 'study-hub')                          // back
+    await clickFlow(page, 'a[href="/study/essays"]', 'epark-essay')                 // F4
+    await clickFlow(page, 'a[href="/study"]', 'study-hub')                          // back
+    const nRev = await clickFlow(page, 'a[href^="/review?noteSource=curriculum"]', 'review-landing')  // F5
+    record(await waitSample(page, nRev, 'review-queue-ready'))                      // S11c background phase
+    await clickFlow(page, 'a[href="/dict"]', 'dict')                                // F8 (control)
+    await clickFlow(page, 'a[href="/"]', 'home')                                    // F7 (RSC)
+    const nLearn = await gotoFlow(page, '/learn', 'learn-landing')                  // F6
+    record(await waitSample(page, nLearn, 'learn-queue-ready'))                     // S11c background phase
+    await gotoFlow(page, '/', 'home')                                               // reset for next round
   } catch (e) {
     console.error(`  round ${run} aborted: ${e.message.split('\n')[0]}`)
     await page.goto(`${BASE}/`).catch(() => {})

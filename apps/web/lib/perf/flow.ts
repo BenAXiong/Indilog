@@ -82,9 +82,14 @@ export function flowDone(flow: string, meta?: Record<string, unknown>) {
     const click = takeClick()
     let ms: number
     let name = flow
-    if (click) {
+    if (click && performance.now() >= click.t) {
       ms = performance.now() - click.t
       try { sessionStorage.removeItem(CLICK_KEY) } catch {}
+    } else if (click) {
+      // stale marker from a previous page's clock (sessionStorage survives hard
+      // navigations but performance.now() resets) — discard, record nothing
+      try { sessionStorage.removeItem(CLICK_KEY) } catch {}
+      return
     } else if (!coldRecorded) {
       ms = performance.now()
       name = `cold:${flow}`

@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 23:04 | FIX | Perf harness: flow-matched waitSample (async queue-ready samples misattributed to next flow, killed home/learn measurements); flow.ts discards stale cross-page click markers (negative deltas) |
 | 2026-07-03 22:58 | FEATURE | Perf S11c: two-phase session loading — landing paints from countDueFlashcards/countLearnFlashcards + context while the full queue (overflow buffer intact per DEC-M5-01) downloads in background; Begin/autostart await queueReady (Preparing… state on early tap); queue-ready duration recorded via recordManual |
 | 2026-07-03 22:49 | FIX | getStudyStats: paginate instead of .limit(10000) (PostgREST caps at 1000 — stats computed on 1000 of 2572 cards); !inner fix verified in prod (Saved deck n=366 exact, review-landing 1094ms); byproduct-fixes section added to perf-log.md |
 | 2026-07-03 22:44 | FIX | ind_items!inner in CARD_SEL + conditional ind_flashcards!inner in listBrowserCards — embed filters were nulling instead of excluding, so custom/filtered sessions loaded the ENTIRE pool with blank cards (Saved deck: 2394 loaded vs 366 real; broken since f42db26 predicate pushdown); verified live via PostgREST probe |
