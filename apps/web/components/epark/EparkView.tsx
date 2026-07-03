@@ -147,15 +147,18 @@ export default function EparkView({ source }: Props) {
     }
   }, [source, dialect, titleZh, navItems])
 
+  // Selection key — pack lookup key, and PerfMark refire signal
+  const contentKey = source === 'twelve' ? `Level ${level} Lesson ${lesson}`
+    : source === 'grmpts' ? `${level}::${pattern}`
+    : titleZh
+
   // ── Fetch curriculum data — content pack first, API fallback ───────────────
   useEffect(() => {
     if (!dialect) return
     const isIndexed = source !== 'twelve' && source !== 'grmpts'
     if (isIndexed && !titleZh) return
 
-    const packKey = source === 'twelve' ? `Level ${level} Lesson ${lesson}`
-      : source === 'grmpts' ? `${level}::${pattern}`
-      : titleZh
+    const packKey = contentKey
 
     let cancelled = false
     setLoading(true)
@@ -367,7 +370,9 @@ export default function EparkView({ source }: Props) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <PerfMark flow={`epark-${source}`} when={!loading && results.length > 0} meta={{ n: results.length }} />
+      {/* signal = first rendered row, so back-to-back pack loads (no committed
+          loading frame) still refire once the NEW lesson's content is painted */}
+      <PerfMark flow={`epark-${source}`} when={!loading && results.length > 0} signal={results[0]?.original_uuid} meta={{ n: results.length }} />
       {/* Custom header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '8px 18px 10px',
