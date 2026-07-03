@@ -1,5 +1,6 @@
 {
   "installCommand": "cd ../.. && pnpm install",
   "buildCommand": "pnpm build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "regions": ["syd1"]
 }

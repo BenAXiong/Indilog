@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 10:39 | CONFIG | Perf S1: pin Vercel functions to syd1 (co-located with Supabase Sydney) — was defaulting to iad1, adding ~200ms per function↔DB round trip |
 | 2026-07-03 10:38 | FIX | Perf harness: filter visible elements (desktop sidebar duplicates nav links); S0 baseline recorded in perf-log.md — study-hub 2.8s, review-landing 4.0s, epark 0.9–1.7s, dict control 44ms |
 | 2026-07-03 10:30 | FEATURE | Perf harness: mint-session.mjs — admin magiclink → session → @supabase/ssr cookie chunks; bypasses Google OAuth automation block; re-mint before each round (1h token life) |
 | 2026-07-03 10:26 | FIX | Perf harness --login: wait for sb-auth-token cookie (OAuth detours off /login broke the old wait), verify saved session headlessly, session guard at measure start fails loud instead of timing out per flow |
