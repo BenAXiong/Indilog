@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { ensureFlashcards } from '@/lib/db/srs/flashcards'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export async function pinCollection(id: string, pinned: boolean): Promise<boolean> {
   const supabase = createClient()
@@ -17,7 +18,7 @@ export async function saveCollection(
   levels: LevelInput[],
 ): Promise<string | null> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return null
 
   const { data: col, error: colErr } = await supabase
@@ -82,7 +83,7 @@ export type CollectionMeta = {
 
 export async function listCollections(language?: string): Promise<CollectionMeta[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return []
   let q = supabase
     .from('ind_learn_collections')

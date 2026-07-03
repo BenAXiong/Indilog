@@ -12,6 +12,7 @@ import { getGlid, getDialectsForLang } from '@/lib/lang/lang-bridge'
 import { shortDialectLabel } from '@/lib/lang/dialects'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import type { User } from '@supabase/supabase-js'
+import { getSessionUser } from '@/lib/supabase/session'
 
 function SettingsContent() {
   const searchParams = useSearchParams()
@@ -48,7 +49,7 @@ function SettingsContent() {
   // Fetch user identity and locale only — lang/dialect come from LangDialectProvider
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    getSessionUser().then((user) => {
       if (!user) return
       setUser(user)
       setUserId(user.id)

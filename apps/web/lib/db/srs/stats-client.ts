@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { localDateStr } from './flashcards'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type CollectionStat = {
   id: string
@@ -54,7 +55,7 @@ function accumulateCard(
 
 export async function getStudyStats(): Promise<StudyStats> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return EMPTY
 
   const now = new Date().toISOString()

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import { shortDialectLabel } from '@/lib/lang/dialects'
 import type { Language } from '@/lib/languages'
+import { getSessionUser } from '@/lib/supabase/session'
 
 const DEFAULT_LANG: Language = LANGUAGES[0] // Amis
 
@@ -54,7 +55,7 @@ export function LangDialectProvider({ children }: { children: ReactNode }) {
     setDialectLabelState(cachedD ? shortDialectLabel(cachedD, getGlid(cachedL.code) ?? '01') : null)
 
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    getSessionUser().then((user) => {
       if (!user) return
       setUserId(user.id)
       supabase

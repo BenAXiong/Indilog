@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui'
 import { patchPreferences } from '@/lib/db/profile/preferences'
 import { createClient } from '@/lib/supabase/client'
 import type { FlashcardWithItem, Rating } from '@/lib/db/srs/flashcards'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ type SessionReturning = { total: number; newCards: number; plantedOrAbove: numbe
 async function countSessionReturning(cardIds: string[]): Promise<SessionReturning> {
   if (!cardIds.length) return { total: 0, newCards: 0, plantedOrAbove: 0 }
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { total: 0, newCards: 0, plantedOrAbove: 0 }
   const now = new Date().toISOString()
   const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
@@ -36,7 +37,7 @@ async function countSessionReturning(cardIds: string[]): Promise<SessionReturnin
 
 async function countDueTomorrow(): Promise<number> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return 0
   const now = new Date().toISOString()
   const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')

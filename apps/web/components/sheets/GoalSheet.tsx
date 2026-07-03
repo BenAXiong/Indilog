@@ -15,6 +15,7 @@ import { localDateStr, getStudyDate } from '@/lib/db/srs/flashcards'
 import { listCollections, type CollectionMeta } from '@/lib/db/progress/collections'
 import { projectSimulation, buildCurveFromDays, type SimulationCurve, type TodayTarget } from '@/lib/db/srs/simulation-client'
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,7 +147,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   async function loadPrefs(): Promise<{ mode: GoalMode; learnTarget: number }> {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getSessionUser()
     if (!user) return { mode: 'manual', learnTarget: 10 }
     const { data } = await supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle()
     const prefs = data?.preferences as Record<string, unknown> | null
@@ -164,7 +165,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
   async function loadPriority(initialMode?: GoalMode, initialLearnTarget?: number) {
     setPriorityLoading(true)
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getSessionUser()
     if (!user) { setPriorityLoading(false); return }
     const [decksData, cols] = await Promise.all([
       listPriorityDecks(user.id),
@@ -495,7 +496,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     const [userId, setUserId] = useState<string | null>(null)
     useEffect(() => {
       const supabase = createClient()
-      supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null))
+      getSessionUser().then((user) => setUserId(user?.id ?? null))
     }, [])
 
     if (priorityLoading) {
@@ -981,7 +982,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
     // Persist mode and deadline — learn_target/review_target prefs stay as the user's manual values
     await patchPreferences({ goal_mode: 'calculated' })
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getSessionUser()
     if (!user) return
     for (const d of decks.filter(dk => dk.in_simulation && dk.collection_id)) {
       await setPriorityDeckSimulation(user.id, d.collection_id!, true, simDeadline)

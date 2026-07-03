@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type UserPreferences = {
   review_target:     number
@@ -42,7 +43,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 
 export async function patchPreferences(patch: Partial<UserPreferences>): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
   const { data } = await supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).single()
   const current = { ...DEFAULT_PREFERENCES, ...(data?.preferences as Partial<UserPreferences>) }

@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { listUserLanguages, getStudyDate } from '@/lib/db/srs/flashcards'
 import { savePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/lib/db/profile/preferences'
 import type { User } from '@supabase/supabase-js'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ── Settings sheet ────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    getSessionUser().then((user) => {
       if (!user) return
       setUser(user); setUserId(user.id)
       supabase.from('ind_profiles').select('ui_locale, preferences').eq('user_id', user.id).single()

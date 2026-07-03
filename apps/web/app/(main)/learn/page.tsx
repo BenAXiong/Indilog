@@ -32,6 +32,7 @@ import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
 import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
 import { useUndoStack } from '@/lib/hooks/useUndoStack'
 import PerfMark from '@/components/perf/PerfMark'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ type LearnUndoEntry =
 
 async function loadLearnContext(): Promise<LearnContext> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { learnedToday: 0, learnTarget: 10, priorityDecks: [] }
 
   const today = getStudyDate()

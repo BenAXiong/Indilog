@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { localDateStr } from './flashcards'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type SimulationDay   = { day: number; learn: number; review: number }
 export type SimulationCurve = Array<{ label: string; learnTarget: number; reviewTarget: number }>
@@ -50,7 +51,7 @@ export async function projectSimulation(params: {
   if (!collectionIds.length || !deadline) return null
 
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return null
 
   const todayMs  = new Date(localDateStr()).getTime()

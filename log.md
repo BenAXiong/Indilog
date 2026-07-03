@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 11:12 | REFACTOR | Perf S3: getSessionUser() (local session read) replaces auth.getUser() network round trip at 57 client callsites; server-side code (middleware, server.ts, stats-server, API routes) keeps getUser; RLS still authorizes every query |
 | 2026-07-03 11:07 | CONFIG | Perf S2 measured: epark-essay 1729→180ms (−90%), epark-twelve 562→361ms (min 79ms edge HIT); first-visit-per-lesson still ~S1 cost until S8 content pack — verdict keep (perf-log.md) |
 | 2026-07-03 10:50 | CONFIG | Perf S2: /api/learn/curriculum + geometry excluded from auth middleware (public corpus data) and CDN-cached (s-maxage=86400, swr=604800); corpus DB edits appear after ≤1 day or next deploy |
 | 2026-07-03 10:48 | CONFIG | Perf S1 measured: home RSC 2529→796ms (−69%), cold start 2575→858ms (−67%), epark-twelve 913→562ms (−38%); client-query flows flat as expected — verdict keep (perf-log.md) |

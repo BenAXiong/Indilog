@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { setFlagColor, suspendCard, unsuspendCard } from '@/lib/db/srs/flashcards'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export { setFlagColor, suspendCard, unsuspendCard }
 
@@ -35,7 +36,7 @@ export type VideoCollection = {
 
 export async function listVideoCollections(): Promise<VideoCollection[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return []
 
   const { data: videoItems } = await supabase
@@ -76,7 +77,7 @@ export async function listVideoCollections(): Promise<VideoCollection[]> {
 
 export async function listCollectionVideoCards(collectionId: string): Promise<VideoCard[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return []
   const { data } = await supabase
     .from('ind_items')
@@ -112,7 +113,7 @@ export async function mergeVideoCards(
 ): Promise<VideoCard | null> {
   if (cards.length < 2) return null
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return null
 
   const first = cards[0]

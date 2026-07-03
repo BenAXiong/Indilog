@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/progress/collections'
 import { ensureFlashcards } from '@/lib/db/srs/flashcards'
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 type LessonGroup = { lesson: number; cards: CollectionCard[] }
 type LevelGroup  = { level: number; lessons: LessonGroup[] }
@@ -61,7 +62,7 @@ export default function CollectionPage() {
       )
 
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await getSessionUser()
       if (!user) return
       await ensureFlashcards()
       const now = new Date().toISOString()

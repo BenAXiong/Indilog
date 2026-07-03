@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type SourceType = 'person' | 'media' | 'reference'
 
@@ -24,7 +25,7 @@ function defined(obj: Record<string, unknown>): Record<string, unknown> {
 
 export async function listSources(): Promise<Source[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return []
   const { data, error } = await supabase
     .from('ind_sources')
@@ -37,7 +38,7 @@ export async function listSources(): Promise<Source[]> {
 
 export async function createSource(input: CreateSourceInput): Promise<Source | null> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return null
   const { data, error } = await supabase
     .from('ind_sources')

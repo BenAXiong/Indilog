@@ -34,6 +34,7 @@ import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
 import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
 import { useUndoStack } from '@/lib/hooks/useUndoStack'
 import PerfMark from '@/components/perf/PerfMark'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ function cardSMState(card: FlashcardWithItem): SMState {
 
 async function loadSessionContext(): Promise<SessionContext> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null }
 
   const today   = getStudyDate()
@@ -212,7 +213,7 @@ function ReviewSession({
     if (!showInspect || !cardId) return
     setInspectHistory(null)
     const sb = createClient()
-    sb.auth.getUser().then(({ data: { user } }) => {
+    getSessionUser().then((user) => {
       if (!user) return
       sb.from('ind_reviews')
         .select('id, rating, mode, phase, reviewed_at, due_at')

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type Speaker = {
   id: string
@@ -10,7 +11,7 @@ export type Speaker = {
 
 export async function createSpeaker(name: string): Promise<Speaker | null> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return null
 
   const { data, error } = await supabase

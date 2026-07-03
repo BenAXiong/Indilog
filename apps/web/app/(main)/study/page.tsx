@@ -16,6 +16,7 @@ import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/a
 import BrowserView from '@/components/study/BrowserView'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
 import PerfMark from '@/components/perf/PerfMark'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ─── Due badge ───────────────────────────────────────────────────────────────
 
@@ -338,7 +339,7 @@ function StudyPageInner() {
 
   useEffect(() => {
     const sb = createClient()
-    sb.auth.getUser().then(({ data: { user } }) => {
+    getSessionUser().then((user) => {
       if (!user) return
       const now = new Date().toISOString()
       Promise.all([

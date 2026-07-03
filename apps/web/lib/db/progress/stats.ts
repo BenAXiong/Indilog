@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { getStudyDate } from '@/lib/db/srs/flashcards'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type DashboardStats = {
   streak: number
@@ -18,7 +19,7 @@ export type DashboardStats = {
 
 export async function getDashboardStats(language?: string): Promise<DashboardStats> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
 
   const empty: DashboardStats = {
     streak: 0, capturedTotal: 0, capturedToday: 0,

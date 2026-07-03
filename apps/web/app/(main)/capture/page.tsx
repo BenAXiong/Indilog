@@ -18,6 +18,7 @@ import { GLID_FAMILIES, shortDialectLabel } from '@/lib/lang/dialects'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import InlineSelector from '@/components/capture/InlineSelector'
 import BatchImport from '@/components/capture/BatchImport'
+import { getSessionUser } from '@/lib/supabase/session'
 
 type LookupRow    = { word_ab: string; word_ch: string; dialect_name: string; vocab_source: string }
 type LookupResult = { token: string; rows: LookupRow[] }
@@ -135,11 +136,11 @@ function CapturePageInner() {
   }, [])
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data: { user } }) => {
+    getSessionUser().then((user) => {
       if (user) setUserId(user.id)
     })
     listSources().then(setSources)
-    createClient().auth.getUser().then(async ({ data: { user } }) => {
+    getSessionUser().then(async (user) => {
       if (!user) return
       const { data } = await createClient().from('ind_items').select('place_heard').eq('user_id', user.id).not('place_heard', 'is', null)
       const places = [...new Set((data ?? []).map((r: { place_heard: string }) => r.place_heard).filter(Boolean))].sort() as string[]

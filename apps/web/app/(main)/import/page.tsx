@@ -9,6 +9,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import { createItem } from '@/lib/db/notebook/items'
 import { createClient } from '@/lib/supabase/client'
 import { getLanguage } from '@/lib/languages'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ── IndiHunt Import Format v1 ─────────────────────────────────────────────────
 // Extension encoding: btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(payload))))
@@ -96,7 +97,7 @@ export default function ImportPage() {
     if (pageState !== 'checking' || !payload) return
     async function check() {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await getSessionUser()
       if (!user) { setPageState('unauth'); return }
 
       const abs   = [...new Set(payload!.items.map(i => i.ab))]

@@ -9,6 +9,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import { createItem } from '@/lib/db/notebook/items'
 import { createClient } from '@/lib/supabase/client'
 import { getLanguage } from '@/lib/languages'
+import { getSessionUser } from '@/lib/supabase/session'
 
 // ── Bridge protocol ───────────────────────────────────────────────────────────
 // Source: INDIVORE_OWNED_IMPORT_HANDOFF.md §4
@@ -136,7 +137,7 @@ export default function ImportExtensionPage() {
     setPageState('bridge-uploading')
 
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getSessionUser()
     if (!user) { setPageState('unauth'); return }
 
     const raw = itemsRef.current
@@ -258,7 +259,7 @@ export default function ImportExtensionPage() {
     if (pageState !== 'checking' || !payload) return
     async function check() {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = await getSessionUser()
       if (!user) { setPageState('unauth'); return }
 
       const abs   = [...new Set(payload!.items.map(i => i.ab))]

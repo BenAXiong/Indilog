@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { nextFormoSRS1, nextRelearn, type SMState, type Rating } from './schedule'
 import { listPriorityDecks, matchesPriorityDeck } from './priority'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type { Rating } from './schedule'
 
@@ -16,7 +17,7 @@ export type PendingReviewEvent = {
 export async function flushReviewEvents(events: PendingReviewEvent[]): Promise<void> {
   if (!events.length) return
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
   await supabase.from('ind_reviews').insert(events.map(e => ({ ...e, user_id: user.id })))
 }
@@ -77,7 +78,7 @@ export async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]>
 
 export async function ensureFlashcards(): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
 
   // Paginate both queries in parallel — plain .select() is capped at 1000 rows server-side
@@ -101,7 +102,7 @@ export async function ensureFlashcards(): Promise<void> {
 
 export async function setTargetWord(noteId: string, targetWord: string | null): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
 
   await supabase.from('ind_items').update({ target_word: targetWord }).eq('id', noteId).eq('user_id', user.id)
@@ -140,7 +141,7 @@ export function getStudyDate(): LocalDateString {
 
 export async function getExcludeFromReview(): Promise<{ collections: string[]; captures: boolean }> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { collections: [], captures: false }
   const [colRes, profRes] = await Promise.all([
     supabase.from('ind_learn_collections').select('id').eq('user_id', user.id).eq('include_in_review', false),
@@ -160,7 +161,7 @@ export type DueStats = {
 
 export async function listCustomSessionMeta(): Promise<{ types: string[]; tags: string[]; places: string[] }> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { types: [], tags: [], places: [] }
   const { data } = await supabase.from('ind_items').select('type, tags, place_heard').eq('user_id', user.id)
   const types  = [...new Set((data ?? []).map(r => r.type).filter(Boolean) as string[])].sort()
@@ -171,7 +172,7 @@ export async function listCustomSessionMeta(): Promise<{ types: string[]; tags: 
 
 export async function listUserLanguages(): Promise<string[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return []
   const rows = await paginate<{ language: string }>(
     () => supabase.from('ind_items').select('language').eq('user_id', user.id),
@@ -201,7 +202,7 @@ export async function getDueStats(
   opts: { excludeLangs?: string[]; excludeCollections?: string[]; excludeCaptures?: boolean } = {},
 ): Promise<DueStats> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { total: 0, captures: 0, byCollection: {} }
 
   const now = new Date().toISOString()
@@ -312,7 +313,7 @@ export async function graduateLearnCard(
   type: 'good' | 'easy',
 ): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
 
   const today = getStudyDate()
@@ -327,7 +328,7 @@ export async function graduateLearnCard(
 
 export async function listLearnFlashcards(opts: { collectionId?: string } = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return []
 
   const pages = await paginate<FlashcardWithItem>(
@@ -386,7 +387,7 @@ export async function rateCardRelearn(
   storeRating?: string,
 ): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
 
   const { due_at, new_state } = nextRelearn(currentState, rating, lapsedInterval)
@@ -434,7 +435,7 @@ async function wipeReviewsAndReset(supabase: ReturnType<typeof createClient>, us
 
 export async function resetCollectionSRS(collectionId: string): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
   const rows = await paginate<{ id: string }>(
     () => supabase.from('ind_items').select('id').eq('collection_id', collectionId),
@@ -446,7 +447,7 @@ export async function resetCollectionSRS(collectionId: string): Promise<void> {
 
 export async function resetCapturesSRS(): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
   const rows = await paginate<{ id: string }>(
     () => supabase.from('ind_items').select('id').eq('user_id', user.id).neq('note_source', 'collection'),
@@ -473,7 +474,7 @@ type PrevSMState = { ease_factor: number; interval_days: number; repetitions: nu
 
 export async function undoRating(cardId: string, prevState: PrevSMState): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
 
   const today = getStudyDate()
@@ -531,7 +532,7 @@ export async function undoGraduateLearnCard(
   prevState: { ease_factor: number; interval_days: number; repetitions: number; due_at: string | null },
 ): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
 
   const today = getStudyDate()
@@ -584,7 +585,7 @@ export async function rateCard(
   mode?: string,
 ): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return
 
   const { due_at, new_state } = nextFormoSRS1(currentState, rating)

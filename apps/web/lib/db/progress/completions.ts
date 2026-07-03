@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export async function fetchCompletions(language: string, source: string): Promise<Set<string>> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return new Set()
   const { data } = await supabase
     .from('ind_completions')
@@ -17,7 +18,7 @@ export async function markComplete(
   language: string, source: string, itemKey: string,
 ): Promise<boolean> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return false
   const { error } = await supabase
     .from('ind_completions')
@@ -29,7 +30,7 @@ export async function unmarkComplete(
   language: string, source: string, itemKey: string,
 ): Promise<boolean> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return false
   const { error } = await supabase
     .from('ind_completions')

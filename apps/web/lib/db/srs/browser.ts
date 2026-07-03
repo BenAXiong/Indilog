@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { paginate } from './flashcards'
+import { getSessionUser } from '@/lib/supabase/session'
 export { suspendCard, unsuspendCard, setFlagColor } from './flashcards'
 
 export type BrowserCard = {
@@ -42,7 +43,7 @@ export async function listBrowserCards(
   videoOnly?: boolean,
 ): Promise<BrowserCard[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return []
 
   const now = new Date().toISOString()

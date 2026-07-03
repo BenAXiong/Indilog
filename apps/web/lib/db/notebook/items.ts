@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type ItemType = 'word' | 'sentence' | 'note'
 
@@ -36,7 +37,7 @@ function defined(obj: Record<string, unknown>): Record<string, unknown> {
 
 export async function createItem(input: CreateItemInput): Promise<Item | null> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return null
 
   const { data, error } = await supabase

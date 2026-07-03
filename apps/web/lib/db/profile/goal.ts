@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/client'
+import { getSessionUser } from '@/lib/supabase/session'
 
 export type DeckRootedStats = { total: number; rooted: number }
 
 export async function getDeckRootedStats(collectionId: string): Promise<DeckRootedStats> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { total: 0, rooted: 0 }
 
   const [totalRes, rootedRes] = await Promise.all([
@@ -32,7 +33,7 @@ export type DeckMasteryStats = { total: number; seed: number; planted: number; r
 
 export async function getDeckMasteryStats(collectionId: string): Promise<DeckMasteryStats> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getSessionUser()
   if (!user) return { total: 0, seed: 0, planted: 0, rooted: 0, blooming: 0 }
 
   const sel = 'id, ind_items!inner(collection_id)'
