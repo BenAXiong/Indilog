@@ -23,21 +23,38 @@ const has  = name => args.includes(`--${name}`)
 
 const BASE = opt('base', 'https://indilog.vercel.app')
 const STEP = opt('step', 'S?')
-const RUNS = parseInt(opt('runs', '5'), 10)
-const COLD = parseInt(opt('cold', '2'), 10)
+const RUNS = Number.parseInt(opt('runs', '5'), 10)
+const COLD = Number.parseInt(opt('cold', '2'), 10)
 
 // ── One-time login ────────────────────────────────────────────────────────────
+// Waits for the actual Supabase session cookie (sb-…-auth-token), not just a
+// navigation — OAuth detours through accounts.google.com before returning.
+const hasSessionCookie = cookies => cookies.some(c => /^sb-.+-auth-token(\.\d+)?$/.test(c.name))
+
 if (has('login')) {
   const browser = await chromium.launch({ headless: false })
   const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } })
   const page = await ctx.newPage()
   await page.goto(`${BASE}/login`)
-  console.log('Log in in the browser window… (waiting up to 5 min for redirect off /login)')
-  await page.waitForURL(u => !u.pathname.startsWith('/login'), { timeout: 300_000 })
+  console.log('Log in in the browser window… (waiting up to 5 min for the session cookie)')
+  const deadline = Date.now() + 300_000
+  while (!hasSessionCookie(await ctx.cookies(BASE))) {
+    if (Date.now() > deadline) { console.error('Timed out — no session cookie appeared.'); process.exit(1) }
+    await page.waitForTimeout(1000)
+  }
   await page.waitForTimeout(1500)
   await ctx.storageState({ path: AUTH })
-  console.log(`Saved session → ${AUTH}`)
   await browser.close()
+
+  // Verify: a fresh headless context with this state must reach the app, not /login.
+  const check = await chromium.launch()
+  const cctx = await check.newContext({ storageState: AUTH })
+  const cpage = await cctx.newPage()
+  await cpage.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
+  const landed = new URL(cpage.url()).pathname
+  await check.close()
+  if (landed.startsWith('/login')) { console.error('Session saved but not accepted (landed on /login). Try again.'); process.exit(1) }
+  console.log(`Session verified (landed on ${landed}) → ${AUTH}`)
   process.exit(0)
 }
 
@@ -91,6 +108,20 @@ async function gotoFlow(page, url) {
 
 // ── Run ───────────────────────────────────────────────────────────────────────
 const browser = await chromium.launch({ headless: !has('headed') })
+
+// Session guard — fail loud instead of timing out on every flow.
+{
+  const ctx = await newContext(browser)
+  const page = await ctx.newPage()
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' })
+  const landed = new URL(page.url()).pathname
+  await ctx.close()
+  if (landed.startsWith('/login')) {
+    console.error('Session expired/invalid — rerun:  node scripts/perf/measure.mjs --login')
+    await browser.close()
+    process.exit(1)
+  }
+}
 
 // Cold starts: fresh context each, straight to home.
 for (let i = 0; i < COLD; i++) {
