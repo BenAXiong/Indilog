@@ -47,3 +47,7 @@ packages/amis1k/convert.js
 packages/dictionary/ycm_master.db
 
 .vercel
+
+# perf harness — session + raw results stay local
+scripts/perf/.auth.json
+scripts/perf/results/

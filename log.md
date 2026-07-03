@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 10:05 | FEATURE | Perf campaign Step 0b: Playwright browser harness (scripts/perf/measure.mjs) replaces phone as primary measurement; plan/log split into docs/perf-plan.md + docs/perf-log.md; added S8 dialect content pack step (Malan Amis = 3131 sentences ≈ 472KB raw) |
 | 2026-07-03 09:43 | FEATURE | Perf campaign Step 0: click→paint flow instrumentation (?perf=1 HUD, PerfMark on home/study-hub/epark/learn/review/dict), ind_perf_samples table + upload, Server-Timing on curriculum route, docs/perf-plan.md with baselines + S1–S9 step log incl. Tokyo/Sing migration |
 | 2026-07-01 12:03 | FEATURE | Move maturity pill (seed/planted/rooted/blooming) from card top-center to below progress bar, left-aligned opposite the session counter; both learn and review sessions |
 | 2026-07-01 11:22 | FIX | EditCardSheet: stopPropagation on keyDown so Enter while editing doesn't trigger card flip/advance below |
