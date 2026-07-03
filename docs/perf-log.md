@@ -43,6 +43,35 @@ _(pending)_
 
 ---
 
+## S1 — Pin Vercel functions to Sydney — 2026-07-03
+
+**Deploy**: d1dce02 (indilog-2oex4xeon) · `X-Vercel-Id: hkg1::syd1::…` confirmed
+
+### Machine probes
+| Probe | p50 | Δ vs S0 |
+|---|---|---|
+| edge static `/login` | 0.19 | ✓ control flat |
+| function no-DB `/auth/callback` | **0.31** | **−0.11s** (HK→SYD closer than HK→IAD) |
+
+### Harness flow medians (`--step S1`)
+| Flow | p50 (ms) | Δ vs S0 | n |
+|---|---|---|---|
+| cold:home | **858** | **−1717 (−67%)** | 7 |
+| cold:learn-landing | 3492 | −64 (flat) | 5 |
+| dict (control) | 45 | ✓ flat | 5 |
+| epark-essay | 1729 | +51 (flat) | 5 |
+| epark-twelve | **562** | **−351 (−38%)** | 20 |
+| home (RSC) | **796** | **−1733 (−69%)** | 5 |
+| review-landing | 4028 | +18 (flat) | 5 |
+| study-hub | 2778 | −1 (flat) | 15 |
+
+**Verdict**: **keep** — everything routed through functions collapsed (home −69%, cold start −67%,
+lesson content −38%); flows bound by client→Sydney query stacks (study-hub, review-landing,
+learn) didn't move, exactly as diagnosed — those are S3–S5. Essay flat: its serial
+geometry→curriculum waterfall dominates (S6).
+
+---
+
 <!-- Template for each step:
 
 ## S1 — <name> — YYYY-MM-DD
