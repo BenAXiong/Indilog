@@ -149,7 +149,7 @@ review-landing ~2.7s → ~1.6s, study-hub ~760 → ~550ms, home ~670 → ~500ms;
 project gets consolidated, or with one month of Pro for the transition window.
 (Read-replica alternative rejected: SRS writes on every card rating would still go to Sydney.)
 
-### S11 — Session-queue loading (a+b DONE 2026-07-03; c optional)
+### S11 — Session-queue loading (a+b+c DONE 2026-07-03)
 **Problem**: after S1–S5, `review-landing` (2.7s) and `learn-landing` (2.8s) are dominated by
 `listDueFlashcards` / `listLearnFlashcards` downloading the **entire** due/new queue with joined
 item data, even though a session uses only `sessionCap` cards.

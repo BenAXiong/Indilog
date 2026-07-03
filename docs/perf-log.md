@@ -220,6 +220,31 @@ page boundaries deterministic (callers without ORDER BY were unsound under OFFSE
 
 ---
 
+## S11c — Two-phase session loading (landing-first paint) — 2026-07-03
+
+**Deploy**: S11c + a harness fix (flow-matched waits; async queue-ready samples had
+misattributed one round, producing a negative learn number — measurement artifact, not app).
+
+### Harness flow medians (`--step S11c`, clean rerun)
+| Flow | p50 (ms) | Δ vs S11ab | n |
+|---|---|---|---|
+| cold:home | 721 | −136 | 7 |
+| cold:learn-landing | **471** | **−1394 (−75%)** | 5 |
+| dict (control) | 46 | ✓ flat | 5 |
+| epark-essay / twelve | 97 / 30 | flat | 5 / 20 |
+| home (RSC) | 613 | −98 | 5 |
+| review-landing | **680** | **−520 (−43%)** | 5 |
+| study-hub | 673 | −35 | 15 |
+| review-queue-ready (bg) | 985 | new metric | 5 |
+| learn-queue-ready (bg) | 1539 | new metric | 5 |
+
+**Verdict**: **keep** — landings paint from a fast count (same predicates as the queue fetch via
+shared builder) while the full queue (overflow buffer intact, DEC-M5-01) loads behind; Begin
+shows "Preparing…" if tapped before queue-ready, which lands ~0.3–1.1s after paint — rarely
+visible in practice. Displayed N reconciles when the queue lands.
+
+---
+
 ## Byproduct correctness fixes (found by campaign probing, not perf steps)
 
 1. **Embed filters excluded nothing** — `.filter('ind_items.x', …)` on non-inner embeds nulls
@@ -234,21 +259,22 @@ page boundaries deterministic (callers without ORDER BY were unsound under OFFSE
    capped at 1000 by PostgREST (DEC-SRS04 class). Fix: `paginate<T>` helper.
 3. **Nondeterministic page boundaries** — paginate had no ORDER BY tiebreaker (fixed in S11a).
 
-## Campaign summary (2026-07-03, S0 → S11ab)
+## Campaign summary (2026-07-03, S0 → S11c final)
 
-| Flow | S0 | now | Δ |
+| Flow | S0 | final | Δ |
 |---|---|---|---|
-| Study content (lessons) | 913 | **23** | **−97%** |
-| Study content (essays) | 1678 | **103** | **−94%** |
-| Study hub | 2779 | **747** | −73% |
-| Dashboard (RSC) | 2529 | **711** | −72% |
-| Cold app start | 2575 | **857** | −67% |
-| Review landing | 4010 | **1200** | **−70%** |
-| Learn landing | 3556 | **1865** | −48% |
-| dict (control) | 44 | 34 | ✓ stable all day |
+| Study content (lessons) | 913 | **30** | **−97%** |
+| Study content (essays) | 1678 | **97** | **−94%** |
+| Review landing | 4010 | **680** | **−83%** |
+| Learn landing | 3556 | **471** | **−87%** |
+| Study hub | 2779 | **673** | −76% |
+| Dashboard (RSC) | 2529 | **613** | −76% |
+| Cold app start | 2575 | **721** | −72% |
+| dict (control) | 44 | 46 | ✓ stable all day |
 
-Remaining on the board: S11c (landing-first paint, UX decision) · S10 Tokyo migration
-(deferred — shared project + free-tier slots).
+Every flow now paints in well under a second; Study content is near-instant and offline-capable.
+Remaining on the board: S10 Tokyo migration only (deferred — shared project + free-tier slots;
+would roughly halve the queue-ready background times and the remaining DB-bound flows).
 
 ---
 
