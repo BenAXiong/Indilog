@@ -25,6 +25,7 @@ import LookupInline from '@/components/lookup/LookupInline'
 import SettingsPanel, { type ZhMode } from './SettingsPanel'
 import { type LayoutMode, LAYOUT_CYCLE, LAYOUT_META } from '@/lib/eparkTokens'
 import PerfMark from '@/components/perf/PerfMark'
+import { getPackRows } from '@/lib/learn/packs'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
 
@@ -146,30 +147,43 @@ export default function EparkView({ source }: Props) {
     }
   }, [source, dialect, titleZh, navItems])
 
-  // ── Fetch curriculum data ───────────────────────────────────────────────────
+  // ── Fetch curriculum data — content pack first, API fallback ───────────────
   useEffect(() => {
     if (!dialect) return
+    const isIndexed = source !== 'twelve' && source !== 'grmpts'
+    if (isIndexed && !titleZh) return
 
-    let params: URLSearchParams
+    const packKey = source === 'twelve' ? `Level ${level} Lesson ${lesson}`
+      : source === 'grmpts' ? `${level}::${pattern}`
+      : titleZh
 
-    if (source === 'twelve') {
-      params = new URLSearchParams({ source, dialect, level, title_zh: `Level ${level} Lesson ${lesson}` })
-    } else if (source === 'grmpts') {
-      params = new URLSearchParams({ source, dialect, level, title_zh: pattern })
-    } else {
-      // essay / dialogue — route looks up by index; navItems must be loaded
-      if (!titleZh || !navItems.length) return
-      const item = navItems.find(i => i.title_zh === titleZh)
-      if (!item) return
-      params = new URLSearchParams({ source, dialect, index: String(item.index) })
-    }
-
+    let cancelled = false
     setLoading(true)
-    fetch(`/api/learn/curriculum?${params}`)
-      .then(r => r.json())
-      .then((d: { results: CurriculumRow[] }) => setResults(d.results ?? []))
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false))
+    getPackRows(dialect, source, packKey).then(rows => {
+      if (cancelled) return
+      if (rows) { setResults(rows); setLoading(false); return }
+
+      // Fallback: no pack for this dialect (or key missing) → API
+      let params: URLSearchParams
+      if (source === 'twelve') {
+        params = new URLSearchParams({ source, dialect, level, title_zh: packKey })
+      } else if (source === 'grmpts') {
+        params = new URLSearchParams({ source, dialect, level, title_zh: pattern })
+      } else {
+        // route looks up by index; navItems must be loaded (effect re-runs when they land)
+        if (!navItems.length) return
+        const item = navItems.find(i => i.title_zh === titleZh)
+        if (!item) { setResults([]); setLoading(false); return }
+        params = new URLSearchParams({ source, dialect, index: String(item.index) })
+      }
+
+      fetch(`/api/learn/curriculum?${params}`)
+        .then(r => r.json())
+        .then((d: { results: CurriculumRow[] }) => { if (!cancelled) setResults(d.results ?? []) })
+        .catch(() => { if (!cancelled) setResults([]) })
+        .finally(() => { if (!cancelled) setLoading(false) })
+    })
+    return () => { cancelled = true }
   }, [source, dialect, level, lesson, titleZh, pattern, navItems])
 
   // Reset card index when lesson changes

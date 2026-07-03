@@ -99,26 +99,22 @@ paginated 1000/page, on every Study hub + review load) with one
 every due row to the client.
 **Expected**: study-hub −100–400ms depending on due count.
 
-### S6 — Ship `corpus_geometry.json` client-side (kill the essays waterfall)
-**Change**: import geometry in the client bundle (~300KB raw ≈ ~40KB gz, cached with the bundle)
-instead of `/api/learn/geometry`; EparkView computes navOrder locally, removing the serial
-geometry→curriculum fetch for essays/dialogues/conversations.
-**Expected**: epark-essay ≈ epark-twelve (one fetch instead of two).
+### S6 — Ship `corpus_geometry.json` client-side — **SUPERSEDED, skipped**
+S2's edge cache already serves geometry in ~50ms warm, and S8's pack removes the content fetch
+entirely; the waterfall this targeted no longer costs enough to spend a deploy on.
 
-### S7 — Stale-while-revalidate content + prefetch
-**Change**: cache last-viewed lesson sentences per selection key (localStorage), paint instantly,
-revalidate in background; prefetch next/prev lesson on idle.
-**Expected**: next-lesson → near-0 perceived; repeat epark-twelve → near-0.
-**Note**: evaluate after S2/S8 — may be largely superseded by the dialect content pack.
+### S7 — Stale-while-revalidate content + prefetch — **SUPERSEDED, skipped**
+Same reasoning: S2 covers repeat fetches at the edge, S8 covers everything for packed dialects.
 
 ### S8 — Dialect content pack (Amis first)
-**Change**: precompute one JSON pack per dialect with the **entire** study content
-(twelve/grmpts/essay/dialogue/con_practice). Measured: Malan Amis = 3,131 sentences ≈ **472KB raw
-≈ ~120KB gzipped** — smaller than many single images. Serve as a static CDN asset (or Supabase
-Storage), download on first use into IndexedDB, version by a pack hash; EparkView reads locally
-and falls back to the API for dialects without a pack.
-**Expected**: all epark content loads → ~0ms network after first visit; works offline (audio still
-streams from klokah.tw). Most users are Amis (Malan) — highest-value dialect first.
+**Change (as built)**: `scripts/build-content-packs.mjs` bakes per-dialect JSON packs into
+`public/packs/` (CDN-served, version-busted by content hash) + `lib/learn/pack-manifest.json`.
+Two packs: `amis-malan` (twelve/essay/dialogue/con_practice, 3,131 rows, 654KB raw) and
+`amis-grammar` (grmpts lives under the language-level dialect_name 阿美語, 2,021 rows, 348KB).
+Client (`lib/learn/packs.ts`) caches packs in IndexedDB; EparkView reads pack-first with API
+fallback for unpacked dialects/keys. Rebuild + commit after corpus edits.
+**Expected**: all epark content loads → ~0ms network after first pack download; works offline
+(audio still streams from klokah.tw).
 
 ### S9 — Middleware: `getUser()` → `getClaims()` (local JWT verification)
 **Change**: per current Supabase guidance, verify the JWT locally in middleware instead of a
@@ -139,6 +135,21 @@ every earlier step's measurement stays valid — this shifts the whole baseline 
 - [ ] Migration window; repoint `NEXT_PUBLIC_SUPABASE_URL`/keys in Vercel env + Grimoire extension + scripts
 - [ ] Flip `vercel.json` regions to match; re-run full protocol as **S10**
 **Expected**: user↔DB −80–100ms per round trip on top of everything above.
+
+### S11 — Cap session-queue fetches (PROPOSAL — needs behavior decision)
+**Problem**: after S1–S5, `review-landing` (2.7s) and `learn-landing` (2.8s) are dominated by
+`listDueFlashcards` / `listLearnFlashcards` downloading the **entire** due/new queue with joined
+item data, even though a session uses only `sessionCap` cards.
+**Sketch**: fetch `sessionCap + buffer` rows with a DB `LIMIT`, plus a cheap count for the
+badge/overflow numbers.
+**Why it needs a decision first**: both functions apply **priority-deck ordering client-side
+across the full queue** (`listLearnFlashcards` sorts by priority deck → level/lesson/position;
+review sorts due cards by priority deck). A naive DB LIMIT selects cards *before* priority
+ordering, changing which cards enter a session — that's SRS behavior, not just perf. Options:
+push priority ordering into SQL (needs the virtual-deck matching logic server-side), or fetch
+per-priority-deck in order until the cap is filled. Read `CONTEXT.md` + priority-deck ADRs and
+get sign-off before implementing.
+**Expected if done**: review/learn landings well under 1s.
 
 ## Out of scope
 - Audio files come from `web.klokah.tw` (external).
