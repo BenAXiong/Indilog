@@ -72,6 +72,33 @@ geometry→curriculum waterfall dominates (S6).
 
 ---
 
+## S2 — Corpus API public + CDN-cached — 2026-07-03
+
+**Deploy**: ec7520a (indilog-f4m7jf3ku) · unauthenticated 200 confirmed, `X-Vercel-Cache: MISS→HIT`
+
+### Machine probes
+| Probe | p50 | Notes |
+|---|---|---|
+| corpus API repeat (HIT) | 0.11–0.37s | curl pays fresh TLS each call; in-app warm connection ≈ 30–80ms |
+
+### Harness flow medians (`--step S2`)
+| Flow | p50 (ms) | Δ vs S1 | n |
+|---|---|---|---|
+| cold:home | 889 | +31 (flat) | 7 |
+| cold:learn-landing | 3520 | +28 (flat) | 5 |
+| dict (control) | 44 | ✓ flat | 5 |
+| epark-essay | **180** | **−1549 (−90%)** | 5 |
+| epark-twelve | **361** | **−201 (−36%)**, min **79** | 20 |
+| home (RSC) | 842 | +46 (flat) | 5 |
+| review-landing | 4010 | −18 (flat) | 5 |
+| study-hub | 2795 | +17 (flat) | 15 |
+
+**Verdict**: **keep** — content flows now serve from the HK edge on repeat visits (essay 1.7s→0.18s
+cumulative from S0). Caveat: harness revisits the same lessons (cache-friendly); a first visit to
+a lesson still pays ~S1 cost until the S8 content pack. Client-query flows unchanged, as expected.
+
+---
+
 <!-- Template for each step:
 
 ## S1 — <name> — YYYY-MM-DD
