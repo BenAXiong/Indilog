@@ -934,7 +934,9 @@ function ReviewPage() {
   }
 
   async function reload() {
-    await ensureFlashcards()
+    // Backfill runs concurrently (perf S11b): it only creates repetitions=0 cards,
+    // which Review sessions never load (DEC-M5-01 strict boundary), so it cannot
+    // affect the queue fetched below.
     const [c, context] = await Promise.all([
       isCustom
         ? listDueFlashcards({
@@ -968,6 +970,7 @@ function ReviewPage() {
             return listDueFlashcards(opts)
           })(),
       loadSessionContext(),
+      ensureFlashcards(),
     ])
 
     // Priority sort: deck 1 first, then deck 2, …, then non-priority. Stable — preserves due_at order within each group.

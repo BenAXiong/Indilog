@@ -63,17 +63,31 @@ export function cardAudio(card: FlashcardWithItem): string | null {
 const CARD_SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
 
 export async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]> {
+  // Pages are fetched in parallel batches (perf S11a) — sequential pages paid one
+  // Sydney round trip each. Speculative pages beyond the result set come back
+  // empty (or PGRST103) and cost ~nothing. The `.order('id')` tiebreaker makes
+  // page boundaries deterministic — callers without their own ORDER BY were
+  // technically unsound under OFFSET pagination.
   const PAGE = 1000
+  const BATCH = 4
   const results: T[] = []
-  let from = 0
-  while (true) {
-    const { data, error } = await buildQ().range(from, from + PAGE - 1)
-    if (error) { console.error(tag ?? 'paginate:', error); break }
-    if (data?.length) results.push(...(data as T[]))
-    if (!data?.length || data.length < PAGE) break
-    from += PAGE
+  for (let batch = 0; ; batch++) {
+    const pages = await Promise.all(
+      Array.from({ length: BATCH }, (_, i) => {
+        const from = (batch * BATCH + i) * PAGE
+        return buildQ().order('id', { ascending: true }).range(from, from + PAGE - 1)
+      }),
+    )
+    for (const { data, error } of pages) {
+      if (error) {
+        // PGRST103 = range beyond result set — expected for speculative pages
+        if (error.code !== 'PGRST103') console.error(tag ?? 'paginate:', error)
+        return results
+      }
+      if (data?.length) results.push(...(data as T[]))
+      if (!data || data.length < PAGE) return results
+    }
   }
-  return results
 }
 
 export async function ensureFlashcards(): Promise<void> {
