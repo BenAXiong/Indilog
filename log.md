@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 11:29 | SCHEMA | Perf S4+S5 measured: study-hub 1542→696ms (−55%, −75% cumulative), review-landing −23%; verdict keep (perf-log.md) |
 | 2026-07-03 11:25 | SCHEMA | Perf S4+S5: ensure_flashcards + get_due_stats RPCs (SECURITY INVOKER, RLS applies) replace client download-and-diff/count; ON CONFLICT closes two-tab race; get_due_stats uses true join semantics (old embed filters leaked excluded rows into captures); migration 20260703020000 applied via db query --linked |
 | 2026-07-03 11:16 | REFACTOR | Perf S3 measured: study-hub 2795→1542ms (−45%), learn-landing −20%, review-landing −12%; verdict keep (perf-log.md) |
 | 2026-07-03 11:12 | REFACTOR | Perf S3: getSessionUser() (local session read) replaces auth.getUser() network round trip at 57 client callsites; server-side code (middleware, server.ts, stats-server, API routes) keeps getUser; RLS still authorizes every query |

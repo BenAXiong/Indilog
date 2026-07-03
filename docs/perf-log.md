@@ -122,6 +122,35 @@ worked normally in the harness → the swapped auth pattern holds up end-to-end.
 
 ---
 
+## S4+S5 — `ensure_flashcards` + `get_due_stats` RPCs — 2026-07-03
+
+**Deploy**: d624c37 · migration 20260703020000 applied via `db query --linked`
+**Verified first**: the old client-side shape was fallout from the 2026-06-01 duplicate-cards
+incident (PostgREST 1000-row cap), not intentional design; RPCs already established practice
+(`graduate_learn_card`). Grouping logic smoke-tested against live data before deploy.
+
+### Harness flow medians (`--step S4S5`)
+| Flow | p50 (ms) | Δ vs S3 | n |
+|---|---|---|---|
+| cold:home | 893 | +19 (flat) | 7 |
+| cold:learn-landing | 2827 | +22 (flat) | 5 |
+| dict (control) | 46 | ✓ flat | 5 |
+| epark-essay | 177 | −1 (flat) | 5 |
+| epark-twelve | 363 | ±0 (flat) | 20 |
+| home (RSC) | 761 | +16 (flat) | 5 |
+| review-landing | **2713** | **−827 (−23%)** | 5 |
+| study-hub | **696** | **−846 (−55%)** | 15 |
+
+**Verdict**: **keep** — study-hub now 696ms (was 2779 at S0, −75% cumulative). Note: due counts
+may shift *correctly* for users with language exclusions (old embed filters leaked excluded rows
+into captures; RPC applies true join semantics).
+**Remaining weight**: review-landing (2.7s) = `listDueFlashcards` downloading the full due queue
+with joined items; learn-landing (2.8s) = `listLearnFlashcards` downloading all rep-0 cards.
+Both are session-queue fetches — capping them changes overflow behavior, so that's a separate
+proposal, not part of this step.
+
+---
+
 <!-- Template for each step:
 
 ## S1 — <name> — YYYY-MM-DD
