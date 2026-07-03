@@ -99,6 +99,29 @@ a lesson still pays ~S1 cost until the S8 content pack. Client-query flows uncha
 
 ---
 
+## S3 — Local session read replaces client `auth.getUser()` — 2026-07-03
+
+**Deploy**: 0676f90 · 57 callsites → `getSessionUser()`; server-side code unchanged
+
+### Harness flow medians (`--step S3`)
+| Flow | p50 (ms) | Δ vs S2 | n |
+|---|---|---|---|
+| cold:home | 874 | −15 (flat) | 7 |
+| cold:learn-landing | **2805** | **−715 (−20%)** | 5 |
+| dict (control) | 40 | ✓ flat | 5 |
+| epark-essay | 178 | −2 (flat) | 5 |
+| epark-twelve | 363 | +2 (flat) | 20 |
+| home (RSC) | 745 | −97 | 5 |
+| review-landing | **3540** | **−470 (−12%)** | 5 |
+| study-hub | **1542** | **−1253 (−45%)** | 15 |
+
+**Verdict**: **keep** — the auth round trips were stacked deepest in study-hub (−45%). Remaining
+weight in review-landing (3.5s) and study-hub (1.5s) is data transfer: `ensureFlashcards`
+downloading every note/card id (S4) and due-stats/queue pagination (S5). All session flows
+worked normally in the harness → the swapped auth pattern holds up end-to-end.
+
+---
+
 <!-- Template for each step:
 
 ## S1 — <name> — YYYY-MM-DD
