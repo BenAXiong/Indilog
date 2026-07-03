@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 10:50 | CONFIG | Perf S2: /api/learn/curriculum + geometry excluded from auth middleware (public corpus data) and CDN-cached (s-maxage=86400, swr=604800); corpus DB edits appear after ≤1 day or next deploy |
 | 2026-07-03 10:48 | CONFIG | Perf S1 measured: home RSC 2529→796ms (−69%), cold start 2575→858ms (−67%), epark-twelve 913→562ms (−38%); client-query flows flat as expected — verdict keep (perf-log.md) |
 | 2026-07-03 10:39 | CONFIG | Perf S1: pin Vercel functions to syd1 (co-located with Supabase Sydney) — was defaulting to iad1, adding ~200ms per function↔DB round trip |
 | 2026-07-03 10:38 | FIX | Perf harness: filter visible elements (desktop sidebar duplicates nav links); S0 baseline recorded in perf-log.md — study-hub 2.8s, review-landing 4.0s, epark 0.9–1.7s, dict control 44ms |

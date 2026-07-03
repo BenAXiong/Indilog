@@ -27,10 +27,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Server-Timing lets DevTools split DB time from network time (docs/perf-plan.md)
+    // Server-Timing lets DevTools split DB time from network time (docs/perf-plan.md).
+    // Corpus content is static + public → CDN-cacheable; deploys purge the Vercel cache,
+    // so direct corpus DB edits show up after at most a day or the next deploy.
     const t0 = Date.now()
     const timed = (results: unknown) =>
-      NextResponse.json({ results }, { headers: { 'Server-Timing': `db;dur=${Date.now() - t0}` } })
+      NextResponse.json({ results }, { headers: {
+        'Server-Timing': `db;dur=${Date.now() - t0}`,
+        'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800',
+      } })
 
     if (source === 'twelve') {
       return timed(await queryTwelve(dialect, titleZh))

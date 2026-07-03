@@ -39,6 +39,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // api/learn/{curriculum,geometry} excluded: public corpus data, no auth inside,
+    // and skipping middleware lets the CDN cache them (perf S2)
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|icons/|api/learn/(?:curriculum|geometry)|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

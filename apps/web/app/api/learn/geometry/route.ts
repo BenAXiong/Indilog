@@ -22,6 +22,10 @@ type Geo = typeof rawGeo & {
 
 const geo = rawGeo as unknown as Geo
 
+// Static bundled JSON, public — let the CDN cache it (perf S2); deploys purge the cache
+const cached = (body: unknown) =>
+  NextResponse.json(body, { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } })
+
 export async function GET(req: NextRequest) {
   const p      = req.nextUrl.searchParams
   const source = p.get('source') ?? ''
@@ -30,7 +34,7 @@ export async function GET(req: NextRequest) {
   const dialect = p.get('dialect') ?? ''
 
   if (source === 'twelve') {
-    return NextResponse.json({
+    return cached({
       levels:  geo.twelve.levels,
       classes: geo.twelve.classes,
       titles:  geo.twelve.titles,
@@ -46,12 +50,12 @@ export async function GET(req: NextRequest) {
       cleanLabels[k] = v.replace(/^\d+\s*-\s*/, '')
     }
     if (level) {
-      return NextResponse.json({
+      return cached({
         patterns: Object.keys(allCounts[level] ?? {}).sort(),
         labels: cleanLabels,
       })
     }
-    return NextResponse.json({
+    return cached({
       levels: geo.grmpts.levels,
       counts: allCounts,
       labels: cleanLabels,
@@ -65,7 +69,7 @@ export async function GET(req: NextRequest) {
       title_zh: e.title_zh,
       available: dialect ? dialect in e.alignment : true,
     }))
-    return NextResponse.json({ items })
+    return cached({ items })
   }
 
   return NextResponse.json({ error: 'unknown source' }, { status: 400 })
