@@ -77,27 +77,12 @@ export async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]>
 }
 
 export async function ensureFlashcards(): Promise<void> {
+  // Server-side insert-select RPC (SECURITY INVOKER, RLS applies) — replaces the
+  // client download-and-diff of every note/card id (perf S4). Same contract:
+  // one default Card per unmatched Note (architecture.md § Card generation).
   const supabase = createClient()
-  const user = await getSessionUser()
-  if (!user) return
-
-  // Paginate both queries in parallel — plain .select() is capped at 1000 rows server-side
-  const [existingRows, allItems] = await Promise.all([
-    paginate<{ note_id: string }>(() => supabase.from('ind_flashcards').select('note_id').eq('user_id', user.id)),
-    paginate<{ id: string; target_word: string | null }>(() => supabase.from('ind_items').select('id, target_word').eq('user_id', user.id)),
-  ])
-  const existingIds = new Set(existingRows.map(r => r.note_id))
-
-  if (!allItems.length) return
-  const newItems = allItems.filter(i => !existingIds.has(i.id))
-  if (!newItems.length) return
-
-  await supabase.from('ind_flashcards').insert(
-    newItems.map(item => ({
-      user_id: user.id,
-      note_id: item.id,
-    }))
-  )
+  const { error } = await supabase.rpc('ensure_flashcards')
+  if (error) console.error('ensureFlashcards:', error)
 }
 
 export async function setTargetWord(noteId: string, targetWord: string | null): Promise<void> {
@@ -201,33 +186,28 @@ export function computeDueStats(rows: DueStatRow[]): DueStats {
 export async function getDueStats(
   opts: { excludeLangs?: string[]; excludeCollections?: string[]; excludeCaptures?: boolean } = {},
 ): Promise<DueStats> {
+  // Grouped counts via RPC (perf S5) — was paginating every due row to count
+  // client-side. True join semantics: excluded rows no longer leak into captures
+  // (the old non-inner embed filters nulled ind_items instead of dropping the row).
   const supabase = createClient()
-  const user = await getSessionUser()
-  if (!user) return { total: 0, captures: 0, byCollection: {} }
-
-  const now = new Date().toISOString()
-  function buildQ() {
-    let q = supabase.from('ind_flashcards')
-      .select('ind_items(note_source, collection_id)')
-      .eq('user_id', user!.id)
-      .lte('due_at', now)
-      .gt('repetitions', 0)
-      .is('suspended_at', null)
-    if (opts.excludeLangs?.length)
-      q = q.filter('ind_items.language', 'not.in', `(${opts.excludeLangs.join(',')})`)
-    if (opts.excludeCollections?.length && opts.excludeCaptures) {
-      q = q.filter('ind_items.note_source', 'eq', 'collection')
-      q = q.filter('ind_items.collection_id', 'not.in', `(${opts.excludeCollections.join(',')})`)
-    } else if (opts.excludeCollections?.length) {
-      q = q.or(`note_source.neq.collection,collection_id.not.in.(${opts.excludeCollections.join(',')})`, { foreignTable: 'ind_items' })
-    } else if (opts.excludeCaptures) {
-      q = q.filter('ind_items.note_source', 'eq', 'collection')
-    }
-    return q
+  const { data, error } = await supabase.rpc('get_due_stats', {
+    p_exclude_langs:       opts.excludeLangs ?? [],
+    p_exclude_collections: opts.excludeCollections ?? [],
+    p_exclude_captures:    opts.excludeCaptures ?? false,
+  })
+  if (error || !data) {
+    console.error('getDueStats:', error)
+    return { total: 0, captures: 0, byCollection: {} }
   }
 
-  const rows = await paginate<{ ind_items: unknown }>(buildQ, 'getDueStats')
-  return computeDueStats(rows.map(r => (r.ind_items as DueStatRow | null) ?? { note_source: '', collection_id: null }))
+  let total = 0, captures = 0
+  const byCollection: Record<string, number> = {}
+  for (const row of data as { collection_id: string | null; captures: boolean; n: number }[]) {
+    total += row.n
+    if (row.captures) captures += row.n
+    else if (row.collection_id) byCollection[row.collection_id] = (byCollection[row.collection_id] ?? 0) + row.n
+  }
+  return { total, captures, byCollection }
 }
 
 export type ListDueOpts = {
