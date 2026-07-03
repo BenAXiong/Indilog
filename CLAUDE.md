@@ -25,6 +25,14 @@
 ## Code constraints
 - Never put non-ASCII characters literally inside regex character classes in `.ts` files — SWC rejects them at build time and the Write/Edit tools corrupt them silently via JSON encoding. Always use `\uXXXX` escapes: e.g. `/[‘’ʼꞌ]/g` for apostrophe variants, NOT the literal curly-quote characters.
 - **Never use `new Date().toISOString().slice(0, 10)` to get a "today" date string** — `toISOString()` returns UTC, which is wrong for any user not in UTC±0. Always use `localDateStr()` or `getStudyDate()` from `@/lib/db/srs/flashcards`. These return `LocalDateString` (branded type); raw strings from `toISOString().slice()` are plain `string` and will be rejected by TypeScript wherever `LocalDateString` is required.
+- **Supabase embed filters exclude nothing without `!inner`** — `.filter('ind_items.x', …)` on a non-inner embed nulls the join and keeps the row (DEC-ARCH03). Mark the embed `!inner` or push the logic into an RPC.
+- **Client code never calls `auth.getUser()`** — use `getSessionUser()` from `@/lib/supabase/session` (local read, no network; RLS authorizes server-side anyway). `getUser()` is for server code only; middleware uses `getClaims()`. (DEC-ARCH04)
+- **`.limit(N)` is silently capped at 1000 by PostgREST** — any possibly->1000-row query goes through `paginate<T>` (DEC-SRS04).
+- **After corpus edits**: rebuild dialect content packs (`node scripts/build-content-packs.mjs`) and commit; the corpus API's CDN cache purges on deploy.
+
+## Performance work
+- Perf claims need measurements: `node scripts/perf/mint-session.mjs && node scripts/perf/measure.mjs --step <tag>` (headless-Chromium harness against production; `?perf=1` shows the in-app HUD). One change = one deploy = one measured round, appended to `docs/perf-log.md`. Standing decisions: DEC-ARCH04; baseline history: `docs/perf-log.md`.
+- Vercel functions are region-pinned to the Supabase region in `vercel.json` — if the DB ever moves (perf-plan § S10), move the pin in the same deploy.
 
 ## Security
 - `INFERENCE_API_URL` and `INFERENCE_API_KEY` must NEVER have `NEXT_PUBLIC_` prefix — server-side only

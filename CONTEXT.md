@@ -69,6 +69,12 @@ _Avoid_: limit, maximum
 Count of consecutive days on which the user met their daily targets. When a Simulation is active: streak fires if both the Learn daily target AND the Review daily target are met. When no Simulation is active: streak fires if either cap is hit. The streak is a goal-realism feedback signal — if it breaks repeatedly, the Simulation deadline or scope is too aggressive.
 _Avoid_: combo, chain (chain is reserved for the 7-day visual widget)
 
+**Content pack**:
+A per-dialect JSON bundle of all ePark study content (lessons, patterns, essays, dialogues,
+conversations), CDN-served and cached in IndexedDB so content renders with zero network and works
+offline. Built by `scripts/build-content-packs.mjs`; dialects without a pack fall back to the API.
+_Avoid_: offline bundle, cache file
+
 **Mastery grade**:
 A four-tier classification of a card's long-term retention strength, derived entirely from existing SRS columns. Displayed in the browser and Stats; used by the Simulation as a finish-line target.
 

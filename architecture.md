@@ -187,12 +187,14 @@ Single unified function. Creates one `default` Card per Note that doesn't alread
 
 **When called:**
 - On Study page mount
+- On Review page mount (concurrent with the queue fetch — backfilled cards are `repetitions=0`
+  and Review never loads them, DEC-M5-01)
 - Immediately after collection import completes (ensures new cards appear without needing a page reload)
 
-**Contract:**
-1. Fetch all existing `note_id` values in `ind_flashcards` for this user
-2. Fetch all `ind_items` for this user
-3. Insert one `default` Card per unmatched Note (no `front`/`back` — rendering is live from Note)
+**Contract (since 2026-07-03, perf S4):** one `ensure_flashcards()` RPC — a server-side
+`INSERT … SELECT … WHERE NOT EXISTS` with `ON CONFLICT DO NOTHING` (closes the two-tab race),
+`SECURITY INVOKER` so RLS applies. Behavior identical to the old client download-and-diff:
+one `default` Card per unmatched Note, no `front`/`back` (rendering is live from Note).
 
 **STS Cards** are NOT auto-generated. Created explicitly by the user on a per-Note basis.
 
@@ -237,9 +239,20 @@ ind_flashcards
   LIMIT 20
 ```
 
-All `ListDueOpts` predicates are pushed to PostgREST via `.filter('ind_items.column', operator, value)` embedded-resource filters, so the paginated fetch returns only the rows matching the session's filters — O(result) not O(vault). The one exception is `includeTags`: OR logic across a JSONB array column has no clean PostgREST pushdown, so it applies client-side after the fetch.
+All `ListDueOpts` predicates are pushed to PostgREST via the shared `buildDueQuery()` builder —
+**the embed is `ind_items!inner(…)`; without `!inner` the filters exclude nothing** (they null
+the embed and keep the row — see DEC-ARCH03; this shipped broken 2026-06-14 → 2026-07-03).
+The one exception is `includeTags`: OR logic across a JSONB array column has no clean PostgREST
+pushdown, so it applies client-side after the fetch.
 
-`getDueStats` uses the same embedded-filter pushdown for its exclusion opts. Counting is delegated to `computeDueStats(rows)`, a pure function exported from `lib/db/srs/flashcards.ts` — callers who already have `FlashcardWithItem[]` loaded can call it directly without a second DB round-trip.
+`countDueFlashcards()` / `countLearnFlashcards()` are head-count twins of the queue fetches
+(`countDueFlashcards` shares `buildDueQuery` exactly) — used by the two-phase session landings
+(perf S11c): the landing paints from count + context while the full queue (overflow buffer,
+DEC-M5-01) downloads in the background and Begin/autostart await it.
+
+`getDueStats` is the `get_due_stats()` RPC (grouped counts server-side, `SECURITY INVOKER`,
+true join semantics). `computeDueStats(rows)` remains exported for callers who already hold
+`FlashcardWithItem[]`.
 
 ### Supabase row cap — pagination pattern
 
@@ -252,9 +265,35 @@ const results = await paginate<MyType>(
 )
 ```
 
-`paginate<T>` runs the `while/range/break` loop internally (PAGE = 1000), logs any PostgREST error with the tag prefix, and returns a flat `T[]`. Do not copy-paste the loop — call the helper.
+`paginate<T>` fetches pages in **parallel batches of 4** (perf S11a) and appends an
+`.order('id')` tiebreaker — OFFSET pagination without a deterministic ORDER BY is unsound.
+Do not copy-paste the loop — call the helper.
+
+### Client auth access — `getSessionUser()`
+
+Client code (`lib/db/**`, pages, components) gets the user via `getSessionUser()` from
+`lib/supabase/session.ts` — a local session read, no network. `auth.getUser()` (a full auth-server
+round trip per call) is reserved for server code (RSC, API routes, `*/server.ts`); middleware uses
+`auth.getClaims()` (local JWT verification). Rationale + tradeoffs: DEC-ARCH04.
 
 Affected functions (all paginated as of 2026-06-14): `ensureFlashcards` (both queries), `listDueFlashcards`, `getDueStats`, `listLearnFlashcards`, `listUserLanguages`, `resetCollectionSRS`, `resetCapturesSRS`, `listBrowserCards` (two parallel `paginate<T>` calls, one per `note_source`, to prevent cross-type row crowding).
+
+---
+
+## ePark content delivery — dialect packs
+
+ePark content (EparkView) resolves **pack-first, API-fallback** (perf S8, DEC-ARCH04):
+
+1. `lib/learn/packs.ts` checks `pack-manifest.json` for the dialect → IndexedDB-cached JSON pack
+   (version-busted by content hash; one fetch per version). Lookup key: twelve → `"Level X
+   Lesson Y"`, grmpts → `"level::pattern"`, essay/dialogue/con_practice → `title_zh`.
+2. Any miss (unpacked dialect, missing key, storage failure) falls back to
+   `/api/learn/curriculum` — public + CDN-cached (`s-maxage=86400`), excluded from the auth
+   middleware matcher.
+
+Packs are built by `scripts/build-content-packs.mjs` into `apps/web/public/packs/` — **rebuild +
+commit after corpus edits**. grmpts content lives under the language-level `dialect_name`
+(e.g. 阿美語), not the specific dialect; the manifest maps both.
 
 ---
 

@@ -12,6 +12,8 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 |----|-------|--------|
 | [DEC-ARCH01](docs/adr/DEC-ARCH01-lib-directory-contract.md) | Shared YCM utilities — `lib/` directory contract | accepted |
 | [DEC-ARCH02](docs/adr/DEC-ARCH02-unified-note-card-model.md) | Unified Note/Card model | accepted |
+| [DEC-ARCH03](docs/adr/DEC-ARCH03-postgrest-embed-filters-inner.md) | PostgREST embed filters require `!inner` | accepted |
+| [DEC-ARCH04](docs/adr/DEC-ARCH04-performance-architecture.md) | Performance architecture — 2026-07 campaign decisions | accepted |
 | [DEC-DASH-01](docs/adr/DEC-DASH-01-duecount-divergence.md) | Dashboard dueCount vs session count divergence | resolved in Phase 2F of plan-v1-M5-srs.md |
 | [DEC-D01](docs/adr/DEC-D01-dict-word-dedup-normalisation.md) | Dictionary word dedup: space-stripping normalisation | accepted |
 | [DEC-L01](docs/adr/DEC-L01-learn-all-16-languages.md) | Learn available for all 16 languages | accepted |

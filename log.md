@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-04 03:39 | PHASE COMPLETE | Perf campaign closed: DEC-ARCH03 (!inner rule) + DEC-ARCH04 (performance architecture) ADRs; architecture.md updated (ensureFlashcards RPC, buildDueQuery/!inner, parallel paginate, getSessionUser tiering, content packs section); CLAUDE.md code constraints + Performance work section; agents.md perf docs row; CONTEXT.md Content pack term |
 | 2026-07-03 23:07 | FEATURE | Perf S11c measured (clean rerun): learn-landing 3556→471ms (−87% vs S0), review-landing 4010→680ms (−83%); queue-ready bg 985/1539ms; campaign complete — every flow under 1s, only S10 Tokyo deferred (perf-log.md) |
 | 2026-07-03 23:04 | FIX | Perf harness: flow-matched waitSample (async queue-ready samples misattributed to next flow, killed home/learn measurements); flow.ts discards stale cross-page click markers (negative deltas) |
 | 2026-07-03 22:58 | FEATURE | Perf S11c: two-phase session loading — landing paints from countDueFlashcards/countLearnFlashcards + context while the full queue (overflow buffer intact per DEC-M5-01) downloads in background; Begin/autostart await queueReady (Preparing… state on early tap); queue-ready duration recorded via recordManual |

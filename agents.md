@@ -20,6 +20,7 @@ Build in layers. Complete each phase before moving to the next. Do not half-wire
 | `agents.md` (this file) | Workflow rules for agents | When a new pattern or rule is established |
 | `CLAUDE.md` | Project-level setup notes for Claude Code | When env vars, commands, or tooling change |
 | `architecture.md` | Canonical data model — Note/Card schema, session modes, audio resolution, migration status | When schema or model decisions change |
+| `docs/perf-plan.md` / `docs/perf-log.md` | Performance campaign plan + measured results per step | When making performance changes — measure with `scripts/perf/measure.mjs`, log the before/after |
 
 **Rule:** Do not end a session without updating `log.md` and checking that `plan-v0.md` reflects completed work.
 
