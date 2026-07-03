@@ -196,6 +196,48 @@ sessions pass middleware until token expiry (≤1h) — same window PostgREST al
 
 ---
 
+## S11a+b — Parallel pagination + concurrent backfill — 2026-07-03
+
+**Deploy**: S11a+b commit · S11c (landing-first paint) not taken yet — optional follow-up
+**Doc check first**: the full-queue download is *intentional* (DEC-M5-01 overflow buffer:
+suspend-replacement + "Review more"), so the original DB-LIMIT idea was rejected; these two
+changes keep the documented behavior exactly. Bonus fix: `.order('id')` tiebreaker makes
+page boundaries deterministic (callers without ORDER BY were unsound under OFFSET pagination).
+
+### Harness flow medians (`--step S11ab`)
+| Flow | p50 (ms) | Δ vs S9 | n |
+|---|---|---|---|
+| cold:home | 857 | +2 (flat) | 7 |
+| cold:learn-landing | **1865** | **−1076 (−37%)** | 5 |
+| dict (control) | 34 | ✓ flat | 5 |
+| epark-essay | 103 | +6 (flat) | 5 |
+| epark-twelve | 23 | −6 (flat) | 20 |
+| home (RSC) | 711 | +43 (noise) | 5 |
+| review-landing | **1200** | **−1463 (−55%)** | 5 |
+| study-hub | 747 | −15 (flat) | 15 |
+
+**Verdict**: **keep.**
+
+---
+
+## Campaign summary (2026-07-03, S0 → S11ab)
+
+| Flow | S0 | now | Δ |
+|---|---|---|---|
+| Study content (lessons) | 913 | **23** | **−97%** |
+| Study content (essays) | 1678 | **103** | **−94%** |
+| Study hub | 2779 | **747** | −73% |
+| Dashboard (RSC) | 2529 | **711** | −72% |
+| Cold app start | 2575 | **857** | −67% |
+| Review landing | 4010 | **1200** | **−70%** |
+| Learn landing | 3556 | **1865** | −48% |
+| dict (control) | 44 | 34 | ✓ stable all day |
+
+Remaining on the board: S11c (landing-first paint, UX decision) · S10 Tokyo migration
+(deferred — shared project + free-tier slots).
+
+---
+
 <!-- Template for each step:
 
 ## S1 — <name> — YYYY-MM-DD
