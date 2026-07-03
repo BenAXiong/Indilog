@@ -9,7 +9,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  listLearnFlashcards, graduateLearnCard, suspendCard, unsuspendCard, setFlagColor, cardMeta, cardAudio,
+  listLearnFlashcards, countLearnFlashcards, graduateLearnCard, suspendCard, unsuspendCard, setFlagColor, cardMeta, cardAudio,
   flushReviewEvents, getStudyDate, undoGraduateLearnCard,
   type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
@@ -32,6 +32,7 @@ import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
 import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
 import { useUndoStack } from '@/lib/hooks/useUndoStack'
 import PerfMark from '@/components/perf/PerfMark'
+import { recordManual } from '@/lib/perf/flow'
 import { getSessionUser } from '@/lib/supabase/session'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -736,29 +737,55 @@ function LearnPage() {
   const [overflow,     setOverflow]     = useState<FlashcardWithItem[]>([])
   const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnTarget: 10, priorityDecks: [] })
   const [loading,      setLoading]      = useState(true)
+  // S11c two-phase load: landing paints from sessionN (fast count) while the
+  // full queue downloads; Begin waits on queueReady if tapped early
+  const [sessionN,     setSessionN]     = useState<number | null>(null)
+  const [queueReady,   setQueueReady]   = useState(false)
+  const [starting,     setStarting]     = useState(false)
+  const startPendingRef = useRef(false)
   const [learnedCount, setLearnedCount] = useState(0)
   const [sessionKey,   setSessionKey]   = useState(0)
   const autostartedRef = useRef(false)
 
   async function reload() {
-    const [allCards, context] = await Promise.all([listLearnFlashcards(collectionId ? { collectionId } : {}), loadLearnContext()])
+    // Two-phase load (perf S11c): a cheap count + context paint the landing fast;
+    // the full queue (incl. overflow buffer, DEC-M5-01) keeps downloading in the
+    // background — Begin/autostart wait on it.
+    setLoading(true)
+    setQueueReady(false)
+    const t0 = performance.now()
+    const queueP = listLearnFlashcards(collectionId ? { collectionId } : {})
+
+    const [count, context] = await Promise.all([countLearnFlashcards(collectionId), loadLearnContext()])
+    const remaining = Math.max(0, context.learnedToday >= context.learnTarget
+      ? context.learnTarget
+      : context.learnTarget - context.learnedToday)
+    setCtx(context)
+    // Estimate ignores language exclusions (applied client-side below); reconciled when the queue lands
+    setSessionN(Math.min(count, nParam ?? (collectionId ? count : remaining)))
+    setLoading(false)
+
+    const allCards = await queueP
     const excludeLangs: string[] = !collectionId && localStorage.getItem('srs_show_all_langs') === 'false'
       ? (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
       : []
     const filtered = excludeLangs.length
       ? allCards.filter(c => !excludeLangs.includes(c.ind_items?.language ?? ''))
       : allCards
-    const remaining = Math.max(0, context.learnedToday >= context.learnTarget
-      ? context.learnTarget
-      : context.learnTarget - context.learnedToday)
     const toLearn = nParam ?? (collectionId ? filtered.length : remaining)
     const sessionCards = filtered.slice(0, toLearn)
     setCards(sessionCards)
     setOverflow(filtered.slice(toLearn))
-    setCtx(context)
-    setLoading(false)
-    if (autostart && !autostartedRef.current && sessionCards.length > 0) {
+    setSessionN(sessionCards.length)
+    setQueueReady(true)
+    recordManual('learn-queue-ready', performance.now() - t0, { n: sessionCards.length })
+
+    const shouldStart = (autostart && !autostartedRef.current) || startPendingRef.current
+    startPendingRef.current = false
+    setStarting(false)
+    if (shouldStart && sessionCards.length > 0) {
       autostartedRef.current = true
+      setSessionKey(k => k + 1)
       setMode('learning')
     }
   }
@@ -798,7 +825,7 @@ function LearnPage() {
   // Landing
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <PerfMark flow="learn-landing" when={!loading} meta={{ n: cards.length }} />
+      <PerfMark flow="learn-landing" when={!loading} meta={{ n: sessionN ?? 0 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
         <Link href={collectionId ? '/study?tab=collections' : '/'} style={{ width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft, textDecoration: 'none' }}>
           <Icon name="arrow-l" size={17} strokeWidth={1.8} />
@@ -812,24 +839,32 @@ function LearnPage() {
         <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="animate-iv-shimmer" style={{ width: 120, height: 16, borderRadius: 8, background: T.lineSoft }} />
         </div>
-      ) : cards.length > 0 ? (
+      ) : (sessionN ?? 0) > 0 ? (
         <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 20, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
             <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 48, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-              {cards.length}
+              {sessionN}
             </span>
-            <span style={{ fontSize: 15, color: T.inkSoft }}>{cards.length === 1 ? 'new card' : 'new cards'}</span>
+            <span style={{ fontSize: 15, color: T.inkSoft }}>{sessionN === 1 ? 'new card' : 'new cards'}</span>
           </div>
           <div style={{ fontSize: 13, color: T.inkMute }}>
-            ~{Math.ceil(cards.length * 1.5)} min · exposure then test passes
+            ~{Math.ceil((sessionN ?? 0) * 1.5)} min · exposure then test passes
           </div>
-          <button onClick={() => { setSessionKey(k => k + 1); setMode('learning') }} style={{
-            height: 56, borderRadius: 15, background: T.sage, color: '#fff',
-            border: 'none', fontSize: 17, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 14px rgba(80,120,30,0.22)',
-          }}>
-            <Icon name="play" size={15} color="#fff" /> Begin session
+          <button
+            onClick={() => {
+              if (queueReady) { setSessionKey(k => k + 1); setMode('learning'); return }
+              startPendingRef.current = true
+              setStarting(true)
+            }}
+            disabled={starting}
+            style={{
+              height: 56, borderRadius: 15, background: T.sage, color: '#fff',
+              border: 'none', fontSize: 17, fontWeight: 600, cursor: starting ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              opacity: starting ? 0.75 : 1,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 4px 14px rgba(80,120,30,0.22)',
+            }}>
+            <Icon name="play" size={15} color="#fff" /> {starting ? 'Preparing…' : 'Begin session'}
           </button>
         </div>
       ) : (

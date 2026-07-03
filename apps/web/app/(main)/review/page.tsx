@@ -9,7 +9,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import {
-  ensureFlashcards, listDueFlashcards, getExcludeFromReview,
+  ensureFlashcards, listDueFlashcards, countDueFlashcards, getExcludeFromReview,
   rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
   suspendCard, unsuspendCard, setFlagColor, deferCard, setDueAt, undoRating, undoDefer, localDateStr, getStudyDate,
   type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
@@ -34,6 +34,7 @@ import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
 import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
 import { useUndoStack } from '@/lib/hooks/useUndoStack'
 import PerfMark from '@/components/perf/PerfMark'
+import { recordManual } from '@/lib/perf/flow'
 import { getSessionUser } from '@/lib/supabase/session'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -920,6 +921,12 @@ function ReviewPage() {
   const [overflow, setOverflow] = useState<FlashcardWithItem[]>([])
   const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null })
   const [loading, setLoading] = useState(true)
+  // S11c two-phase load: landing paints from sessionN (fast count) while the
+  // full queue downloads; Begin waits on queueReady if tapped early
+  const [sessionN,   setSessionN]   = useState<number | null>(null)
+  const [queueReady, setQueueReady] = useState(false)
+  const [starting,   setStarting]   = useState(false)
+  const startPendingRef = useRef(false)
   const [sessionCount,    setSessionCount]    = useState(0)
   const [sessionKey,      setSessionKey]      = useState(0)
   const [reviewedCards,   setReviewedCards]   = useState<FlashcardWithItem[]>([])
@@ -934,44 +941,64 @@ function ReviewPage() {
   }
 
   async function reload() {
-    // Backfill runs concurrently (perf S11b): it only creates repetitions=0 cards,
-    // which Review sessions never load (DEC-M5-01 strict boundary), so it cannot
-    // affect the queue fetched below.
-    const [c, context] = await Promise.all([
-      isCustom
-        ? listDueFlashcards({
-            includeFlagColors:   customFlagColors,
-            includePlaceHeard:   customPlaceHeard,
-            includeLangs:        customLang ? [customLang] : undefined,
-            includeDialect:      customDialect,
-            includeCollectionId: customCollection,
-            capturesOnly:        customCaptures,
-            includeNoteSource:   customNoteSource,
-            includeUnseen:       customIncludeUnseen || undefined,
-            includeNoteTypes:    customNoteType ? [customNoteType] : undefined,
-            includeTags:         customTags,
-            dueOnly:             customDueOnly,
-          })
-        : (async () => {
-            const exclude = await getExcludeFromReview()
-            const opts: ListDueOpts = {
-              flagColor,
-              excludeLangs:       getExcludeLangs(),
-              excludeCollections: exclude.collections,
-              excludeCaptures:    exclude.captures,
-            }
-            if (isAdvance) {
-              const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
-              const nextReset = new Date()
-              if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
-              nextReset.setHours(resetHour, 0, 0, 0)
-              opts.advanceUntil = nextReset.toISOString()
-            }
-            return listDueFlashcards(opts)
-          })(),
+    // Two-phase load (perf S11c): a cheap count + context paint the landing fast;
+    // the full queue (incl. overflow buffer, DEC-M5-01) keeps downloading in the
+    // background — Begin/autostart wait on it. Backfill stays concurrent (S11b):
+    // it only creates repetitions=0 cards, which Review sessions never load.
+    setLoading(true)
+    setQueueReady(false)
+    const t0 = performance.now()
+    ensureFlashcards()
+
+    const optsP: Promise<ListDueOpts> = (async () => {
+      if (isCustom) return {
+        includeFlagColors:   customFlagColors,
+        includePlaceHeard:   customPlaceHeard,
+        includeLangs:        customLang ? [customLang] : undefined,
+        includeDialect:      customDialect,
+        includeCollectionId: customCollection,
+        capturesOnly:        customCaptures,
+        includeNoteSource:   customNoteSource,
+        includeUnseen:       customIncludeUnseen || undefined,
+        includeNoteTypes:    customNoteType ? [customNoteType] : undefined,
+        includeTags:         customTags,
+        dueOnly:             customDueOnly,
+      }
+      const exclude = await getExcludeFromReview()
+      const opts: ListDueOpts = {
+        flagColor,
+        excludeLangs:       getExcludeLangs(),
+        excludeCollections: exclude.collections,
+        excludeCaptures:    exclude.captures,
+      }
+      if (isAdvance) {
+        const resetHour = parseInt(localStorage.getItem('srs_reset_hour') ?? '4')
+        const nextReset = new Date()
+        if (nextReset.getHours() >= resetHour) nextReset.setDate(nextReset.getDate() + 1)
+        nextReset.setHours(resetHour, 0, 0, 0)
+        opts.advanceUntil = nextReset.toISOString()
+      }
+      return opts
+    })()
+
+    const queueP = optsP.then(o => listDueFlashcards(o))
+
+    // Fast phase — landing paints from count + context
+    const [count, context] = await Promise.all([
+      optsP.then(o => countDueFlashcards(o)),
       loadSessionContext(),
-      ensureFlashcards(),
     ])
+    const reviewMoreN = context.reviewMoreSize ?? Math.max(20, Math.round(context.reviewTarget / 50) * 5)
+    const capFor = (len: number) => reviewNParam !== null ? Math.min(len, reviewNParam)
+      : isCustom || isAdvance ? len
+      : isMore         ? reviewMoreN
+      : Math.max(0, context.reviewTarget - context.reviewedToday)
+    setCtx(context)
+    setSessionN(Math.min(count, capFor(count)))
+    setLoading(false)
+
+    // Slow phase — full queue; reconciles N and unblocks Begin
+    const c = await queueP
 
     // Priority sort: deck 1 first, then deck 2, …, then non-priority. Stable — preserves due_at order within each group.
     if (!isCustom && context.priorityDecks.length > 0) {
@@ -989,16 +1016,18 @@ function ReviewPage() {
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
     }
 
-    const reviewMoreN  = context.reviewMoreSize ?? Math.max(20, Math.round(context.reviewTarget / 50) * 5)
-    const sessionCap   = reviewNParam !== null ? Math.min(c.length, reviewNParam)
-      : isCustom || isAdvance ? c.length
-      : isMore         ? reviewMoreN
-      : Math.max(0, context.reviewTarget - context.reviewedToday)
-    setCards(c.slice(0, sessionCap))
+    const sessionCap   = capFor(c.length)
+    const sessionCards = c.slice(0, sessionCap)
+    setCards(sessionCards)
     setOverflow(isCustom ? [] : c.slice(sessionCap))
-    setCtx(context)
-    setLoading(false)
-    if (autostart && !autostartedRef.current && c.length > 0) {
+    setSessionN(sessionCards.length)
+    setQueueReady(true)
+    recordManual('review-queue-ready', performance.now() - t0, { n: sessionCards.length })
+
+    const shouldStart = (autostart && !autostartedRef.current) || startPendingRef.current
+    startPendingRef.current = false
+    setStarting(false)
+    if (shouldStart && sessionCards.length > 0) {
       autostartedRef.current = true
       setMode('reviewing')
     }
@@ -1075,7 +1104,7 @@ function ReviewPage() {
   // Landing
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <PerfMark flow="review-landing" when={!loading} meta={{ n: cards.length }} />
+      <PerfMark flow="review-landing" when={!loading} meta={{ n: sessionN ?? 0 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
         <Link href={
           !isCustom ? '/' :
@@ -1103,23 +1132,31 @@ function ReviewPage() {
         <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="animate-iv-shimmer" style={{ width: 120, height: 16, borderRadius: 8, background: T.lineSoft }} />
         </div>
-      ) : cards.length > 0 ? (
+      ) : (sessionN ?? 0) > 0 ? (
         <div style={{ background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 20, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
             <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 48, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', lineHeight: 1 }}>
-              {cards.length}
+              {sessionN}
             </span>
-            <span style={{ fontSize: 15, color: T.inkSoft }}>{cards.length === 1 ? 'card' : 'cards'} due</span>
+            <span style={{ fontSize: 15, color: T.inkSoft }}>{sessionN === 1 ? 'card' : 'cards'} due</span>
           </div>
-          <div style={{ fontSize: 13, color: T.inkMute }}>~{Math.ceil(cards.length * 0.5)} min</div>
-          <button onClick={() => setMode('reviewing')} style={{
-            height: 56, borderRadius: 15, background: T.crimson, color: '#fff',
-            border: 'none', fontSize: 17, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)',
-          }}>
+          <div style={{ fontSize: 13, color: T.inkMute }}>~{Math.ceil((sessionN ?? 0) * 0.5)} min</div>
+          <button
+            onClick={() => {
+              if (queueReady) { setMode('reviewing'); return }
+              startPendingRef.current = true
+              setStarting(true)
+            }}
+            disabled={starting}
+            style={{
+              height: 56, borderRadius: 15, background: T.crimson, color: '#fff',
+              border: 'none', fontSize: 17, fontWeight: 600, cursor: starting ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              opacity: starting ? 0.75 : 1,
+              boxShadow: '0 1px 0 rgba(255,255,255,0.18) inset, 0 2px 4px rgba(120,30,15,0.2), 0 8px 18px rgba(120,30,15,0.18)',
+            }}>
             <Icon name="play" size={15} color="#fff" />
-            Begin session
+            {starting ? 'Preparing…' : 'Begin session'}
           </button>
         </div>
       ) : (

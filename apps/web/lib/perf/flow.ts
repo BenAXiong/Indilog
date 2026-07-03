@@ -104,6 +104,21 @@ export function flowDone(flow: string, meta?: Record<string, unknown>) {
   }))
 }
 
+// Record a duration measured by the caller (no click pairing) — used for
+// phases that outlive the click-consumed flow sample, e.g. S11c queue-ready.
+export function recordManual(flow: string, ms: number, meta?: Record<string, unknown>) {
+  if (!perfEnabled()) return
+  record({
+    flow,
+    ms:     Math.round(ms),
+    at:     new Date().toISOString(),
+    build:  process.env.NEXT_PUBLIC_BUILD_TIME ?? '',
+    step:   getStep(),
+    device: matchMedia('(pointer:coarse)').matches ? 'phone' : 'desktop',
+    meta,
+  })
+}
+
 export function readLog(): PerfSample[] {
   try { return JSON.parse(localStorage.getItem(LOG_KEY) ?? '[]') } catch { return [] }
 }

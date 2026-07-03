@@ -250,61 +250,101 @@ export type ListDueOpts = {
   advanceUntil?:       string     // ISO timestamp ceiling; when set, queries cards due between now and this time, rep>=2 only
 }
 
+// Shared predicate builder — the queue fetch and the landing count (S11c) must
+// apply IDENTICAL filters. `now` is passed in so paginated pages share one cutoff.
+function buildDueQuery(
+  supabase: ReturnType<typeof createClient>,
+  opts: ListDueOpts,
+  select: string,
+  now: string,
+  head = false,
+) {
+  let q = supabase.from('ind_flashcards')
+    .select(select, head ? { count: 'exact', head: true } : undefined)
+    .is('suspended_at', null)
+  if (!head) q = q.order('due_at', { ascending: true, nullsFirst: false })
+  if (!opts.includeUnseen) {
+    // advance mode: rep>=2 (exclude freshly-graduated New cards); normal: rep>=1
+    q = q.gt('repetitions', opts.advanceUntil ? 1 : 0)
+  }
+  if (opts.advanceUntil)           q = q.gt('due_at', now).lte('due_at', opts.advanceUntil)
+  else if (opts.dueOnly !== false)  q = q.lte('due_at', now)
+  if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
+  else if (opts.flagColor === 'none') q = q.is('flag_color', null)
+  else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
+  // Global exclusions — push to DB to reduce pagination payload for large vaults
+  if (opts.excludeLangs?.length)
+    q = q.filter('ind_items.language', 'not.in', `(${opts.excludeLangs.join(',')})`)
+  if (opts.excludeCollections?.length && opts.excludeCaptures) {
+    q = q.filter('ind_items.note_source', 'eq', 'collection')
+    q = q.filter('ind_items.collection_id', 'not.in', `(${opts.excludeCollections.join(',')})`)
+  } else if (opts.excludeCollections?.length) {
+    q = q.or(`note_source.neq.collection,collection_id.not.in.(${opts.excludeCollections.join(',')})`, { foreignTable: 'ind_items' })
+  } else if (opts.excludeCaptures) {
+    q = q.filter('ind_items.note_source', 'eq', 'collection')
+  }
+  // Custom session inclusions — push to DB
+  if (opts.includeLangs?.length)
+    q = q.filter('ind_items.language', 'in', `(${opts.includeLangs.join(',')})`)
+  if (opts.includeDialect)
+    q = q.filter('ind_items.dialect', 'eq', opts.includeDialect)
+  if (opts.includeCollectionId)
+    q = q.filter('ind_items.collection_id', 'eq', opts.includeCollectionId)
+  else if (opts.capturesOnly)
+    q = q.filter('ind_items.note_source', 'in', '(captured,dict,import)')
+  if (opts.includeNoteSource)
+    q = q.filter('ind_items.note_source', 'eq', opts.includeNoteSource)
+  if (opts.includeNoteTypes?.length)
+    q = q.filter('ind_items.type', 'in', `(${opts.includeNoteTypes.join(',')})`)
+  if (opts.includeFlagColors?.length)
+    q = q.in('flag_color', opts.includeFlagColors)
+  if (opts.includePlaceHeard)
+    q = q.filter('ind_items.place_heard', 'eq', opts.includePlaceHeard)
+  return q
+}
+
 export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<FlashcardWithItem[]> {
   const supabase = createClient()
   const now = new Date().toISOString()
 
-  function buildQ() {
-    let q = supabase.from('ind_flashcards').select(CARD_SEL)
-      .is('suspended_at', null)
-      .order('due_at', { ascending: true, nullsFirst: false })
-    if (!opts.includeUnseen) {
-      // advance mode: rep>=2 (exclude freshly-graduated New cards); normal: rep>=1
-      q = q.gt('repetitions', opts.advanceUntil ? 1 : 0)
-    }
-    if (opts.advanceUntil)           q = q.gt('due_at', now).lte('due_at', opts.advanceUntil)
-    else if (opts.dueOnly !== false)  q = q.lte('due_at', now)
-    if      (opts.flagColor === 'any')  q = q.not('flag_color', 'is', null)
-    else if (opts.flagColor === 'none') q = q.is('flag_color', null)
-    else if (opts.flagColor)            q = q.eq('flag_color', opts.flagColor)
-    // Global exclusions — push to DB to reduce pagination payload for large vaults
-    if (opts.excludeLangs?.length)
-      q = q.filter('ind_items.language', 'not.in', `(${opts.excludeLangs.join(',')})`)
-    if (opts.excludeCollections?.length && opts.excludeCaptures) {
-      q = q.filter('ind_items.note_source', 'eq', 'collection')
-      q = q.filter('ind_items.collection_id', 'not.in', `(${opts.excludeCollections.join(',')})`)
-    } else if (opts.excludeCollections?.length) {
-      q = q.or(`note_source.neq.collection,collection_id.not.in.(${opts.excludeCollections.join(',')})`, { foreignTable: 'ind_items' })
-    } else if (opts.excludeCaptures) {
-      q = q.filter('ind_items.note_source', 'eq', 'collection')
-    }
-    // Custom session inclusions — push to DB
-    if (opts.includeLangs?.length)
-      q = q.filter('ind_items.language', 'in', `(${opts.includeLangs.join(',')})`)
-    if (opts.includeDialect)
-      q = q.filter('ind_items.dialect', 'eq', opts.includeDialect)
-    if (opts.includeCollectionId)
-      q = q.filter('ind_items.collection_id', 'eq', opts.includeCollectionId)
-    else if (opts.capturesOnly)
-      q = q.filter('ind_items.note_source', 'in', '(captured,dict,import)')
-    if (opts.includeNoteSource)
-      q = q.filter('ind_items.note_source', 'eq', opts.includeNoteSource)
-    if (opts.includeNoteTypes?.length)
-      q = q.filter('ind_items.type', 'in', `(${opts.includeNoteTypes.join(',')})`)
-    if (opts.includeFlagColors?.length)
-      q = q.in('flag_color', opts.includeFlagColors)
-    if (opts.includePlaceHeard)
-      q = q.filter('ind_items.place_heard', 'eq', opts.includePlaceHeard)
-    return q
-  }
-
-  let results = await paginate<FlashcardWithItem>(buildQ, 'listDueFlashcards')
+  let results = await paginate<FlashcardWithItem>(
+    () => buildDueQuery(supabase, opts, CARD_SEL, now),
+    'listDueFlashcards',
+  )
 
   // includeTags stays client-side: OR across an array column has no clean PostgREST pushdown
   if (opts.includeTags?.length)
     results = results.filter(c => opts.includeTags!.some(t => (c.ind_items?.tags ?? []).includes(t)))
 
   return results
+}
+
+// Fast landing count (perf S11c) — same predicates as listDueFlashcards, zero rows
+// transferred. includeTags filters client-side in the list call, so tag-filtered
+// sessions may briefly overcount here until the loaded queue reconciles the number.
+export async function countDueFlashcards(opts: ListDueOpts = {}): Promise<number> {
+  const supabase = createClient()
+  const now = new Date().toISOString()
+  const { count, error } = await buildDueQuery(supabase, opts, 'id, ind_items!inner(id)', now, true)
+  if (error) { console.error('countDueFlashcards:', error); return 0 }
+  return count ?? 0
+}
+
+// Fast landing count for Learn (perf S11c). Language exclusions apply client-side
+// in the learn page, so the estimate reconciles when the queue lands.
+export async function countLearnFlashcards(collectionId?: string): Promise<number> {
+  const supabase = createClient()
+  const user = await getSessionUser()
+  if (!user) return 0
+  let q = supabase.from('ind_flashcards')
+    .select(collectionId ? 'id, ind_items!inner(collection_id)' : 'id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('repetitions', 0)
+    .is('suspended_at', null)
+  if (collectionId) q = q.filter('ind_items.collection_id', 'eq', collectionId)
+  const { count, error } = await q
+  if (error) { console.error('countLearnFlashcards:', error); return 0 }
+  return count ?? 0
 }
 
 export async function graduateLearnCard(
