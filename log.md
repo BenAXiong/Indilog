@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 15:26 | CONFIG | Perf S10 investigated + deferred: Tokyo RTT 35ms vs Sydney 160ms; DB 258MB, storage 108MB/2923 obj, 1 user; full mechanics in perf-plan.md; deferred — free-tier slots occupied + FormosanEchoes hosts multiple hitchhiking projects (migration scope = all tenants) |
 | 2026-07-03 15:15 | CONFIG | Perf S9 measured: home RSC 960→668ms, cold start −114ms, review −82ms; auth gating verified; verdict keep (perf-log.md) |
 | 2026-07-03 15:11 | CONFIG | Perf S9: middleware getUser→getClaims — local ES256 JWT verification vs auth-server round trip per navigation; revocation window ≤1h matches what PostgREST already allows |
 | 2026-07-03 14:32 | FEATURE | Perf S8 measured: epark-twelve 363→29ms (−97% vs S0), epark-essay 177→95ms; packed content offline-capable; verdict keep (perf-log.md) |

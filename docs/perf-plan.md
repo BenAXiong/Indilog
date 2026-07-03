@@ -122,19 +122,32 @@ network call on **every** navigation and API request. Requires asymmetric JWT si
 enabled on the project.
 **Expected**: −120–250ms on every page navigation and API call (stacks with S1).
 
-### S10 — Migrate Supabase project to Tokyo or Singapore (final step)
-**Change**: user is in Taiwan; Sydney adds ~2–3× the RTT of Tokyo (`ap-northeast-1`, ~50ms) or
-Singapore (`ap-southeast-1`, ~70ms). Migrate the project, then repoint `vercel.json` regions to
-`hnd1`/`sin1` and update env URLs if the project ref changes.
-**Why last**: the only step with real migration risk (data, auth users, storage buckets, RLS);
-every earlier step's measurement stays valid — this shifts the whole baseline down afterward.
-**Checklist**:
-- [ ] Inventory: DB size, storage buckets (`ind-audio`), auth users, RPCs, RLS policies
-- [ ] Choose region: Tokyo vs Singapore (probe both from home network)
-- [ ] Dry-run restore into a scratch project; verify RLS + RPCs + storage
-- [ ] Migration window; repoint `NEXT_PUBLIC_SUPABASE_URL`/keys in Vercel env + Grimoire extension + scripts
-- [ ] Flip `vercel.json` regions to match; re-run full protocol as **S10**
-**Expected**: user↔DB −80–100ms per round trip on top of everything above.
+### S10 — Migrate Supabase project to Tokyo — **INVESTIGATED 2026-07-03, DEFERRED**
+
+**Region choice (measured from home network)**: Tokyo `ap-northeast-1` RTT ≈ **35ms** vs
+Singapore ≈ 70ms vs Sydney (current) ≈ **160ms** → Tokyo, functions to `hnd1`.
+**Inventory (measured)**: DB 258MB · storage 108MB / 2,923 objects (`ind-audio`) · **1 auth user**.
+**Expected when done**: −120ms per client↔DB round trip, compounding across chains —
+review-landing ~2.7s → ~1.6s, study-hub ~760 → ~550ms, home ~670 → ~500ms; packs unaffected (29ms).
+
+**Mechanics** (Supabase has no in-place region move → new project + cutover):
+1. Create Tokyo project (same project can serve as dry-run target, then production)
+2. pg_dump/restore (public + auth schemas: RLS, all 4 RPCs, corpus tables come along)
+3. Scripted storage copy (`ind-audio`)
+4. Repoint the new project ref everywhere: Vercel env + `apps/web/.env.local`,
+   **Google OAuth callback** (`https://<new-ref>.supabase.co/auth/v1/callback` in Google Cloud
+   Console + provider config in new project — forgetting this breaks login entirely),
+   Grimoire extension, ILRDF pipeline scripts, perf harness (`mint-session.mjs` hardcodes ref),
+   `supabase link`, `vercel.json` `syd1`→`hnd1`
+5. Sessions invalidate (new signing keys) — trivial with 1 user
+6. Cutover: brief writes-freeze → delta dump/restore → env flip + deploy → harness round as S10
+7. Rollback: Sydney project **paused, not deleted** for ≥1 week
+
+**Why deferred**: (a) free-tier project slots are occupied — IA DuBoulot is needed and stays;
+(b) **FormosanEchoes hosts multiple hitchhiking projects beyond Indivore**, so migration scope
+= every tenant of the DB, not just this app — too messy for now. Revisit when the shared
+project gets consolidated, or with one month of Pro for the transition window.
+(Read-replica alternative rejected: SRS writes on every card rating would still go to Sydney.)
 
 ### S11 — Cap session-queue fetches (PROPOSAL — needs behavior decision)
 **Problem**: after S1–S5, `review-landing` (2.7s) and `learn-landing` (2.8s) are dominated by
