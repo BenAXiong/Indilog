@@ -174,6 +174,28 @@ Unpacked dialects fall back to the API (S2 edge cache). Rebuild packs after corp
 
 ---
 
+## S9 — Middleware `getClaims()` (local JWT verification) — 2026-07-03
+
+**Deploy**: S9 middleware commit · project already on ES256 asymmetric keys (JWKS verified live)
+
+### Harness flow medians (`--step S9`)
+| Flow | p50 (ms) | Δ vs S8 | n |
+|---|---|---|---|
+| cold:home | 855 | −114 | 7 |
+| cold:learn-landing | 2941 | +85 (noise) | 5 |
+| dict (control) | 46 | ✓ flat | 5 |
+| epark-essay | 97 | +2 (flat) | 5 |
+| epark-twelve | 29 | ±0 (flat) | 20 |
+| home (RSC) | **668** | **−292** | 5 |
+| review-landing | 2663 | −82 | 5 |
+| study-hub | 762 | +34 (noise) | 15 |
+
+**Verdict**: **keep** — the per-navigation auth round trip is gone; auth gating verified working
+(all logged-in flows ran; unauthenticated requests still 302). Tradeoff on record: revoked
+sessions pass middleware until token expiry (≤1h) — same window PostgREST already allows.
+
+---
+
 <!-- Template for each step:
 
 ## S1 — <name> — YYYY-MM-DD
