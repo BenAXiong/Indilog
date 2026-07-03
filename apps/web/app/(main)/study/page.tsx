@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
 import BrowserView from '@/components/study/BrowserView'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
+import PerfMark from '@/components/perf/PerfMark'
 
 // ─── Due badge ───────────────────────────────────────────────────────────────
 
@@ -457,6 +458,7 @@ function StudyPageInner() {
 
   return (
     <div style={{ paddingBottom: 110, display: 'flex', flexDirection: 'column' }}>
+      <PerfMark flow="study-hub" when={!loading} />
 
       {/* Header */}
       <div style={{ padding: '4px 18px 0' }}>

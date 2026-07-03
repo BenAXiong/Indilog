@@ -27,12 +27,17 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Server-Timing lets DevTools split DB time from network time (docs/perf-plan.md)
+    const t0 = Date.now()
+    const timed = (results: unknown) =>
+      NextResponse.json({ results }, { headers: { 'Server-Timing': `db;dur=${Date.now() - t0}` } })
+
     if (source === 'twelve') {
-      return NextResponse.json({ results: await queryTwelve(dialect, titleZh) })
+      return timed(await queryTwelve(dialect, titleZh))
     }
 
     if (source === 'grmpts') {
-      return NextResponse.json({ results: await queryGrmpts(dialect, titleZh, level) })
+      return timed(await queryGrmpts(dialect, titleZh, level))
     }
 
     if (isIndexed) {
@@ -41,7 +46,7 @@ export async function GET(req: NextRequest) {
       const entry = items.find(e => e.index === idx)
       const category = entry?.alignment?.[dialect]
       if (!category) return NextResponse.json({ results: [] })
-      return NextResponse.json({ results: await queryEssayOrDialogue(source, dialect, category) })
+      return timed(await queryEssayOrDialogue(source, dialect, category))
     }
 
     return NextResponse.json({ error: 'Unknown source', results: [] }, { status: 400 })

@@ -7,6 +7,7 @@ import GoalWidget from '@/components/widgets/GoalWidget'
 import SettingsButton from '@/components/widgets/SettingsSheet'
 import StatsButton from '@/components/study/StatsButton'
 import Heatmap from '@/components/widgets/Heatmap'
+import PerfMark from '@/components/perf/PerfMark'
 
 function StreakCard({ streak }: { streak: number }) {
   return (
@@ -39,6 +40,8 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ padding: '4px 18px 0', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* server component — mark fires when the streamed RSC payload mounts */}
+      <PerfMark flow="home" />
 
       {/* Header */}
       <div data-id="dashboard-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>

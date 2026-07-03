@@ -12,6 +12,7 @@ import { getGlid } from '@/lib/lang/lang-bridge'
 import { GLID_FAMILIES } from '@/lib/lang/dialects'
 import { createItem } from '@/lib/db/notebook/items'
 import { createClient } from '@/lib/supabase/client'
+import PerfMark from '@/components/perf/PerfMark'
 
 type WordResult = {
   id: number | string
@@ -488,6 +489,9 @@ export default function DictionaryPage() {
 
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* control flow: no blocking data — measures pure client-nav cost */}
+      <PerfMark flow="dict" />
+      <PerfMark flow="dict-search" when={searched && !loading} meta={{ words: words.length }} />
       <ScreenHeader
         title="Dictionary"
         langName={lang.name}

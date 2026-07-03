@@ -31,6 +31,7 @@ import { useEnteringAnimation } from '@/lib/hooks/useEnteringAnimation'
 import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture'
 import { useAudioPlayer } from '@/lib/hooks/useAudioPlayer'
 import { useUndoStack } from '@/lib/hooks/useUndoStack'
+import PerfMark from '@/components/perf/PerfMark'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -796,6 +797,7 @@ function LearnPage() {
   // Landing
   return (
     <div style={{ padding: '4px 18px 110px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <PerfMark flow="learn-landing" when={!loading} meta={{ n: cards.length }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 4 }}>
         <Link href={collectionId ? '/study?tab=collections' : '/'} style={{ width: 36, height: 36, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft, textDecoration: 'none' }}>
           <Icon name="arrow-l" size={17} strokeWidth={1.8} />

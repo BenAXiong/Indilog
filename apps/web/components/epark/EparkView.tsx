@@ -24,6 +24,7 @@ import ContentSheet from './ContentSheet'
 import LookupInline from '@/components/lookup/LookupInline'
 import SettingsPanel, { type ZhMode } from './SettingsPanel'
 import { type LayoutMode, LAYOUT_CYCLE, LAYOUT_META } from '@/lib/eparkTokens'
+import PerfMark from '@/components/perf/PerfMark'
 
 type Source = 'twelve' | 'grmpts' | 'essay' | 'dialogue' | 'con_practice'
 
@@ -352,6 +353,7 @@ export default function EparkView({ source }: Props) {
 
   return (
     <div style={{ position: 'relative' }}>
+      <PerfMark flow={`epark-${source}`} when={!loading && results.length > 0} meta={{ n: results.length }} />
       {/* Custom header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '8px 18px 10px',
