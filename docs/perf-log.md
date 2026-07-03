@@ -220,6 +220,20 @@ page boundaries deterministic (callers without ORDER BY were unsound under OFFSE
 
 ---
 
+## Byproduct correctness fixes (found by campaign probing, not perf steps)
+
+1. **Embed filters excluded nothing** — `.filter('ind_items.x', …)` on non-inner embeds nulls
+   the join instead of dropping the row (verified via live PostgREST probe). Custom/filtered
+   sessions loaded the entire pool with blank cards (Saved deck: **2,394 loaded vs 366 real** —
+   our own harness meta recorded it every round since S0), language/collection exclusions in
+   review didn't exclude, Browser due/new/flagged/suspended tabs over-showed. Broken since the
+   f42db26 predicate-pushdown refactor (2026-06-14). Fix: `ind_items!inner` in `CARD_SEL`,
+   conditional `ind_flashcards!inner` in `listBrowserCards`. **Verified after deploy: Saved
+   deck n=366 exactly**; review-landing −~100ms as a bonus (fewer rows).
+2. **Stats computed on 1000 of 2,572 cards** — `getStudyStats` used `.limit(10000)`, silently
+   capped at 1000 by PostgREST (DEC-SRS04 class). Fix: `paginate<T>` helper.
+3. **Nondeterministic page boundaries** — paginate had no ORDER BY tiebreaker (fixed in S11a).
+
 ## Campaign summary (2026-07-03, S0 → S11ab)
 
 | Flow | S0 | now | Δ |

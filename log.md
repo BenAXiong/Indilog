@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 22:49 | FIX | getStudyStats: paginate instead of .limit(10000) (PostgREST caps at 1000 — stats computed on 1000 of 2572 cards); !inner fix verified in prod (Saved deck n=366 exact, review-landing 1094ms); byproduct-fixes section added to perf-log.md |
 | 2026-07-03 22:44 | FIX | ind_items!inner in CARD_SEL + conditional ind_flashcards!inner in listBrowserCards — embed filters were nulling instead of excluding, so custom/filtered sessions loaded the ENTIRE pool with blank cards (Saved deck: 2394 loaded vs 366 real; broken since f42db26 predicate pushdown); verified live via PostgREST probe |
 | 2026-07-03 15:52 | REFACTOR | Perf S11a+b measured: review-landing 2663→1200ms (−55%, −70% cumulative), learn-landing −37%; campaign summary added to perf-log.md — verdict keep |
 | 2026-07-03 15:48 | REFACTOR | Perf S11a+b: paginate() fetches pages in parallel batches of 4 with .order(id) tiebreaker (page boundaries were nondeterministic without ORDER BY); review reload runs ensureFlashcards concurrently (rep-0 backfill cannot affect Review queue per DEC-M5-01 boundary) |

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { localDateStr } from './flashcards'
+import { localDateStr, paginate } from './flashcards'
 import { getSessionUser } from '@/lib/supabase/session'
 
 export type CollectionStat = {
@@ -63,12 +63,19 @@ export async function getStudyStats(): Promise<StudyStats> {
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 13)
   const fromDate = localDateStr(twoWeeksAgo)
 
-  const [cardsRes, dailyRes] = await Promise.all([
-    supabase
-      .from('ind_flashcards')
-      .select('ease_factor, interval_days, repetitions, due_at, suspended_at, ind_items(note_source, collection_id, ind_learn_collections(id, name))')
-      .eq('user_id', user.id)
-      .limit(10000),
+  const [cards, dailyRes] = await Promise.all([
+    // paginate — .limit(10000) was silently capped at 1000 by PostgREST (DEC-SRS04),
+    // so stats were computed on a fraction of the vault
+    paginate<{
+      ease_factor: number; interval_days: number; repetitions: number
+      due_at: string | null; suspended_at: string | null; ind_items: unknown
+    }>(
+      () => supabase
+        .from('ind_flashcards')
+        .select('ease_factor, interval_days, repetitions, due_at, suspended_at, ind_items(note_source, collection_id, ind_learn_collections(id, name))')
+        .eq('user_id', user.id),
+      'getStudyStats',
+    ),
     supabase
       .from('ind_daily_stats')
       .select('date, reviewed_count')
@@ -76,8 +83,6 @@ export async function getStudyStats(): Promise<StudyStats> {
       .gte('date', fromDate)
       .order('date', { ascending: true }),
   ])
-
-  const cards = cardsRes.data ?? []
   let dueToday = 0, known = 0, rooted = 0, blooming = 0
   const captures = { total: 0, known: 0 }
   const colMap   = new Map<string, CollectionStat>()
