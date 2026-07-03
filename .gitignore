@@ -51,3 +51,4 @@ packages/dictionary/ycm_master.db
 # perf harness — session + raw results stay local
 scripts/perf/.auth.json
 scripts/perf/results/
+scripts/perf/.api-keys.json

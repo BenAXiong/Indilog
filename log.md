@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 10:30 | FEATURE | Perf harness: mint-session.mjs — admin magiclink → session → @supabase/ssr cookie chunks; bypasses Google OAuth automation block; re-mint before each round (1h token life) |
 | 2026-07-03 10:26 | FIX | Perf harness --login: wait for sb-auth-token cookie (OAuth detours off /login broke the old wait), verify saved session headlessly, session guard at measure start fails loud instead of timing out per flow |
 | 2026-07-03 10:05 | FEATURE | Perf campaign Step 0b: Playwright browser harness (scripts/perf/measure.mjs) replaces phone as primary measurement; plan/log split into docs/perf-plan.md + docs/perf-log.md; added S8 dialect content pack step (Malan Amis = 3131 sentences ≈ 472KB raw) |
 | 2026-07-03 09:43 | FEATURE | Perf campaign Step 0: click→paint flow instrumentation (?perf=1 HUD, PerfMark on home/study-hub/epark/learn/review/dict), ind_perf_samples table + upload, Server-Timing on curriculum route, docs/perf-plan.md with baselines + S1–S9 step log incl. Tokyo/Sing migration |
