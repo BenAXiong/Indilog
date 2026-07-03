@@ -96,7 +96,8 @@ const record = s => { results.push({ flow: s.flow, ms: s.ms }); process.stdout.w
 
 async function clickFlow(page, selector) {
   const n = await logLen(page)
-  await page.locator(selector).first().click()
+  // .filter visible — the desktop sidebar duplicates nav links, hidden at mobile width
+  await page.locator(selector).filter({ visible: true }).first().click()
   record(await waitSample(page, n))
 }
 

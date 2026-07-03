@@ -7,7 +7,7 @@ One entry per step, appended after each deploy + harness round. Verdict: keep / 
 
 ## S0 — Baseline (instrumentation only) — 2026-07-03
 
-**Deploy**: pending push (commit 8b48ea9)
+**Deploy**: 0382c1f (indilog-76em53bvl)
 
 ### Machine probes (warm, seconds; first cold run excluded)
 
@@ -20,11 +20,22 @@ One entry per step, appended after each deploy + harness round. Verdict: keep / 
 
 ### Harness flow medians (`--step S0`)
 
-_(pending: deploy + `node scripts/perf/measure.mjs --step S0`)_
-
 | Flow | p50 (ms) | min | max | n |
 |---|---|---|---|---|
-| | | | | |
+| cold:home | **2575** | 2350 | 3484 | 7 |
+| cold:learn-landing | **3556** | 3474 | 4293 | 5 |
+| dict (control) | **44** | 43 | 46 | 5 |
+| epark-essay | **1678** | 1627 | 2364 | 5 |
+| epark-twelve | **913** | 696 | 1112 | 20 |
+| home (RSC) | **2529** | 2312 | 3179 | 5 |
+| review-landing | **4010** | 3946 | 4077 | 5 |
+| study-hub | **2779** | 2743 | 3628 | 15 |
+
+Reading: every DB-touching flow sits at 1–4s; the pure-client control is 44ms. `review-landing`
+(4.0s) and `study-hub` (2.8s) are dominated by client→Sydney query stacks (`ensureFlashcards`
+pagination, per-helper `getUser()`); `home` (2.5s) is an RSC render through iad1→Sydney;
+`epark-twelve` (0.9s) is one corpus API call; `epark-essay` (1.7s) pays the geometry→curriculum
+waterfall on top.
 
 ### Phone spot-check (`S0-phone`, optional)
 
