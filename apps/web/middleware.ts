@@ -21,8 +21,14 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session — required for Server Components to read auth state
-  const { data: { user } } = await supabase.auth.getUser()
+  // Local JWT verification (perf S9): with asymmetric ES256 keys, getClaims
+  // verifies the signature against the cached JWKS — no auth-server round trip
+  // per request (getUser was ~150–250ms HK→Sydney on every navigation).
+  // Session refresh still happens under the hood when the token is expired.
+  // Tradeoff: a revoked-but-unexpired token passes until expiry (≤1h) — same
+  // window PostgREST/RLS already allows for data access.
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims?.sub ? { id: data.claims.sub } : null
 
   const { pathname } = request.nextUrl
   // /import is public — hash fragment is client-side and must be read before any redirect
