@@ -47,7 +47,11 @@ export async function listBrowserCards(
   if (!user) return []
 
   const now = new Date().toISOString()
-  const SEL = 'id, ab, zh, notes, audio, metadata, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)'
+  // !inner when a card-level filter is active — otherwise PostgREST keeps every
+  // item and just empties the embed, so due/new/flagged/suspended showed the
+  // whole vault with defaulted SRS values (same bug as CARD_SEL, fixed 2026-07-03)
+  const inner = filter === 'all' ? '' : '!inner'
+  const SEL = `id, ab, zh, notes, audio, metadata, type, language, dialect, place_heard, tags, target_word, note_source, source_id, collection_id, created_at, ind_flashcards${inner}(id, due_at, ease_factor, interval_days, repetitions, suspended_at, flag_color), ind_learn_collections(name)`
 
   function withVideoFilter(q: any): any {
     if (!videoOnly) return q

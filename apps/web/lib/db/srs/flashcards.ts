@@ -60,7 +60,12 @@ export function cardAudio(card: FlashcardWithItem): string | null {
   return card.audio ?? card.ind_items?.audio ?? null
 }
 
-const CARD_SEL = '*, ind_items(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
+// !inner is load-bearing: without it, PostgREST filters on ind_items.* null the
+// embed instead of excluding the row — custom sessions received the ENTIRE due
+// pool with blank item data (verified live 2026-07-03; broken since the
+// predicate-pushdown refactor f42db26). Every card has a note (0 null note_ids),
+// so the join never drops legitimate rows.
+const CARD_SEL = '*, ind_items!inner(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
 
 export async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]> {
   // Pages are fetched in parallel batches (perf S11a) — sequential pages paid one
