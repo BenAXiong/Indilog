@@ -151,6 +151,29 @@ proposal, not part of this step.
 
 ---
 
+## S8 — Amis content packs (IndexedDB) — 2026-07-03
+
+**Deploy**: 61010af + measurement fix (PerfMark `signal` prop — pack loads swap content with no
+committed loading frame; first S8 round lost its next-lesson samples to that and was rerun)
+
+### Harness flow medians (`--step S8`, rerun)
+| Flow | p50 (ms) | Δ vs S4+S5 | n |
+|---|---|---|---|
+| cold:home | 969 | +76 (variance) | 7 |
+| cold:learn-landing | 2856 | +29 (flat) | 5 |
+| dict (control) | 45 | ✓ flat | 5 |
+| epark-essay | **95** | **−82 (−46%)** | 5 |
+| epark-twelve | **29** | **−334 (−92%)**, max 1447 = one-time pack download | 20 |
+| home (RSC) | 960 | +199 (variance; min 660) | 5 |
+| review-landing | 2745 | +32 (flat) | 5 |
+| study-hub | 728 | +32 (flat) | 15 |
+
+**Verdict**: **keep** — packed content renders in ~30–95ms with zero network (offline-capable).
+Unpacked dialects fall back to the API (S2 edge cache). Rebuild packs after corpus edits:
+`node scripts/build-content-packs.mjs` + commit.
+
+---
+
 <!-- Template for each step:
 
 ## S1 — <name> — YYYY-MM-DD

@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-03 14:32 | FEATURE | Perf S8 measured: epark-twelve 363→29ms (−97% vs S0), epark-essay 177→95ms; packed content offline-capable; verdict keep (perf-log.md) |
 | 2026-07-03 14:28 | FIX | PerfMark signal prop — pack-served lessons swap content without a committed loading frame, so next-lesson flows produced no false→true transition; signal=first rendered row refires per new content |
 | 2026-07-03 11:38 | FEATURE | Perf S8: dialect content packs — build-content-packs.mjs bakes amis-malan (3131 rows) + amis-grammar (2021 rows, 阿美語 grmpts) into public/packs; lib/learn/packs.ts IndexedDB cache; EparkView pack-first with API fallback; plan updated (S6/S7 superseded, S11 queue-cap proposal) |
 | 2026-07-03 11:29 | SCHEMA | Perf S4+S5 measured: study-hub 1542→696ms (−55%, −75% cumulative), review-landing −23%; verdict keep (perf-log.md) |
