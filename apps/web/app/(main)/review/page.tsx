@@ -685,7 +685,7 @@ function ReviewSession({
           onFlagSelect={handleSetFlag}
           backContent={
             revealed
-              ? <CardBack card={card} effectiveMode={effectiveMode} showZhAfterAudio />
+              ? <CardBack card={card} effectiveMode={effectiveMode} />
               : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
           }
         />

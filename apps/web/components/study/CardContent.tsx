@@ -110,24 +110,19 @@ export function CardFront({
 export function CardBack({
   card,
   effectiveMode,
-  showZhAfterAudio = false,
 }: {
-  card:             FlashcardWithItem
-  effectiveMode:    CardMode
-  // review shows zh below ab in audio mode; learn does not
-  showZhAfterAudio?: boolean
+  card:          FlashcardWithItem
+  effectiveMode: CardMode
 }) {
   if (effectiveMode === 'audio') {
     return (
       <>
-        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: showZhAfterAudio ? 6 : 0 }}>
+        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
           {card.ind_items?.ab}
         </div>
-        {showZhAfterAudio && (
-          <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-            {card.ind_items?.zh ?? '—'}
-          </div>
-        )}
+        <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
+          {card.ind_items?.zh ?? '—'}
+        </div>
       </>
     )
   }

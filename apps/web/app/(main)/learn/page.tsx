@@ -268,6 +268,16 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   useEffect(() => { pauseAudio(); setShowFlagPicker(false); pendingRef.current = false }, [qIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Autoplay in audio mode when card changes
+  useEffect(() => {
+    if (reviewMode !== 'audio') return
+    const e = queue[qIdx]
+    if (!e) return
+    const url = cardAudio(e.card)
+    if (url) playAudio(url)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qIdx, reviewMode])
+
   // Shuffle test-phase entries once, when the last exposure entry has been processed
   useEffect(() => {
     if (testShuffledRef.current || !shuffleTests) return

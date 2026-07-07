@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-08 00:40 | FIX | Learn session audio mode: autoplay on card advance (was Review-only; architecture.md session-mode table specifies autoplay) + audio-mode reveal always shows zh below ab (CardBack showZhAfterAudio prop dropped — Learn exposure pass hid the meaning entirely, violating CONTEXT.md fully-revealed rule) |
 | 2026-07-08 00:35 | FIX | repairAudioUrl handles two-segment /sound/{tid}/{id}.mp3 (all 51,834 corpus dialogue rows had this dead shape) in curriculum.ts + build-content-packs.mjs; packs rebuilt (amis-malan 1,221 dialogue URLs now live). DB repair: 39 curriculum + 179 collection ind_items.audio snapshots rewritten to web.klokah.tw/text/sound form (file.klokah.tw is dead); 25 pre-fix bookmarks (captured, null zh/audio) backfilled zh+audio from corpus by exact ab match |
 | 2026-07-04 03:39 | PHASE COMPLETE | Perf campaign closed: DEC-ARCH03 (!inner rule) + DEC-ARCH04 (performance architecture) ADRs; architecture.md updated (ensureFlashcards RPC, buildDueQuery/!inner, parallel paginate, getSessionUser tiering, content packs section); CLAUDE.md code constraints + Performance work section; agents.md perf docs row; CONTEXT.md Content pack term |
 | 2026-07-03 23:07 | FEATURE | Perf S11c measured (clean rerun): learn-landing 3556→471ms (−87% vs S0), review-landing 4010→680ms (−83%); queue-ready bg 985/1539ms; campaign complete — every flow under 1s, only S10 Tokyo deferred (perf-log.md) |
