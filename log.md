@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-08 00:53 | FIX | resolveEffectiveMode fallback chain: sts/audio degraded to reverse without checking hasZh, so zh-less cards showed the em-dash as the prompt; now sts/audio/reverse all fall through to forward when zh is missing |
 | 2026-07-08 00:40 | FIX | Learn session audio mode: autoplay on card advance (was Review-only; architecture.md session-mode table specifies autoplay) + audio-mode reveal always shows zh below ab (CardBack showZhAfterAudio prop dropped — Learn exposure pass hid the meaning entirely, violating CONTEXT.md fully-revealed rule) |
 | 2026-07-08 00:35 | FIX | repairAudioUrl handles two-segment /sound/{tid}/{id}.mp3 (all 51,834 corpus dialogue rows had this dead shape) in curriculum.ts + build-content-packs.mjs; packs rebuilt (amis-malan 1,221 dialogue URLs now live). DB repair: 39 curriculum + 179 collection ind_items.audio snapshots rewritten to web.klokah.tw/text/sound form (file.klokah.tw is dead); 25 pre-fix bookmarks (captured, null zh/audio) backfilled zh+audio from corpus by exact ab match |
 | 2026-07-04 03:39 | PHASE COMPLETE | Perf campaign closed: DEC-ARCH03 (!inner rule) + DEC-ARCH04 (performance architecture) ADRs; architecture.md updated (ensureFlashcards RPC, buildDueQuery/!inner, parallel paginate, getSessionUser tiering, content packs section); CLAUDE.md code constraints + Performance work section; agents.md perf docs row; CONTEXT.md Content pack term |

@@ -12,12 +12,11 @@ export function resolveEffectiveMode(
   hasZh:      boolean,
   hasAudio:   boolean,
 ): CardMode {
-  if (reviewMode === 'sts'     && targetWord)  return 'sts'
-  if (reviewMode === 'sts'     && !targetWord) return 'reverse'
-  if (reviewMode === 'audio'   && hasAudio)    return 'audio'
-  if (reviewMode === 'audio'   && !hasAudio)   return 'reverse'
-  if (reviewMode === 'reverse' && hasZh)       return 'reverse'
-  if (reviewMode === 'reverse' && !hasZh)      return 'forward'
+  if (reviewMode === 'sts'   && targetWord) return 'sts'
+  if (reviewMode === 'audio' && hasAudio)   return 'audio'
+  // fallbacks chain: sts/audio degrade to reverse, which itself needs zh —
+  // otherwise a zh-less card would show '—' as the prompt
+  if ((reviewMode === 'sts' || reviewMode === 'audio' || reviewMode === 'reverse') && hasZh) return 'reverse'
   return 'forward'
 }
 
