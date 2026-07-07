@@ -17,6 +17,8 @@ status: accepted
 
 **Decision 2 — 4 session modes** stored in localStorage as `srs_review_mode`:
 
+> **Amended by DEC-SRS13 (2026-07-08):** every mode now surfaces audio when present (forward/reverse on the reveal, sts on the prompt, all autoplay) and fallbacks chain through the zh check. The table below is the original decision.
+
 | Mode | Front | Back | Fallback |
 |------|-------|------|----------|
 | `forward` | `ab` | `zh` | — (always works) |

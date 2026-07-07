@@ -196,6 +196,8 @@ Response:
 
 **Audio URL repair** must be applied to every row before returning:
 
+> **Stale snippet (2026-07-08):** the current implementation lives in `apps/web/lib/corpus/curriculum.ts` (mirrored in `scripts/build-content-packs.mjs`) and additionally handles grmpts plus the two-segment `/sound/{tid}/{id}.mp3` shape that all dialogue rows carry — the version below misses it and leaves those URLs dead. See architecture.md → Known data notes.
+
 ```ts
 function repairAudioUrl(row: { audio_url?: string | null; source?: string; original_uuid?: string }) {
   if (!row.audio_url || !row.audio_url.includes('klokah.tw')) return row.audio_url

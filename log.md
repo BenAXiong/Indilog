@@ -2,6 +2,7 @@
 
 | Timestamp | Type | Description |
 |-----------|------|-------------|
+| 2026-07-08 04:12 | CONFIG | DEC-SRS13 ADR (audio surfacing in all session modes); DEC-SRS06 Decision 2 amendment note + decisions.md index rows; learn-feature.md stale repairAudioUrl snippet flagged with pointer to curriculum.ts |
 | 2026-07-08 01:55 | FEATURE | All session modes surface audio when present: forward/reverse autoplay+button on reveal (reverse prompt would leak the answer), sts autoplay+button on prompt, audio mode unchanged; Learn exposure passes autoplay on advance since the back is already visible; shared PlayChip in CardContent; architecture.md session-mode table updated |
 | 2026-07-08 00:53 | FIX | resolveEffectiveMode fallback chain: sts/audio degraded to reverse without checking hasZh, so zh-less cards showed the em-dash as the prompt; now sts/audio/reverse all fall through to forward when zh is missing |
 | 2026-07-08 00:40 | FIX | Learn session audio mode: autoplay on card advance (was Review-only; architecture.md session-mode table specifies autoplay) + audio-mode reveal always shows zh below ab (CardBack showZhAfterAudio prop dropped — Learn exposure pass hid the meaning entirely, violating CONTEXT.md fully-revealed rule) |

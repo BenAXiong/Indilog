@@ -53,13 +53,14 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-SRS03](docs/adr/DEC-SRS03-formosrs1-algorithm.md) | FormoSRS-1 algorithm | accepted |
 | [DEC-SRS04](docs/adr/DEC-SRS04-supabase-row-cap-pagination.md) | Supabase row cap — `.range()` pagination | accepted |
 | [DEC-SRS05](docs/adr/DEC-SRS05-note-centric-srs-architecture.md) | Note-centric SRS architecture | accepted (partially superseded by DEC-SRS06) |
-| [DEC-SRS06](docs/adr/DEC-SRS06-review-modes-drop-card-type.md) | Review modes — 4-mode system; drop card_type | accepted |
+| [DEC-SRS06](docs/adr/DEC-SRS06-review-modes-drop-card-type.md) | Review modes — 4-mode system; drop card_type | accepted (Decision 2 amended by DEC-SRS13) |
 | [DEC-SRS07](docs/adr/DEC-SRS07-learning-phase-gesture-labels.md) | Learning phase gesture + label design | accepted |
 | [DEC-SRS08](docs/adr/DEC-SRS08-session-cap-source-of-truth.md) | Session cap source of truth + "Review more" UX | superseded by DEC-M5-01 |
 | [DEC-SRS09](docs/adr/DEC-SRS09-mastery-grades.md) | Mastery grades — Seed / Planted / Rooted / Blooming | accepted |
 | [DEC-SRS10](docs/adr/DEC-SRS10-simulation-forward-projection.md) | Simulation — FormoSRS-1 day-by-day forward projection | accepted |
 | [DEC-SRS11](docs/adr/DEC-SRS11-review-session-counter.md) | Review session — in-session counter and progress bar semantics | accepted |
 | [DEC-SRS12](docs/adr/DEC-SRS12-advance-review.md) | Advance review — session mode for cards returning before next reset | accepted |
+| [DEC-SRS13](docs/adr/DEC-SRS13-audio-surfacing-session-modes.md) | Audio surfacing — every session mode plays audio when present | accepted |
 | [DEC-M5-01](docs/adr/DEC-M5-01-learn-review-separation.md) | Learn / Review session separation + priority-list goal model | accepted |
 | [DEC-001](docs/adr/DEC-001-dictionary-corpus-api-contract.md) | Dictionary and corpus API contract | accepted |
 | [DEC-002](docs/adr/DEC-002-supported-translation-pairs.md) | Supported translation pairs (v0) | superseded by DEC-M6-01 |
