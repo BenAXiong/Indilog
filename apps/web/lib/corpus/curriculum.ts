@@ -27,6 +27,11 @@ function repairAudioUrl(url: string | null, source: string, uuid: string): strin
   fixed = fixed.replace('file.klokah.tw', 'web.klokah.tw')
 
   if (TEXT_SOUND_SOURCES.has(source) && !fixed.includes('/text/')) {
+    // dialogue URLs already carry /sound/{tid}/{id}.mp3 — just insert /text/
+    const twoSeg = /\/sound\/(\d+)\/(\d+)\.mp3/.exec(fixed)
+    if (twoSeg) {
+      return `https://web.klokah.tw/text/sound/${twoSeg[1]}/${twoSeg[2]}.mp3`
+    }
     const parts = uuid.split('_')
     const contextId = parts.length >= 3 ? parts.at(-2) ?? null : null
     const soundMatch = /\/sound\/(\d+)\.mp3/.exec(fixed)

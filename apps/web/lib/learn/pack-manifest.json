@@ -1,12 +1,12 @@
 {
   "馬蘭阿美語": {
     "url": "/packs/amis-malan.json",
-    "version": "084a3e28692b",
+    "version": "c0029836c586",
     "sentences": 3131
   },
   "阿美語": {
     "url": "/packs/amis-grammar.json",
-    "version": "1bbc6bfd0de8",
+    "version": "a3e40238fb7b",
     "sentences": 2021
   }
 }

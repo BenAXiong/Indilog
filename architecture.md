@@ -313,4 +313,5 @@ commit after corpus edits**. grmpts content lives under the language-level `dial
 - `StudyView.handleSave` now saves zh to `ind_items.zh` directly (fixed in T-UNIFY / audio step 6).
 - `front`/`back` snapshots eliminated — cards render live from `note.ab`/`note.zh`.
 - Pre-existing `card_type='reverse'` rows deleted in M3 (no production users).
-- Pre-fix curriculum bookmarks (before audio step 6) have `ind_items.audio = null` — no auto-repair.
+- Pre-fix curriculum bookmarks (before audio step 6, saved as `note_source='captured'` with null zh/audio) were backfilled from the corpus by exact `ab` match on 2026-07-08 (25 rows).
+- klokah audio URL repair: `file.klokah.tw` is dead (connection refused) and `web.klokah.tw/sound/…` (without `/text/`) 404s. `repairAudioUrl` (lib/corpus/curriculum.ts + scripts/build-content-packs.mjs) rewrites both the one-segment `/sound/{id}.mp3` (tid from `original_uuid`) and two-segment `/sound/{tid}/{id}.mp3` shapes to `web.klokah.tw/text/sound/{tid}/{id}.mp3`. Stored `ind_items.audio` snapshots with dead shapes were repaired in-DB on 2026-07-08 (39 curriculum + 179 collection rows). A few repaired URLs still 404 — those files are missing upstream on klokah.tw (~3% sampled).
