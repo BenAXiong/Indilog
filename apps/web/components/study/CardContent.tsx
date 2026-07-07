@@ -37,6 +37,25 @@ export function renderHighlighted(sentence: string, target: string) {
   )
 }
 
+// ─── PlayChip — small replay button, shown wherever a card surfaces audio ─────
+
+function PlayChip({ url, playAudio }: { url: string; playAudio: (url: string) => void }) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); playAudio(url) }}
+      aria-label="Play audio"
+      style={{
+        marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 34, height: 34, borderRadius: 999, flexShrink: 0,
+        background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+        cursor: 'pointer', color: T.inkSoft,
+      }}
+    >
+      <Icon name="speaker" size={14} strokeWidth={1.8} />
+    </button>
+  )
+}
+
 // ─── CardFront ────────────────────────────────────────────────────────────────
 
 export function CardFront({
@@ -68,9 +87,12 @@ export function CardFront({
   }
   if (effectiveMode === 'sts') {
     return (
-      <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
-        {renderHighlighted(card.ind_items?.ab ?? '', targetWord ?? '')}
-      </div>
+      <>
+        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.5 }}>
+          {renderHighlighted(card.ind_items?.ab ?? '', targetWord ?? '')}
+        </div>
+        {cardAudio(card) && <PlayChip url={cardAudio(card)!} playAudio={playAudio} />}
+      </>
     )
   }
   if (effectiveMode === 'reverse') {
@@ -80,27 +102,11 @@ export function CardFront({
       </div>
     )
   }
-  // forward
+  // forward — audio surfaces on the reveal, not the prompt
   return (
-    <>
-      <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-        {card.ind_items?.ab}
-      </div>
-      {cardAudio(card) && (
-        <button
-          onClick={e => { e.stopPropagation(); playAudio(cardAudio(card)!) }}
-          aria-label="Play audio"
-          style={{
-            marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 34, height: 34, borderRadius: 999, flexShrink: 0,
-            background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-            cursor: 'pointer', color: T.inkSoft,
-          }}
-        >
-          <Icon name="speaker" size={14} strokeWidth={1.8} />
-        </button>
-      )}
-    </>
+    <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.22 }}>
+      {card.ind_items?.ab}
+    </div>
   )
 }
 
@@ -109,11 +115,15 @@ export function CardFront({
 export function CardBack({
   card,
   effectiveMode,
+  playAudio,
 }: {
   card:          FlashcardWithItem
   effectiveMode: CardMode
+  playAudio:     (url: string) => void
 }) {
+  const audio = cardAudio(card)
   if (effectiveMode === 'audio') {
+    // replay control is the front's player button, which stays visible
     return (
       <>
         <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 22, fontWeight: 400, color: T.inkSoft, letterSpacing: '-0.01em', marginBottom: 6 }}>
@@ -127,15 +137,21 @@ export function CardBack({
   }
   if (effectiveMode === 'reverse') {
     return (
-      <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
-        {card.ind_items?.ab}
-      </div>
+      <>
+        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.3 }}>
+          {card.ind_items?.ab}
+        </div>
+        {audio && <PlayChip url={audio} playAudio={playAudio} />}
+      </>
     )
   }
-  // forward + sts → zh
+  // forward + sts → zh (sts replay control lives on the front, next to the sentence)
   return (
-    <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
-      {card.ind_items?.zh ?? '—'}
-    </div>
+    <>
+      <div style={{ fontSize: 19, fontWeight: 500, color: T.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>
+        {card.ind_items?.zh ?? '—'}
+      </div>
+      {effectiveMode === 'forward' && audio && <PlayChip url={audio} playAudio={playAudio} />}
+    </>
   )
 }

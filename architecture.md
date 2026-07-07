@@ -98,10 +98,17 @@ Persisted in `localStorage` key `srs_review_mode` **and** `ind_profiles.preferen
 
 | Mode | Prompt shown | Reveal shows | Fallback |
 |------|-------------|--------------|---------|
-| `forward` | `note.ab` | `note.zh` | — |
-| `reverse` | `note.zh` | `note.ab` | → `forward` (no zh) |
+| `forward` | `note.ab` | `note.zh` + audio | — |
+| `reverse` | `note.zh` | `note.ab` + audio | → `forward` (no zh) |
 | `audio` | Audio player (autoplay) | `note.ab` + `note.zh` | → `reverse` (no audio) |
-| `sts` | `ab` with `target_word` highlighted | `note.zh` | → `reverse` (no target_word) |
+| `sts` | `ab` with `target_word` highlighted + audio | `note.zh` | → `reverse` (no target_word) |
+
+**Audio rule (2026-07-08):** every mode surfaces the card's audio when present — a play
+button plus autoplay the moment the audio surface appears: on the prompt for `audio`/`sts`,
+on the reveal for `forward`/`reverse` (playing the ab aloud on a reverse prompt would give
+away the answer). In Learn, the exposure pass shows the back immediately, so reveal-surfaced
+audio autoplays on card advance there. Fallbacks chain through the zh check: `sts`/`audio`
+degrade to `reverse` only if the card has zh, else all the way to `forward`.
 
 **Rule:** Never create a new `ind_flashcards` row just because a different session mode is needed. Modes are view logic only.
 

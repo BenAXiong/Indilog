@@ -268,15 +268,20 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   useEffect(() => { pauseAudio(); setShowFlagPicker(false); pendingRef.current = false }, [qIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Autoplay in audio mode when card changes
+  // Autoplay when the card's audio surface appears: audio/sts modes on card
+  // advance (prompt), forward/reverse when the back is visible — exposure passes
+  // show the back immediately, test passes on reveal
   useEffect(() => {
-    if (reviewMode !== 'audio') return
     const e = queue[qIdx]
     if (!e) return
     const url = cardAudio(e.card)
-    if (url) playAudio(url)
+    if (!url) return
+    const mode = resolveEffectiveMode(reviewMode, e.card.ind_items?.target_word ?? null, !!e.card.ind_items?.zh, true)
+    const onPrompt = mode === 'audio' || mode === 'sts'
+    const backVisible = !e.exposureDone || revealed
+    if (onPrompt ? !revealed : backVisible) playAudio(url)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qIdx, reviewMode])
+  }, [qIdx, revealed, reviewMode])
 
   // Shuffle test-phase entries once, when the last exposure entry has been processed
   useEffect(() => {
@@ -646,7 +651,7 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
           onFlagSelect={handleSetFlag}
           backContent={
             showBack
-              ? <CardBack card={card} effectiveMode={effectiveMode} />
+              ? <CardBack card={card} effectiveMode={effectiveMode} playAudio={playAudio} />
               : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
           }
         />

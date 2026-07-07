@@ -228,15 +228,18 @@ function ReviewSession({
   // Stop audio + close kebab when card advances; reset action gate
   useEffect(() => { pauseAudio(); setShowKebab(false); setShowInspect(false); pendingRef.current = false }, [qIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Autoplay in audio mode when card changes
+  // Autoplay when the card's audio surface appears: audio/sts modes on card
+  // advance (prompt), forward/reverse on reveal — all modes carry audio when present
   useEffect(() => {
-    if (reviewMode !== 'audio') return
     const e = queue[qIdx]
     if (!e) return
     const url = cardAudio(e.card)
-    if (url) playAudio(url)
+    if (!url) return
+    const mode = resolveEffectiveMode(reviewMode, e.card.ind_items?.target_word ?? null, !!e.card.ind_items?.zh, true)
+    const onPrompt = mode === 'audio' || mode === 'sts'
+    if (onPrompt ? !revealed : revealed) playAudio(url)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qIdx, reviewMode])
+  }, [qIdx, revealed, reviewMode])
 
   useEffect(() => {
     setShowHardEasyRaw(localStorage.getItem('srs_show_hard_easy') !== 'false')
@@ -685,7 +688,7 @@ function ReviewSession({
           onFlagSelect={handleSetFlag}
           backContent={
             revealed
-              ? <CardBack card={card} effectiveMode={effectiveMode} />
+              ? <CardBack card={card} effectiveMode={effectiveMode} playAudio={playAudio} />
               : <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 11, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em' }}>tap to reveal</span>
           }
         />
