@@ -195,6 +195,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Study tab revamp - One tab per type of deck
 - [x] Study tab - subdecks
 
+- [x] FIX: dialect mismatch warning for patterns
 - [ ] Study/Decks: move the video subtab/link and add video section (keep page)
 - [ ] Study/Capture: prototype for expanded sub-decks
 - [ ] Session: minor mods, see screenshots
@@ -217,6 +218,10 @@ Personal library of sources (people, media, references) linked to captured items
 
 - [x] FIX: db wiring (pyu displays in ami 1-1-4)
 - [x] (deferred) FIX: vercel error on session completion
+- [x] FIX: zh missing in curriculm cards
+- [x] FIX: audio broken in curriculm cards
+- [x] FIX: zh and audio missing from seesion fields in some modes of curriculm cards
+- [x] FIX: unsave (delete or suspend) curriculum and dict entries
 - [ ] FIX: decks content capped at 1000 (at least custom)
 - [ ] FIX: ePark Review page amount
 
@@ -227,8 +232,8 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Review session CTA: add size override
 - [x] Priority decks: add captures and curriculum + update goal and queue logic
 - [x] Priority decks: add filters for captures and curriculum
-- [ ] Record curriculum completion time per unit
-- [ ] Improve Study content loading latency
+- [x] Record curriculum completion time per unit (not surfaced)
+- [x] Improve Study content loading latency
 
 - [x] Dict: enable non-amis ab search with dialects
 - [ ] Dict: compare words vs merge and keep best
