@@ -342,7 +342,11 @@ export async function listDueFlashcards(opts: ListDueOpts = {}): Promise<Flashca
 export async function countDueFlashcards(opts: ListDueOpts = {}): Promise<number> {
   const supabase = createClient()
   const now = new Date().toISOString()
-  const { count, error } = await buildDueQuery(supabase, opts, 'id, ind_items!inner(id)', now, true)
+  let { count, error } = await buildDueQuery(supabase, opts, 'id, ind_items!inner(id)', now, true)
+  // One retry — a request in this landing-page burst can get aborted by the
+  // browser (observed alongside an unrelated Next.js prefetch cancellation)
+  // and would otherwise silently show "0 due" instead of the real count.
+  if (error) ({ count, error } = await buildDueQuery(supabase, opts, 'id, ind_items!inner(id)', now, true))
   if (error) { console.error('countDueFlashcards:', error); return 0 }
   return count ?? 0
 }
@@ -359,7 +363,9 @@ export async function countLearnFlashcards(collectionId?: string): Promise<numbe
     .eq('repetitions', 0)
     .is('suspended_at', null)
   if (collectionId) q = q.filter('ind_items.collection_id', 'eq', collectionId)
-  const { count, error } = await q
+  let { count, error } = await q
+  // One retry — see countDueFlashcards for why this landing-page count is retried.
+  if (error) ({ count, error } = await q)
   if (error) { console.error('countLearnFlashcards:', error); return 0 }
   return count ?? 0
 }

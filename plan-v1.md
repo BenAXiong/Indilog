@@ -224,6 +224,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] FIX: unsave (delete or suspend) curriculum and dict entries
 - [ ] FIX: decks content capped at 1000 (at least custom)
 - [ ] FIX: ePark Review page amount
+- [x] FIX: transient learn/review page
 
 - [x] Tune the Again grading in Reviews: min(10min, requeue to last)
 - [x] (deferred) Tune the fuzz so that cards don't cling
