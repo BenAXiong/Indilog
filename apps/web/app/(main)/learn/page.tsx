@@ -368,6 +368,21 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     return () => window.removeEventListener('keydown', onKey)
   }, [entry, revealed]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Must run before the `!entry` bail-out below (Rules of Hooks) — this is the
+  // hook whose late placement caused React error #300 on natural session end,
+  // when `entry` goes undefined for LearnSession's last render before unmount.
+  const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
+    flying:      !!gradingFly,
+    setDrag,
+    revealed,
+    exposureDone: entry?.exposureDone ?? false,
+    onEasy:    () => handleGraduate('easy'),
+    onSuspend: handleSuspend,
+    onAgain:   handleAgain,
+    onGood:    () => handleGood(entry?.goodCount ?? 0),
+    onNext:    handleExposureOK,
+  })
+
   if (!entry) return null
 
   const { card, exposureDone, goodCount } = entry
@@ -539,20 +554,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
       setQIdx(qi => qi - 1)
     }
   }
-
-  // ── Touch ─────────────────────────────────────────────────────────────────
-
-  const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
-    flying:      !!gradingFly,
-    setDrag,
-    revealed,
-    exposureDone,
-    onEasy:    () => handleGraduate('easy'),
-    onSuspend: handleSuspend,
-    onAgain:   handleAgain,
-    onGood:    () => handleGood(goodCount),
-    onNext:    handleExposureOK,
-  })
 
   const showBack = !exposureDone || (exposureDone && revealed)
 

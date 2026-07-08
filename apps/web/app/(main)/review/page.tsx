@@ -314,6 +314,20 @@ function ReviewSession({
     return Object.fromEntries(RATINGS.map(r => [r.id, formatDays(estimateInterval(st, r.id))]))
   }, [entry?.card?.id, entry?.card?.ease_factor, entry?.card?.interval_days, entry?.card?.repetitions]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Must run before the `!entry` bail-out below (Rules of Hooks) — this is the
+  // hook whose late placement caused React error #300 on natural session end,
+  // when `entry` goes undefined for ReviewSession's last render before unmount.
+  const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
+    flying:    !!gradingFly,
+    setDrag,
+    revealed,
+    onEasy:    () => submit('easy'),
+    onSuspend: handleSuspend,
+    onAgain:   () => submit('again'),
+    onGood:    () => submit('good'),
+    onReveal:  () => setRevealed(true),
+  })
+
   if (!entry) return null  // transitioning to done state
 
   const { card } = entry
@@ -525,17 +539,6 @@ function ReviewSession({
     }))
     setShowEdit(false)
   }
-
-  const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture({
-    flying:    !!gradingFly,
-    setDrag,
-    revealed,
-    onEasy:    () => submit('easy'),
-    onSuspend: handleSuspend,
-    onAgain:   () => submit('again'),
-    onGood:    () => submit('good'),
-    onReveal:  () => setRevealed(true),
-  })
 
   const visibleRatings = showHardEasy ? RATINGS : RATINGS.filter(r => r.id === 'again' || r.id === 'good')
 
