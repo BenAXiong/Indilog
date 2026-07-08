@@ -19,14 +19,23 @@ indistinguishable from one another and all resolved to the same pool.
 
 ## Decisions
 
-**1. Curriculum sub-source recorded going forward, not backfilled.** `EparkView.tsx`'s `handleSave`
+**1. Curriculum sub-source recorded going forward, and backfilled.** `EparkView.tsx`'s `handleSave`
 now passes `metadata: { curriculum_source: source }` on every `createItem()` call (previously only
 `'twelve'` got any source-specific data, via `level`/`lesson`). `CreateItemInput` gained an optional
 `metadata` field; `ind_items.metadata` already existed as an empty jsonb column. `matchesPriorityDeck`
 checks `metadata.curriculum_source` first, falling back to the old level-based heuristic for cards
-saved before this change (no backfill attempted — no reliable link from existing rows back to their
-corpus source). The existing 283 pre-fix Conversations/Dialogues/Essays/Patterns cards remain in one
-combined bucket permanently, unless naturally re-saved.
+saved before this change.
+
+Initially assumed the existing 283 pre-fix cards couldn't be backfilled reliably (no stored link
+back to their corpus source) — that was wrong, checked without verifying. Empirically, exact `ab`
+text + matching `dialect`, joined against `corpus_sentences`/`corpus_occurrences` restricted to the
+4 non-`twelve` sources, resolved all 283 cards to exactly one distinct source each (zero no-match,
+zero multi-source ambiguity) — verified by dry-run before writing anything. Backfilled via a single
+`UPDATE ... FROM` with a `having count(distinct o.source) = 1` guard (skips silently rather than
+guessing, if ever re-run against data where that stops holding). Result: `grmpts` 187, `essay` 34,
+`dialogue` 32, `con_practice` 30 — 283 total, all accounted for. The level-based fallback in
+`matchesPriorityDeck` remains in place regardless, for any future edge case where a match isn't
+found (e.g. hand-edited `ab` text that no longer matches the corpus verbatim).
 
 **2. Session header falls through to the card's real deck, not blank.** `deckName` (in both
 `review/page.tsx` and `learn/page.tsx`) previously returned `null` when the current card didn't
@@ -90,5 +99,6 @@ Pending checklist:
    (not lumped into one bucket) sorted by count descending, and the numbers match a manual DB count.
 4. Confirm switching tabs and closing/reopening a picker doesn't leave stale data from the other
    picker (Learn vs Review breakdown state shouldn't cross-contaminate).
-5. Regression: existing pre-fix curriculum cards (no `metadata.curriculum_source`) still sort/match
-   the same as before (level-based fallback intact).
+5. After the backfill, open the Learn/Review "Decks" tab and confirm Conversations/Dialogues/
+   Essays/Patterns now show distinct, non-lumped counts (this is the actual point of the backfill —
+   verify it's visible, not just correct in the DB).
