@@ -17,6 +17,8 @@ import BrowserView from '@/components/study/BrowserView'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
 import PerfMark from '@/components/perf/PerfMark'
 import { getSessionUser } from '@/lib/supabase/session'
+import { getGlid } from '@/lib/lang/lang-bridge'
+import { GRMPTS_SOURCE_DIALECT, DIALECT_TO_EN } from '@/lib/lang/dialects'
 
 // ─── Due badge ───────────────────────────────────────────────────────────────
 
@@ -129,10 +131,51 @@ function progressFill(pct: number) {
   return 'rgba(180,40,40,0.07)'
 }
 
-function CurriculumSection({ icon, name, href, meta, last, open, onToggle }: {
+function WarningTip({ text }: { text: string }) {
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    if (!show) return
+    const close = () => setShow(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [show])
+
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+      <button
+        type="button"
+        aria-label="Content notice"
+        onClick={e => { e.preventDefault(); e.stopPropagation(); setShow(true) }}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+        }}
+      >
+        <Icon name="alert-triangle" size={13} color={T.amber} strokeWidth={2} />
+      </button>
+      {show && (
+        <span style={{
+          position: 'absolute', bottom: '100%', right: 0, marginBottom: 6,
+          width: 200, padding: '8px 10px', borderRadius: 8,
+          background: T.ink, color: T.paperHi,
+          fontSize: 11.5, fontFamily: 'system-ui, sans-serif', lineHeight: 1.35,
+          boxShadow: '0 4px 14px rgba(0,0,0,0.22)', zIndex: 20,
+        }}>
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
+function CurriculumSection({ icon, name, href, meta, last, open, onToggle, warning }: {
   icon: IconName; name: string; href: string
   meta: CurriculumProgressItem | null; last?: boolean
   open: boolean; onToggle: () => void
+  warning?: string
 }) {
   const pct    = meta && meta.total > 0 ? Math.round(meta.completed / meta.total * 100) : 0
   const levels = meta?.levels ?? []
@@ -157,24 +200,28 @@ function CurriculumSection({ icon, name, href, meta, last, open, onToggle }: {
           <Icon name={icon} size={19} color={T.crimson} strokeWidth={1.6} />
         </div>
 
-        <button
-          onClick={hasLevels ? onToggle : undefined}
-          style={{
-            flex: '1 1 0', minWidth: 0, background: 'none', border: 'none',
-            cursor: hasLevels ? 'pointer' : 'default', padding: 0, textAlign: 'left',
-          }}
-        >
-          <div style={{
-            fontFamily: 'Newsreader, Georgia, serif',
-            fontSize: 16, fontWeight: 500, color: T.ink,
-            letterSpacing: '-0.015em', lineHeight: 1.15,
-          }}>{name}</div>
-          {meta && meta.total > 0 && (
-            <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, marginTop: 3 }}>
-              {meta.completed}/{meta.total}
-            </div>
-          )}
-        </button>
+        <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <button
+            onClick={hasLevels ? onToggle : undefined}
+            style={{
+              flex: '1 1 0', minWidth: 0, background: 'none', border: 'none',
+              cursor: hasLevels ? 'pointer' : 'default', padding: 0, textAlign: 'left',
+            }}
+          >
+            <div style={{
+              fontFamily: 'Newsreader, Georgia, serif',
+              fontSize: 16, fontWeight: 500, color: T.ink,
+              letterSpacing: '-0.015em', lineHeight: 1.15,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{name}</div>
+            {meta && meta.total > 0 && (
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, marginTop: 3 }}>
+                {meta.completed}/{meta.total}
+              </div>
+            )}
+          </button>
+          {warning && <WarningTip text={warning} />}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <Link href={href} style={{
@@ -294,11 +341,22 @@ function CaptureSection({ counts, open, onToggle, onKebab }: {
 
 const CURRICULUM: { id: string; name: string; icon: IconName; href: string }[] = [
   { id: 'lessons',  name: 'Lessons',  icon: 'learn',  href: '/study/lessons'   },
-  { id: 'patterns', name: 'Patterns', icon: 'layers', href: '/study/patterns'  },
+  { id: 'patterns', name: 'Patterns', icon: 'layers', href: '/study/patterns' },
   { id: 'essays',         name: 'Essays',         icon: 'pen',    href: '/study/essays'         },
   { id: 'dialogues',      name: 'Dialogues',      icon: 'wave',   href: '/study/dialogues'      },
   { id: 'conversations',  name: 'Conversations',  icon: 'mic',    href: '/study/conversations'  },
 ]
+
+// Patterns content is only truly written in one sub-dialect per language (GRMPTS_SOURCE_DIALECT)
+// but served to all sub-dialects for convenience — warn only when they actually differ.
+function patternsWarning(glid: string | null, userDialect: string | null): string | undefined {
+  if (!glid || !userDialect) return undefined
+  const sourceDialect = GRMPTS_SOURCE_DIALECT[glid]
+  if (!sourceDialect || sourceDialect === userDialect) return undefined
+  const sourceLabel = DIALECT_TO_EN[sourceDialect] ?? sourceDialect
+  const userLabel = DIALECT_TO_EN[userDialect] ?? userDialect
+  return `Patterns content is only available in ${sourceLabel} — you're studying ${userLabel}. Vocabulary may not match.`
+}
 
 const SUBTABS = [
   { id: 'epark'       as const, label: 'ePark'    },
@@ -524,6 +582,7 @@ function StudyPageInner() {
                 icon={deck.icon}
                 name={deck.name}
                 href={deck.href}
+                warning={deck.id === 'patterns' ? patternsWarning(getGlid(lang.code), dialect) : undefined}
                 meta={curriculumMeta?.[deck.id as keyof typeof curriculumMeta] ?? null}
                 last={i === CURRICULUM.length - 1}
                 open={openDecks[deck.id] ?? false}

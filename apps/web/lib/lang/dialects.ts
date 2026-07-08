@@ -61,6 +61,14 @@ export const GLID_NAMES: Record<string, string> = {
   '13': '撒奇萊雅語', '14': '賽德克語', '15': '拉阿魯哇語', '16': '卡那卡那富語',
 }
 
+// Grmpts (grammar patterns) content is scraped once per language and shared
+// across all of that language's sub-dialects (see getGrmptsDialect) — it is
+// only actually written in one specific sub-dialect. Populate here as the
+// true source dialect is confirmed per language; omit rather than guess.
+export const GRMPTS_SOURCE_DIALECT: Record<string, string> = {
+  '01': '秀姑巒阿美語', // Xiuguluan Amis
+}
+
 export const GLID_NAMES_EN: Record<string, string> = {
   '01': 'Amis',      '02': 'Atayal',   '03': 'Paiwan',    '04': 'Bunun',
   '05': 'Puyuma',    '06': 'Rukai',    '07': 'Tsou',      '08': 'Saisiyat',
