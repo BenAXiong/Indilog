@@ -12,7 +12,7 @@ import {
   ensureFlashcards, listDueFlashcards, countDueFlashcards, getExcludeFromReview,
   rateCard, rateCardRelearn, flushReviewEvents, cardMeta, cardAudio,
   suspendCard, unsuspendCard, setFlagColor, deferCard, setDueAt, undoRating, undoDefer, localDateStr, getStudyDate,
-  type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent,
+  type FlashcardWithItem, type Rating, type ListDueOpts, type PendingReviewEvent, type ReviewExclusions,
 } from '@/lib/db/srs/flashcards'
 import { getLangName, getGlid } from '@/lib/lang/lang-bridge'
 import { shortDialectLabel } from '@/lib/lang/dialects'
@@ -46,6 +46,8 @@ type SessionContext = {
   streak:         number
   priorityDecks:  PriorityDeck[]
   reviewMoreSize: number | null
+  showAllLangs:   boolean
+  excludedLangs:  string[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,20 +56,20 @@ function cardSMState(card: FlashcardWithItem): SMState {
   return { ease_factor: card.ease_factor, interval_days: card.interval_days, repetitions: card.repetitions }
 }
 
-async function loadSessionContext(): Promise<SessionContext> {
+async function loadSessionContext(exclude?: Promise<ReviewExclusions>): Promise<SessionContext> {
   const supabase = createClient()
   const user = await getSessionUser()
-  if (!user) return { reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null }
+  if (!user) return { reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null, showAllLangs: true, excludedLangs: [] }
 
   const today   = getStudyDate()
   const from30  = new Date(); from30.setDate(from30.getDate() - 29)
   const fromStr = localDateStr(from30)
 
-  const [profileRes, todayRes, dailyRes, priorityDecks] = await Promise.all([
-    supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle(),
+  const [todayRes, dailyRes, priorityDecks, exc] = await Promise.all([
     supabase.from('ind_daily_stats').select('reviewed_count, review_target').eq('user_id', user.id).eq('date', today).maybeSingle(),
     supabase.from('ind_daily_stats').select('date, reviewed_count').eq('user_id', user.id).gte('date', fromStr).order('date', { ascending: false }),
     listPriorityDecks(user.id),
+    exclude ?? getExcludeFromReview(),
   ])
 
   const reviewSet = new Set(
@@ -77,9 +79,8 @@ async function loadSessionContext(): Promise<SessionContext> {
   let cur = today
   while (reviewSet.has(cur)) { streak++; const [y,m,d] = cur.split('-').map(Number); const p = new Date(y,m-1,d-1); cur = `${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}` as typeof today }
 
-  const prefs = profileRes.data?.preferences as Record<string, unknown> | null
-  const prefReviewTarget = typeof prefs?.review_target === 'number' ? prefs.review_target : 100
-  const reviewMoreSize = typeof prefs?.review_more_size === 'number' ? prefs.review_more_size : null
+  const prefReviewTarget = exc.prefs.review_target
+  const reviewMoreSize = exc.prefs.review_more_size
   if (typeof window !== 'undefined') localStorage.setItem('srs_review_target', String(prefReviewTarget))
 
   return {
@@ -89,6 +90,8 @@ async function loadSessionContext(): Promise<SessionContext> {
     streak,
     priorityDecks,
     reviewMoreSize,
+    showAllLangs:          exc.showAllLangs,
+    excludedLangs:         exc.excludedLangs,
   }
 }
 
@@ -188,8 +191,8 @@ function ReviewSession({
   const [prefReviewTarget, setPrefReviewTargetRaw] = useState(100)
   const [reviewMode,     setReviewModeRaw]  = useState('forward')
   const [shuffleNew,     setShuffleNewRaw]  = useState(false)
-  const [showAllLangs,   setShowAllLangsRaw] = useState(true)
-  const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>([])
+  const [showAllLangs,   setShowAllLangsRaw] = useState(ctx.showAllLangs)
+  const [excludedLangs,  setExcludedLangsRaw] = useState<string[]>(ctx.excludedLangs)
   const { playAudio, pauseAudio } = useAudioPlayer()
   const { push: pushUndo, pop: popUndo, count: undoCount } = useUndoStack<UndoEntry>()
   const queueRef      = useRef<QueueEntry[]>(cards.map(c => ({ card: c })))
@@ -248,8 +251,6 @@ function ReviewSession({
     setPrefReviewTargetRaw(isNaN(cap) ? 100 : Math.min(300, Math.max(1,cap)))
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
     setShuffleNewRaw(localStorage.getItem('srs_shuffle_new') === 'true')
-    setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
-    try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
 
   function setShuffleNew(v: boolean)   { setShuffleNewRaw(v);   localStorage.setItem('srs_shuffle_new',    String(v)); patchPreferences({ shuffle_new: v }) }
@@ -922,7 +923,7 @@ function ReviewPage() {
   const [mode,     setMode]     = useState<'landing' | 'reviewing' | 'done'>('landing')
   const [cards,    setCards]    = useState<FlashcardWithItem[]>([])
   const [overflow, setOverflow] = useState<FlashcardWithItem[]>([])
-  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null })
+  const [ctx,     setCtx]     = useState<SessionContext>({ reviewedToday: 0, reviewTarget: 100, prefReviewTarget: 100, streak: 0, priorityDecks: [], reviewMoreSize: null, showAllLangs: true, excludedLangs: [] })
   const [loading, setLoading] = useState(true)
   // S11c two-phase load: landing paints from sessionN (fast count) while the
   // full queue downloads; Begin waits on queueReady if tapped early
@@ -936,13 +937,6 @@ function ReviewPage() {
   const [gradeHistory,    setGradeHistory]    = useState<Map<string, Rating[]>>(new Map())
   const autostartedRef = useRef(false)
 
-  function getExcludeLangs(): string[] {
-    if (localStorage.getItem('srs_show_all_langs') === 'false') {
-      try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch {}
-    }
-    return []
-  }
-
   async function reload() {
     // Two-phase load (perf S11c): a cheap count + context paint the landing fast;
     // the full queue (incl. overflow buffer, DEC-M5-01) keeps downloading in the
@@ -952,6 +946,11 @@ function ReviewPage() {
     setQueueReady(false)
     const t0 = performance.now()
     ensureFlashcards()
+
+    // Fetched once, shared with loadSessionContext below — avoids a duplicate ind_profiles
+    // round trip and, more importantly, makes excludeLangs authoritative from the DB instead
+    // of racing a synchronous localStorage read (which can be stale on a fresh device/tab).
+    const excludeP = isCustom ? undefined : getExcludeFromReview()
 
     const optsP: Promise<ListDueOpts> = (async () => {
       if (isCustom) return {
@@ -967,10 +966,10 @@ function ReviewPage() {
         includeTags:         customTags,
         dueOnly:             customDueOnly,
       }
-      const exclude = await getExcludeFromReview()
+      const exclude = await excludeP!
       const opts: ListDueOpts = {
         flagColor,
-        excludeLangs:       getExcludeLangs(),
+        excludeLangs:       exclude.showAllLangs ? [] : exclude.excludedLangs,
         excludeCollections: exclude.collections,
         excludeCaptures:    exclude.captures,
       }
@@ -989,7 +988,7 @@ function ReviewPage() {
     // Fast phase — landing paints from count + context
     const [count, context] = await Promise.all([
       optsP.then(o => countDueFlashcards(o)),
-      loadSessionContext(),
+      loadSessionContext(excludeP),
     ])
     const reviewMoreN = context.reviewMoreSize ?? Math.max(20, Math.round(context.reviewTarget / 50) * 5)
     const capFor = (len: number) => reviewNParam !== null ? Math.min(len, reviewNParam)
@@ -1061,8 +1060,8 @@ function ReviewPage() {
   async function handleReviewMore(n: number) {
     const exclude = await getExcludeFromReview()
     const more = await listDueFlashcards({
-      excludeLangs:       ctx.priorityDecks.length === 0 && localStorage.getItem('srs_show_all_langs') !== 'false'
-        ? [] : JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]'),
+      excludeLangs:       ctx.priorityDecks.length === 0 && exclude.showAllLangs
+        ? [] : exclude.excludedLangs,
       excludeCollections: exclude.collections,
       excludeCaptures:    exclude.captures,
     })

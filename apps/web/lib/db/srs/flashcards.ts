@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import { nextFormoSRS1, nextRelearn, type SMState, type Rating } from './schedule'
 import { listPriorityDecks, matchesPriorityDeck } from './priority'
 import { getSessionUser } from '@/lib/supabase/session'
+import { fetchReviewPrefsSnapshot, DEFAULT_PREFERENCES, type ReviewPrefsSnapshot } from '@/lib/db/profile/preferences'
 
 export type { Rating } from './schedule'
 
@@ -143,17 +144,32 @@ export function getStudyDate(): LocalDateString {
   return localDateStr(now)
 }
 
-export async function getExcludeFromReview(): Promise<{ collections: string[]; captures: boolean }> {
+export type ReviewExclusions = {
+  collections:   string[]
+  captures:      boolean
+  showAllLangs:  boolean
+  excludedLangs: string[]
+  prefs:         ReviewPrefsSnapshot['prefs']
+}
+
+// Authoritative review-filter fetch — sources language exclusions from ind_profiles.preferences
+// (via fetchReviewPrefsSnapshot), not localStorage, which can be stale on a device/tab that
+// hasn't opened SettingsSheet yet this session. Exposes the full prefs snapshot too, so callers
+// that also need e.g. review_target don't have to fetch ind_profiles a second time.
+export async function getExcludeFromReview(): Promise<ReviewExclusions> {
   const supabase = createClient()
   const user = await getSessionUser()
-  if (!user) return { collections: [], captures: false }
-  const [colRes, profRes] = await Promise.all([
+  if (!user) return { collections: [], captures: false, showAllLangs: true, excludedLangs: [], prefs: DEFAULT_PREFERENCES }
+  const [colRes, snap] = await Promise.all([
     supabase.from('ind_learn_collections').select('id').eq('user_id', user.id).eq('include_in_review', false),
-    supabase.from('ind_profiles').select('include_in_review').eq('user_id', user.id).maybeSingle(),
+    fetchReviewPrefsSnapshot(user.id),
   ])
   return {
-    collections: (colRes.data ?? []).map(r => r.id as string),
-    captures:    !((profRes.data?.include_in_review as boolean) ?? true),
+    collections:   (colRes.data ?? []).map(r => r.id as string),
+    captures:      !snap.includeInReview,
+    showAllLangs:  snap.prefs.show_all_langs,
+    excludedLangs: snap.prefs.excluded_langs,
+    prefs:         snap.prefs,
   }
 }
 

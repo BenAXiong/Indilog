@@ -14,7 +14,7 @@ import {
   type FlashcardWithItem, type PendingReviewEvent,
 } from '@/lib/db/srs/flashcards'
 import { updateItem } from '@/lib/db/notebook/items'
-import { patchPreferences } from '@/lib/db/profile/preferences'
+import { patchPreferences, fetchReviewPrefsSnapshot } from '@/lib/db/profile/preferences'
 import { getLangName, getGlid } from '@/lib/lang/lang-bridge'
 import { shortDialectLabel } from '@/lib/lang/dialects'
 import { createClient } from '@/lib/supabase/client'
@@ -47,6 +47,8 @@ type LearnContext = {
   learnedToday: number
   learnTarget:  number
   priorityDecks: PriorityDeck[]
+  showAllLangs:  boolean
+  excludedLangs: string[]
 }
 
 type LearnUndoEntry =
@@ -60,17 +62,16 @@ type LearnUndoEntry =
 async function loadLearnContext(): Promise<LearnContext> {
   const supabase = createClient()
   const user = await getSessionUser()
-  if (!user) return { learnedToday: 0, learnTarget: 10, priorityDecks: [] }
+  if (!user) return { learnedToday: 0, learnTarget: 10, priorityDecks: [], showAllLangs: true, excludedLangs: [] }
 
   const today = getStudyDate()
-  const [profileRes, statsRes, priorityDecks] = await Promise.all([
-    supabase.from('ind_profiles').select('preferences').eq('user_id', user.id).maybeSingle(),
+  const [statsRes, priorityDecks, snap] = await Promise.all([
     supabase.from('ind_daily_stats').select('learned_count, learn_target').eq('user_id', user.id).eq('date', today).maybeSingle(),
     listPriorityDecks(user.id),
+    fetchReviewPrefsSnapshot(user.id),
   ])
 
-  const prefs      = profileRes.data?.preferences as Record<string, unknown> | null
-  const prefLearnTarget = typeof prefs?.learn_target === 'number' ? prefs.learn_target : 10
+  const prefLearnTarget = snap.prefs.learn_target
 
   // Use frozen learn_target from ind_daily_stats when available (set by dashboard on first load).
   // Fall back to live simulation rate, or bare pref cap when no sim is active.
@@ -102,6 +103,8 @@ async function loadLearnContext(): Promise<LearnContext> {
     learnedToday:          (statsRes.data as Record<string, unknown> | null)?.learned_count as number ?? 0,
     learnTarget,
     priorityDecks,
+    showAllLangs:          snap.prefs.show_all_langs,
+    excludedLangs:         snap.prefs.excluded_langs,
   }
 }
 
@@ -222,8 +225,8 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const testShuffledRef = useRef(false)
   const [showOptions,   setShowOptions]   = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
-  const [showAllLangs,  setShowAllLangsRaw]  = useState(true)
-  const [excludedLangs, setExcludedLangsRaw] = useState<string[]>([])
+  const [showAllLangs,  setShowAllLangsRaw]  = useState(ctx.showAllLangs)
+  const [excludedLangs, setExcludedLangsRaw] = useState<string[]>(ctx.excludedLangs)
   const [overflow,      setOverflow]      = useState<FlashcardWithItem[]>(initialOverflow)
   const [showPriorityToast, setShowPriorityToast] = useState(false)
   const [cardFlags,     setCardFlags]     = useState<Record<string, string | null>>({})
@@ -258,8 +261,6 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
 
   useEffect(() => {
     setReviewModeRaw(localStorage.getItem('srs_review_mode') ?? 'forward')
-    setShowAllLangsRaw(localStorage.getItem('srs_show_all_langs') !== 'false')
-    try { setExcludedLangsRaw(JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]')) } catch {}
   }, [])
 
   function setReviewMode(v: string)      { setReviewModeRaw(v);    localStorage.setItem('srs_review_mode',    v); patchPreferences({ review_mode: v }) }
@@ -750,7 +751,7 @@ function LearnPage() {
   const [mode,         setMode]         = useState<'landing' | 'learning' | 'done'>('landing')
   const [cards,        setCards]        = useState<FlashcardWithItem[]>([])
   const [overflow,     setOverflow]     = useState<FlashcardWithItem[]>([])
-  const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnTarget: 10, priorityDecks: [] })
+  const [ctx,          setCtx]          = useState<LearnContext>({ learnedToday: 0, learnTarget: 10, priorityDecks: [], showAllLangs: true, excludedLangs: [] })
   const [loading,      setLoading]      = useState(true)
   // S11c two-phase load: landing paints from sessionN (fast count) while the
   // full queue downloads; Begin waits on queueReady if tapped early
@@ -781,9 +782,7 @@ function LearnPage() {
     setLoading(false)
 
     const allCards = await queueP
-    const excludeLangs: string[] = !collectionId && localStorage.getItem('srs_show_all_langs') === 'false'
-      ? (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
-      : []
+    const excludeLangs: string[] = !collectionId && !context.showAllLangs ? context.excludedLangs : []
     const filtered = excludeLangs.length
       ? allCards.filter(c => !excludeLangs.includes(c.ind_items?.language ?? ''))
       : allCards

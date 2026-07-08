@@ -425,15 +425,18 @@ function StudyPageInner() {
   useEffect(() => {
     if (!lang.code) return
     setCurriculumMeta(null)
-    const excludeLangs = showAllLangs ? [] : excludedLangs
     Promise.all([
       listCollections(lang.code),
       getExcludeFromReview(),
       ensureFlashcards(),
     ]).then(async ([cols, exclude]) => {
+      // Source lang exclusions from the fresh DB fetch, not the localStorage-seeded initial
+      // state, which can be stale on a device/tab that hasn't opened SettingsSheet yet.
+      setShowAllLangs(exclude.showAllLangs)
+      setExcludedLangs(exclude.excludedLangs)
       setCapturesIncluded(!exclude.captures)
       const stats = await getDueStats({
-        excludeLangs,
+        excludeLangs:       exclude.showAllLangs ? [] : exclude.excludedLangs,
         excludeCollections: exclude.collections,
         excludeCaptures:    exclude.captures,
       })
@@ -462,9 +465,7 @@ function StudyPageInner() {
   }
 
   async function refreshDue() {
-    const currentShowAll = localStorage.getItem('srs_show_all_langs') !== 'false'
-    const currentExcluded: string[] = (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
-    const excludeLangs = currentShowAll ? [] : currentExcluded
+    const excludeLangs = showAllLangs ? [] : excludedLangs
     const excludeCollections = collections.filter(c => !c.include_in_review).map(c => c.id)
     const stats = await getDueStats({ excludeLangs, excludeCollections, excludeCaptures: !capturesIncluded })
     setDue(stats)
@@ -473,9 +474,7 @@ function StudyPageInner() {
   async function handleReset() { await refreshDue() }
 
   async function handleIncludeToggled(id: string, include: boolean) {
-    const currentShowAll = localStorage.getItem('srs_show_all_langs') !== 'false'
-    const currentExcluded: string[] = (() => { try { return JSON.parse(localStorage.getItem('srs_excluded_langs') ?? '[]') } catch { return [] } })()
-    const excludeLangs = currentShowAll ? [] : currentExcluded
+    const excludeLangs = showAllLangs ? [] : excludedLangs
     if (id === CAPTURES_DECK_ID) {
       setCapturesIncluded(include)
       const excludeCollections = collections.filter(c => !c.include_in_review).map(c => c.id)

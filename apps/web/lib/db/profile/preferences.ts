@@ -41,6 +41,30 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   goal_mode:        'manual',
 }
 
+export type ReviewPrefsSnapshot = {
+  prefs:           UserPreferences
+  includeInReview: boolean
+}
+
+// Single authoritative read of ind_profiles (preferences + include_in_review), used wherever a
+// page needs to build a query from the user's real settings instead of the localStorage cache.
+// Keeps localStorage in sync as a side effect so components that read it synchronously (toggle
+// UI initial state) see the DB value on next read, not just query-building code.
+export async function fetchReviewPrefsSnapshot(userId: string): Promise<ReviewPrefsSnapshot> {
+  const supabase = createClient()
+  const { data } = await supabase
+    .from('ind_profiles')
+    .select('preferences, include_in_review')
+    .eq('user_id', userId)
+    .maybeSingle()
+  const prefs = { ...DEFAULT_PREFERENCES, ...(data?.preferences as Partial<UserPreferences> | undefined) }
+  if (globalThis.window !== undefined) {
+    localStorage.setItem('srs_show_all_langs', String(prefs.show_all_langs))
+    localStorage.setItem('srs_excluded_langs', JSON.stringify(prefs.excluded_langs))
+  }
+  return { prefs, includeInReview: (data?.include_in_review as boolean | null) ?? true }
+}
+
 export async function patchPreferences(patch: Partial<UserPreferences>): Promise<void> {
   const supabase = createClient()
   const user = await getSessionUser()
