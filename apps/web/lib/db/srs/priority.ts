@@ -52,36 +52,46 @@ export const EPARK_SOURCES: { id: string; label: string }[] = [
   { id: 'con_practice', label: 'Conversations'  },
 ]
 
+// Fields needed to test a card/item against a priority deck's filter_config.
+// Grouped into one object — matchesPriorityDeck was hitting the lint param-count
+// ceiling as a flat arg list, and every call site already has these off one card.
+export type PriorityMatchItem = {
+  collectionId?: string | null
+  noteSource?:   string | null
+  level?:        number | null
+  lesson?:       number | null
+  language?:     string | null
+  dialect?:      string | null
+  tags?:         string[] | null
+  metadata?:     Record<string, unknown> | null
+}
+
+// Curriculum source: matched via metadata.curriculum_source (recorded at save time since
+// 2026-07-08). Cards saved before that fall back to the level-based heuristic: 'twelve' has
+// level set, everything else shares one unlabelled pool — a real ambiguity for pre-fix cards
+// (Conversations/Dialogues/Essays/Patterns are indistinguishable among themselves), not a bug
+// in this function; there's no backfill for it.
+function matchesFilterConfig(fc: PriorityDeckFilterConfig, item: PriorityMatchItem): boolean {
+  if (fc.curriculum_source) {
+    const metaSource = item.metadata?.curriculum_source as string | undefined
+    if (metaSource) return fc.curriculum_source === metaSource
+    return fc.curriculum_source === 'twelve' ? item.level != null : item.level == null
+  }
+  if (fc.language) {
+    if (fc.language !== item.language) return false
+    if (fc.dialect && fc.dialect !== item.dialect) return false
+    if (fc.tag && !(item.tags ?? []).includes(fc.tag)) return false
+    return true
+  }
+  return false
+}
+
 // Consistent priority match used by review and learn pages.
 // Generic virtual deck (filter_config=null) matches all cards with that note_source.
-// Curriculum source: 'twelve' matches items with level set; others share the unlabelled pool.
-// Capture filter: matches by language, then optionally dialect (null = any dialect).
-export function matchesPriorityDeck(
-  deck: PriorityDeck,
-  colId: string | null | undefined,
-  src: string | null | undefined,
-  level?: number | null,
-  lesson?: number | null,
-  language?: string | null,
-  dialect?: string | null,
-  tags?: string[] | null,
-): boolean {
-  if (deck.collection_id) return deck.collection_id === colId
-  if (!deck.note_source || deck.note_source !== src) return false
-  if (deck.filter_config) {
-    const fc = deck.filter_config
-    if (fc.curriculum_source) {
-      if (fc.curriculum_source === 'twelve') return level != null
-      return level == null
-    }
-    if (fc.language) {
-      if (fc.language !== language) return false
-      if (fc.dialect && fc.dialect !== dialect) return false
-      if (fc.tag && !(tags ?? []).includes(fc.tag)) return false
-      return true
-    }
-    return false
-  }
+export function matchesPriorityDeck(deck: PriorityDeck, item: PriorityMatchItem): boolean {
+  if (deck.collection_id) return deck.collection_id === item.collectionId
+  if (!deck.note_source || deck.note_source !== item.noteSource) return false
+  if (deck.filter_config) return matchesFilterConfig(deck.filter_config, item)
   return true
 }
 

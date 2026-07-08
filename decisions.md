@@ -63,6 +63,7 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-SRS13](docs/adr/DEC-SRS13-audio-surfacing-session-modes.md) | Audio surfacing — every session mode plays audio when present | accepted |
 | [DEC-SRS14](docs/adr/DEC-SRS14-unsave-delete-vs-suspend.md) | Unsave from bookmark surfaces — delete if unreviewed, suspend if reviewed | accepted |
 | [DEC-SRS15](docs/adr/DEC-SRS15-exclusion-filters-db-source-of-truth.md) | Review/learn language exclusion filters must read from `ind_profiles`, not localStorage | implemented — pending manual verification |
+| [DEC-SRS16](docs/adr/DEC-SRS16-priority-deck-visibility.md) | Priority-deck visibility — curriculum sub-source, session header fallback, due breakdown tab | implemented — pending manual verification |
 | [DEC-M5-01](docs/adr/DEC-M5-01-learn-review-separation.md) | Learn / Review session separation + priority-list goal model | accepted |
 | [DEC-001](docs/adr/DEC-001-dictionary-corpus-api-contract.md) | Dictionary and corpus API contract | accepted |
 | [DEC-002](docs/adr/DEC-002-supported-translation-pairs.md) | Supported translation pairs (v0) | superseded by DEC-M6-01 |

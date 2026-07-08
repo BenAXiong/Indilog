@@ -21,6 +21,7 @@ export type CreateItemInput = {
   level?: number
   lesson?: number
   lesson_title?: string
+  metadata?: Record<string, unknown>
 }
 
 export type Item = CreateItemInput & {

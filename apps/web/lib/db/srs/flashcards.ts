@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { nextFormoSRS1, nextRelearn, type SMState, type Rating } from './schedule'
-import { listPriorityDecks, matchesPriorityDeck } from './priority'
+import { listPriorityDecks, matchesPriorityDeck, NOTE_SOURCE_LABELS } from './priority'
 import { getSessionUser } from '@/lib/supabase/session'
 import { fetchReviewPrefsSnapshot, DEFAULT_PREFERENCES, type ReviewPrefsSnapshot } from '@/lib/db/profile/preferences'
 
@@ -43,6 +43,7 @@ export type FlashcardWithItem = Flashcard & {
     collection_id: string | null; tags: string[] | null; place_heard: string | null
     target_word: string | null
     level: number | null; lesson: number | null; position: number | null
+    metadata: Record<string, unknown> | null
     ind_learn_collections: { name: string; language: string } | null
   } | null
 }
@@ -66,7 +67,7 @@ export function cardAudio(card: FlashcardWithItem): string | null {
 // pool with blank item data (verified live 2026-07-03; broken since the
 // predicate-pushdown refactor f42db26). Every card has a note (0 null note_ids),
 // so the join never drops legitimate rows.
-const CARD_SEL = '*, ind_items!inner(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, ind_learn_collections(name, language))'
+const CARD_SEL = '*, ind_items!inner(ab, zh, audio, type, language, dialect, note_source, collection_id, level, lesson, position, tags, place_heard, target_word, metadata, ind_learn_collections(name, language))'
 
 export async function paginate<T>(buildQ: () => any, tag?: string): Promise<T[]> {
   // Pages are fetched in parallel batches (perf S11a) — sequential pages paid one
@@ -410,16 +411,16 @@ export async function listLearnFlashcards(opts: { collectionId?: string } = {}):
   // Matches the same deck (collection OR virtual note_source+filter_config) used by review/learn toast logic.
   const priorityDecks = await listPriorityDecks(user.id)
   const priorityIdx = (c: FlashcardWithItem) => {
-    const i = priorityDecks.findIndex(d => matchesPriorityDeck(
-      d,
-      c.ind_items?.collection_id,
-      c.ind_items?.note_source,
-      c.ind_items?.level,
-      c.ind_items?.lesson,
-      c.ind_items?.language,
-      c.ind_items?.dialect,
-      c.ind_items?.tags,
-    ))
+    const i = priorityDecks.findIndex(d => matchesPriorityDeck(d, {
+      collectionId: c.ind_items?.collection_id,
+      noteSource:   c.ind_items?.note_source,
+      level:        c.ind_items?.level,
+      lesson:       c.ind_items?.lesson,
+      language:     c.ind_items?.language,
+      dialect:      c.ind_items?.dialect,
+      tags:         c.ind_items?.tags,
+      metadata:     c.ind_items?.metadata,
+    }))
     return i === -1 ? Infinity : i
   }
 
@@ -430,6 +431,100 @@ export async function listLearnFlashcards(opts: { collectionId?: string } = {}):
     if (aPri !== Infinity) return byPos(a, b)
     return 0
   })
+}
+
+export type DeckBreakdownRow = { label: string; count: number; priority: boolean }
+
+// Labels for non-priority buckets that aren't a named collection (mirrors NOTE_SOURCE_LABELS,
+// extended with sources that have no dedicated virtual-deck entry).
+const FALLBACK_SOURCE_LABELS: Record<string, string> = {
+  captured:   'Captures',
+  dict:       'Dictionary',
+  curriculum: 'Curriculum (unprioritized)',
+  import:     'Imported',
+}
+
+type BreakdownItemRow = {
+  ind_items: {
+    collection_id: string | null
+    note_source:   string
+    level:         number | null
+    lesson:        number | null
+    language:      string
+    dialect:       string | null
+    tags:          string[] | null
+    metadata:      Record<string, unknown> | null
+    ind_learn_collections: { name: string } | null
+  } | null
+}
+
+// Due/new cards grouped by priority deck (in configured order), with everything else bucketed
+// by its actual collection/note_source — informational only, for the session-size picker's
+// "Decks" tab (DEC-SRS?? follow-up to DEC-SRS15). Deliberately client-side: reuses
+// matchesPriorityDeck() instead of a SQL port, so this can never drift from what a real
+// review/learn session actually prioritizes. Fetches a slim projection (no ab/zh/audio/joined
+// corpus content) — fine at this app's per-user card volume; would need revisiting (e.g. a
+// grouped RPC) if this ever ran against a much larger per-user due/new count.
+export async function getDeckBreakdown(pool: 'due' | 'new'): Promise<DeckBreakdownRow[]> {
+  const supabase = createClient()
+  const user = await getSessionUser()
+  if (!user) return []
+
+  const priorityDecks = await listPriorityDecks(user.id)
+  const now = new Date().toISOString()
+  const sel = 'id, ind_items!inner(collection_id, note_source, level, lesson, language, dialect, tags, metadata, ind_learn_collections(name))'
+
+  const rows = await paginate<BreakdownItemRow>(() => {
+    let q = supabase.from('ind_flashcards').select(sel).eq('user_id', user.id).is('suspended_at', null)
+    q = pool === 'due' ? q.gt('repetitions', 0).lte('due_at', now) : q.eq('repetitions', 0)
+    return q
+  }, 'getDeckBreakdown')
+
+  type Bucket = { label: string; count: number; priority: boolean; position: number }
+  const buckets = new Map<string, Bucket>()
+
+  for (const r of rows) {
+    const item = r.ind_items
+    if (!item) continue
+    const idx = priorityDecks.findIndex(d => matchesPriorityDeck(d, {
+      collectionId: item.collection_id,
+      noteSource:   item.note_source,
+      level:        item.level,
+      lesson:       item.lesson,
+      language:     item.language,
+      dialect:      item.dialect,
+      tags:         item.tags,
+      metadata:     item.metadata,
+    }))
+
+    let key: string, bucket: Omit<Bucket, 'count'>
+    if (idx !== -1) {
+      const deck = priorityDecks[idx]
+      key = deck.id
+      bucket = {
+        label: deck.filter_config?.label
+          ?? (deck.note_source ? NOTE_SOURCE_LABELS[deck.note_source] : undefined)
+          ?? item.ind_learn_collections?.name
+          ?? 'Priority deck',
+        priority: true,
+        position: idx,
+      }
+    } else {
+      key = item.collection_id ?? `src:${item.note_source}`
+      bucket = {
+        label: item.ind_learn_collections?.name ?? FALLBACK_SOURCE_LABELS[item.note_source] ?? item.note_source,
+        priority: false,
+        position: Infinity,
+      }
+    }
+    const existing = buckets.get(key)
+    if (existing) existing.count++
+    else buckets.set(key, { ...bucket, count: 1 })
+  }
+
+  return [...buckets.values()]
+    .sort((a, b) => a.position !== b.position ? a.position - b.position : b.count - a.count)
+    .map(({ label, count, priority }) => ({ label, count, priority }))
 }
 
 // Used when a mature card completes its relearn burst (Good/Easy = 50% recovery).

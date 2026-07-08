@@ -340,6 +340,7 @@ export default function EparkView({ source }: Props) {
       ab, zh: zh || undefined, type: 'sentence', language: langCode,
       dialect, note_source: 'curriculum',
       audio: audioUrl || undefined,
+      metadata: { curriculum_source: source },
       ...(source === 'twelve' ? {
         level:        parseInt(level),
         lesson:       parseInt(lesson),

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon, Card } from '@/components/ui'
+import { getDeckBreakdown, type DeckBreakdownRow } from '@/lib/db/srs/flashcards'
 
 const R = 38, C = 2 * Math.PI * R
 
@@ -64,6 +65,48 @@ function PopupRow({ icon, text }: { icon: string; text: string }) {
   )
 }
 
+// ── Session-size picker: "Size" (numeric stepper) / "Decks" (due breakdown, informational) ───
+function PickerTabs({ active, onSelect }: { active: 'size' | 'decks'; onSelect: (t: 'size' | 'decks') => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, background: T.lineSoft, borderRadius: 8, padding: 3, marginBottom: 16 }}>
+      {(['size', 'decks'] as const).map(t => (
+        <button key={t} onClick={() => onSelect(t)} style={{
+          flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
+          background: active === t ? T.paperHi : 'transparent',
+          color: active === t ? T.ink : T.inkMute,
+          fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: '0.05em',
+          boxShadow: active === t ? '0 1px 3px rgba(40,20,10,0.1)' : 'none',
+        }}>
+          {t === 'size' ? 'Size' : 'Decks'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function DeckBreakdownList({ rows }: { rows: DeckBreakdownRow[] | null }) {
+  if (rows === null) return <div style={{ fontSize: 12.5, color: T.inkMute, textAlign: 'center', padding: '20px 0' }}>Loading…</div>
+  if (rows.length === 0) return <div style={{ fontSize: 12.5, color: T.inkMute, textAlign: 'center', padding: '20px 0' }}>Nothing due</div>
+  return (
+    <div style={{ maxHeight: 280, overflowY: 'auto', marginBottom: 16 }}>
+      {rows.map((r, i) => (
+        <div key={i} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '9px 2px', borderBottom: i < rows.length - 1 ? `1px solid ${T.lineSoft}` : 'none',
+        }}>
+          <span style={{ fontSize: 13.5, color: r.priority ? T.ink : T.inkMute, fontWeight: r.priority ? 600 : 400 }}>
+            {r.label}
+          </span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 13, color: T.inkMute }}>
+            {r.count}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function DualRingCard({
   learnedToday, learnTarget, newCount,
   reviewedToday, reviewTarget, dueCount, totalDue,
@@ -87,6 +130,16 @@ export default function DualRingCard({
   const [learnPickerN,      setLearnPickerN]      = useState(0)
   const [showReviewPicker,  setShowReviewPicker]  = useState(false)
   const [reviewPickerN,     setReviewPickerN]     = useState(0)
+  const [pickerTab,         setPickerTab]         = useState<'size' | 'decks'>('size')
+  const [learnBreakdown,    setLearnBreakdown]    = useState<DeckBreakdownRow[] | null>(null)
+  const [reviewBreakdown,   setReviewBreakdown]   = useState<DeckBreakdownRow[] | null>(null)
+
+  function openPickerTab(tab: 'size' | 'decks', which: 'learn' | 'review') {
+    setPickerTab(tab)
+    if (tab !== 'decks') return
+    if (which === 'learn' && learnBreakdown === null) getDeckBreakdown('new').then(setLearnBreakdown)
+    if (which === 'review' && reviewBreakdown === null) getDeckBreakdown('due').then(setReviewBreakdown)
+  }
 
   useEffect(() => { localStorage.setItem('srs_learn_target',  String(learnTarget))  }, [learnTarget])
   useEffect(() => { localStorage.setItem('srs_review_target', String(reviewTarget)) }, [reviewTarget])
@@ -206,7 +259,7 @@ export default function DualRingCard({
                 Learn {learnN}
               </Link>
               <button
-                onClick={() => { setLearnPickerN(learnN); setShowLearnPicker(true) }}
+                onClick={() => { setLearnPickerN(learnN); setPickerTab('size'); setShowLearnPicker(true) }}
                 style={{
                   width: 38, height: 44, borderRadius: 12, flexShrink: 0,
                   background: T.paperHi, border: `1px solid ${T.lineSoft}`,
@@ -269,7 +322,7 @@ export default function DualRingCard({
                 Review {dueCount}
               </Link>
               <button
-                onClick={() => { setReviewPickerN(dueCount); setShowReviewPicker(true) }}
+                onClick={() => { setReviewPickerN(dueCount); setPickerTab('size'); setShowReviewPicker(true) }}
                 style={{
                   width: 38, height: 44, borderRadius: 12, flexShrink: 0,
                   background: T.paperHi, border: `1px solid ${T.lineSoft}`,
@@ -319,22 +372,29 @@ export default function DualRingCard({
               <Icon name="close" size={16} color={T.inkMute} strokeWidth={2} />
             </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 10 }}>
-            <button
-              onClick={() => setLearnPickerN(n => Math.max(1, n - 5))}
-              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-            >−</button>
-            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 52, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', minWidth: 64, textAlign: 'center', lineHeight: 1 }}>
-              {learnPickerN}
-            </span>
-            <button
-              onClick={() => setLearnPickerN(n => Math.min(newCount, n + 5))}
-              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-            >+</button>
-          </div>
-          <div style={{ fontSize: 11.5, color: T.inkMute, textAlign: 'center', marginBottom: 20 }}>
-            {newCount} new cards available · step 5
-          </div>
+          <PickerTabs active={pickerTab} onSelect={t => openPickerTab(t, 'learn')} />
+          {pickerTab === 'decks' ? (
+            <DeckBreakdownList rows={learnBreakdown} />
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 10 }}>
+                <button
+                  onClick={() => setLearnPickerN(n => Math.max(1, n - 5))}
+                  style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                >−</button>
+                <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 52, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', minWidth: 64, textAlign: 'center', lineHeight: 1 }}>
+                  {learnPickerN}
+                </span>
+                <button
+                  onClick={() => setLearnPickerN(n => Math.min(newCount, n + 5))}
+                  style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                >+</button>
+              </div>
+              <div style={{ fontSize: 11.5, color: T.inkMute, textAlign: 'center', marginBottom: 20 }}>
+                {newCount} new cards available · step 5
+              </div>
+            </>
+          )}
           <Link
             href={`/learn?start=1&n=${learnPickerN}`}
             onClick={() => setShowLearnPicker(false)}
@@ -360,22 +420,29 @@ export default function DualRingCard({
               <Icon name="close" size={16} color={T.inkMute} strokeWidth={2} />
             </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 10 }}>
-            <button
-              onClick={() => setReviewPickerN(n => Math.max(5, n - 5))}
-              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-            >−</button>
-            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 52, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', minWidth: 64, textAlign: 'center', lineHeight: 1 }}>
-              {reviewPickerN}
-            </span>
-            <button
-              onClick={() => setReviewPickerN(n => Math.min(totalDue, n + 5))}
-              style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-            >+</button>
-          </div>
-          <div style={{ fontSize: 11.5, color: T.inkMute, textAlign: 'center', marginBottom: 20 }}>
-            {totalDue} cards due · step 5
-          </div>
+          <PickerTabs active={pickerTab} onSelect={t => openPickerTab(t, 'review')} />
+          {pickerTab === 'decks' ? (
+            <DeckBreakdownList rows={reviewBreakdown} />
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 10 }}>
+                <button
+                  onClick={() => setReviewPickerN(n => Math.max(5, n - 5))}
+                  style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                >−</button>
+                <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 52, fontWeight: 600, color: T.ink, letterSpacing: '-0.03em', minWidth: 64, textAlign: 'center', lineHeight: 1 }}>
+                  {reviewPickerN}
+                </span>
+                <button
+                  onClick={() => setReviewPickerN(n => Math.min(totalDue, n + 5))}
+                  style={{ width: 40, height: 40, borderRadius: 10, background: T.paperHi, border: `1px solid ${T.lineSoft}`, fontSize: 22, color: T.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                >+</button>
+              </div>
+              <div style={{ fontSize: 11.5, color: T.inkMute, textAlign: 'center', marginBottom: 20 }}>
+                {totalDue} cards due · step 5
+              </div>
+            </>
+          )}
           <Link
             href={`/review?start=1&n=${reviewPickerN}`}
             onClick={() => setShowReviewPicker(false)}

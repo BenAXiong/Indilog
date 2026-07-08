@@ -322,11 +322,23 @@ function ReviewSession({
   const phaseLabel = lang.type
   const dialLabel = lang.dialect ? shortDialectLabel(lang.dialect, getGlid(lang.language) ?? '') : null
   const deckName = (() => {
-    const deck = ctx.priorityDecks.find(d => matchesPriorityDeck(d, card.ind_items?.collection_id, card.ind_items?.note_source, card.ind_items?.level, card.ind_items?.lesson, card.ind_items?.language, card.ind_items?.dialect, card.ind_items?.tags))
-    if (!deck) return null
-    if (deck.filter_config?.label) return deck.filter_config.label
-    if (deck.note_source) return NOTE_SOURCE_LABELS[deck.note_source] ?? null
-    return card.ind_items?.ind_learn_collections?.name ?? null
+    const deck = ctx.priorityDecks.find(d => matchesPriorityDeck(d, {
+      collectionId: card.ind_items?.collection_id,
+      noteSource:   card.ind_items?.note_source,
+      level:        card.ind_items?.level,
+      lesson:       card.ind_items?.lesson,
+      language:     card.ind_items?.language,
+      dialect:      card.ind_items?.dialect,
+      tags:         card.ind_items?.tags,
+      metadata:     card.ind_items?.metadata,
+    }))
+    // Falls through to the card's real collection/note_source even when it isn't in the
+    // priority list — a blank header here is exactly the "silent non-priority leak" gap
+    // (e.g. EPark_Amis due cards showing up with no label at all).
+    if (deck?.filter_config?.label) return deck.filter_config.label
+    if (deck?.note_source) return NOTE_SOURCE_LABELS[deck.note_source] ?? null
+    return card.ind_items?.ind_learn_collections?.name
+      ?? NOTE_SOURCE_LABELS[card.ind_items?.note_source ?? ''] ?? null
   })()
 
   const targetWord  = card.ind_items?.target_word ?? null
@@ -1005,14 +1017,16 @@ function ReviewPage() {
     // Priority sort: deck 1 first, then deck 2, …, then non-priority. Stable — preserves due_at order within each group.
     if (!isCustom && context.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
-        const colId    = x.ind_items?.collection_id
-        const src      = x.ind_items?.note_source
-        const level    = x.ind_items?.level
-        const lesson   = x.ind_items?.lesson
-        const language = x.ind_items?.language
-        const dialect  = x.ind_items?.dialect
-        const tags     = x.ind_items?.tags
-        const i = context.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect, tags))
+        const i = context.priorityDecks.findIndex(d => matchesPriorityDeck(d, {
+          collectionId: x.ind_items?.collection_id,
+          noteSource:   x.ind_items?.note_source,
+          level:        x.ind_items?.level,
+          lesson:       x.ind_items?.lesson,
+          language:     x.ind_items?.language,
+          dialect:      x.ind_items?.dialect,
+          tags:         x.ind_items?.tags,
+          metadata:     x.ind_items?.metadata,
+        }))
         return i === -1 ? Infinity : i
       }
       c.sort((a, b) => priorityIdx(a) - priorityIdx(b))
@@ -1067,14 +1081,16 @@ function ReviewPage() {
     })
     if (ctx.priorityDecks.length > 0) {
       const priorityIdx = (x: FlashcardWithItem) => {
-        const colId    = x.ind_items?.collection_id
-        const src      = x.ind_items?.note_source
-        const level    = x.ind_items?.level
-        const lesson   = x.ind_items?.lesson
-        const language = x.ind_items?.language
-        const dialect  = x.ind_items?.dialect
-        const tags     = x.ind_items?.tags
-        const i = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect, tags))
+        const i = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, {
+          collectionId: x.ind_items?.collection_id,
+          noteSource:   x.ind_items?.note_source,
+          level:        x.ind_items?.level,
+          lesson:       x.ind_items?.lesson,
+          language:     x.ind_items?.language,
+          dialect:      x.ind_items?.dialect,
+          tags:         x.ind_items?.tags,
+          metadata:     x.ind_items?.metadata,
+        }))
         return i === -1 ? Infinity : i
       }
       more.sort((a, b) => priorityIdx(a) - priorityIdx(b))

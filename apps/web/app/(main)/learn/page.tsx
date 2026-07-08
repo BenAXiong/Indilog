@@ -194,11 +194,16 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     } else if (mode === 'deck') {
       const groups = new Map<number, FlashcardWithItem[]>()
       for (const c of cards) {
-        const idx = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(
-          d, c.ind_items?.collection_id, c.ind_items?.note_source,
-          c.ind_items?.level, c.ind_items?.lesson,
-          c.ind_items?.language, c.ind_items?.dialect, c.ind_items?.tags,
-        ))
+        const idx = ctx.priorityDecks.findIndex(d => matchesPriorityDeck(d, {
+          collectionId: c.ind_items?.collection_id,
+          noteSource:   c.ind_items?.note_source,
+          level:        c.ind_items?.level,
+          lesson:       c.ind_items?.lesson,
+          language:     c.ind_items?.language,
+          dialect:      c.ind_items?.dialect,
+          tags:         c.ind_items?.tags,
+          metadata:     c.ind_items?.metadata,
+        }))
         const key = idx === -1 ? Infinity : idx
         if (!groups.has(key)) groups.set(key, [])
         groups.get(key)!.push(c)
@@ -318,14 +323,16 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
     if (!e || priorityToastRef.current) return
     if (ctx.priorityDecks.length === 0) return
     if (graduatedRef.current.size === 0) return  // no cards graduated yet → still in first sweep
-    const colId    = e.card.ind_items?.collection_id
-    const src      = e.card.ind_items?.note_source
-    const level    = e.card.ind_items?.level
-    const lesson   = e.card.ind_items?.lesson
-    const language = e.card.ind_items?.language
-    const dialect  = e.card.ind_items?.dialect
-    const tags     = e.card.ind_items?.tags
-    const inPriority = ctx.priorityDecks.some(d => matchesPriorityDeck(d, colId, src, level, lesson, language, dialect, tags))
+    const inPriority = ctx.priorityDecks.some(d => matchesPriorityDeck(d, {
+      collectionId: e.card.ind_items?.collection_id,
+      noteSource:   e.card.ind_items?.note_source,
+      level:        e.card.ind_items?.level,
+      lesson:       e.card.ind_items?.lesson,
+      language:     e.card.ind_items?.language,
+      dialect:      e.card.ind_items?.dialect,
+      tags:         e.card.ind_items?.tags,
+      metadata:     e.card.ind_items?.metadata,
+    }))
     if (!inPriority) {
       priorityToastRef.current = true
       setShowPriorityToast(true)
@@ -367,11 +374,20 @@ function LearnSession({ cards, overflow: initialOverflow, ctx, onExit, onReloadN
   const lang = cardMeta(card)
   const dialLabel = lang.dialect ? shortDialectLabel(lang.dialect, getGlid(lang.language) ?? '') : null
   const deckName = (() => {
-    const deck = ctx.priorityDecks.find(d => matchesPriorityDeck(d, card.ind_items?.collection_id, card.ind_items?.note_source, card.ind_items?.level, card.ind_items?.lesson, card.ind_items?.language, card.ind_items?.dialect, card.ind_items?.tags))
-    if (!deck) return null
-    if (deck.filter_config?.label) return deck.filter_config.label
-    if (deck.note_source) return NOTE_SOURCE_LABELS[deck.note_source] ?? null
-    return card.ind_items?.ind_learn_collections?.name ?? null
+    const deck = ctx.priorityDecks.find(d => matchesPriorityDeck(d, {
+      collectionId: card.ind_items?.collection_id,
+      noteSource:   card.ind_items?.note_source,
+      level:        card.ind_items?.level,
+      lesson:       card.ind_items?.lesson,
+      language:     card.ind_items?.language,
+      dialect:      card.ind_items?.dialect,
+      tags:         card.ind_items?.tags,
+      metadata:     card.ind_items?.metadata,
+    }))
+    if (deck?.filter_config?.label) return deck.filter_config.label
+    if (deck?.note_source) return NOTE_SOURCE_LABELS[deck.note_source] ?? null
+    return card.ind_items?.ind_learn_collections?.name
+      ?? NOTE_SOURCE_LABELS[card.ind_items?.note_source ?? ''] ?? null
   })()
 
   const targetWord  = card.ind_items?.target_word ?? null
