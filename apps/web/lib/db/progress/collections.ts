@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { ensureFlashcards } from '@/lib/db/srs/flashcards'
+import { ensureFlashcards, paginate } from '@/lib/db/srs/flashcards'
 import { getSessionUser } from '@/lib/supabase/session'
 
 export async function pinCollection(id: string, pinned: boolean): Promise<boolean> {
@@ -122,13 +122,12 @@ export type CollectionCard = {
 
 export async function listCollectionCards(collectionId: string): Promise<CollectionCard[]> {
   const supabase = createClient()
-  const { data } = await supabase
+  return paginate<CollectionCard>(() => supabase
     .from('ind_items')
     .select('id, level, lesson, lesson_title, position, ab, zh')
     .eq('collection_id', collectionId)
-    .order('level', { ascending: true }).order('lesson', { ascending: true }).order('position', { ascending: true })
-    .limit(10000)
-  return (data ?? []) as CollectionCard[]
+    .order('level', { ascending: true }).order('lesson', { ascending: true }).order('position', { ascending: true }),
+  'listCollectionCards')
 }
 
 export async function renameCollection(id: string, name: string): Promise<boolean> {
