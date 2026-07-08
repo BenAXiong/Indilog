@@ -302,6 +302,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 - [x] FIX: dict sentence bookmark toast invisible when scrolled — moved to `position: fixed` at bottom
 - [x] FIX: dict sentence saved state not pre-loaded across sessions — `savedAbSet` pre-check from `ind_items` on sentences state change
 - [x] FIX: dict sentence could be re-saved indefinitely — block duplicates, show amber warning toast
+- [x] FIX: unsave restored on curriculum + dict bookmarks — delete if unreviewed, suspend (keep history) if reviewed (DEC-SRS14)
 - [ ] FIX: dict duplicate captures & bookmark state persistence
 
 - [ ] Improve latency (eg batch supa calls)

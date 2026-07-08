@@ -61,6 +61,7 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-SRS11](docs/adr/DEC-SRS11-review-session-counter.md) | Review session — in-session counter and progress bar semantics | accepted |
 | [DEC-SRS12](docs/adr/DEC-SRS12-advance-review.md) | Advance review — session mode for cards returning before next reset | accepted |
 | [DEC-SRS13](docs/adr/DEC-SRS13-audio-surfacing-session-modes.md) | Audio surfacing — every session mode plays audio when present | accepted |
+| [DEC-SRS14](docs/adr/DEC-SRS14-unsave-delete-vs-suspend.md) | Unsave from bookmark surfaces — delete if unreviewed, suspend if reviewed | accepted |
 | [DEC-M5-01](docs/adr/DEC-M5-01-learn-review-separation.md) | Learn / Review session separation + priority-list goal model | accepted |
 | [DEC-001](docs/adr/DEC-001-dictionary-corpus-api-contract.md) | Dictionary and corpus API contract | accepted |
 | [DEC-002](docs/adr/DEC-002-supported-translation-pairs.md) | Supported translation pairs (v0) | superseded by DEC-M6-01 |

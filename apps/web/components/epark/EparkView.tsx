@@ -14,6 +14,7 @@ const PATTERN_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(rawPatternLabels as Record<string, string>).map(([k, v]) => [k, v.replace(/^\d+\s*-\s*/, '')])
 )
 import { createItem, type Item } from '@/lib/db/notebook/items'
+import { unsaveItem, type UnsaveOutcome } from '@/lib/db/srs/browser'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCompletions, markComplete, unmarkComplete } from '@/lib/db/progress/completions'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
@@ -353,10 +354,19 @@ export default function EparkView({ source }: Props) {
     return item
   }
 
-  const handleSaveWarning = () => {
-    setSaveMsgWarn(true)
-    setSaveMsg('Already saved — find it in the Captures deck to remove')
-    setTimeout(() => setSaveMsg(null), 4000)
+  const handleUnsave = async (ab: string, itemId: string): Promise<UnsaveOutcome> => {
+    const outcome = await unsaveItem(itemId)
+    if (outcome === 'deleted') {
+      setSavedItemMap(prev => { const m = new Map(prev); m.delete(ab); return m })
+      setSaveMsgWarn(false)
+      setSaveMsg('Removed from notebook')
+      setTimeout(() => setSaveMsg(null), 2000)
+    } else {
+      setSaveMsgWarn(true)
+      setSaveMsg("Kept — your review history is safe, but it won't appear in future sessions. Unsuspend it from the Captures deck if you change your mind.")
+      setTimeout(() => setSaveMsg(null), 4000)
+    }
+    return outcome
   }
 
   // ── Current item pill label ─────────────────────────────────────────────────
@@ -494,7 +504,7 @@ export default function EparkView({ source }: Props) {
                 onLookup={(word, rect) => setLookup({ word, rect })}
                 onPlay={handlePlay}
                 onSave={handleSave}
-                onSaveWarning={handleSaveWarning}
+                onUnsave={handleUnsave}
               />
             ))}
           </div>
@@ -537,7 +547,7 @@ export default function EparkView({ source }: Props) {
                   onLookup={(word, rect) => setLookup({ word, rect })}
                   onPlay={handlePlay}
                   onSave={handleSave}
-                  onSaveWarning={handleSaveWarning}
+                  onUnsave={handleUnsave}
                 />
               )}
 
@@ -579,7 +589,7 @@ export default function EparkView({ source }: Props) {
                 onLookup={(word, rect) => setLookup({ word, rect })}
                 onPlay={handlePlay}
                 onSave={handleSave}
-                onSaveWarning={handleSaveWarning}
+                onUnsave={handleUnsave}
               />
             ))}
           </div>
@@ -596,7 +606,7 @@ export default function EparkView({ source }: Props) {
               onLookup={(word, rect) => setLookup({ word, rect })}
               onPlay={handlePlay}
               onSave={handleSave}
-              onSaveWarning={handleSaveWarning}
+              onUnsave={handleUnsave}
             />
           ))
         )}

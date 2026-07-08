@@ -11,6 +11,7 @@ import { useLang } from '@/lib/context/LangDialectProvider'
 import { getGlid } from '@/lib/lang/lang-bridge'
 import { GLID_FAMILIES } from '@/lib/lang/dialects'
 import { createItem } from '@/lib/db/notebook/items'
+import { unsaveItem } from '@/lib/db/srs/browser'
 import { createClient } from '@/lib/supabase/client'
 import PerfMark from '@/components/perf/PerfMark'
 
@@ -248,7 +249,7 @@ export default function DictionaryPage() {
   const [searched, setSearched] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [saveMsgWarn, setSaveMsgWarn] = useState(false)
-  const [savedAbSet, setSavedAbSet] = useState<Set<string>>(() => new Set())
+  const [savedAbSet, setSavedAbSet] = useState<Map<string, string>>(() => new Map())
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
@@ -347,11 +348,11 @@ export default function DictionaryPage() {
 
   // Pre-check which sentences are already saved in ind_items
   useEffect(() => {
-    if (sentences.length === 0) { setSavedAbSet(new Set()); return }
+    if (sentences.length === 0) { setSavedAbSet(new Map()); return }
     const abs = sentences.map(s => s.ab)
-    createClient().from('ind_items').select('ab').in('ab', abs).eq('type', 'sentence')
+    createClient().from('ind_items').select('id, ab').in('ab', abs).eq('type', 'sentence')
       .then(({ data }) => {
-        if (data) setSavedAbSet(new Set(data.map((r: { ab: string }) => r.ab)))
+        if (data) setSavedAbSet(new Map(data.map((r: { id: string; ab: string }) => [r.ab, r.id])))
       })
   }, [sentences])
 
@@ -455,14 +456,23 @@ export default function DictionaryPage() {
   }
 
   async function handleSaveSentence(s: SentenceResult) {
-    if (savedAbSet.has(s.ab)) {
-      setSaveMsgWarn(true)
-      setSaveMsg('Already captured — to delete or suspend it, find it in Study → Browser')
-      setTimeout(() => setSaveMsg(null), 4000)
+    const existingId = savedAbSet.get(s.ab)
+    if (existingId) {
+      const outcome = await unsaveItem(existingId)
+      if (outcome === 'deleted') {
+        setSavedAbSet(prev => { const m = new Map(prev); m.delete(s.ab); return m })
+        setSaveMsgWarn(false)
+        setSaveMsg('Removed from notebook')
+        setTimeout(() => setSaveMsg(null), 2000)
+      } else {
+        setSaveMsgWarn(true)
+        setSaveMsg("Kept — your review history is safe, but it won't appear in future sessions. Unsuspend it from Study → Browser if you change your mind.")
+        setTimeout(() => setSaveMsg(null), 4000)
+      }
       return
     }
     const item = await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: s.dialect_name, note_source: 'dict' })
-    if (item) setSavedAbSet(prev => new Set(prev).add(s.ab))
+    if (item) setSavedAbSet(prev => new Map(prev).set(s.ab, item.id))
     setSaveMsgWarn(false)
     setSaveMsg('Sentence saved')
     setTimeout(() => setSaveMsg(null), 2000)

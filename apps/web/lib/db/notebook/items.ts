@@ -57,13 +57,6 @@ export async function updateItem(id: string, patch: Partial<CreateItemInput>): P
   return true
 }
 
-export async function deleteItem(id: string): Promise<boolean> {
-  const supabase = createClient()
-  const { error } = await supabase.from('ind_items').delete().eq('id', id)
-  if (error) { console.error('deleteItem:', error); return false }
-  return true
-}
-
 export async function listItems(opts?: { language?: string; limit?: number; offset?: number }): Promise<Item[]> {
   const supabase = createClient()
   let query = supabase

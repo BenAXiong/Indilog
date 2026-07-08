@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import Icon from '@/components/ui/Icon'
 import type { Item } from '@/lib/db/notebook/items'
+import type { UnsaveOutcome } from '@/lib/db/srs/browser'
 import type { CurriculumRow } from '@/lib/corpus/curriculum'
 import type { ZhMode } from './SettingsPanel'
 import { EP, type LayoutMode } from '@/lib/eparkTokens'
@@ -21,7 +22,7 @@ type Props = {
   onLookup?: (word: string, rect: DOMRect) => void
   onPlay: (url: string) => void
   onSave: (ab: string, zh: string, audioUrl?: string | null) => Promise<Item | null>
-  onSaveWarning: () => void
+  onUnsave: (ab: string, itemId: string) => Promise<UnsaveOutcome>
 }
 
 function singleFontSize(text: string): number {
@@ -31,7 +32,7 @@ function singleFontSize(text: string): number {
   return Math.round(30 - ((len - 60) / 140) * 15)
 }
 
-export default function EparkSentence({ row, index, total, layout, zhMode, lookupOn, isActive, onActivate, initialSavedId, onLookup, onPlay, onSave, onSaveWarning }: Readonly<Props>) {
+export default function EparkSentence({ row, index, total, layout, zhMode, lookupOn, isActive, onActivate, initialSavedId, onLookup, onPlay, onSave, onUnsave }: Readonly<Props>) {
   const [zhRevealed, setZhRevealed] = useState(false)
   const [copied,     setCopied]     = useState(false)
   const [savedId,    setSavedId]    = useState<string | null>(initialSavedId ?? null)
@@ -52,7 +53,8 @@ export default function EparkSentence({ row, index, total, layout, zhMode, looku
 
   const handleSave = async () => {
     if (savedId) {
-      onSaveWarning()
+      const outcome = await onUnsave(row.ab, savedId)
+      if (outcome === 'deleted') setSavedId(null)
     } else {
       const item = await onSave(row.ab, row.zh ?? '', row.audio_url)
       if (item) setSavedId(item.id)

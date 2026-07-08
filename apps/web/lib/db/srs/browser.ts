@@ -189,6 +189,27 @@ export async function deleteNote(noteId: string): Promise<void> {
   await supabase.from('ind_items').delete().eq('id', noteId)
 }
 
+// Unsave from a bookmark surface (curriculum, dict). Delete outright if the
+// card was never reviewed — nothing to lose. If it has review history,
+// suspend instead of delete so the history + heatmap stay intact (DEC-SRS14).
+export type UnsaveOutcome = 'deleted' | 'suspended'
+
+export async function unsaveItem(noteId: string): Promise<UnsaveOutcome> {
+  const supabase = createClient()
+  const { data: card } = await supabase
+    .from('ind_flashcards')
+    .select('repetitions')
+    .eq('note_id', noteId)
+    .maybeSingle()
+
+  if (!card || card.repetitions === 0) {
+    await deleteNote(noteId)
+    return 'deleted'
+  }
+  await batchSuspendCards([noteId])
+  return 'suspended'
+}
+
 export async function resetCardEase(id: string): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_flashcards').update({
