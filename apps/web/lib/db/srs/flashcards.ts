@@ -357,15 +357,20 @@ export async function countLearnFlashcards(collectionId?: string): Promise<numbe
   const supabase = createClient()
   const user = await getSessionUser()
   if (!user) return 0
-  let q = supabase.from('ind_flashcards')
-    .select(collectionId ? 'id, ind_items!inner(collection_id)' : 'id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .eq('repetitions', 0)
-    .is('suspended_at', null)
-  if (collectionId) q = q.filter('ind_items.collection_id', 'eq', collectionId)
-  let { count, error } = await q
-  // One retry — see countDueFlashcards for why this landing-page count is retried.
-  if (error) ({ count, error } = await q)
+  const buildQuery = () => {
+    let q = supabase.from('ind_flashcards')
+      .select(collectionId ? 'id, ind_items!inner(collection_id)' : 'id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('repetitions', 0)
+      .is('suspended_at', null)
+    if (collectionId) q = q.filter('ind_items.collection_id', 'eq', collectionId)
+    return q
+  }
+  let { count, error } = await buildQuery()
+  // One retry on a FRESH query — reusing the same builder resolved with the
+  // same error again without a second network request (its fetch/signal was
+  // already spent), so the first fix attempt here silently never retried.
+  if (error) ({ count, error } = await buildQuery())
   if (error) { console.error('countLearnFlashcards:', error); return 0 }
   return count ?? 0
 }
