@@ -4,6 +4,30 @@ Active bug investigations. Strike through + add fix commit when resolved.
 
 ---
 
+## BUG-02 — learned-today count overshoots target (26/20 after 2×10 sessions)
+
+**Symptom:** dashboard's learned-today counter can end up above `learnTarget` by more than one
+session's worth (e.g. 26/20 after only two 10-card Learn sessions), when the user deliberately runs
+extra sessions past today's target via the "Learn N more?" link.
+
+**Suspect:** `loadLearnContext()` in `apps/web/app/(main)/learn/page.tsx`. Once
+`learnedToday >= learnTarget`, `remaining` is computed as the *full* `learnTarget` again instead of
+`0`:
+
+```ts
+const remaining = Math.max(0, context.learnedToday >= context.learnTarget
+  ? context.learnTarget        // resets to full target once exceeded, not 0
+  : context.learnTarget - context.learnedToday)
+```
+
+This only matters when `nParam` (the URL's `n=`) isn't already pinning the session size — worth
+checking whether `learnMoreN` (`DualRingCard.tsx`, feeds the "Learn N more?" link's `n=`) is derived
+independently or ends up relying on this same `remaining` value. Not yet root-caused; logged
+2026-07-09 for a follow-up session. User confirms doing extra sessions beyond target is intentional
+— the bug is the *magnitude* of the overshoot, not that overshoot is possible at all.
+
+---
+
 ## ~~BUG-01 — "Application error" on natural session completion~~ — FIXED
 
 **Root cause (found 2026-07-09, none of the hypotheses below were it):** `useSwipeGesture()` was

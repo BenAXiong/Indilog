@@ -222,8 +222,8 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] FIX: audio broken in curriculm cards
 - [x] FIX: zh and audio missing from seesion fields in some modes of curriculm cards
 - [x] FIX: unsave (delete or suspend) curriculum and dict entries
-- [ ] FIX: decks content capped at 1000 (at least custom)
-- [ ] FIX: ePark Review page amount
+- [x] FIX: decks content capped at 1000 (at least custom)
+- [x] FIX: ePark Review page amount
 - [x] FIX: transient learn/review page
 
 - [x] Tune the Again grading in Reviews: min(10min, requeue to last)

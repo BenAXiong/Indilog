@@ -1149,7 +1149,7 @@ function ReviewPage() {
         </div>
       </div>
 
-      {loading ? (
+      {loading || (autostart && !queueReady) ? (
         <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="animate-iv-shimmer" style={{ width: 120, height: 16, borderRadius: 8, background: T.lineSoft }} />
         </div>
