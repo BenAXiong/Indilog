@@ -13,7 +13,8 @@ import { ensureFlashcards, getDueStats, getExcludeFromReview, type DueStats } fr
 import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
 import { createClient } from '@/lib/supabase/client'
 import type { CurriculumProgressItem, CurriculumProgressResponse } from '@/app/api/learn/curriculum-progress/route'
-import BrowserView from '@/components/study/BrowserView'
+import BrowserButton from '@/components/study/BrowserButton'
+import SettingsButton from '@/components/widgets/SettingsSheet'
 import DeckActionSheet, { CAPTURES_DECK_ID } from '@/components/sheets/DeckActionSheet'
 import PerfMark from '@/components/perf/PerfMark'
 import { getSessionUser } from '@/lib/supabase/session'
@@ -362,8 +363,25 @@ const SUBTABS = [
   { id: 'epark'       as const, label: 'ePark'    },
   { id: 'collections' as const, label: 'Decks'    },
   { id: 'captures'    as const, label: 'Captures' },
-  { id: 'browser'     as const, label: 'Browser'   },
 ]
+
+function SubtabButton({ tab, active, onClick }: { tab: typeof SUBTABS[number]; active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      position: 'relative', paddingBottom: 11, background: 'none', border: 'none',
+      fontSize: 15, fontWeight: active ? 700 : 500,
+      color: active ? T.ink : T.inkMute, cursor: 'pointer', letterSpacing: '-0.01em',
+    }}>
+      {tab.label}
+      {active && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: -1,
+          height: 2.5, background: T.crimson, borderRadius: 2,
+        }} />
+      )}
+    </button>
+  )
+}
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -374,9 +392,9 @@ export default function StudyPage() {
 function StudyPageInner() {
   const { lang, dialect, dialectLabel } = useLang()
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<'epark' | 'collections' | 'captures' | 'browser'>(() => {
+  const [activeTab, setActiveTab] = useState<'epark' | 'collections' | 'captures'>(() => {
     const t = searchParams.get('tab')
-    return (t === 'collections' || t === 'captures' || t === 'browser') ? t : 'epark'
+    return (t === 'collections' || t === 'captures') ? t : 'epark'
   })
   const [collections, setCollections]     = useState<CollectionMeta[]>([])
   const [due, setDue]                     = useState<DueStats>({ total: 0, captures: 0, byCollection: {} })
@@ -524,7 +542,12 @@ function StudyPageInner() {
           title="Study"
           langName={lang.name}
           langDialect={dialectLabel}
-          settingsTab="study"
+          right={
+            <div style={{ display: 'flex', gap: 8 }}>
+              <BrowserButton />
+              <SettingsButton initialTab="study" />
+            </div>
+          }
         />
       </div>
 
@@ -533,29 +556,14 @@ function StudyPageInner() {
         display: 'flex', gap: 22, padding: '16px 18px 0',
         borderBottom: `1px solid ${T.lineSoft}`, marginBottom: 20,
       }}>
-        {SUBTABS.map(tab => {
-          const active = activeTab === tab.id
-          return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              position: 'relative', paddingBottom: 11, background: 'none', border: 'none',
-              fontSize: 15, fontWeight: active ? 700 : 500,
-              color: active ? T.ink : T.inkMute, cursor: 'pointer', letterSpacing: '-0.01em',
-            }}>
-              {tab.label}
-              {active && (
-                <div style={{
-                  position: 'absolute', left: 0, right: 0, bottom: -1,
-                  height: 2.5, background: T.crimson, borderRadius: 2,
-                }} />
-              )}
-            </button>
-          )
-        })}
+        <SubtabButton tab={SUBTABS[0]} active={activeTab === SUBTABS[0].id} onClick={() => setActiveTab(SUBTABS[0].id)} />
+        <SubtabButton tab={SUBTABS[1]} active={activeTab === SUBTABS[1].id} onClick={() => setActiveTab(SUBTABS[1].id)} />
         <Link href="/video" style={{
           position: 'relative', paddingBottom: 11, textDecoration: 'none',
           fontSize: 15, fontWeight: 500,
           color: T.inkMute, letterSpacing: '-0.01em',
         }}>Videos</Link>
+        <SubtabButton tab={SUBTABS[2]} active={activeTab === SUBTABS[2].id} onClick={() => setActiveTab(SUBTABS[2].id)} />
       </div>
 
       {/* ── ePARK ── */}
@@ -650,9 +658,6 @@ function StudyPageInner() {
           </div>
         </div>
       )}
-
-      {/* ── Browser ── */}
-      {activeTab === 'browser' && <BrowserView />}
 
       {actionDeck && (
         <DeckActionSheet
