@@ -14,6 +14,34 @@ ILRDF (原住民族語言研究發展基金會) publishes a colloquial corpus at
 
 ---
 
+## Quick reference
+
+Everything below lives in `C:\Users\Ben\Documents\LL\6_ycm\Datasets\ILRDF\videos\` — **not a git repo**, so this ADR (indexed in `decisions.md`) is the durable source of truth for these constants and the command sequence. Don't rediscover them from `output/import.sql` or memory.
+
+- Supabase user UUID (`--user-id`): `211632df-c86a-434f-8a03-afa97ee13597`
+- Supabase project ref: `gnmcttlpkiexxoilwhfa`
+- Built-in demo set: IDs 142, 151, 704, 750 — any other video needs `--video-ids` (see below)
+
+**Full deck** (per-segment video clips) for one or more videos:
+```
+python gen_ilrdf_cards.py --user-id 211632df-c86a-434f-8a03-afa97ee13597 --video-ids <id1,id2,...>
+python upload_to_supabase.py
+npx supabase db query --linked < output/import.sql
+python create_collections.py --video-ids <id1,id2,...>
+```
+
+**Lite deck** (one shared screenshot per video, no video download-heavy slicing) — see Decision 6:
+```
+python gen_ilrdf_cards.py --user-id 211632df-c86a-434f-8a03-afa97ee13597 --video-ids <id1,id2,...> --lite --shared-image
+python upload_to_supabase.py
+npx supabase db query --linked < output/import.sql
+python create_collections.py --video-ids <id1,id2,...>
+```
+
+Omitting `--video-ids` falls back to the built-in demo set on both scripts.
+
+---
+
 ## Decision 1 — Data sources and pipeline scripts
 
 All scripts live in `C:\Users\Ben\Documents\LL\6_ycm\Datasets\ILRDF\videos\`.
@@ -125,9 +153,9 @@ Status: done (2026-06-15).
 
 ---
 
-## Decision 6 — Planned: lite decks (image) and media-presence-driven rendering
+## Decision 6 — Lite decks (image) and media-presence-driven rendering
 
-**Goal:** Most of the ~100+ transcript files have no downloaded video yet. A "lite" card uses a still image (single frame at segment midpoint) instead of a video clip — much smaller storage footprint. Full clips can be added later to enrich a lite card.
+**Goal:** Most of the ~100+ transcript files have no downloaded video yet. A "lite" card uses a still image instead of a video clip — much smaller storage footprint, no per-segment ffmpeg slicing. Full clips can be added later to enrich a lite card.
 
 **Universal card model constraint:** Indivore has one card type with the same available fields for all cards. There is no stored "deck mode" — the player derives available modes from which media fields are present in `metadata`:
 - `video_clip` present → full video mode available
@@ -139,16 +167,22 @@ The field is named `image` (not `screenshot`) to retain the universal aspect —
 `metadata` extension:
 ```json
 {
-  "video_clip": "...webm",
+  "video_clip": "...mp4",
   "image":      "...jpg",
-  "video_segments":  ["...webm", "...webm"],
-  "audio_segments":  ["...mp3",  "...mp3"]
+  "video_segments":  ["...mp4", "...mp4"],
+  "audio_segments":  ["...mp3", "...mp3"]
 }
 ```
 
-VideoPage renders whichever media is present and lets the user toggle between available modes. `gen_ilrdf_cards.py` needs a `--lite` flag that runs `ffmpeg -ss {mid} -frames:v 1` to extract the midpoint frame instead of slicing video.
+`VideoPage.tsx` renders whichever media is present and lets the user toggle between available modes (`cardMode` cycling, mode-cycle button) — this is done and needs no further frontend work.
 
-Status: design only — scripts and UI not yet updated.
+**Two `--lite` variants in `gen_ilrdf_cards.py`:**
+- **Per-segment** (`--lite` alone): `ffmpeg -ss {mid} -frames:v 1` extracts one JPEG per subtitle segment at its own midpoint, mirroring the per-segment video-clip granularity.
+- **Shared** (`--lite --shared-image`, added 2026-07-09): extracts exactly **one** frame for the whole video (at `duration_s / 2`) and reuses that single URL across every card's `metadata.image`. Much cheaper for videos where the framing doesn't change (e.g. static interview shots) — this is the default recommended starting point for backfilling the un-downloaded transcripts.
+
+`--add-images` is a separate backfill mode: it patches per-segment screenshots onto *already-imported* full-video decks via `output/update_images.sql`, independent of the two `--lite` variants above.
+
+Status: implemented. `--video-ids` (comma-separated) on both `gen_ilrdf_cards.py` and `create_collections.py` lets you target specific videos instead of only the hardcoded demo set.
 
 ---
 
@@ -168,6 +202,8 @@ python upload_to_supabase.py --images
 ```
 
 The `--images` flag reads `output/image_records.json` (written by `--add-images`) and uploads each JPEG to `ind-video/ilrdf/{id}/seg_{n:04d}.jpg`.
+
+**Fixed 2026-07-09:** the default (non-`--images`) upload path in `build_pairs()` was passing the full public URL (stored in `card["audio"]` / `metadata.video_clip` for frontend use) as the *remote storage path* to the REST API, double-prefixing the Supabase domain into a malformed upload URL. It now derives the bucket-relative path from that URL (`_relpath()`), matching what `build_image_pairs()` and `compress_clips.py` already did correctly. `build_pairs()` also now uploads `metadata.image` (both lite variants), deduplicated by remote path — needed so shared-image decks don't re-upload the same screenshot once per card.
 
 ---
 
