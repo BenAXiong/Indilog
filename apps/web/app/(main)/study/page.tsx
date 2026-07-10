@@ -277,7 +277,11 @@ function CurriculumSection({ icon, name, href, meta, last, open, onToggle, warni
 
 // ─── Capture section (collapsible) ──────────────────────────────────────────
 
-type CaptureCounts = { captured: { total: number; due: number }; dict: { total: number; due: number } }
+type CaptureCounts = {
+  captured:  { total: number; due: number }
+  dict:      { total: number; due: number }
+  translate: { total: number; due: number }
+}
 
 function SubCaptureRow({ name, total, due, href, last }: {
   name: string; total: number; due: number; href: string; last?: boolean
@@ -304,8 +308,8 @@ function CaptureSection({ counts, open, onToggle, onKebab }: {
   onToggle: () => void
   onKebab: () => void
 }) {
-  const totalDue   = counts ? counts.captured.due + counts.dict.due : null
-  const totalCards = counts ? counts.captured.total + counts.dict.total : null
+  const totalDue   = counts ? counts.captured.due + counts.dict.due + counts.translate.due : null
+  const totalCards = counts ? counts.captured.total + counts.dict.total + counts.translate.total : null
 
   return (
     <>
@@ -314,7 +318,7 @@ function CaptureSection({ counts, open, onToggle, onKebab }: {
           <Icon name="capture" size={19} color={T.sage} strokeWidth={1.6} />
         </div>
         <button onClick={onToggle} style={{ flex: '1 1 0', minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.15 }}>Captures</div>
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink, letterSpacing: '-0.015em', lineHeight: 1.15 }}>Notebook</div>
           {totalCards !== null && (
             <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 10.5, color: T.inkMute, marginTop: 3 }}>{totalCards} cards</div>
           )}
@@ -331,7 +335,8 @@ function CaptureSection({ counts, open, onToggle, onKebab }: {
       {open && counts && (
         <>
           <SubCaptureRow name="Captured" total={counts.captured.total} due={counts.captured.due} href="/review?noteSource=captured&custom=1" />
-          <SubCaptureRow name="Dictionary" total={counts.dict.total} due={counts.dict.due} href="/review?noteSource=dict&custom=1" last />
+          <SubCaptureRow name="Dictionary" total={counts.dict.total} due={counts.dict.due} href="/review?noteSource=dict&custom=1" />
+          <SubCaptureRow name="Translations" total={counts.translate.total} due={counts.translate.due} href="/review?noteSource=translate&custom=1" last />
         </>
       )}
     </>
@@ -362,7 +367,7 @@ function patternsWarning(glid: string | null, userDialect: string | null): strin
 const SUBTABS = [
   { id: 'epark'       as const, label: 'ePark'    },
   { id: 'collections' as const, label: 'Decks'    },
-  { id: 'captures'    as const, label: 'Captures' },
+  { id: 'captures'    as const, label: 'Notebook' },
 ]
 
 function SubtabButton({ tab, active, onClick }: { tab: typeof SUBTABS[number]; active: boolean; onClick: () => void }) {
@@ -421,6 +426,7 @@ function StudyPageInner() {
       Promise.all([
         sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('note_source', 'captured'),
         sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('note_source', 'dict'),
+        sb.from('ind_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('note_source', 'translate'),
         sb.from('ind_flashcards').select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
           .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
           .lte('due_at', now).filter('ind_items.note_source', 'eq', 'captured'),
@@ -428,12 +434,16 @@ function StudyPageInner() {
           .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
           .lte('due_at', now).filter('ind_items.note_source', 'eq', 'dict'),
         sb.from('ind_flashcards').select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
+          .eq('user_id', user.id).gt('repetitions', 0).is('suspended_at', null)
+          .lte('due_at', now).filter('ind_items.note_source', 'eq', 'translate'),
+        sb.from('ind_flashcards').select('id, ind_items!inner(note_source)', { count: 'exact', head: true })
           .eq('user_id', user.id).is('suspended_at', null)
           .filter('ind_items.note_source', 'eq', 'curriculum'),
-      ]).then(([captTot, dictTot, captDue, dictDue, currDue]) => {
+      ]).then(([captTot, dictTot, translateTot, captDue, dictDue, translateDue, currDue]) => {
         setCaptureSourceCounts({
-          captured: { total: captTot.count ?? 0, due: captDue.count ?? 0 },
-          dict:     { total: dictTot.count ?? 0, due: dictDue.count ?? 0 },
+          captured:  { total: captTot.count ?? 0, due: captDue.count ?? 0 },
+          dict:      { total: dictTot.count ?? 0, due: dictDue.count ?? 0 },
+          translate: { total: translateTot.count ?? 0, due: translateDue.count ?? 0 },
         })
         setCurriculumDue(currDue.count ?? 0)
       })
@@ -650,7 +660,7 @@ function StudyPageInner() {
               open={openDecks['captures'] ?? false}
               onToggle={() => setOpenDecks(prev => ({ ...prev, captures: !prev['captures'] }))}
               onKebab={() => setActionDeck({
-                id: CAPTURES_DECK_ID, name: 'Captured',
+                id: CAPTURES_DECK_ID, name: 'Notebook',
                 language: '', created_at: '', card_count: 0, pinned: false,
                 include_in_review: capturesIncluded,
               })}

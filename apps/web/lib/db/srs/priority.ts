@@ -40,8 +40,9 @@ export const VIRTUAL_DECK_LABELS: Record<string, string> = {}
 
 // Display names for virtual note_source decks (used in deck lists and GoalWidget)
 export const NOTE_SOURCE_LABELS: Record<string, string> = {
-  dict:     'Dictionary',
-  captured: 'All captures',
+  dict:      'Dictionary',
+  captured:  'All captures',
+  translate: 'Translations',
 }
 
 export const EPARK_SOURCES: { id: string; label: string }[] = [

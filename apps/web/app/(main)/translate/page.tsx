@@ -132,7 +132,7 @@ export default function TranslatePage() {
       zh:       isFormosanSrc ? output      : text.trim(),
       type:     'sentence',
       language: isFormosanSrc ? src.replace('_Latn', '') : tgt.replace('_Latn', ''),
-      note_source: 'dict',
+      note_source: 'translate',
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 1800)

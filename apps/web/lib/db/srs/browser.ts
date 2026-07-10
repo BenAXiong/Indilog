@@ -112,7 +112,7 @@ export async function listBrowserCards(
     const cardArr = row.ind_flashcards as unknown as CardJoin[] | null
     const card    = Array.isArray(cardArr) ? (cardArr[0] ?? null) : null
     const col     = row.ind_learn_collections as unknown as { name: string } | null
-    const source  = col?.name ?? ({ dict: 'Dict', curriculum: 'Curriculum', import: 'Imported' }[row.note_source as string] ?? 'Captured')
+    const source  = col?.name ?? ({ dict: 'Dict', translate: 'Translations', curriculum: 'Curriculum', import: 'Imported' }[row.note_source as string] ?? 'Captured')
     return {
       id:            row.id,
       card_id:       card?.id ?? null,

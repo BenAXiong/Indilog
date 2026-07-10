@@ -308,7 +308,7 @@ function buildDueQuery(
   if (opts.includeCollectionId)
     q = q.filter('ind_items.collection_id', 'eq', opts.includeCollectionId)
   else if (opts.capturesOnly)
-    q = q.filter('ind_items.note_source', 'in', '(captured,dict,import)')
+    q = q.filter('ind_items.note_source', 'in', '(captured,dict,translate,import)')
   if (opts.includeNoteSource)
     q = q.filter('ind_items.note_source', 'eq', opts.includeNoteSource)
   if (opts.includeNoteTypes?.length)
@@ -451,6 +451,7 @@ export type DeckBreakdownRow = { label: string; count: number; priority: boolean
 const FALLBACK_SOURCE_LABELS: Record<string, string> = {
   captured:   'Captures',
   dict:       'Dictionary',
+  translate:  'Translations',
   curriculum: 'Curriculum (unprioritized)',
   import:     'Imported',
 }

@@ -23,7 +23,7 @@ export type StudyStats = {
 
 const EMPTY: StudyStats = {
   totalCards: 0, dueToday: 0, known: 0, rooted: 0, blooming: 0,
-  captures: { id: 'captures', name: 'Captures & lookups', total: 0, known: 0 },
+  captures: { id: 'captures', name: 'Notebook', total: 0, known: 0 },
   collections: [], dailyCounts: [], avgPerDay: 0,
 }
 
@@ -124,7 +124,7 @@ export async function getStudyStats(): Promise<StudyStats> {
     known,
     rooted,
     blooming,
-    captures: { id: 'captures', name: 'Captures & lookups', total: captures.total, known: captures.known },
+    captures: { id: 'captures', name: 'Notebook', total: captures.total, known: captures.known },
     collections: Array.from(colMap.values()).sort((a, b) => b.total - a.total),
     dailyCounts,
     avgPerDay,
