@@ -791,13 +791,17 @@ function CapturePageInner() {
               onSelect={opt => {
                 const s = opt as Source | null
                 setSelectedSource(s)
-                if (s?.language)     setCaptureLanguage(s.language)
-                if (s?.dialect_name) setDialect(s.dialect_name)
+                if (s?.language && s.language !== captureLanguage) {
+                  setCaptureLanguage(s.language)
+                  setDialect(s.dialect_name ?? '')
+                } else if (s?.dialect_name) {
+                  setDialect(s.dialect_name)
+                }
               }}
               onCreate={async name => {
                 const color = Math.random().toString(16).substring(2, 8)
                 const s = await createSource({
-                  name, type: 'person', language: lang.code,
+                  name, type: 'person', language: captureLanguage || lang.code,
                   dialect_name: dialect || null, location: null, url: null,
                   notes: null, avatar_color: `#${color}`,
                 })
