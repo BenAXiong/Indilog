@@ -102,6 +102,79 @@ function ExactWordCard({ word, onSave, onCapture, saved = false }: {
   )
 }
 
+// ─── Exact match group (same word, exact in 2+ dialects at once) ─────────
+function ExactMatchGroupCard({ entries, onSave, onCapture, savedWordMap }: {
+  entries: WordResult[]
+  onSave: (w: WordResult) => void
+  onCapture: (w: WordResult) => void
+  savedWordMap: Map<string, string>
+}) {
+  const headword = entries[0].word_ab
+
+  return (
+    <Card raised pad={0} style={{ overflow: 'hidden' }}>
+      <div style={{
+        padding: '16px 16px 14px', borderBottom: `1px solid ${T.lineSoft}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+      }}>
+        <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.025em' }}>
+          {headword}
+        </div>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '3px 8px', borderRadius: 999,
+          background: T.sageBg, color: T.sage, border: `1px solid #D2D8AE`,
+          fontSize: 10.5, fontWeight: 600, flexShrink: 0,
+        }}>
+          <Icon name="check" size={10} color={T.sage} strokeWidth={2.5} />
+          exact in {entries.length} dialects
+        </span>
+      </div>
+
+      {entries.map((w, i) => {
+        const saved = savedWordMap.has(wordKey(w.word_ab, w.dialect_name))
+        return (
+          <div key={w.id} style={{
+            padding: '12px 16px',
+            borderBottom: i < entries.length - 1 ? `1px solid ${T.lineSoft}` : 'none',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 2 }}>{w.dialect_name}</div>
+              <div style={{ fontSize: 14.5, color: T.ink, fontWeight: 500, lineHeight: 1.4 }}>{w.word_ch}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+              <button
+                onClick={() => onSave(w)}
+                title={saved ? 'Remove from your notebook' : 'Save word'} aria-label="Save word"
+                style={{
+                  width: 32, height: 32, borderRadius: 9,
+                  background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  ...(saved ? { color: T.crimson, border: `1px solid ${T.crimson}`, background: T.crimsonBg } : {}),
+                }}
+              >
+                <Icon name={saved ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
+              </button>
+              <button
+                onClick={() => onCapture(w)}
+                title="Add context in Capture" aria-label="Add context in Capture"
+                style={{
+                  width: 32, height: 32, borderRadius: 9,
+                  background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                }}
+              >
+                <Icon name="capture" size={15} strokeWidth={1.8} />
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </Card>
+  )
+}
+
 // ─── Sentence card ────────────────────────────────────────────
 function SentenceCard({ s, onSave, onCapture, saved = false }: {
   s: SentenceResult
@@ -548,10 +621,12 @@ export default function DictionaryPage() {
   }
 
   // Multiple rows can be exact at once (e.g. the same short word defined in
-  // several dialects) — otherWords must be "everything but the hero card",
-  // not "everything non-exact", or the rest of the exact matches vanish.
-  const exactWord = words.find(w => w.exact)
-  const otherWords = exactWord ? words.filter(w => w !== exactWord) : words
+  // several dialects) — group them into one dialect-sectioned card instead of
+  // picking an arbitrary hero and burying the rest in "Also matches".
+  const exactMatches = words.filter(w => w.exact)
+  const exactWord = exactMatches.length === 1 ? exactMatches[0] : undefined
+  const exactGroup = exactMatches.length > 1 ? exactMatches : null
+  const otherWords = words.filter(w => !w.exact)
 
   const selectedLangOption = dialects.find(d => d.glid === glid)
   const filterActive = !!(glid || dialectFilter)
@@ -723,9 +798,12 @@ export default function DictionaryPage() {
               {exactWord && (
                 <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} />
               )}
+              {exactGroup && (
+                <ExactMatchGroupCard entries={exactGroup} onSave={handleSave} onCapture={handleCapture} savedWordMap={savedWordMap} />
+              )}
               {otherWords.length > 0 && (
                 <div>
-                  {exactWord && <SectionHead title="Also matches" action={`${otherWords.length}`} />}
+                  {exactMatches.length > 0 && <SectionHead title="Also matches" action={`${otherWords.length}`} />}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {otherWords.map(w => (
                       <div key={w.id} style={{
