@@ -8,7 +8,7 @@ import { Card, SectionHead, Icon, Button } from '@/components/ui'
 import ScreenHeader from '@/components/nav/ScreenHeader'
 import SettingsButton from '@/components/widgets/SettingsSheet'
 import { useLang } from '@/lib/context/LangDialectProvider'
-import { getGlid } from '@/lib/lang/lang-bridge'
+import { getGlid, getIndivoreCode, getIndivoreCodeFromDialectName } from '@/lib/lang/lang-bridge'
 import { GLID_FAMILIES } from '@/lib/lang/dialects'
 import { createItem } from '@/lib/db/notebook/items'
 import { unsaveItem } from '@/lib/db/srs/browser'
@@ -157,7 +157,7 @@ type MergedEntry = {
 
 function MergedEntryCard({ entry, onSave, onCapture }: {
   entry: MergedEntry
-  onSave: (ab: string, dialect: string, def: string) => void
+  onSave: (ab: string, dialect: string, def: string, glid: string) => void
   onCapture: (ab: string, def: string) => void
 }) {
   const firstSection = entry.dialectSections[0]
@@ -197,7 +197,7 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
           )}
         </div>
         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-          <button onClick={() => onSave(entry.ab, primaryDialect, primaryDef)} title="Save word" style={btnStyle}>
+          <button onClick={() => onSave(entry.ab, primaryDialect, primaryDef, entry.glid)} title="Save word" style={btnStyle}>
             <Icon name="bookmark" size={14} strokeWidth={1.8} />
           </button>
           <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
@@ -429,8 +429,8 @@ export default function DictionaryPage() {
     touchStartX.current = null
   }
 
-  async function handleSaveMerged(ab: string, dialect: string, def: string) {
-    await createItem({ ab, zh: def, type: 'word', language: dialect, note_source: 'dict' })
+  async function handleSaveMerged(ab: string, dialect: string, def: string, glid: string) {
+    await createItem({ ab, zh: def, type: 'word', language: getIndivoreCode(glid) ?? lang.code, dialect, note_source: 'dict' })
     setSaveMsg(`Saved "${ab}"`)
     setTimeout(() => setSaveMsg(null), 2000)
   }
@@ -443,7 +443,7 @@ export default function DictionaryPage() {
   async function handleSave(word: WordResult) {
     await createItem({
       ab: word.word_ab, zh: word.word_ch,
-      type: 'word', language: word.dialect_name, note_source: 'dict',
+      type: 'word', language: getIndivoreCode(word.glid) ?? lang.code, dialect: word.dialect_name, note_source: 'dict',
       target_word: word.word_ab,
     })
     setSaveMsg(`Saved "${word.word_ab}"`)
@@ -471,7 +471,7 @@ export default function DictionaryPage() {
       }
       return
     }
-    const item = await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: s.dialect_name, note_source: 'dict' })
+    const item = await createItem({ ab: s.ab, zh: s.zh, type: 'sentence', language: getIndivoreCodeFromDialectName(s.dialect_name) ?? lang.code, dialect: s.dialect_name, note_source: 'dict' })
     if (item) setSavedAbSet(prev => new Map(prev).set(s.ab, item.id))
     setSaveMsgWarn(false)
     setSaveMsg('Sentence saved')

@@ -24,6 +24,24 @@ export function getGlid(indivoreCode: string): string | null {
   return INDIVORE_TO_GLID[indivoreCode] ?? null
 }
 
+const GLID_TO_INDIVORE: Record<string, string> = Object.fromEntries(
+  Object.entries(INDIVORE_TO_GLID).map(([code, glid]) => [glid, code])
+)
+
+export function getIndivoreCode(glid: string): string | null {
+  return GLID_TO_INDIVORE[glid] ?? null
+}
+
+const DIALECT_NAME_TO_GLID: Record<string, string> = Object.fromEntries(
+  Object.entries(GLID_FAMILIES).flatMap(([glid, names]) => names.map(name => [name, glid]))
+)
+
+// For results that carry only a dialect_name (no glid), e.g. dict sentence search
+export function getIndivoreCodeFromDialectName(dialectName: string): string | null {
+  const glid = DIALECT_NAME_TO_GLID[dialectName]
+  return glid ? getIndivoreCode(glid) : null
+}
+
 export function getDefaultDialect(indivoreCode: string): string | null {
   const glid = getGlid(indivoreCode)
   if (!glid) return null
