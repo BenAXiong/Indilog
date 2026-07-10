@@ -547,8 +547,11 @@ export default function DictionaryPage() {
     router.push(`/capture?${params}`)
   }
 
+  // Multiple rows can be exact at once (e.g. the same short word defined in
+  // several dialects) — otherWords must be "everything but the hero card",
+  // not "everything non-exact", or the rest of the exact matches vanish.
   const exactWord = words.find(w => w.exact)
-  const otherWords = words.filter(w => !w.exact)
+  const otherWords = exactWord ? words.filter(w => w !== exactWord) : words
 
   const selectedLangOption = dialects.find(d => d.glid === glid)
   const filterActive = !!(glid || dialectFilter)

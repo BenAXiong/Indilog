@@ -92,8 +92,17 @@ export async function searchSentences(
     // either way (common short prefixes like "ma%" hit ~20k of 185k rows) —
     // word-boundary at least answers "does this word appear here" instead of
     // "does the sentence start with these letters".
+    //
+    // Postgres's \m/\M treat the apostrophe as a boundary character, but in
+    // these romanizations it's a real glottal-stop consonant — e.g. corpus
+    // has both "si" (function word, several meanings) and "si’" (a
+    // Wenshui-Atayal word meaning "you") as distinct entries. \m/\M would
+    // match "si’" as if it were plain "si". Build the boundary
+    // ourselves, treating apostrophe variants as word-forming characters.
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    sentQuery = sentQuery.filter('ab', 'imatch', `\\m${escaped}\\M`)
+    const apos = '\u2018\u2019\u02BC\uA78C' // apostrophe variants used in Formosan romanizations
+    const wordChar = `a-zA-Z'${apos}`
+    sentQuery = sentQuery.filter('ab', 'imatch', `(^|[^${wordChar}])${escaped}($|[^${wordChar}])`)
   } else {
     sentQuery = sentQuery.ilike('ab', fuzzy ? `%${q}%` : `${q}%`)
   }
