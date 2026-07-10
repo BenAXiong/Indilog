@@ -41,6 +41,9 @@ supabase/.temp
 # scratch / research — not part of the app
 scrap/
 
+# per-machine Claude Code overrides
+.claude/settings.local.json
+
 # Amis1k source data — JSON output is what matters
 packages/amis1k/source.csv
 packages/amis1k/convert.js

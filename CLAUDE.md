@@ -6,11 +6,6 @@
 - If working on M5-B SRS overhaul (Learn/Review split, priority list, GoalSheet, mastery grades): read `plan-v1-M5-srs.md` and `CONTEXT.md` before starting
 - If touching `ind_items`, `ind_flashcards`, or any query/type layer: read `architecture.md` first
 
-## After every commit
-- Append one or more rows to `log.md` covering what changed
-- Format: `| 2026-MM-DD HH:MM | TYPE | Description |`
-- Types: FEATURE, FIX, REFACTOR, SCHEMA, CONFIG, PHASE COMPLETE
-
 ## Pushing
 - **Never push without explicit approval.** When a commit or batch of commits seems ready to ship, say so and ask — do not push until the user confirms.
 - After an approved push, check Vercel build status with `npx vercel ls`.
@@ -37,6 +32,11 @@
 ## Security
 - `INFERENCE_API_URL` and `INFERENCE_API_KEY` must NEVER have `NEXT_PUBLIC_` prefix — server-side only
 - Never commit `.env.local`
+
+## File tracking
+- One-off analysis/investigation output (dedup reports, ad-hoc query dumps, debug logs) is not part of the app — put it under `scrap/` (gitignored) or the session scratchpad, never the repo root or `docs/`. `docs/` is for durable reference material meant to outlive the session that produced it.
+- `.claude/settings.local.json` is a per-machine override — never commit it. `.claude/settings.json` (shared project config, if introduced) is trackable.
+- When `git status` surfaces untracked files you didn't create this session and their purpose isn't obvious, ask before adding them to a commit rather than sweeping them in.
 
 ## Global skills (`~/.claude/skills/`)
 
