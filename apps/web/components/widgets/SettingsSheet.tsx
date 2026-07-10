@@ -244,13 +244,11 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   }
 
   function toggleDictSource(id: string) {
-    setDictSources(prev => {
-      const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-      localStorage.setItem('ind_dict_sources', JSON.stringify(next))
-      saveToCloud({ dict_sources: next })
-      window.dispatchEvent(new CustomEvent('ind-dict-sources-changed', { detail: next }))
-      return next
-    })
+    const next = dictSources.includes(id) ? dictSources.filter(s => s !== id) : [...dictSources, id]
+    setDictSources(next)
+    localStorage.setItem('ind_dict_sources', JSON.stringify(next))
+    saveToCloud({ dict_sources: next })
+    window.dispatchEvent(new CustomEvent('ind-dict-sources-changed', { detail: next }))
   }
 
   const displayName  = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? '—'
