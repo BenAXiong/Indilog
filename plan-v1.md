@@ -197,7 +197,7 @@ Personal library of sources (people, media, references) linked to captured items
 
 - [x] FIX: dialect mismatch warning for patterns
 - [x] Study: move the browser to a header button
-- [-] Study/Capture: expanded sub-decks
+- [x] Study/Capture: expanded sub-decks
 - [ ] Session: minor mods, see screenshots
 
 - [ ] Dash: add counter to goal widget
@@ -231,6 +231,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Record curriculum completion time per unit (not surfaced)
 - [x] Improve Study content loading latency
 
+- [ ] Dict: FIX bookmarked state
 - [x] Dict: enable non-amis ab search with dialects
 - [ ] Dict: compare words vs merge and keep best
 - [ ] Dict: compare word search with MoE and improve results
