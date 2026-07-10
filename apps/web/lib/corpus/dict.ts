@@ -86,25 +86,28 @@ export async function searchSentences(
   const hasCJK = /[㐀-鿿]/.test(q)
   if (hasCJK) {
     sentQuery = sentQuery.ilike('zh', `%${q}%`)
-  } else if (q.length < 3) {
-    // Short queries: match q as a standalone word anywhere in the sentence.
-    // Prefix/substring search on a 1-2 char string falls back to a seq scan
-    // either way (common short prefixes like "ma%" hit ~20k of 185k rows) —
-    // word-boundary at least answers "does this word appear here" instead of
-    // "does the sentence start with these letters".
+  } else if (fuzzy) {
+    sentQuery = sentQuery.ilike('ab', `%${q}%`)
+  } else {
+    // Non-fuzzy: match q as a standalone word anywhere in the sentence, not
+    // just where the sentence happens to start — the old `${q}%` prefix
+    // missed every mid-sentence occurrence (e.g. "hreq" only matched
+    // sentences literally starting with "hreq", missing "kiya hreq na
+    // waw..." entirely). Verified this stays index-backed (idx_cs_ab_trgm)
+    // for ordinary word lengths too, not just short queries — Postgres's
+    // trigram index only falls back to a seq scan when the literal pattern
+    // text is under 3 chars, which only bites when q itself is 1-2 chars.
     //
     // Postgres's \m/\M treat the apostrophe as a boundary character, but in
     // these romanizations it's a real glottal-stop consonant — e.g. corpus
-    // has both "si" (function word, several meanings) and "si’" (a
+    // has both "si" (function word, several meanings) and "si\u2019" (a
     // Wenshui-Atayal word meaning "you") as distinct entries. \m/\M would
-    // match "si’" as if it were plain "si". Build the boundary
+    // match "si\u2019" as if it were plain "si". Build the boundary
     // ourselves, treating apostrophe variants as word-forming characters.
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const apos = '\u2018\u2019\u02BC\uA78C' // apostrophe variants used in Formosan romanizations
     const wordChar = `a-zA-Z'${apos}`
     sentQuery = sentQuery.filter('ab', 'imatch', `(^|[^${wordChar}])${escaped}($|[^${wordChar}])`)
-  } else {
-    sentQuery = sentQuery.ilike('ab', fuzzy ? `%${q}%` : `${q}%`)
   }
 
   if (glid) sentQuery = sentQuery.eq('glid', glid)
