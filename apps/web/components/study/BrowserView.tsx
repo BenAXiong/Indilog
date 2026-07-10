@@ -13,6 +13,7 @@ import {
 import { setTargetWord } from '@/lib/db/srs/flashcards'
 import { listSources } from '@/lib/db/sources/sources'
 import { getLanguage } from '@/lib/languages'
+import { DIALECT_TO_EN } from '@/lib/lang/dialects'
 import { formatDays, computeStrength, computeMasteryGrade } from '@/lib/db/srs/schedule'
 import { FLAG_COLORS, flagColorHex } from '@/lib/db/srs/flags'
 
@@ -500,6 +501,8 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   const [sourceNames,    setSourceNames]    = useState<Map<string, string>>(new Map())
   const [fType,          setFType]          = useState('')
   const [fSource,        setFSource]        = useState('')
+  const [fLanguage,      setFLanguage]      = useState('')
+  const [fDialect,       setFDialect]       = useState('')
   const [fromDate,       setFromDate]       = useState('')
   const [toDate,         setToDate]         = useState('')
   const [selectionMode,  setSelectionMode]  = useState(false)
@@ -553,8 +556,29 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
     fontFamily: 'inherit', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
     maxWidth: 160,
   }
-  const availTypes   = useMemo(() => [...new Set(cards.map(c => c.note_type).filter(Boolean))].sort(), [cards])
-  const availSources = useMemo(() => [...new Set(cards.map(c => c.source).filter(Boolean))].sort(), [cards])
+  const narrowDropStyle: React.CSSProperties = {
+    ...dropStyle, padding: '0 22px 0 8px', maxWidth: 108,
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  }
+  const availTypes     = useMemo(() => [...new Set(cards.map(c => c.note_type).filter(Boolean))].sort(), [cards])
+  const availSources   = useMemo(() => [...new Set(cards.map(c => c.source).filter(Boolean))].sort(), [cards])
+  // Some legacy dict saves wrote the dialect name into the language column (fixed at the
+  // source in dict/page.tsx) — guard against that stale data leaking dialect names in here.
+  const availLanguages = useMemo(() => [...new Set(
+    cards.map(c => c.language).filter(l => l && getLanguage(l))
+  )].sort(), [cards])
+  // grmpts/Patterns saves write a generic language-level name (e.g. "阿美語") into dialect
+  // when the true source sub-dialect isn't documented yet (GRMPTS_SOURCE_DIALECT) — filter
+  // to our real dialect list so that placeholder doesn't show up as a selectable dialect.
+  const availDialects  = useMemo(() => [...new Set(
+    cards.filter(c => !fLanguage || c.language === fLanguage)
+      .map(c => c.dialect).filter((d): d is string => !!d && d in DIALECT_TO_EN)
+  )].sort(), [cards, fLanguage])
+
+  // Dialects are scoped to a language — drop a stale selection when it switches
+  useEffect(() => {
+    if (fDialect && !availDialects.includes(fDialect)) setFDialect('')
+  }, [availDialects]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
     let result = cards
@@ -562,12 +586,23 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
       const q = search.toLowerCase()
       result = result.filter(c => c.ab.toLowerCase().includes(q) || (c.zh ?? '').toLowerCase().includes(q))
     }
-    if (fType)    result = result.filter(c => c.note_type === fType)
-    if (fSource)  result = result.filter(c => c.source === fSource)
-    if (fromDate) result = result.filter(c => c.created_at >= fromDate)
-    if (toDate)   result = result.filter(c => c.created_at <= toDate + 'T23:59:59.999Z')
+    if (fType)     result = result.filter(c => c.note_type === fType)
+    if (fSource)   result = result.filter(c => c.source === fSource)
+    if (fLanguage) result = result.filter(c => c.language === fLanguage)
+    if (fDialect)  result = result.filter(c => c.dialect === fDialect)
+    // fromDate/toDate are local calendar dates from <input type="date">; created_at is a
+    // UTC timestamptz — parse the boundaries as local time (no zone suffix) so the compare
+    // against the UTC string lines up with the user's actual local day, not UTC's.
+    if (fromDate) {
+      const fromISO = new Date(`${fromDate}T00:00:00`).toISOString()
+      result = result.filter(c => c.created_at >= fromISO)
+    }
+    if (toDate) {
+      const toISO = new Date(`${toDate}T23:59:59.999`).toISOString()
+      result = result.filter(c => c.created_at <= toISO)
+    }
     return result
-  }, [cards, search, fType, fSource, fromDate, toDate])
+  }, [cards, search, fType, fSource, fLanguage, fDialect, fromDate, toDate])
 
   function updateCard(id: string, patch: Partial<BrowserCard>) {
     setCards(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
@@ -646,23 +681,52 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
         </button>
       </div>
 
-      {/* Filter row: SRS state | source | spacer | field-filters | sort */}
+      {/* Filter row 1: language | dialect | deck */}
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        {/* SRS state dropdown */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <select value={filter} onChange={e => setFilter(e.target.value as BrowserFilter)} style={dropStyle}>
-            {FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-          </select>
-          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-            <Icon name="chev-d" size={11} strokeWidth={2} />
+        {/* Language dropdown */}
+        {availLanguages.length > 1 && (
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <select value={fLanguage} onChange={e => setFLanguage(e.target.value)} style={narrowDropStyle}>
+              <option value="">All langs</option>
+              {availLanguages.map(l => <option key={l} value={l}>{getLanguage(l)?.name ?? l}</option>)}
+            </select>
+            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+              <Icon name="chev-d" size={11} strokeWidth={2} />
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Dialect dropdown */}
+        {availDialects.length > 1 && (
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <select value={fDialect} onChange={e => setFDialect(e.target.value)} style={narrowDropStyle}>
+              <option value="">All dialects</option>
+              {availDialects.map(d => <option key={d} value={d}>{DIALECT_TO_EN[d] ?? d}</option>)}
+            </select>
+            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+              <Icon name="chev-d" size={11} strokeWidth={2} />
+            </div>
+          </div>
+        )}
 
         {/* Source/deck dropdown */}
         <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
           <select value={fSource} onChange={e => setFSource(e.target.value)} style={{ ...dropStyle, maxWidth: '100%', width: '100%' }}>
             <option value="">All sources</option>
             {availSources.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
+            <Icon name="chev-d" size={11} strokeWidth={2} />
+          </div>
+        </div>
+      </div>
+
+      {/* Filter row 2: SRS state | type | sort */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        {/* SRS state dropdown */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <select value={filter} onChange={e => setFilter(e.target.value as BrowserFilter)} style={dropStyle}>
+            {FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
           <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
             <Icon name="chev-d" size={11} strokeWidth={2} />
@@ -692,7 +756,6 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
           </div>
         </div>
       </div>
-
 
       {/* Date range row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

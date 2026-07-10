@@ -31,19 +31,14 @@ export default function BrowserButton() {
           />
           <div style={{
             position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 41,
-            background: T.cream, borderRadius: '20px 20px 0 0',
-            boxShadow: '0 -4px 32px rgba(43,34,26,0.15)',
-            maxHeight: '90vh', overflowY: 'auto',
+            background: T.cream, borderRadius: 0,
+            height: '100dvh', maxHeight: '100dvh', overflow: 'hidden',
             display: 'flex', flexDirection: 'column',
           }}>
-            {/* Handle */}
-            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 4, flexShrink: 0 }}>
-              <div style={{ width: 36, height: 4, borderRadius: 999, background: T.lineSoft }} />
-            </div>
             {/* Title */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '8px 18px 16px', flexShrink: 0,
+              padding: '16px 18px', flexShrink: 0,
             }}>
               <div style={{
                 fontFamily: 'Newsreader, Georgia, serif',
@@ -64,7 +59,7 @@ export default function BrowserButton() {
               </button>
             </div>
             {/* Content */}
-            <div style={{ paddingBottom: 40 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 40 }}>
               <BrowserView />
             </div>
           </div>
