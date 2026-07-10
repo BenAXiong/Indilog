@@ -231,10 +231,13 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Record curriculum completion time per unit (not surfaced)
 - [x] Improve Study content loading latency
 
-- [ ] Dict: FIX bookmarked state
+- [x] Dict: FIX bookmarked state
 - [x] Dict: enable non-amis ab search with dialects
 - [ ] Dict: compare words vs merge and keep best
 - [ ] Dict: compare word search with MoE and improve results
+- [ ] Dict: expandable results on tap for long entries
+- [ ] Dict: expand to show sentences?
+- [ ] Dict: 
 - [ ] Dict: 
 
 - [ ] Browser: add all context fields, editable

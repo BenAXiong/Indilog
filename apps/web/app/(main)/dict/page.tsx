@@ -39,11 +39,18 @@ type DialectOption = {
   group_name: string
 }
 
+// Stable key for matching a dictionary word result against a saved ind_items row —
+// text alone collides across dialects, so pair it with dialect_name.
+function wordKey(ab: string, dialect: string) {
+  return `${dialect}|${ab}`
+}
+
 // ─── Word card (exact match) ──────────────────────────────────
-function ExactWordCard({ word, onSave, onCapture }: {
+function ExactWordCard({ word, onSave, onCapture, saved = false }: {
   word: WordResult
   onSave: (w: WordResult) => void
   onCapture: (w: WordResult) => void
+  saved?: boolean
 }) {
   return (
     <Card raised pad={0} style={{ overflow: 'hidden' }}>
@@ -80,8 +87,12 @@ function ExactWordCard({ word, onSave, onCapture }: {
         padding: 12, borderTop: `1px solid ${T.lineSoft}`, background: T.paper,
         display: 'flex', gap: 8,
       }}>
-        <Button variant="primary" size="md" icon="bookmark" style={{ flex: 1 }} title="Save to your notebook" onClick={() => onSave(word)}>
-          Save word
+        <Button
+          variant={saved ? 'secondary' : 'primary'} size="md" icon={saved ? 'bookmarkF' : 'bookmark'}
+          style={{ flex: 1, ...(saved ? { color: T.crimson, border: `1px solid ${T.crimson}` } : {}) }}
+          title={saved ? 'Remove from your notebook' : 'Save to your notebook'} onClick={() => onSave(word)}
+        >
+          {saved ? 'Saved' : 'Save word'}
         </Button>
         <Button variant="secondary" size="md" icon="capture" style={{ flex: 1 }} title="Open in Capture to add a sentence example" onClick={() => onCapture(word)}>
           Add context
@@ -150,15 +161,17 @@ function SentenceCard({ s, onSave, onCapture, saved = false }: {
 // ─── Merged entry (words only, per-dialect sections) ─────────
 type MergedEntry = {
   ab: string        // display form, first letter capitalised
+  rawAb: string     // as stored in ind_items / returned by search — used for save + saved-state lookups
   glid: string
   exact: boolean
   dialectSections: { dialect_name: string; defs: string[] }[]
 }
 
-function MergedEntryCard({ entry, onSave, onCapture }: {
+function MergedEntryCard({ entry, onSave, onCapture, saved = false }: {
   entry: MergedEntry
   onSave: (ab: string, dialect: string, def: string, glid: string) => void
   onCapture: (ab: string, def: string) => void
+  saved?: boolean
 }) {
   const firstSection = entry.dialectSections[0]
   const primaryDef   = firstSection?.defs[0] ?? ''
@@ -197,8 +210,12 @@ function MergedEntryCard({ entry, onSave, onCapture }: {
           )}
         </div>
         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-          <button onClick={() => onSave(entry.ab, primaryDialect, primaryDef, entry.glid)} title="Save word" style={btnStyle}>
-            <Icon name="bookmark" size={14} strokeWidth={1.8} />
+          <button
+            onClick={() => onSave(entry.rawAb, primaryDialect, primaryDef, entry.glid)}
+            title={saved ? 'Remove from your notebook' : 'Save word'}
+            style={{ ...btnStyle, ...(saved ? { color: T.crimson, border: `1px solid ${T.crimson}`, background: T.crimsonBg } : {}) }}
+          >
+            <Icon name={saved ? 'bookmarkF' : 'bookmark'} size={14} strokeWidth={1.8} />
           </button>
           <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
             <Icon name="capture" size={14} strokeWidth={1.8} />
@@ -250,6 +267,7 @@ export default function DictionaryPage() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [saveMsgWarn, setSaveMsgWarn] = useState(false)
   const [savedAbSet, setSavedAbSet] = useState<Map<string, string>>(() => new Map())
+  const [savedWordMap, setSavedWordMap] = useState<Map<string, string>>(() => new Map())
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
@@ -356,6 +374,16 @@ export default function DictionaryPage() {
       })
   }, [sentences])
 
+  // Pre-check which words are already saved in ind_items (keyed by ab+dialect — text alone collides across dialects)
+  useEffect(() => {
+    if (words.length === 0) { setSavedWordMap(new Map()); return }
+    const abs = words.map(w => w.word_ab)
+    createClient().from('ind_items').select('id, ab, dialect').in('ab', abs).eq('type', 'word')
+      .then(({ data }) => {
+        if (data) setSavedWordMap(new Map(data.map((r: { id: string; ab: string; dialect: string | null }) => [wordKey(r.ab, r.dialect ?? ''), r.id])))
+      })
+  }, [words])
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     // phrases + CJK: always fuzzy so they match mid-sentence / mid-definition
@@ -396,7 +424,7 @@ export default function DictionaryPage() {
     const map = new Map<string, MergedEntry>()
     for (const w of words) {
       const key = normKey(w.word_ab)
-      if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), glid: w.glid, exact: false, dialectSections: [] })
+      if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), rawAb: w.word_ab, glid: w.glid, exact: false, dialectSections: [] })
       const e = map.get(key)!
       if (w.exact) e.exact = true
       let section = e.dialectSections.find(s => s.dialect_name === w.dialect_name)
@@ -430,7 +458,24 @@ export default function DictionaryPage() {
   }
 
   async function handleSaveMerged(ab: string, dialect: string, def: string, glid: string) {
-    await createItem({ ab, zh: def, type: 'word', language: getIndivoreCode(glid) ?? lang.code, dialect, note_source: 'dict' })
+    const key = wordKey(ab, dialect)
+    const existingId = savedWordMap.get(key)
+    if (existingId) {
+      const outcome = await unsaveItem(existingId)
+      if (outcome === 'deleted') {
+        setSavedWordMap(prev => { const m = new Map(prev); m.delete(key); return m })
+        setSaveMsgWarn(false)
+        setSaveMsg('Removed from notebook')
+      } else {
+        setSaveMsgWarn(true)
+        setSaveMsg("Kept — your review history is safe, but it won't appear in future sessions. Unsuspend it from Study → Browser if you change your mind.")
+      }
+      setTimeout(() => setSaveMsg(null), outcome === 'deleted' ? 2000 : 4000)
+      return
+    }
+    const item = await createItem({ ab, zh: def, type: 'word', language: getIndivoreCode(glid) ?? lang.code, dialect, note_source: 'dict' })
+    if (item) setSavedWordMap(prev => new Map(prev).set(key, item.id))
+    setSaveMsgWarn(false)
     setSaveMsg(`Saved "${ab}"`)
     setTimeout(() => setSaveMsg(null), 2000)
   }
@@ -441,11 +486,28 @@ export default function DictionaryPage() {
   }
 
   async function handleSave(word: WordResult) {
-    await createItem({
+    const key = wordKey(word.word_ab, word.dialect_name)
+    const existingId = savedWordMap.get(key)
+    if (existingId) {
+      const outcome = await unsaveItem(existingId)
+      if (outcome === 'deleted') {
+        setSavedWordMap(prev => { const m = new Map(prev); m.delete(key); return m })
+        setSaveMsgWarn(false)
+        setSaveMsg('Removed from notebook')
+      } else {
+        setSaveMsgWarn(true)
+        setSaveMsg("Kept — your review history is safe, but it won't appear in future sessions. Unsuspend it from Study → Browser if you change your mind.")
+      }
+      setTimeout(() => setSaveMsg(null), outcome === 'deleted' ? 2000 : 4000)
+      return
+    }
+    const item = await createItem({
       ab: word.word_ab, zh: word.word_ch,
       type: 'word', language: getIndivoreCode(word.glid) ?? lang.code, dialect: word.dialect_name, note_source: 'dict',
       target_word: word.word_ab,
     })
+    if (item) setSavedWordMap(prev => new Map(prev).set(key, item.id))
+    setSaveMsgWarn(false)
     setSaveMsg(`Saved "${word.word_ab}"`)
     setTimeout(() => setSaveMsg(null), 2000)
   }
@@ -654,7 +716,7 @@ export default function DictionaryPage() {
                 </div>
               )}
               {exactWord && (
-                <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} />
+                <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} />
               )}
               {otherWords.length > 0 && (
                 <div>
@@ -682,12 +744,13 @@ export default function DictionaryPage() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => handleSave(w)} title="Save word" aria-label="Save word" style={{
+                          <button onClick={() => handleSave(w)} title={savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? 'Remove from your notebook' : 'Save word'} aria-label="Save word" style={{
                             width: 32, height: 32, borderRadius: 9,
                             background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            ...(savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? { color: T.crimson, border: `1px solid ${T.crimson}`, background: T.crimsonBg } : {}),
                           }}>
-                            <Icon name="bookmark" size={15} strokeWidth={1.8} />
+                            <Icon name={savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
                           </button>
                           <button onClick={() => handleCapture(w)} title="Add context in Capture" aria-label="Add context in Capture" style={{
                             width: 32, height: 32, borderRadius: 9,
@@ -721,6 +784,7 @@ export default function DictionaryPage() {
                       entry={entry}
                       onSave={handleSaveMerged}
                       onCapture={handleCaptureMerged}
+                      saved={savedWordMap.has(wordKey(entry.rawAb, entry.dialectSections[0]?.dialect_name ?? ''))}
                     />
                   ))}
                 </div>
