@@ -339,7 +339,9 @@ export default function DictionaryPage() {
 
   const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean, withKlokah: boolean) => {
     const trimmed = term.trim()
-    const minLen = /[㐀-鿿]/.test(trimmed) ? 1 : 3
+    // 2 chars is enough to fire the request — the API exact-matches word search
+    // below its own 3-char prefix-search floor, so a 2-char query still finds words.
+    const minLen = /[㐀-鿿]/.test(trimmed) ? 1 : 2
     if (trimmed.length < minLen) { setWords([]); setSentences([]); setSearched(false); return }
     setLoading(true)
     setSearched(true)

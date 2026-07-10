@@ -42,6 +42,12 @@ export async function searchWords(
   const hasCJK = /[㐀-鿿]/.test(q)
   if (hasCJK) {
     query = query.ilike('word_ch', `%${q}%`)
+  } else if (q.length < 3) {
+    // pg_trgm can't use the GIN index for prefix patterns under 3 chars — a 2-char
+    // prefix (e.g. "ma%") falls back to a seq scan and returns tens of thousands of
+    // rows. Exact match stays index-backed (idx_cv_ab_trgm) and answers the actually
+    // useful question for short input: "does this word exist (in this language)?"
+    query = query.ilike('word_ab', q)
   } else {
     query = query.ilike('word_ab', fuzzy ? `%${q}%` : `${q}%`)
   }
