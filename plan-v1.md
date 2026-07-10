@@ -196,14 +196,9 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Study tab - subdecks
 
 - [x] FIX: dialect mismatch warning for patterns
-- [ ] Study/Decks: move the video subtab/link and add video section (keep page)
-- [ ] Study/Capture: prototype for expanded sub-decks
+- [x] Study: move the browser to a header button
+- [-] Study/Capture: expanded sub-decks
 - [ ] Session: minor mods, see screenshots
-
-- [ ] Browser: add all context fields, editable
-- [ ] Browser: enable swipe left/right for extanded options
-- [ ] Browser: 
-- [ ] Browser: 
 
 - [ ] Dash: add counter to goal widget
 - [ ] Dash/prio: add counters to each deck
@@ -220,7 +215,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] (deferred) FIX: vercel error on session completion
 - [x] FIX: zh missing in curriculm cards
 - [x] FIX: audio broken in curriculm cards
-- [x] FIX: zh and audio missing from seesion fields in some modes of curriculm cards
+- [x] FIX: zh and audio missing from session fields in some modes of curriculm cards
 - [x] FIX: unsave (delete or suspend) curriculum and dict entries
 - [x] FIX: decks content capped at 1000 (at least custom)
 - [x] FIX: ePark Review page amount
@@ -241,7 +236,12 @@ Personal library of sources (people, media, references) linked to captured items
 - [ ] Dict: compare word search with MoE and improve results
 - [ ] Dict: 
 
-- [ ] 
+- [ ] Browser: add all context fields, editable
+- [ ] Browser: enable swipe left/right for extanded options
+- [ ] Browser: edit of any field esp audio
+- [ ] Browser: batch edit of any field esp dia & source
+- [ ] Browser: 
+- [ ] Browser: 
 
 add to post v1
 scrape 
