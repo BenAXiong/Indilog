@@ -80,23 +80,21 @@ export async function GET(req: NextRequest) {
   const includeKlokah = searchParams.get('klokah')  === '1'
 
   const hasCJK = /[㐀-鿿]/.test(q)
-  // Word search can go to 2 chars (exact-match only, see searchWords) to answer
-  // "does this word exist" for short input. Sentences and MoE need the full
-  // 3-char prefix search to stay meaningful/cheap, so they keep the higher floor.
-  const minLenWords  = hasCJK ? 1 : 2
-  const minLenOthers = hasCJK ? 1 : 3
-  if (!q || q.length < minLenWords) {
+  // Word + sentence search can go to 2 chars — see searchWords/searchSentences for how
+  // short queries switch to exact/word-boundary matching instead of noisy prefix scans.
+  // MoE goes through an external proxy API, so it keeps the original 3-char floor.
+  const minLen    = hasCJK ? 1 : 2
+  const minLenMoe = hasCJK ? 1 : 3
+  if (!q || q.length < minLen) {
     return NextResponse.json({ words: [], sentences: [] })
   }
 
   try {
-    const wordsEligible  = q.length >= minLenWords
-    const othersEligible = q.length >= minLenOthers
-    const moeActive = includeMoe && othersEligible && (!glid || glid === AMIS_GLID)
+    const moeActive = includeMoe && q.length >= minLenMoe && (!glid || glid === AMIS_GLID)
     const [rawWords, rawSentences, moeWords] = await Promise.all([
-      includeKlokah && wordsEligible  ? searchWords(q, glid, dialect, fuzzy)     : Promise.resolve([]),
-      includeKlokah && othersEligible ? searchSentences(q, glid, dialect, fuzzy) : Promise.resolve([]),
-      moeActive                       ? fetchMoeWords(q)                        : Promise.resolve<WordRow[]>([]),
+      includeKlokah ? searchWords(q, glid, dialect, fuzzy)     : Promise.resolve([]),
+      includeKlokah ? searchSentences(q, glid, dialect, fuzzy) : Promise.resolve([]),
+      moeActive     ? fetchMoeWords(q)                         : Promise.resolve<WordRow[]>([]),
     ])
 
     // Dedup ePark words — corpus has "mafana'to" and "mafana' to" as separate entries;

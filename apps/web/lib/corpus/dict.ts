@@ -86,6 +86,14 @@ export async function searchSentences(
   const hasCJK = /[㐀-鿿]/.test(q)
   if (hasCJK) {
     sentQuery = sentQuery.ilike('zh', `%${q}%`)
+  } else if (q.length < 3) {
+    // Short queries: match q as a standalone word anywhere in the sentence.
+    // Prefix/substring search on a 1-2 char string falls back to a seq scan
+    // either way (common short prefixes like "ma%" hit ~20k of 185k rows) —
+    // word-boundary at least answers "does this word appear here" instead of
+    // "does the sentence start with these letters".
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    sentQuery = sentQuery.filter('ab', 'imatch', `\\m${escaped}\\M`)
   } else {
     sentQuery = sentQuery.ilike('ab', fuzzy ? `%${q}%` : `${q}%`)
   }
