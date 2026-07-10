@@ -482,5 +482,4 @@ Settings panel (accessible from header icon):
 
 - `plan-v0.md` Phase 10 — Learn feature v1
 - `decisions.md` — DEC-L01 through DEC-L04, DEC-R05 (Learn was placeholder in v0)
-- `log.md` — implementation entries as phases complete
 - `temp_learn/` — source handoff directory (can be deleted after Phase L0 assets are copied)

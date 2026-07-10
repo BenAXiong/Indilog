@@ -26,7 +26,6 @@
 - **Pagination.** Any query that may return >1000 rows must use the `.range()` pagination pattern from `architecture.md`.
 - **`architecture.md` first.** Read it before touching `ind_items`, `ind_flashcards`, or anything in `lib/db/srs/`.
 - **Commit cadence.** One commit per screen, component, or schema change — not one commit per phase.
-- **Log.md.** Update `log.md` in the same commit as the code; use real git timestamps.
 
 ---
 

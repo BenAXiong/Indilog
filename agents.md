@@ -15,14 +15,13 @@ Build in layers. Complete each phase before moving to the next. Do not half-wire
 | Doc | Purpose | When to update |
 |-----|---------|---------------|
 | `plan-v0.md` | Detailed todo, phase by phase | Mark tasks done as you complete them; add sub-tasks as discovered |
-| `log.md` | Timestamped record of features, fixes, schema changes, and decisions | Every meaningful change — at least one entry per session |
 | `decisions.md` | ADR index — links to all individual decisions in `docs/adr/` | When a new ADR is added or status changes |
 | `agents.md` (this file) | Workflow rules for agents | When a new pattern or rule is established |
 | `CLAUDE.md` | Project-level setup notes for Claude Code | When env vars, commands, or tooling change |
 | `architecture.md` | Canonical data model — Note/Card schema, session modes, audio resolution, migration status | When schema or model decisions change |
 | `docs/perf-plan.md` / `docs/perf-log.md` | Performance campaign plan + measured results per step | When making performance changes — measure with `scripts/perf/measure.mjs`, log the before/after |
 
-**Rule:** Do not end a session without updating `log.md` and checking that `plan-v0.md` reflects completed work.
+**Rule:** Do not end a session without checking that `plan-v0.md` reflects completed work.
 
 ---
 
@@ -30,9 +29,8 @@ Build in layers. Complete each phase before moving to the next. Do not half-wire
 
 1. Read `plan-v0.md` — identify the current phase and next task.
 2. Read `decisions.md` — check the ADR index for open decisions that affect the current task; open the relevant ADR file(s) in `docs/adr/` for full context.
-3. Check `log.md` — orient yourself to what was last done.
-4. If a design checkpoint is due, fetch the Claude Design output before writing UI code.
-5. **Before starting a new phase:** run the phase-start confirmation gate (see "Clarify before you build").
+3. If a design checkpoint is due, fetch the Claude Design output before writing UI code.
+4. **Before starting a new phase:** run the phase-start confirmation gate (see "Clarify before you build").
 
 ---
 
@@ -43,7 +41,6 @@ The workflow doc specifies design checkpoints at phases 0, 1, 2, 3, 4, 5, 6, and
 1. Fetch the current Claude Design output.
 2. Update `docs/design-system.md` and `docs/ui-screens.md`.
 3. Reconcile the running implementation against the design before continuing.
-4. Log what was updated in `log.md`.
 
 Do not improvise visual direction when design output is available for the component being built.
 
@@ -52,7 +49,6 @@ Do not improvise visual direction when design output is available for the compon
 ## Phase progression rules
 
 - Each phase has explicit exit criteria in the workflow doc — verify them before declaring a phase complete.
-- Log phase completions in `log.md` with a `[PHASE COMPLETE]` marker.
 - Update `plan-v0.md` to mark the phase done and surface the next phase.
 
 ---
@@ -147,8 +143,6 @@ If the build fails, read the error, fix it, and push again before reporting back
 
 A "unit of work" is one component, one screen, one schema change, or one self-contained fix. Never accumulate multiple features/fixes into a single commit.
 
-Why this matters: `log.md` timestamps come from `git log -1 --format="%ai"`. If you batch an entire session into one commit, all log entries get the same timestamp, making the history unreadable.
-
 Concrete triggers to commit:
 - New file created (component, migration, lib)
 - Existing screen has a complete, working change
@@ -159,18 +153,6 @@ Do not wait until the user asks. Do not wait until the end of the session.
 
 ---
 
-## Log entry format
-
-Table columns: `Timestamp | Type | Description`
-
-Timestamp format: `YYYY-MM-DD HH:MM` — use the **actual git commit timestamp** (`git log -1 --format="%ai"`), not a made-up or sequential time. Commit granularly (per screen, per component, per meaningful change) so entries get distinct real timestamps.
-
-Types: `FEATURE`, `FIX`, `SCHEMA`, `DECISION`, `PHASE COMPLETE`, `CHECKPOINT`, `CONFIG`, `REFACTOR`
-
-**Rule:** Commit before logging. Get the real timestamp from git. Never invent timestamps.
-
----
-
 ## What not to do
 
 - Do not push to remote or create PRs without explicit user instruction.
@@ -178,7 +160,6 @@ Types: `FEATURE`, `FIX`, `SCHEMA`, `DECISION`, `PHASE COMPLETE`, `CHECKPOINT`, `
 - Do not skip design checkpoints when a new major screen is being built.
 - Do not make silent decisions about translation pairs, dictionary API shape, or auth flow — these belong in `decisions.md`.
 - Do not end a session with `plan-v0.md` still showing tasks that were completed in that session.
-- Do not invent log timestamps — always derive them from `git log -1 --format="%ai"` after committing.
-- Do not batch all work into one commit per phase — commit per screen or meaningful unit so log entries get real distinct timestamps.
+- Do not batch all work into one commit per phase — commit per screen or meaningful unit.
 - Do not start a new phase without running the phase-start confirmation gate.
 - Do not self-resolve an ambiguity and keep coding — stop, ask, log the answer.
