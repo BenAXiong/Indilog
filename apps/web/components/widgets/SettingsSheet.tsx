@@ -728,6 +728,12 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
           {tab === 'dict' && (() => {
             const eparkActive = dictSources.includes('klokah')
             const labelStyle: React.CSSProperties = { fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }
+            // Same language order as the app's main study-language picker (LANGUAGES),
+            // not GLID_NAMES's own key order — those two only diverge at Saaroa/Kanakanavu.
+            const orderedGlidLangs = LANGUAGES
+              .map(l => getGlid(l.code))
+              .filter((g): g is string => !!g && !!GLID_NAMES[g])
+              .map(g => [g, GLID_NAMES[g]] as const)
             return (
               <>
                 <div>
@@ -791,7 +797,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                         <span style={{ fontSize: 13, fontWeight: !dictLangGlid ? 600 : 400, color: !dictLangGlid ? T.crimson : T.ink }}>Auto</span>
                         {!dictLangGlid && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
                       </button>
-                      {Object.entries(GLID_NAMES).map(([g, name], i, arr) => {
+                      {orderedGlidLangs.map(([g, name], i, arr) => {
                         const active = dictLangGlid === g
                         return (
                           <button
