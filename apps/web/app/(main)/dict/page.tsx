@@ -631,6 +631,14 @@ export default function DictionaryPage() {
     router.push(`/capture?${params}`)
   }
 
+  function handleCaptureEmpty() {
+    const params = new URLSearchParams({ text: q.trim(), type: 'word' })
+    const language = getIndivoreCode(glid) ?? lang.code
+    if (language)     params.set('language', language)
+    if (dialectFilter) params.set('dialect', dialectFilter)
+    router.push(`/capture?${params}`)
+  }
+
   // Multiple rows can be exact at once (e.g. the same short word defined in
   // several dialects) — group them into one dialect-sectioned card instead of
   // picking an arbitrary hero and burying the rest in "Also matches".
@@ -786,6 +794,11 @@ export default function DictionaryPage() {
                           {sentences.length} sentence{sentences.length !== 1 ? 's' : ''} found →
                         </button>
                       )}
+                      <div style={{ marginTop: 14 }}>
+                        <Button variant="secondary" size="md" icon="capture" onClick={handleCaptureEmpty}>
+                          Capture "{q}" as a new word
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {merged.length > 0 && (
@@ -815,6 +828,11 @@ export default function DictionaryPage() {
                           {sentences.length} sentence{sentences.length !== 1 ? 's' : ''} found →
                         </button>
                       )}
+                      <div style={{ marginTop: 14 }}>
+                        <Button variant="secondary" size="md" icon="capture" onClick={handleCaptureEmpty}>
+                          Capture "{q}" as a new word
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {exactWord && (

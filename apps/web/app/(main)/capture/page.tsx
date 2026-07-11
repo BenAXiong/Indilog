@@ -55,10 +55,11 @@ function CapturePageInner() {
   // Form state
   const [editingId,   setEditingId]   = useState<string | null>(null)
   const [editingType, setEditingType] = useState<ItemType>('sentence')
+  const [newItemType, setNewItemType] = useState<ItemType>((searchParams.get('type') as ItemType | null) ?? 'sentence')
   const [text,    setText]    = useState(searchParams.get('text')  ?? '')
   const [meaning, setMeaning] = useState('')
-  const [captureLanguage, setCaptureLanguage] = useState('')
-  const [dialect, setDialect] = useState('')
+  const [captureLanguage, setCaptureLanguage] = useState(searchParams.get('language') ?? '')
+  const [dialect, setDialect] = useState(searchParams.get('dialect') ?? '')
   const [place,   setPlace]   = useState('')
   const [notes,   setNotes]   = useState(searchParams.get('notes') ?? '')
 
@@ -122,7 +123,7 @@ function CapturePageInner() {
   const [newTagInput,   setNewTagInput]   = useState('')
 
   // Dialect options for current language
-  const dialectInitRef = useRef(false)
+  const dialectInitRef = useRef(searchParams.get('dialect') !== null)
   const glid = getGlid(captureLanguage || lang.code) ?? '01'
   const langDialects = GLID_FAMILIES[glid] ?? []
 
@@ -363,13 +364,13 @@ function CapturePageInner() {
 
   function handleClear() {
     setEditingId(null); setText(''); setMeaning(''); setCaptureLanguage(lang.code); setDialect(''); setPlace(''); setNotes('')
-    setSelectedSource(null); setSelectedTags([])
+    setSelectedSource(null); setSelectedTags([]); setNewItemType('sentence')
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()); setStsTarget(null)
     discardRecording()
   }
 
   function softClear() {
-    setEditingId(null); setText(''); setMeaning(''); setNotes(''); setSelectedTags([])
+    setEditingId(null); setText(''); setMeaning(''); setNotes(''); setSelectedTags([]); setNewItemType('sentence')
     setLookedUp(false); setLookupResults([]); setExpandedTokens(new Set()); setStsTarget(null)
     discardRecording()
   }
@@ -417,7 +418,7 @@ function CapturePageInner() {
     const payload = {
       ab:          text.trim(),
       zh:          meaning.trim() || undefined,
-      type:        editingId ? editingType : 'sentence' as ItemType,
+      type:        editingId ? editingType : newItemType,
       language:    captureLanguage || lang.code,
       dialect:     dialect.trim() || undefined,
       place_heard: place.trim() || undefined,
