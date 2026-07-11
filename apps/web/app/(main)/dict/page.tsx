@@ -82,7 +82,9 @@ function shortChineseDialect(dialectName: string, glid: string): string {
 
 // Tap-to-expand example sentences on a word card (plan-dict-v2.md Phase 4
 // base test) — lazily fetched on first expand, cached for the card's lifetime.
-function useWordExamples(word: string, glid: string, dialect?: string) {
+// moeEnabled/klokahEnabled must mirror the same source toggles the main
+// search used, so a source disabled everywhere else doesn't reappear here.
+function useWordExamples(word: string, glid: string, moeEnabled: boolean, klokahEnabled: boolean, dialect?: string) {
   const [expanded, setExpanded] = useState(false)
   const [examples, setExamples] = useState<SentenceResult[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -93,7 +95,9 @@ function useWordExamples(word: string, glid: string, dialect?: string) {
       if (next && examples === null && !loading) {
         setLoading(true)
         const params = new URLSearchParams({ word, glid })
-        if (dialect) params.set('dialect', dialect)
+        if (dialect)       params.set('dialect', dialect)
+        if (moeEnabled)    params.set('moe', '1')
+        if (klokahEnabled) params.set('klokah', '1')
         fetch(`/api/dict/word-sentences?${params}`)
           .then(r => r.json())
           .then(data => setExamples(data.sentences ?? []))
@@ -146,13 +150,15 @@ function ExpandToggleButton({ expanded, onClick }: { expanded: boolean; onClick:
 }
 
 // ─── Word card (exact match) ──────────────────────────────────
-function ExactWordCard({ word, onSave, onCapture, saved = false }: {
+function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klokahEnabled }: {
   word: WordResult
   onSave: (w: WordResult) => void
   onCapture: (w: WordResult) => void
   saved?: boolean
+  moeEnabled: boolean
+  klokahEnabled: boolean
 }) {
-  const { expanded, toggle, examples, loading } = useWordExamples(word.word_ab, word.glid, word.dialect_name)
+  const { expanded, toggle, examples, loading } = useWordExamples(word.word_ab, word.glid, moeEnabled, klokahEnabled, word.dialect_name)
 
   return (
     <Card raised pad={0} style={{ overflow: 'hidden' }}>
@@ -352,16 +358,18 @@ type MergedEntry = {
   dialectSections: { dialect_name: string; defs: string[] }[]
 }
 
-function MergedEntryCard({ entry, onSave, onCapture, saved = false }: {
+function MergedEntryCard({ entry, onSave, onCapture, saved = false, moeEnabled, klokahEnabled }: {
   entry: MergedEntry
   onSave: (ab: string, dialect: string, def: string, glid: string) => void
   onCapture: (ab: string, def: string) => void
   saved?: boolean
+  moeEnabled: boolean
+  klokahEnabled: boolean
 }) {
   const firstSection = entry.dialectSections[0]
   const primaryDef   = firstSection?.defs[0] ?? ''
   const primaryDialect = firstSection?.dialect_name ?? ''
-  const { expanded, toggle, examples, loading } = useWordExamples(entry.rawAb, entry.glid)
+  const { expanded, toggle, examples, loading } = useWordExamples(entry.rawAb, entry.glid, moeEnabled, klokahEnabled)
 
   const btnStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: 8,
@@ -946,6 +954,8 @@ export default function DictionaryPage() {
                           onSave={handleSaveMerged}
                           onCapture={handleCaptureMerged}
                           saved={savedWordMap.has(wordKey(entry.rawAb, entry.dialectSections[0]?.dialect_name ?? ''))}
+                          moeEnabled={moeEnabled}
+                          klokahEnabled={klokahEnabled}
                         />
                       ))}
                     </div>
@@ -972,7 +982,7 @@ export default function DictionaryPage() {
                     </div>
                   )}
                   {exactWord && (
-                    <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} />
+                    <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} moeEnabled={moeEnabled} klokahEnabled={klokahEnabled} />
                   )}
                   {exactGroup && (
                     <ExactMatchGroupCard entries={exactGroup} onSave={handleSave} onCapture={handleCapture} savedWordMap={savedWordMap} />

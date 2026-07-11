@@ -12,15 +12,20 @@ const MAX_EXAMPLES = 5
 // search, so results are capped small.
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const word    = searchParams.get('word')?.trim() ?? ''
-  const glid    = searchParams.get('glid')    ?? undefined
-  const dialect = searchParams.get('dialect') ?? undefined
+  const word          = searchParams.get('word')?.trim() ?? ''
+  const glid          = searchParams.get('glid')    ?? undefined
+  const dialect       = searchParams.get('dialect') ?? undefined
+  // Must mirror the same source toggles as the main search (route.ts) —
+  // a word found while ePark/Kilang is disabled shouldn't have that source's
+  // sentences sneak back in just because the card got expanded.
+  const includeMoe    = searchParams.get('moe')    === '1'
+  const includeKlokah = searchParams.get('klokah') === '1'
   if (!word) return NextResponse.json({ sentences: [] })
 
   try {
     const [eparkSentences, moeSentences] = await Promise.all([
-      searchSentences(word, glid, dialect, false),
-      (!glid || glid === AMIS_GLID) ? fetchMoeWordExamples(word) : Promise.resolve([] as SentenceRow[]),
+      includeKlokah ? searchSentences(word, glid, dialect, false) : Promise.resolve([] as SentenceRow[]),
+      (includeMoe && (!glid || glid === AMIS_GLID)) ? fetchMoeWordExamples(word) : Promise.resolve([] as SentenceRow[]),
     ])
 
     const seen = new Map<string, SentenceRow>()

@@ -217,16 +217,21 @@ export async function GET(req: NextRequest) {
   try {
     const moeActive = includeMoe && q.length >= minLenMoe && (!glid || glid === AMIS_GLID)
     // "Swaps" toggle only ever applies to Amis (curated tables don't cover the
-    // other 15 languages) — skip entirely if the user has filtered to a
-    // different language, or the query is CJK-direction (candidate generation
-    // is an AB-direction spelling-recovery mechanism).
-    const altSpellingActive = altSpelling && includeKlokah && !hasCJK && (!glid || glid === AMIS_GLID)
-    const altCandidates = altSpellingActive ? makeMoeFallbackCandidates(q).map(c => c.word) : []
+    // other 15 languages) — skip entirely if the query is CJK-direction
+    // (candidate generation is an AB-direction spelling-recovery mechanism) or
+    // the user has filtered to a different language. Each source's own
+    // include-toggle (moe/klokah) still gates whether *that* source's
+    // candidate lookup runs — swaps for Kilang must not depend on ePark being
+    // enabled, and vice versa.
+    const altSpellingWanted = altSpelling && !hasCJK && (!glid || glid === AMIS_GLID)
+    const altSpellingMoe    = altSpellingWanted && moeActive
+    const altSpellingEpark  = altSpellingWanted && includeKlokah
+    const altCandidates = altSpellingWanted ? makeMoeFallbackCandidates(q).map(c => c.word) : []
     const [rawWords, rawSentences, moeResult, altEparkWords] = await Promise.all([
-      includeKlokah     ? searchWords(q, glid, dialect, fuzzy)                       : Promise.resolve([]),
-      includeKlokah     ? searchSentences(q, glid, dialect, fuzzy)                    : Promise.resolve([]),
-      moeActive         ? fetchMoeWords(q, hasCJK, fuzzy, altSpellingActive)          : Promise.resolve({ words: [] as WordRow[], sentences: [] as SentenceRow[] }),
-      altSpellingActive ? searchWordsByCandidates(altCandidates, AMIS_GLID, dialect)  : Promise.resolve([] as WordRow[]),
+      includeKlokah    ? searchWords(q, glid, dialect, fuzzy)                       : Promise.resolve([]),
+      includeKlokah    ? searchSentences(q, glid, dialect, fuzzy)                    : Promise.resolve([]),
+      moeActive        ? fetchMoeWords(q, hasCJK, fuzzy, altSpellingMoe)             : Promise.resolve({ words: [] as WordRow[], sentences: [] as SentenceRow[] }),
+      altSpellingEpark ? searchWordsByCandidates(altCandidates, AMIS_GLID, dialect)  : Promise.resolve([] as WordRow[]),
     ])
     const { words: moeWords, sentences: moeSentences } = moeResult
 
