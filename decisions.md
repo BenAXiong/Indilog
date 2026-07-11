@@ -17,6 +17,7 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-DASH-01](docs/adr/DEC-DASH-01-duecount-divergence.md) | Dashboard dueCount vs session count divergence | resolved in Phase 2F of plan-v1-M5-srs.md |
 | [DEC-D01](docs/adr/DEC-D01-dict-word-dedup-normalisation.md) | Dictionary word dedup: space-stripping normalisation | accepted |
 | [DEC-D02](docs/adr/DEC-D02-capture-without-dict-entry.md) | Capture without a dict entry — scope, item type, language passthrough | accepted |
+| [DEC-D03](docs/adr/DEC-D03-kilang-fuzzy-fallback.md) | Kilang AB-direction fuzzy matching — tiered contains/similar/alt-spelling | accepted |
 | [DEC-L01](docs/adr/DEC-L01-learn-all-16-languages.md) | Learn available for all 16 languages | accepted |
 | [DEC-L02](docs/adr/DEC-L02-saved-view-all-sentences.md) | Saved view shows all captured sentences for the language | accepted |
 | [DEC-L03](docs/adr/DEC-L03-grammar-comparison-deferred.md) | Grammar comparison mode deferred | deferred |

@@ -23,6 +23,24 @@ type WordResult = {
   glid: string
   exact: boolean
   source?: 'epark' | 'moe'
+  moeMatch?: 'contains' | 'similar' | 'altSpelling'
+}
+
+// Small tag for how a Kilang/MoE row was found, beyond a literal headword match —
+// diagnostic during Phase 2 (see plan-dict-v2.md) to see which fuzzy mechanism
+// actually surfaces results in practice; only shown for the non-default tiers.
+function MoeMatchTag({ kind }: { kind?: 'contains' | 'similar' | 'altSpelling' }) {
+  if (kind !== 'similar' && kind !== 'altSpelling') return null
+  const label = kind === 'similar' ? 'similar spelling' : 'alt spelling'
+  return (
+    <span style={{
+      fontSize: 9.5, fontWeight: 600, color: T.amber,
+      background: T.amberBg, border: `1px solid ${T.amber}`,
+      borderRadius: 999, padding: '1px 6px', flexShrink: 0,
+    }}>
+      {label}
+    </span>
+  )
 }
 
 type SentenceResult = {
@@ -237,6 +255,7 @@ type MergedEntry = {
   rawAb: string     // as stored in ind_items / returned by search — used for save + saved-state lookups
   glid: string
   exact: boolean
+  moeMatch?: 'contains' | 'similar' | 'altSpelling'
   dialectSections: { dialect_name: string; defs: string[] }[]
 }
 
@@ -281,6 +300,7 @@ function MergedEntryCard({ entry, onSave, onCapture, saved = false }: {
               exact
             </span>
           )}
+          <MoeMatchTag kind={entry.moeMatch} />
         </div>
         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
           <button
@@ -513,6 +533,7 @@ export default function DictionaryPage() {
       if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), rawAb: w.word_ab, glid: w.glid, exact: false, dialectSections: [] })
       const e = map.get(key)!
       if (w.exact) e.exact = true
+      if (w.moeMatch && !e.moeMatch) e.moeMatch = w.moeMatch
       let section = e.dialectSections.find(s => s.dialect_name === w.dialect_name)
       if (!section) {
         section = { dialect_name: w.dialect_name, defs: [] }
@@ -861,6 +882,7 @@ export default function DictionaryPage() {
                                 {w.source === 'moe' && (
                                   <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
                                 )}
+                                <MoeMatchTag kind={w.moeMatch} />
                               </div>
                               <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {w.word_ch}

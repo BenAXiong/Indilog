@@ -9,6 +9,9 @@ export type WordRow = {
   glid: string
   exact: boolean
   source?: 'epark' | 'moe'
+  // Kilang/MoE only — which mechanism found this row when it wasn't a literal
+  // headword match. See docs/kilang-moe-api.md + apps/web/app/api/dict/search/route.ts.
+  moeMatch?: 'contains' | 'similar' | 'altSpelling'
 }
 
 export type SentenceRow = {

@@ -235,13 +235,14 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Dict: enable non-amis ab search with dialects
 - [x] Dict: enable 2-chars exact search + sent & dia merge
 - [x] Dict: compare words vs merge and keep best
-- [-] Dict: FIX Kilang sentences
-- [-] Dict: replace word by exact and fix fuzzy
+- [x] Dict: FIX Kilang sentences
+- [x] Dict: remove funnel and improve lang selection UI in settings
+- [-] Dict: make word results exact by def and fix fuzzy
 - [ ] Dict: add language direction toggle   
-- [ ] Dict: expandable results on tap for long entries
 - [ ] Dict: expand to show sentences?
-- [ ] Dict: compare word search with MoE and improve results
-- [ ] Dict: enable add/+context if no results
+- [ ] Dict: improve results: if non fuzzy then have to select existing entry
+            eg "icep" shouldn't return "micepo" in exact mode sentences
+- [ ] Dict: enable capture +-context if no results
 - [ ] Dict: 
 
 - [ ] Browser: add all context fields, editable
@@ -251,15 +252,6 @@ Personal library of sources (people, media, references) linked to captured items
 - [ ] Browser: 
 - [ ] Browser: 
 
-add to post v1
-scrape 
-    https://web.klokah.tw/extension/sp_junior/practice.php
-    https://web.klokah.tw/extension/rd_practice/
-    https://web.klokah.tw/readnews/
-    https://web.klokah.tw/dialogue/video/
-
-make own rich html with https://web.klokah.tw/guide/
-    with pages for learner type
 ---
 
 ## Milestone 6 — Translate (ILRDF AI)
@@ -347,7 +339,6 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 ### V2 — Deferred
 
 - [ ] Root/affix chips from MoE data
-- [x] MoE example sentences in Sentences tab
 - [ ] Lineage/morphology rendering
 - [ ] Remove dot marker once sources are unified (no source badges in final UI)
 

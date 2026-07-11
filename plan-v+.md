@@ -6,10 +6,20 @@ Ideas, deferred features, and future directions not yet scoped into a milestone.
 
 - Refactor (see skill and doc)
 
+- make own rich html with https://web.klokah.tw/guide/
+    with pages for learner type
+
+- Scrape 
+    https://web.klokah.tw/extension/sp_junior/practice.php
+    https://web.klokah.tw/extension/rd_practice/
+    https://web.klokah.tw/readnews/
+    https://web.klokah.tw/dialogue/video/
+
 - Amis 1k: create v1 from ePark content. Save broad then filter on indi ws
     see if learn 12 units content corresponds to eassays and dialogue
     Find how many gaoji vocab have exsent in ePark
 
+- Dict: group results by stem? ex kero & makero appear together for 跳舞 
 - Study/browser: rename and revamp
 - Study subtabs: rework decks and captures UI
 - Curriculum: add "play all" buttons

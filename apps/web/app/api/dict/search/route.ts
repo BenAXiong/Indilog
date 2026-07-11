@@ -32,7 +32,8 @@ const cleanMoeDef = (s: string) =>
 const stripAuthor = (s: string) =>
   (s ?? '阿美語').replace(/\s*\([^)]*\)\s*$/, '').trim() || '阿美語'
 
-type MoeMerged = { word_ab: string; defs: string[]; dialect_name: string; exact: boolean }
+type MoeMatchKind = 'contains' | 'similar' | 'altSpelling'
+type MoeMerged = { word_ab: string; defs: string[]; dialect_name: string; exact: boolean; matchKind?: MoeMatchKind }
 
 function mergeMoeRow(merged: Map<string, MoeMerged>, row: MoeRow, qKey: string) {
   const ab = normMoeAb(row.word_ab)
@@ -52,6 +53,169 @@ function mergeMoeRow(merged: Map<string, MoeMerged>, row: MoeRow, qKey: string) 
       exact: isExact,
     })
   }
+}
+
+// ─── AB-direction fuzzy fallback for Kilang ──────────────────────────────
+// Ported from the Grimoire browser extension (族語魔書/Ext_族語魔書_PopupDict/
+// background.js), the other production consumer of this same undocumented-
+// upstream API — see docs/kilang-moe-api.md. Kilang's own `exact=false` also
+// matches gloss text (not just word_ab), so AB-direction queries filter that
+// broad pool locally instead of trusting the param directly.
+const MOE_COMMON_PREFIXES = ['sapi', 'paka', 'pina', 'maka', 'mala', 'mipa', 'misa', 'ma', 'mi', 'pa', 'pi', 'ka', 'sa', 'si', 'ni']
+const MOE_COMMON_SUFFIXES = ['ayay', 'anay', 'enay', 'ay', 'en', 'an', 'aw', 'to']
+// b/f/v form a 3-way interchangeable group (Amis orthographic variation); u/o and l/r stay 2-way.
+const MOE_SWAP_GROUPS: string[][] = [['u', 'o'], ['l', 'r'], ['b', 'f', 'v']]
+const MAX_MOE_ALT_POSITIONS = 4
+const MAX_MOE_FALLBACK_CANDIDATES = 30
+const MAX_MOE_PREFIX_STRIPS = 2
+const MAX_MOE_SUFFIX_STRIPS = 1
+const MIN_MOE_RECOVERY_BASE_LEN = 4
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+  const dp = new Array(n + 1)
+  for (let j = 0; j <= n; j++) dp[j] = j
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0]
+    dp[0] = i
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j]
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1])
+      prev = tmp
+    }
+  }
+  return dp[n]
+}
+
+function moeSwapAlts(c: string): string[] {
+  const group = MOE_SWAP_GROUPS.find(g => g.includes(c))
+  return group ? group.filter(x => x !== c) : []
+}
+
+// Generalized version of Grimoire's makeMoeAltSpellings — handles both 2-way
+// swap pairs (u/o, l/r) and the 3-way b/f/v group (each active position gets
+// "keep original" + one choice per alternate, not just a binary toggle).
+function makeMoeAltSpellings(word: string): string[] {
+  const positions = [...word].map((c, i) => ({ i, alts: moeSwapAlts(c) })).filter(p => p.alts.length > 0)
+  if (positions.length === 0) return []
+
+  const active  = positions.slice(0, MAX_MOE_ALT_POSITIONS)
+  const radices = active.map(p => p.alts.length + 1) // +1 for "keep original"
+  const total   = radices.reduce((a, b) => a * b, 1)
+  const results = new Set<string>()
+  for (let combo = 1; combo < total; combo++) {
+    const chars = word.split('')
+    let rem = combo
+    for (let k = 0; k < active.length; k++) {
+      const choice = rem % radices[k]
+      rem = Math.floor(rem / radices[k])
+      if (choice > 0) chars[active[k].i] = active[k].alts[choice - 1]
+    }
+    const alt = chars.join('')
+    if (alt !== word) results.add(alt)
+  }
+  return [...results]
+}
+
+function getMoeRecoveryLength(word: string): number {
+  return word.replace(/'/g, '').length
+}
+
+function uniqueMoeWords(words: string[]): string[] {
+  const seen = new Set<string>()
+  return words.filter(word => {
+    const key = word.toLowerCase()
+    if (!word || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function makeMoeGlottalRepairs(word: string): string[] {
+  if (!word || word.includes("'")) return []
+  const repairs: string[] = []
+  if (/^[aeiou]/.test(word)) repairs.push(`'${word}`)
+  if (/[aeiou]$/.test(word)) repairs.push(`${word}'`)
+  for (const prefix of MOE_COMMON_PREFIXES) {
+    if (!word.startsWith(prefix)) continue
+    const rest = word.slice(prefix.length)
+    if (rest.length >= MIN_MOE_RECOVERY_BASE_LEN && /^[aeiou]/.test(rest)) {
+      repairs.push(`${prefix}'${rest}`)
+    }
+  }
+  return uniqueMoeWords(repairs)
+}
+
+type MoeStrippedState = { word: string; prefixStrips: number; suffixStrips: number }
+
+function makeMoeStrippedStates(word: string): MoeStrippedState[] {
+  const initial: MoeStrippedState = { word, prefixStrips: 0, suffixStrips: 0 }
+  const queue: MoeStrippedState[] = [initial]
+  const states: MoeStrippedState[] = []
+  const seen = new Set([`${word}:0:0`])
+
+  for (let index = 0; index < queue.length; index++) {
+    const state = queue[index]
+    if (state.prefixStrips < MAX_MOE_PREFIX_STRIPS) {
+      for (const prefix of MOE_COMMON_PREFIXES) {
+        if (!state.word.startsWith(prefix)) continue
+        const stripped = state.word.slice(prefix.length)
+        if (getMoeRecoveryLength(stripped) < MIN_MOE_RECOVERY_BASE_LEN) continue
+        const next = { word: stripped, prefixStrips: state.prefixStrips + 1, suffixStrips: state.suffixStrips }
+        const key = `${next.word}:${next.prefixStrips}:${next.suffixStrips}`
+        if (seen.has(key)) continue
+        seen.add(key); states.push(next); queue.push(next)
+      }
+    }
+    if (state.suffixStrips < MAX_MOE_SUFFIX_STRIPS) {
+      for (const suffix of MOE_COMMON_SUFFIXES) {
+        if (!state.word.endsWith(suffix)) continue
+        const stripped = state.word.slice(0, -suffix.length)
+        if (getMoeRecoveryLength(stripped) < MIN_MOE_RECOVERY_BASE_LEN) continue
+        const next = { word: stripped, prefixStrips: state.prefixStrips, suffixStrips: state.suffixStrips + 1 }
+        const key = `${next.word}:${next.prefixStrips}:${next.suffixStrips}`
+        if (seen.has(key)) continue
+        seen.add(key); states.push(next); queue.push(next)
+      }
+    }
+  }
+  return states
+}
+
+type MoeCandidate = { word: string; score: number }
+
+function makeMoeFallbackCandidates(word: string): MoeCandidate[] {
+  const normalized = word.trim().toLowerCase()
+  const candidates: MoeCandidate[] = []
+  const seen = new Set([normalized])
+
+  function add(wordValue: string, score: number) {
+    if (!wordValue || getMoeRecoveryLength(wordValue) < MIN_MOE_RECOVERY_BASE_LEN) return
+    const key = wordValue.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    candidates.push({ word: wordValue, score })
+  }
+
+  function addForms(baseWord: string, baseScore: number) {
+    add(baseWord, baseScore)
+    const alts = makeMoeAltSpellings(baseWord)
+    for (const alt of alts) add(alt, baseScore + 1)
+    for (const repaired of makeMoeGlottalRepairs(baseWord)) add(repaired, baseScore + 2)
+    for (const alt of alts) {
+      for (const repaired of makeMoeGlottalRepairs(alt)) add(repaired, baseScore + 3)
+    }
+  }
+
+  addForms(normalized, 0)
+  for (const state of makeMoeStrippedStates(normalized)) {
+    const depth = state.prefixStrips + state.suffixStrips
+    addForms(state.word, 4 + (depth - 1) * 4)
+  }
+
+  return candidates.sort((a, b) => a.score - b.score).slice(0, MAX_MOE_FALLBACK_CANDIDATES)
 }
 
 // MoE's own rows carry example sentences inline (examples_json) — id is the sentence
@@ -83,29 +247,70 @@ function parseMoeExamples(row: MoeRow, dialectName: string): SentenceRow[] {
     }))
 }
 
-async function fetchMoeWords(q: string): Promise<{ words: WordRow[]; sentences: SentenceRow[] }> {
+async function kilangFetch(keyword: string, exact: boolean): Promise<MoeRow[]> {
+  const url = `${CITADEL_MOE}?keyword=${encodeURIComponent(keyword)}&exact=${exact}&mode=moe`
+  const res = await fetch(url, { next: { revalidate: 60 } })
+  if (!res.ok) return []
+  const data: { rows?: MoeRow[] } = await res.json()
+  return data.rows ?? []
+}
+
+function toWordRows(entries: [string, MoeMerged][]): WordRow[] {
+  return entries.map(([, e], i) => ({
+    id:           `moe-${i}`,
+    word_ab:      e.word_ab,
+    word_ch:      e.defs.join(' · '),
+    dialect_name: e.dialect_name,
+    glid:         AMIS_GLID,
+    exact:        e.exact,
+    source:       'moe' as const,
+    moeMatch:     e.matchKind,
+  }))
+}
+
+async function fetchMoeWords(q: string, hasCJK: boolean, fuzzy: boolean): Promise<{ words: WordRow[]; sentences: SentenceRow[] }> {
   try {
-    const url = `${CITADEL_MOE}?keyword=${encodeURIComponent(q)}&exact=false&mode=moe`
-    const res  = await fetch(url, { next: { revalidate: 60 } })
-    if (!res.ok) return { words: [], sentences: [] }
-    const data: { rows?: MoeRow[] } = await res.json()
-    const qKey   = normMoeKey(q)
-    const merged = new Map<string, MoeMerged>()
+    const rawRows = await kilangFetch(q, false)
+    const qKey    = normMoeKey(q)
+    const merged  = new Map<string, MoeMerged>()
     const sentences: SentenceRow[] = []
-    for (const row of data.rows ?? []) {
+    for (const row of rawRows) {
       mergeMoeRow(merged, row, qKey)
       sentences.push(...parseMoeExamples(row, stripAuthor(row.dialect_name)))
     }
-    const words = Array.from(merged.values()).map((e, i) => ({
-      id:           `moe-${i}`,
-      word_ab:      e.word_ab,
-      word_ch:      e.defs.join(' · '),
-      dialect_name: e.dialect_name,
-      glid:         AMIS_GLID,
-      exact:        e.exact,
-      source:       'moe' as const,
-    }))
-    return { words, sentences }
+
+    // ZH/EN direction: Kilang's exact=false is already the intended broad
+    // match (Chinese/English glosses genuinely can match unrelated words) —
+    // no local filtering, matching Grimoire's fetchMoeZhInsights split.
+    if (hasCJK) return { words: toWordRows(Array.from(merged.entries())), sentences }
+
+    // AB direction: exact=false also matches gloss text, so classify + filter
+    // the broad pool locally instead of trusting the param.
+    const maxDist = q.length <= 5 ? 1 : 2
+    let entries = Array.from(merged.entries()).filter(([, e]) => {
+      if (e.exact) return true
+      const ab = normMoeKey(e.word_ab)
+      if (ab.includes(qKey)) { e.matchKind = 'contains'; return true }
+      if (fuzzy && levenshtein(ab, qKey) <= maxDist) { e.matchKind = 'similar'; return true }
+      return false
+    })
+
+    // Nothing at all + fuzzy on: retry curated alt-spelling/glottal/affix-strip
+    // candidates against Kilang's exact=true (bounded — only on the true-empty
+    // path, mirroring Grimoire's fallback trigger, to keep upstream request
+    // volume low against an undocumented external API).
+    if (fuzzy && entries.length === 0) {
+      const candidates    = makeMoeFallbackCandidates(qKey)
+      const candidateRows = await Promise.all(candidates.map(c => kilangFetch(c.word, true)))
+      const altMerged = new Map<string, MoeMerged>()
+      for (const rows of candidateRows) {
+        for (const row of rows) mergeMoeRow(altMerged, row, qKey)
+      }
+      for (const e of altMerged.values()) e.matchKind = 'altSpelling'
+      entries = Array.from(altMerged.entries())
+    }
+
+    return { words: toWordRows(entries), sentences }
   } catch {
     return { words: [], sentences: [] }
   }
@@ -135,7 +340,7 @@ export async function GET(req: NextRequest) {
     const [rawWords, rawSentences, moeResult] = await Promise.all([
       includeKlokah ? searchWords(q, glid, dialect, fuzzy)     : Promise.resolve([]),
       includeKlokah ? searchSentences(q, glid, dialect, fuzzy) : Promise.resolve([]),
-      moeActive     ? fetchMoeWords(q)                         : Promise.resolve({ words: [] as WordRow[], sentences: [] as SentenceRow[] }),
+      moeActive     ? fetchMoeWords(q, hasCJK, fuzzy)          : Promise.resolve({ words: [] as WordRow[], sentences: [] as SentenceRow[] }),
     ])
     const { words: moeWords, sentences: moeSentences } = moeResult
 
