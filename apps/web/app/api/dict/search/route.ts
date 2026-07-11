@@ -158,7 +158,18 @@ export async function GET(req: NextRequest) {
         sentenceMap.set(s.id, s)
       }
     }
+
+    // Rank by where q appears (earlier = more central to the sentence, matches
+    // the word-boundary/substring match itself), then by sentence length —
+    // same "most relevant, then shortest" shape as the words sort above.
+    const qLower = q.toLowerCase()
+    function matchPos(s: SentenceRow): number {
+      const text = (hasCJK ? s.zh : s.ab).toLowerCase()
+      const pos = text.indexOf(qLower)
+      return pos === -1 ? Infinity : pos
+    }
     const sentences = Array.from(sentenceMap.values())
+      .sort((a, b) => matchPos(a) - matchPos(b) || a.ab.length - b.ab.length)
 
     return NextResponse.json({ words, sentences })
   } catch (err) {
