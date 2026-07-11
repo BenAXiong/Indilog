@@ -233,11 +233,15 @@ Personal library of sources (people, media, references) linked to captured items
 
 - [x] Dict: FIX bookmarked state
 - [x] Dict: enable non-amis ab search with dialects
-- [ ] Dict: compare words vs merge and keep best
-- [ ] Dict: compare word search with MoE and improve results
+- [x] Dict: enable 2-chars exact search + sent & dia merge
+- [x] Dict: compare words vs merge and keep best
+- [-] Dict: FIX Kilang sentences
+- [-] Dict: replace word by exact and fix fuzzy
+- [ ] Dict: add language direction toggle   
 - [ ] Dict: expandable results on tap for long entries
 - [ ] Dict: expand to show sentences?
-- [ ] Dict: 
+- [ ] Dict: compare word search with MoE and improve results
+- [ ] Dict: enable add/+context if no results
 - [ ] Dict: 
 
 - [ ] Browser: add all context fields, editable
@@ -343,7 +347,7 @@ Switch translate tab from FormosanBank/Modal.run to ILRDF AI Labs (https://ai-la
 ### V2 — Deferred
 
 - [ ] Root/affix chips from MoE data
-- [ ] MoE example sentences in Sentences tab
+- [x] MoE example sentences in Sentences tab
 - [ ] Lineage/morphology rendering
 - [ ] Remove dot marker once sources are unified (no source badges in final UI)
 
