@@ -69,7 +69,11 @@ export async function searchWords(
     // useful question for short input: "does this word exist (in this language)?"
     query = query.ilike('word_ab', q)
   } else {
-    query = query.ilike('word_ab', fuzzy ? `%${q}%` : `${q}%`)
+    // Contains-anywhere regardless of the fuzzy toggle — matches Kilang's own
+    // base tier (DEC-D03): "icep" should surface "micepo" the same way in both
+    // sources. `fuzzy` no longer distinguishes prefix vs contains for word
+    // matching; it still matters for searchSentences below.
+    query = query.ilike('word_ab', `%${q}%`)
   }
 
   if (glid)    query = query.eq('glid', glid)
@@ -87,6 +91,37 @@ export async function searchWords(
     glid:         row.glid ?? '',
     exact:        hasCJK ? (row.word_ch ?? '') === q : row.word_ab.toLowerCase() === qLower,
   })).sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
+}
+
+// "Swaps" toggle (Amis only) — look up specific curated candidate spellings
+// (see lib/lang/amis-fuzzy.ts) directly, instead of a blind substring search.
+// `_` (SQL single-char wildcard) stands in for the apostrophe position so a
+// straight-quote candidate still matches ePark rows using the curly variants
+// (both forms coexist in the corpus, e.g. "'icep" and "’icep").
+export async function searchWordsByCandidates(candidates: string[], glid: string, dialect?: string): Promise<WordRow[]> {
+  if (candidates.length === 0) return []
+  const db = getCorpusClient()
+  const patterns = candidates.map(c => c.replaceAll("'", '_'))
+  const orFilter = patterns.map(p => `word_ab.ilike.${p}`).join(',')
+  let query = db
+    .from('corpus_vocabulary')
+    .select('id, word_ab, word_ch, dialect_name, glid')
+    .eq('glid', glid)
+    .or(orFilter)
+    .limit(200)
+  if (dialect) query = query.eq('dialect_name', dialect)
+  const { data, error } = await query
+  if (error || !data) return []
+  return (data as any[]).map(row => ({
+    id:           row.id,
+    word_ab:      row.word_ab,
+    word_ch:      row.word_ch ?? '',
+    dialect_name: row.dialect_name ?? '',
+    glid:         row.glid ?? '',
+    exact:        false,
+    source:       'epark' as const,
+    moeMatch:     'altSpelling' as const,
+  }))
 }
 
 export async function searchSentences(

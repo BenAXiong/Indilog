@@ -15,6 +15,11 @@ import { unsaveItem } from '@/lib/db/srs/browser'
 import { createClient } from '@/lib/supabase/client'
 import PerfMark from '@/components/perf/PerfMark'
 
+// The "swaps" (alt-spelling) toggle only ever applies to Amis — curated swap/
+// glottal/affix-strip tables don't exist for the other 15 languages. Matches
+// AMIS_GLID in apps/web/app/api/dict/search/route.ts.
+const AMIS_GLID = '01'
+
 type WordResult = {
   id: number | string
   word_ab: string
@@ -365,6 +370,7 @@ export default function DictionaryPage() {
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'words' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
+  const [altSpelling, setAltSpelling] = useState(false)
   const [moeEnabled,    setMoeEnabled]    = useState(true)
   const [klokahEnabled, setKlokahEnabled] = useState(false)
   const [mergeMode,     setMergeMode]     = useState(true)
@@ -442,7 +448,7 @@ export default function DictionaryPage() {
     }
   }, [lang, dialects, userChangedGlid])
 
-  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean, withKlokah: boolean) => {
+  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean, withKlokah: boolean, withAltSpelling: boolean) => {
     const trimmed = term.trim()
     // 2 chars is enough to fire the request — the API exact-matches word search
     // below its own 3-char prefix-search floor, so a 2-char query still finds words.
@@ -451,11 +457,12 @@ export default function DictionaryPage() {
     setLoading(true)
     setSearched(true)
     const params = new URLSearchParams({ q: trimmed })
-    if (glidFilter)  params.set('glid', glidFilter)
-    if (dialectF)    params.set('dialect', dialectF)
-    if (isFuzzy)     params.set('fuzzy', '1')
-    if (withMoe)     params.set('moe', '1')
-    if (withKlokah)  params.set('klokah', '1')
+    if (glidFilter)      params.set('glid', glidFilter)
+    if (dialectF)        params.set('dialect', dialectF)
+    if (isFuzzy)         params.set('fuzzy', '1')
+    if (withMoe)         params.set('moe', '1')
+    if (withKlokah)      params.set('klokah', '1')
+    if (withAltSpelling) params.set('altspelling', '1')
     const res = await fetch(`/api/dict/search?${params}`)
     const data = await res.json()
     if (data.error) setDbError(data.error)
@@ -490,9 +497,9 @@ export default function DictionaryPage() {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     // phrases + CJK: always fuzzy so they match mid-sentence / mid-definition
-    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy, moeEnabled, klokahEnabled), 320)
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy, moeEnabled, klokahEnabled, altSpelling), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, dialectFilter, fuzzy, isPhrase, isCJK, moeEnabled, klokahEnabled, runSearch])
+  }, [q, glid, dialectFilter, fuzzy, altSpelling, isPhrase, isCJK, moeEnabled, klokahEnabled, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
@@ -683,7 +690,7 @@ export default function DictionaryPage() {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
             <button
               onClick={() => setFuzzy(f => !f)}
-              title={fuzzy ? 'Fuzzy (contains) — click for prefix' : 'Prefix search — click for fuzzy'}
+              title={fuzzy ? 'Fuzzy: broader sentence & similar-spelling matches — click for exact' : 'Exact sentence matches — click for fuzzy'}
               style={{
                 width: 36, height: 36, borderRadius: 999,
                 background: fuzzy ? T.crimsonBg : T.paperHi,
@@ -695,6 +702,22 @@ export default function DictionaryPage() {
             >
               ≈
             </button>
+            {(!glid || glid === AMIS_GLID) && (
+              <button
+                onClick={() => setAltSpelling(v => !v)}
+                title={altSpelling ? 'Alt-spelling recovery on (Amis) — click to turn off' : 'Try alt-spelling recovery (Amis only, e.g. b/f/v, u/o, l/r swaps)'}
+                aria-label="Toggle alt-spelling recovery"
+                style={{
+                  width: 36, height: 36, borderRadius: 999,
+                  background: altSpelling ? T.crimsonBg : T.paperHi,
+                  border: `1px solid ${altSpelling ? T.crimson : T.line}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: altSpelling ? T.crimson : T.inkSoft,
+                }}
+              >
+                <Icon name="swap" size={16} strokeWidth={1.8} />
+              </button>
+            )}
             <SettingsButton initialTab="dict" />
           </div>
         }

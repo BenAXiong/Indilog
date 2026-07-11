@@ -237,13 +237,13 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Dict: compare words vs merge and keep best
 - [x] Dict: FIX Kilang sentences
 - [x] Dict: remove funnel and improve lang selection UI in settings
-- [-] Dict: make word results exact by def and fix fuzzy
-- [ ] Dict: add language direction toggle   
+- [x] Dict: make word results exact by def and fix fuzzy
+- [x] Dict: remove  en description in results 
 - [ ] Dict: expand to show sentences?
-- [ ] Dict: improve results: if non fuzzy then have to select existing entry
+- [x] Dict: improve results: if non fuzzy then have to select existing entry
             eg "icep" shouldn't return "micepo" in exact mode sentences
-- [ ] Dict: enable capture +-context if no results
-- [ ] Dict: recurive search (results are links in sentences at least)
+- [x] Dict: enable capture +-context if no results
+- [ ] Dict: recursive search (results are links in sentences at least)
 - [ ] Dict: 
 
 - [ ] Browser: add all context fields, editable
