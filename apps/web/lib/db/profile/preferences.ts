@@ -14,6 +14,7 @@ export type UserPreferences = {
   excluded_langs:    string[]
   auto_lookup:       boolean
   dict_sources:      string[]
+  dict_merge_mode:   boolean
   translate_dialect: string
   shuffle_tests:     boolean
   shuffle_exposure:  boolean
@@ -35,6 +36,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   excluded_langs:   [],
   auto_lookup:      true,
   dict_sources:     ['moe'],
+  dict_merge_mode:  true,
   translate_dialect: 'ami_Coas',
   shuffle_tests:    true,
   shuffle_exposure: true,

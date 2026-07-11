@@ -342,11 +342,11 @@ export default function DictionaryPage() {
   const [savedAbSet, setSavedAbSet] = useState<Map<string, string>>(() => new Map())
   const [savedWordMap, setSavedWordMap] = useState<Map<string, string>>(() => new Map())
   const [dbError, setDbError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'words' | 'merged' | 'sentences'>('words')
+  const [activeTab, setActiveTab] = useState<'words' | 'sentences'>('words')
   const [fuzzy, setFuzzy] = useState(false)
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [moeEnabled,    setMoeEnabled]    = useState(true)
   const [klokahEnabled, setKlokahEnabled] = useState(false)
+  const [mergeMode,     setMergeMode]     = useState(true)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
 
@@ -358,6 +358,8 @@ export default function DictionaryPage() {
       setMoeEnabled(sources.includes('moe'))
       setKlokahEnabled(sources.includes('klokah'))
     } catch {}
+    const storedMerge = localStorage.getItem('ind_dict_merge_mode')
+    if (storedMerge !== null) setMergeMode(storedMerge === 'true')
     const savedLang    = localStorage.getItem('ind_dict_lang_glid')    ?? ''
     const savedDialect = localStorage.getItem('ind_dict_lang_dialect') ?? ''
     if (savedLang) {
@@ -388,6 +390,15 @@ export default function DictionaryPage() {
     }
     window.addEventListener('ind-dict-sources-changed', onSourcesChange)
     return () => window.removeEventListener('ind-dict-sources-changed', onSourcesChange)
+  }, [])
+
+  // Live-update merge mode when changed from Settings/Dict
+  useEffect(() => {
+    function onMergeModeChange(e: Event) {
+      setMergeMode((e as CustomEvent<boolean>).detail)
+    }
+    window.addEventListener('ind-dict-merge-mode-changed', onMergeModeChange)
+    return () => window.removeEventListener('ind-dict-merge-mode-changed', onMergeModeChange)
   }, [])
 
   // Load dialects once
@@ -525,7 +536,7 @@ export default function DictionaryPage() {
   function handleTouchEnd(e: React.TouchEvent) {
     if (touchStartX.current === null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
-    const tabs: Array<'words' | 'merged' | 'sentences'> = ['words', 'merged', 'sentences']
+    const tabs: Array<'words' | 'sentences'> = ['words', 'sentences']
     const idx = tabs.indexOf(activeTab)
     if (dx < -50 && idx < tabs.length - 1) setActiveTab(tabs[idx + 1])
     if (dx > 50  && idx > 0)               setActiveTab(tabs[idx - 1])
@@ -629,12 +640,6 @@ export default function DictionaryPage() {
   const otherWords = words.filter(w => !w.exact)
 
   const selectedLangOption = dialects.find(d => d.glid === glid)
-  const filterActive = !!(glid || dialectFilter)
-  const filterLabel = !glid
-    ? 'All languages'
-    : dialectFilter
-      ? dialectFilter
-      : `${selectedLangOption?.group_name ?? ''} (all dialects)`
   const searchPlaceholder = selectedLangOption
     ? `Word or phrase in ${selectedLangOption.group_name}${dialectFilter ? ` · ${dialectFilter}` : ''}, Chinese or English`
     : 'Word or phrase in all languages, Chinese or English'
@@ -663,19 +668,6 @@ export default function DictionaryPage() {
               }}
             >
               ≈
-            </button>
-            <button
-              onClick={() => setFilterSheetOpen(true)}
-              title="Filter by language / dialect"
-              style={{
-                width: 36, height: 36, borderRadius: 999,
-                background: filterActive ? T.crimsonBg : T.paperHi,
-                border: `1px solid ${filterActive ? T.crimson : T.line}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: filterActive ? T.crimson : T.inkSoft,
-              }}
-            >
-              <Icon name="filter" size={16} strokeWidth={1.8} />
             </button>
             <SettingsButton initialTab="dict" />
           </div>
@@ -723,7 +715,6 @@ export default function DictionaryPage() {
         <div style={{ display: 'flex', gap: 6 }}>
           {([
             { id: 'words',     label: 'Words',    count: words.length    },
-            { id: 'merged',    label: 'Merged',   count: merged.length   },
             { id: 'sentences', label: 'Sentences', count: sentences.length },
           ] as const).map(({ id, label, count }) => {
             const active = activeTab === id
@@ -782,95 +773,104 @@ export default function DictionaryPage() {
           {/* Words tab */}
           {activeTab === 'words' && (
             <>
-              {words.length === 0 && !dbError && (
-                <div style={{ padding: '20px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
-                  <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>No words found for "{q}"</div>
-                  {sentences.length > 0 && (
-                    <button onClick={() => setActiveTab('sentences')} style={{
-                      marginTop: 6, fontSize: 12, color: T.crimson,
-                      background: 'none', border: 'none', cursor: 'pointer',
-                    }}>
-                      {sentences.length} sentence{sentences.length !== 1 ? 's' : ''} found →
-                    </button>
+              {mergeMode ? (
+                <>
+                  {merged.length === 0 && !dbError && (
+                    <div style={{ padding: '20px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
+                      <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>No words found for "{q}"</div>
+                      {sentences.length > 0 && (
+                        <button onClick={() => setActiveTab('sentences')} style={{
+                          marginTop: 6, fontSize: 12, color: T.crimson,
+                          background: 'none', border: 'none', cursor: 'pointer',
+                        }}>
+                          {sentences.length} sentence{sentences.length !== 1 ? 's' : ''} found →
+                        </button>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
-              {exactWord && (
-                <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} />
-              )}
-              {exactGroup && (
-                <ExactMatchGroupCard entries={exactGroup} onSave={handleSave} onCapture={handleCapture} savedWordMap={savedWordMap} />
-              )}
-              {otherWords.length > 0 && (
-                <div>
-                  {exactMatches.length > 0 && <SectionHead title="Also matches" action={`${otherWords.length}`} />}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {otherWords.map(w => (
-                      <div key={w.id} style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '11px 14px', background: T.paperHi,
-                        border: `1px solid ${T.lineSoft}`, borderRadius: 12,
-                        boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
-                      }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink }}>
-                              {w.word_ab}
-                            </span>
-                            <span style={{ fontSize: 11, color: T.inkFaint }}>{w.dialect_name}</span>
-                            {w.source === 'moe' && (
-                              <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
-                            )}
-                          </div>
-                          <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {w.word_ch}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => handleSave(w)} title={savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? 'Remove from your notebook' : 'Save word'} aria-label="Save word" style={{
-                            width: 32, height: 32, borderRadius: 9,
-                            background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                            ...(savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? { color: T.crimson, border: `1px solid ${T.crimson}`, background: T.crimsonBg } : {}),
+                  {merged.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {merged.map((entry, i) => (
+                        <MergedEntryCard
+                          key={`${entry.ab}|${entry.glid}|${i}`}
+                          entry={entry}
+                          onSave={handleSaveMerged}
+                          onCapture={handleCaptureMerged}
+                          saved={savedWordMap.has(wordKey(entry.rawAb, entry.dialectSections[0]?.dialect_name ?? ''))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {words.length === 0 && !dbError && (
+                    <div style={{ padding: '20px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
+                      <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>No words found for "{q}"</div>
+                      {sentences.length > 0 && (
+                        <button onClick={() => setActiveTab('sentences')} style={{
+                          marginTop: 6, fontSize: 12, color: T.crimson,
+                          background: 'none', border: 'none', cursor: 'pointer',
+                        }}>
+                          {sentences.length} sentence{sentences.length !== 1 ? 's' : ''} found →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {exactWord && (
+                    <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} />
+                  )}
+                  {exactGroup && (
+                    <ExactMatchGroupCard entries={exactGroup} onSave={handleSave} onCapture={handleCapture} savedWordMap={savedWordMap} />
+                  )}
+                  {otherWords.length > 0 && (
+                    <div>
+                      {exactMatches.length > 0 && <SectionHead title="Also matches" action={`${otherWords.length}`} />}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {otherWords.map(w => (
+                          <div key={w.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '11px 14px', background: T.paperHi,
+                            border: `1px solid ${T.lineSoft}`, borderRadius: 12,
+                            boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
                           }}>
-                            <Icon name={savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
-                          </button>
-                          <button onClick={() => handleCapture(w)} title="Add context in Capture" aria-label="Add context in Capture" style={{
-                            width: 32, height: 32, borderRadius: 9,
-                            background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                          }}>
-                            <Icon name="capture" size={15} strokeWidth={1.8} />
-                          </button>
-                        </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink }}>
+                                  {w.word_ab}
+                                </span>
+                                <span style={{ fontSize: 11, color: T.inkFaint }}>{w.dialect_name}</span>
+                                {w.source === 'moe' && (
+                                  <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
+                                )}
+                              </div>
+                              <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {w.word_ch}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button onClick={() => handleSave(w)} title={savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? 'Remove from your notebook' : 'Save word'} aria-label="Save word" style={{
+                                width: 32, height: 32, borderRadius: 9,
+                                background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                ...(savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? { color: T.crimson, border: `1px solid ${T.crimson}`, background: T.crimsonBg } : {}),
+                              }}>
+                                <Icon name={savedWordMap.has(wordKey(w.word_ab, w.dialect_name)) ? 'bookmarkF' : 'bookmark'} size={15} strokeWidth={1.8} />
+                              </button>
+                              <button onClick={() => handleCapture(w)} title="Add context in Capture" aria-label="Add context in Capture" style={{
+                                width: 32, height: 32, borderRadius: 9,
+                                background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                              }}>
+                                <Icon name="capture" size={15} strokeWidth={1.8} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Merged tab */}
-          {activeTab === 'merged' && (
-            <>
-              {merged.length === 0 && !dbError && (
-                <div style={{ padding: '20px 16px', textAlign: 'center', background: T.paperHi, border: `1px solid ${T.lineSoft}`, borderRadius: 14 }}>
-                  <div style={{ fontSize: 13, color: T.inkSoft, fontWeight: 500 }}>No results for "{q}"</div>
-                </div>
-              )}
-              {merged.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {merged.map((entry, i) => (
-                    <MergedEntryCard
-                      key={`${entry.ab}|${entry.glid}|${i}`}
-                      entry={entry}
-                      onSave={handleSaveMerged}
-                      onCapture={handleCaptureMerged}
-                      saved={savedWordMap.has(wordKey(entry.rawAb, entry.dialectSections[0]?.dialect_name ?? ''))}
-                    />
-                  ))}
-                </div>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -900,119 +900,6 @@ export default function DictionaryPage() {
               )}
             </>
           )}
-        </div>
-      )}
-
-      {/* ── Filter bottom sheet ── */}
-      {filterSheetOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-          {/* Overlay */}
-          <div
-            onClick={() => setFilterSheetOpen(false)}
-            style={{ position: 'absolute', inset: 0, background: 'rgba(30,15,5,0.4)' }}
-          />
-          {/* Sheet */}
-          <div style={{
-            position: 'relative', background: T.paper,
-            borderRadius: '20px 20px 0 0',
-            paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
-            maxHeight: '82dvh', display: 'flex', flexDirection: 'column',
-          }}>
-            {/* Drag handle */}
-            <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line, margin: '12px auto 0' }} />
-            {/* Sheet header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '12px 18px 10px',
-              borderBottom: `1px solid ${T.lineSoft}`,
-            }}>
-              <span style={{ fontSize: 15, fontWeight: 600, color: T.ink, fontFamily: 'Newsreader, Georgia, serif' }}>
-                Filter results by language and dialect
-              </span>
-              <span style={{ fontSize: 11.5, color: T.inkSoft, fontFamily: '"JetBrains Mono", monospace' }}>
-                {filterLabel}
-              </span>
-            </div>
-            {/* Two-column body */}
-            <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              {/* Left: languages */}
-              <div style={{ flex: 1, overflowY: 'auto', borderRight: `1px solid ${T.lineSoft}`, padding: '6px 0' }}>
-                {/* All languages */}
-                <button
-                  onClick={() => { setGlid(''); setDialectFilter(''); setUserChangedGlid(true) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', padding: '10px 16px', textAlign: 'left',
-                    background: !glid ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 500, color: !glid ? T.crimson : T.ink }}>All</span>
-                  {!glid && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
-                </button>
-                {dialects.map(d => {
-                  const active = glid === d.glid
-                  return (
-                    <button
-                      key={d.glid}
-                      onClick={() => { setGlid(d.glid); setDialectFilter(''); setUserChangedGlid(true) }}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        width: '100%', padding: '10px 16px', textAlign: 'left',
-                        background: active ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
-                      }}
-                    >
-                      <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? T.crimson : T.ink }}>
-                        {d.group_name}
-                      </span>
-                      {active && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
-                    </button>
-                  )
-                })}
-              </div>
-              {/* Right: dialects for selected language */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
-                {!glid ? (
-                  <div style={{ padding: '16px', fontSize: 12, color: T.inkFaint, textAlign: 'center' }}>
-                    Select a language first
-                  </div>
-                ) : (
-                  <>
-                    {/* All dialects */}
-                    <button
-                      onClick={() => { setDialectFilter(''); setFilterSheetOpen(false) }}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        width: '100%', padding: '10px 16px', textAlign: 'left',
-                        background: !dialectFilter ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
-                      }}
-                    >
-                      <span style={{ fontSize: 13, fontWeight: 500, color: !dialectFilter ? T.crimson : T.ink }}>All</span>
-                      {!dialectFilter && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
-                    </button>
-                    {(GLID_FAMILIES[glid] ?? []).map(d => {
-                      const active = dialectFilter === d
-                      return (
-                        <button
-                          key={d}
-                          onClick={() => { setDialectFilter(d); setFilterSheetOpen(false) }}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            width: '100%', padding: '10px 16px', textAlign: 'left',
-                            background: active ? T.crimsonBg : 'none', border: 'none', cursor: 'pointer',
-                          }}
-                        >
-                          <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? T.crimson : T.ink }}>
-                            {d}
-                          </span>
-                          {active && <Icon name="check" size={14} color={T.crimson} strokeWidth={2.4} />}
-                        </button>
-                      )
-                    })}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
