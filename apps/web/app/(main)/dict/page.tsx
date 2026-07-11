@@ -69,6 +69,71 @@ function wordKey(ab: string, dialect: string) {
   return `${dialect}|${ab}`
 }
 
+// Tap-to-expand example sentences on a word card (plan-dict-v2.md Phase 4
+// base test) — lazily fetched on first expand, cached for the card's lifetime.
+function useWordExamples(word: string, glid: string, dialect?: string) {
+  const [expanded, setExpanded] = useState(false)
+  const [examples, setExamples] = useState<SentenceResult[] | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  function toggle() {
+    setExpanded(v => {
+      const next = !v
+      if (next && examples === null && !loading) {
+        setLoading(true)
+        const params = new URLSearchParams({ word, glid })
+        if (dialect) params.set('dialect', dialect)
+        fetch(`/api/dict/word-sentences?${params}`)
+          .then(r => r.json())
+          .then(data => setExamples(data.sentences ?? []))
+          .catch(() => setExamples([]))
+          .finally(() => setLoading(false))
+      }
+      return next
+    })
+  }
+
+  return { expanded, toggle, examples, loading }
+}
+
+function ExampleSentencesPanel({ loading, examples }: { loading: boolean; examples: SentenceResult[] | null }) {
+  if (loading) {
+    return <div style={{ padding: '10px 14px', fontSize: 12, color: T.inkFaint }}>Loading examples…</div>
+  }
+  if (!examples || examples.length === 0) {
+    return <div style={{ padding: '10px 14px', fontSize: 12, color: T.inkFaint, fontStyle: 'italic' }}>No example sentences found</div>
+  }
+  return (
+    <div style={{ padding: '10px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {examples.map(ex => (
+        <div key={ex.id}>
+          <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontStyle: 'italic', fontSize: 13.5, color: T.ink, lineHeight: 1.4 }}>
+            {ex.ab}
+          </div>
+          <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 2 }}>{ex.zh}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ExpandToggleButton({ expanded, onClick }: { expanded: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={expanded ? 'Hide example sentences' : 'Show example sentences'}
+      aria-label={expanded ? 'Hide example sentences' : 'Show example sentences'}
+      style={{
+        width: 30, height: 30, borderRadius: 8,
+        background: T.paper, border: `1px solid ${T.lineSoft}`, color: T.inkSoft,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+      }}
+    >
+      <Icon name="chev-d" size={14} strokeWidth={1.8} style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+    </button>
+  )
+}
+
 // ─── Word card (exact match) ──────────────────────────────────
 function ExactWordCard({ word, onSave, onCapture, saved = false }: {
   word: WordResult
@@ -76,6 +141,8 @@ function ExactWordCard({ word, onSave, onCapture, saved = false }: {
   onCapture: (w: WordResult) => void
   saved?: boolean
 }) {
+  const { expanded, toggle, examples, loading } = useWordExamples(word.word_ab, word.glid, word.dialect_name)
+
   return (
     <Card raised pad={0} style={{ overflow: 'hidden' }}>
       <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${T.lineSoft}` }}>
@@ -102,10 +169,15 @@ function ExactWordCard({ word, onSave, onCapture, saved = false }: {
           </span>
         </div>
 
-        <div style={{ marginTop: 14, fontSize: 15.5, fontWeight: 500, color: T.ink, lineHeight: 1.4 }}>
-          {word.word_ch}
+        <div style={{ marginTop: 14, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ fontSize: 15.5, fontWeight: 500, color: T.ink, lineHeight: 1.4 }}>
+            {word.word_ch}
+          </div>
+          <ExpandToggleButton expanded={expanded} onClick={toggle} />
         </div>
       </div>
+
+      {expanded && <ExampleSentencesPanel loading={loading} examples={examples} />}
 
       <div style={{
         padding: 12, borderTop: `1px solid ${T.lineSoft}`, background: T.paper,
@@ -274,6 +346,7 @@ function MergedEntryCard({ entry, onSave, onCapture, saved = false }: {
   const firstSection = entry.dialectSections[0]
   const primaryDef   = firstSection?.defs[0] ?? ''
   const primaryDialect = firstSection?.dialect_name ?? ''
+  const { expanded, toggle, examples, loading } = useWordExamples(entry.rawAb, entry.glid)
 
   const btnStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: 8,
@@ -319,6 +392,7 @@ function MergedEntryCard({ entry, onSave, onCapture, saved = false }: {
           <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
             <Icon name="capture" size={14} strokeWidth={1.8} />
           </button>
+          <ExpandToggleButton expanded={expanded} onClick={toggle} />
         </div>
       </div>
 
@@ -345,6 +419,12 @@ function MergedEntryCard({ entry, onSave, onCapture, saved = false }: {
           ))}
         </div>
       ))}
+
+      {expanded && (
+        <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
+          <ExampleSentencesPanel loading={loading} examples={examples} />
+        </div>
+      )}
     </div>
   )
 }

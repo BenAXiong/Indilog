@@ -239,10 +239,10 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Dict: remove funnel and improve lang selection UI in settings
 - [x] Dict: make word results exact by def and fix fuzzy
 - [x] Dict: remove  en description in results 
-- [ ] Dict: expand to show sentences?
 - [x] Dict: improve results: if non fuzzy then have to select existing entry
             eg "icep" shouldn't return "micepo" in exact mode sentences
 - [x] Dict: enable capture +-context if no results
+- [-] Dict: expand words to show sentences
 - [ ] Dict: recursive search (results are links in sentences at least)
 - [ ] Dict: 
 

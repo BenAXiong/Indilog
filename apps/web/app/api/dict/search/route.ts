@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchWords, searchSentences, searchWordsByCandidates, isWordBoundaryMatch, type SentenceRow, type WordRow } from '@/lib/corpus/dict'
+import { kilangFetch, parseMoeExamples, stripAuthor, type MoeRow } from '@/lib/corpus/kilang'
 import { makeMoeFallbackCandidates } from '@/lib/lang/amis-fuzzy'
 
 export const runtime = 'nodejs'
@@ -8,18 +9,7 @@ export const runtime = 'nodejs'
 // for the param contract, response quirks, and a pointer to Grimoire's background.js
 // (族語魔書/Ext_族語魔書_PopupDict), which already solved fuzzy/recovery matching against
 // this same endpoint — read that before adding new fuzzy logic here.
-const CITADEL_MOE = 'https://ycm-citadel.vercel.app/api/moe_shadow'
 const AMIS_GLID   = '01'
-
-type MoeRow = {
-  word_ab: string
-  definition: string
-  dialect_name: string
-  dict_code: string
-  examples_json?: string
-}
-
-type MoeExample = { ab?: string; zh?: string }
 
 // Module-level helpers keep fetchMoeWords simple enough to pass complexity checks
 const normMoeAb  = (s: string) => s.replace(/\|+$/, '').trim()
@@ -30,8 +20,6 @@ const normMoeKey = (s: string) =>
 const cleanMoeDef = (s: string) =>
   s.replace(/[^ -~\u00A0-\u024F\u1E00-\u1EFF\u2000-\u206F\u3000-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/g, ' ')
    .replace(/\s+/g, ' ').trim()
-const stripAuthor = (s: string) =>
-  (s ?? '阿美語').replace(/\s*\([^)]*\)\s*$/, '').trim() || '阿美語'
 
 type MoeMatchKind = 'contains' | 'similar' | 'altSpelling'
 type MoeMerged = { word_ab: string; defs: string[]; dialect_name: string; exact: boolean; matchKind?: MoeMatchKind }
@@ -79,43 +67,6 @@ function levenshtein(a: string, b: string): number {
     }
   }
   return dp[n]
-}
-
-// MoE's own rows carry example sentences inline (examples_json) — id is the sentence
-// text itself so the route's existing sentenceMap dedup (keyed by id) naturally
-// collapses the same example when it's attached to several related word entries
-// (e.g. a root and its derived forms).
-function parseMoeExamples(row: MoeRow, dialectName: string): SentenceRow[] {
-  if (!row.examples_json) return []
-  let examples: MoeExample[]
-  try {
-    examples = JSON.parse(row.examples_json)
-  } catch {
-    return []
-  }
-  if (!Array.isArray(examples)) return []
-  // MoE's example ab text carries its own stress/boundary markup (backtick, tilde)
-  // around words — not part of the orthography, unlike the apostrophe or "^" marker.
-  const cleanMoeAb = (s: string) => s.replace(/[`~]/g, '').replace(/\s+/g, ' ').trim()
-  return examples
-    .map(ex => ({ ab: cleanMoeAb(ex.ab ?? ''), zh: (ex.zh ?? '').trim() }))
-    .filter(ex => ex.ab)
-    .map(ex => ({
-      id:           ex.ab,
-      ab:           ex.ab,
-      zh:           ex.zh,
-      dialect_name: dialectName,
-      source:       'moe',
-      audio_url:    null,
-    }))
-}
-
-async function kilangFetch(keyword: string, exact: boolean): Promise<MoeRow[]> {
-  const url = `${CITADEL_MOE}?keyword=${encodeURIComponent(keyword)}&exact=${exact}&mode=moe`
-  const res = await fetch(url, { next: { revalidate: 60 } })
-  if (!res.ok) return []
-  const data: { rows?: MoeRow[] } = await res.json()
-  return data.rows ?? []
 }
 
 function toWordRows(entries: [string, MoeMerged][]): WordRow[] {
