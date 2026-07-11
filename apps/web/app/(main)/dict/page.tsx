@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
@@ -50,6 +50,7 @@ type SentenceResult = {
   dialect_name: string
   source: string
   audio_url: string | null
+  sentMatch?: 'exact' | 'extended'
 }
 
 type DialectOption = {
@@ -465,10 +466,6 @@ export default function DictionaryPage() {
 
   const isPhrase = q.trim().includes(' ')
   const isCJK    = /[㐀-鿿]/.test(q)
-
-  useEffect(() => {
-    if (isPhrase || isCJK) setActiveTab('sentences')
-  }, [isPhrase, isCJK])
 
   // Pre-check which sentences are already saved in ind_items
   useEffect(() => {
@@ -933,9 +930,18 @@ export default function DictionaryPage() {
               )}
               {sentences.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {sentences.map(s => (
-                    <SentenceCard key={s.id} s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} saved={savedAbSet.has(s.ab)} />
-                  ))}
+                  {sentences[0].sentMatch === 'exact' && <SectionHead title="Exact word" />}
+                  {sentences.map((s, i) => {
+                    // sentences are pre-sorted exact-first, extended-second (route.ts) —
+                    // a divider marks the one transition point, not per-row.
+                    const showDivider = i > 0 && sentences[i - 1].sentMatch === 'exact' && s.sentMatch === 'extended'
+                    return (
+                      <Fragment key={s.id}>
+                        {showDivider && <SectionHead title="Related" style={{ marginTop: 8 }} />}
+                        <SentenceCard s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} saved={savedAbSet.has(s.ab)} />
+                      </Fragment>
+                    )
+                  })}
                 </div>
               )}
             </>

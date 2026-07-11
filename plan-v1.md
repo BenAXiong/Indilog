@@ -243,6 +243,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [ ] Dict: improve results: if non fuzzy then have to select existing entry
             eg "icep" shouldn't return "micepo" in exact mode sentences
 - [ ] Dict: enable capture +-context if no results
+- [ ] Dict: recurive search (results are links in sentences at least)
 - [ ] Dict: 
 
 - [ ] Browser: add all context fields, editable

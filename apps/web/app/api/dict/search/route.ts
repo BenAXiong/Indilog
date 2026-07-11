@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchWords, searchSentences, type SentenceRow, type WordRow } from '@/lib/corpus/dict'
+import { searchWords, searchSentences, isWordBoundaryMatch, type SentenceRow, type WordRow } from '@/lib/corpus/dict'
 
 export const runtime = 'nodejs'
 
@@ -280,9 +280,17 @@ async function fetchMoeWords(q: string, hasCJK: boolean, fuzzy: boolean): Promis
     }
 
     // ZH/EN direction: Kilang's exact=false is already the intended broad
-    // match (Chinese/English glosses genuinely can match unrelated words) —
-    // no local filtering, matching Grimoire's fetchMoeZhInsights split.
-    if (hasCJK) return { words: toWordRows(Array.from(merged.entries())), sentences }
+    // word match (Chinese/English glosses genuinely can match unrelated
+    // words) — no local filtering there, matching Grimoire's
+    // fetchMoeZhInsights split. But example sentences are attached per-word,
+    // so a broadly-matched word's examples can leak in even when the
+    // example's own zh text has nothing to do with the query — filter those
+    // down to sentences that actually contain the query themselves.
+    if (hasCJK) {
+      const qLower = q.toLowerCase()
+      const matchingSentences = sentences.filter(s => s.zh.toLowerCase().includes(qLower))
+      return { words: toWordRows(Array.from(merged.entries())), sentences: matchingSentences }
+    }
 
     // AB direction: exact=false also matches gloss text, so classify + filter
     // the broad pool locally instead of trusting the param.
@@ -377,8 +385,19 @@ export async function GET(req: NextRequest) {
       const pos = text.indexOf(qLower)
       return pos === -1 ? Infinity : pos
     }
-    const sentences = Array.from(sentenceMap.values())
-      .sort((a, b) => matchPos(a) - matchPos(b) || a.ab.length - b.ab.length)
+    const sentenceRows = Array.from(sentenceMap.values())
+
+    // AB direction: tag exact (query appears as its own word, e.g. "misalama")
+    // vs extended (query only appears inside a longer derived word, e.g.
+    // "misalamaay") so the UI can group exact matches first with a divider —
+    // word-boundary detection doesn't map onto Chinese, so CJK direction is
+    // left untagged/ungrouped.
+    if (!hasCJK) {
+      for (const s of sentenceRows) s.sentMatch = isWordBoundaryMatch(s.ab, q) ? 'exact' : 'extended'
+    }
+    const rank = (s: SentenceRow) => (s.sentMatch === 'extended' ? 1 : 0)
+    const sentences = sentenceRows
+      .sort((a, b) => rank(a) - rank(b) || matchPos(a) - matchPos(b) || a.ab.length - b.ab.length)
 
     return NextResponse.json({ words, sentences })
   } catch (err) {

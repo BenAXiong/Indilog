@@ -21,12 +21,29 @@ export type SentenceRow = {
   dialect_name: string
   source: string
   audio_url: string | null
+  // AB-direction only — whether the query appears as a standalone word in `ab`
+  // (vs. only as part of a longer derived word). See route.ts's isWordBoundaryMatch.
+  sentMatch?: 'exact' | 'extended'
 }
 
 export type DialectRow = {
   glid: string
   group_name: string
   sub_dialects: string
+}
+
+// Apostrophe variants used in Formosan romanizations — treated as word-forming
+// characters (not boundaries), since e.g. "si" and "si’" are distinct words.
+export const FORMOSAN_APOSTROPHES = '\u2018\u2019\u02BC\uA78C'
+const WORD_CHAR = `a-zA-Z'${FORMOSAN_APOSTROPHES}`
+
+// Does `query` appear in `text` as a standalone word (vs. only as part of a
+// longer word, e.g. "misalama" inside "misalamaay")? Mirrors the Postgres
+// `imatch` boundary pattern used server-side in searchSentences below.
+export function isWordBoundaryMatch(text: string, query: string): boolean {
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`(^|[^${WORD_CHAR}])${escaped}($|[^${WORD_CHAR}])`, 'i')
+  return re.test(text)
 }
 
 export async function searchWords(
