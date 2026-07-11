@@ -11,7 +11,10 @@ type MoeRow = {
   definition: string
   dialect_name: string
   dict_code: string
+  examples_json?: string
 }
+
+type MoeExample = { ab?: string; zh?: string }
 
 // Module-level helpers keep fetchMoeWords simple enough to pass complexity checks
 const normMoeAb  = (s: string) => s.replace(/\|+$/, '').trim()
@@ -47,16 +50,49 @@ function mergeMoeRow(merged: Map<string, MoeMerged>, row: MoeRow, qKey: string) 
   }
 }
 
-async function fetchMoeWords(q: string): Promise<WordRow[]> {
+// MoE's own rows carry example sentences inline (examples_json) — id is the sentence
+// text itself so the route's existing sentenceMap dedup (keyed by id) naturally
+// collapses the same example when it's attached to several related word entries
+// (e.g. a root and its derived forms).
+function parseMoeExamples(row: MoeRow, dialectName: string): SentenceRow[] {
+  if (!row.examples_json) return []
+  let examples: MoeExample[]
+  try {
+    examples = JSON.parse(row.examples_json)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(examples)) return []
+  // MoE's example ab text carries its own stress/boundary markup (backtick, tilde)
+  // around words — not part of the orthography, unlike the apostrophe or "^" marker.
+  const cleanMoeAb = (s: string) => s.replace(/[`~]/g, '').replace(/\s+/g, ' ').trim()
+  return examples
+    .map(ex => ({ ab: cleanMoeAb(ex.ab ?? ''), zh: (ex.zh ?? '').trim() }))
+    .filter(ex => ex.ab)
+    .map(ex => ({
+      id:           ex.ab,
+      ab:           ex.ab,
+      zh:           ex.zh,
+      dialect_name: dialectName,
+      source:       'moe',
+      audio_url:    null,
+    }))
+}
+
+async function fetchMoeWords(q: string): Promise<{ words: WordRow[]; sentences: SentenceRow[] }> {
   try {
     const url = `${CITADEL_MOE}?keyword=${encodeURIComponent(q)}&exact=false&mode=moe`
     const res  = await fetch(url, { next: { revalidate: 60 } })
-    if (!res.ok) return []
+    if (!res.ok) return { words: [], sentences: [] }
     const data: { rows?: MoeRow[] } = await res.json()
     const qKey   = normMoeKey(q)
     const merged = new Map<string, MoeMerged>()
-    for (const row of data.rows ?? []) mergeMoeRow(merged, row, qKey)
-    return Array.from(merged.values()).map((e, i) => ({
+    const sentences: SentenceRow[] = []
+    for (const row of data.rows ?? []) {
+      mergeMoeRow(merged, row, qKey)
+      sentences.push(...parseMoeExamples(row, stripAuthor(row.dialect_name)))
+    }
+    const words = Array.from(merged.values()).map((e, i) => ({
       id:           `moe-${i}`,
       word_ab:      e.word_ab,
       word_ch:      e.defs.join(' · '),
@@ -65,8 +101,9 @@ async function fetchMoeWords(q: string): Promise<WordRow[]> {
       exact:        e.exact,
       source:       'moe' as const,
     }))
+    return { words, sentences }
   } catch {
-    return []
+    return { words: [], sentences: [] }
   }
 }
 
@@ -91,11 +128,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const moeActive = includeMoe && q.length >= minLenMoe && (!glid || glid === AMIS_GLID)
-    const [rawWords, rawSentences, moeWords] = await Promise.all([
+    const [rawWords, rawSentences, moeResult] = await Promise.all([
       includeKlokah ? searchWords(q, glid, dialect, fuzzy)     : Promise.resolve([]),
       includeKlokah ? searchSentences(q, glid, dialect, fuzzy) : Promise.resolve([]),
-      moeActive     ? fetchMoeWords(q)                         : Promise.resolve<WordRow[]>([]),
+      moeActive     ? fetchMoeWords(q)                         : Promise.resolve({ words: [] as WordRow[], sentences: [] as SentenceRow[] }),
     ])
+    const { words: moeWords, sentences: moeSentences } = moeResult
 
     // Dedup ePark words — corpus has "mafana'to" and "mafana' to" as separate entries;
     // keep the longest among duplicates (spaced form is the correct romanisation).
@@ -115,7 +153,7 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
 
     const sentenceMap = new Map<string, SentenceRow>()
-    for (const s of rawSentences) {
+    for (const s of [...rawSentences, ...moeSentences]) {
       if (!sentenceMap.has(s.id) || (!sentenceMap.get(s.id)!.audio_url && s.audio_url)) {
         sentenceMap.set(s.id, s)
       }
