@@ -3,6 +3,10 @@ import { searchWords, searchSentences, type SentenceRow, type WordRow } from '@/
 
 export const runtime = 'nodejs'
 
+// Kilang/MoE shadow API — external, undocumented upstream. See docs/kilang-moe-api.md
+// for the param contract, response quirks, and a pointer to Grimoire's background.js
+// (族語魔書/Ext_族語魔書_PopupDict), which already solved fuzzy/recovery matching against
+// this same endpoint — read that before adding new fuzzy logic here.
 const CITADEL_MOE = 'https://ycm-citadel.vercel.app/api/moe_shadow'
 const AMIS_GLID   = '01'
 
