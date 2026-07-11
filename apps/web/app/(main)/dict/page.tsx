@@ -9,7 +9,7 @@ import ScreenHeader from '@/components/nav/ScreenHeader'
 import SettingsButton from '@/components/widgets/SettingsSheet'
 import { useLang } from '@/lib/context/LangDialectProvider'
 import { getGlid, getIndivoreCode, getIndivoreCodeFromDialectName } from '@/lib/lang/lang-bridge'
-import { GLID_FAMILIES } from '@/lib/lang/dialects'
+import { GLID_FAMILIES, GLID_NAMES } from '@/lib/lang/dialects'
 import { createItem } from '@/lib/db/notebook/items'
 import { unsaveItem } from '@/lib/db/srs/browser'
 import { createClient } from '@/lib/supabase/client'
@@ -67,6 +67,17 @@ type DialectOption = {
 // text alone collides across dialects, so pair it with dialect_name.
 function wordKey(ab: string, dialect: string) {
   return `${dialect}|${ab}`
+}
+
+// Word cards show dialect_name as a small label — Kilang always returns the
+// bare language name (e.g. "阿美語"), which just repeats what the header
+// already shows, so it's hidden entirely; ePark's real sub-dialects (e.g.
+// "南勢阿美語") get the language-name suffix stripped to a shorthand instead
+// of repeating it.
+function shortChineseDialect(dialectName: string, glid: string): string {
+  const family = GLID_NAMES[glid]
+  if (!family || dialectName === family) return ''
+  return dialectName.endsWith(family) ? dialectName.slice(0, -family.length).trim() : dialectName
 }
 
 // Tap-to-expand example sentences on a word card (plan-dict-v2.md Phase 4
@@ -152,7 +163,9 @@ function ExactWordCard({ word, onSave, onCapture, saved = false }: {
               {word.word_ab}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <span style={{ fontSize: 11.5, color: T.inkSoft }}>{word.dialect_name}</span>
+              {shortChineseDialect(word.dialect_name, word.glid) && (
+                <span style={{ fontSize: 11.5, color: T.inkSoft }}>{shortChineseDialect(word.dialect_name, word.glid)}</span>
+              )}
               {word.source === 'moe' && (
                 <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
               )}
@@ -236,7 +249,9 @@ function ExactMatchGroupCard({ entries, onSave, onCapture, savedWordMap }: {
             display: 'flex', alignItems: 'center', gap: 12,
           }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 2 }}>{w.dialect_name}</div>
+              {shortChineseDialect(w.dialect_name, w.glid) && (
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginBottom: 2 }}>{shortChineseDialect(w.dialect_name, w.glid)}</div>
+              )}
               <div style={{ fontSize: 14.5, color: T.ink, fontWeight: 500, lineHeight: 1.4 }}>{w.word_ch}</div>
             </div>
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -410,9 +425,9 @@ function MergedEntryCard({ entry, onSave, onCapture, saved = false }: {
                 </span>
               )}
               <span style={{ flex: 1, fontSize: 14, color: T.ink, fontWeight: 500, lineHeight: 1.35 }}>{def}</span>
-              {i === 0 && (
+              {i === 0 && shortChineseDialect(section.dialect_name, entry.glid) && (
                 <span style={{ fontSize: 9.5, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>
-                  {section.dialect_name}
+                  {shortChineseDialect(section.dialect_name, entry.glid)}
                 </span>
               )}
             </div>
@@ -978,7 +993,9 @@ export default function DictionaryPage() {
                                 <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 16, fontWeight: 500, color: T.ink }}>
                                   {w.word_ab}
                                 </span>
-                                <span style={{ fontSize: 11, color: T.inkFaint }}>{w.dialect_name}</span>
+                                {shortChineseDialect(w.dialect_name, w.glid) && (
+                                  <span style={{ fontSize: 11, color: T.inkFaint }}>{shortChineseDialect(w.dialect_name, w.glid)}</span>
+                                )}
                                 {w.source === 'moe' && (
                                   <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
                                 )}

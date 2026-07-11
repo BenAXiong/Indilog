@@ -242,7 +242,9 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Dict: improve results: if non fuzzy then have to select existing entry
             eg "icep" shouldn't return "micepo" in exact mode sentences
 - [x] Dict: enable capture +-context if no results
-- [-] Dict: expand words to show sentences
+- [x] Dict: expand words to show sentences
+- [ ] Dict: show sentence tab by def if 2+ words are entered
+- [ ] Dict: recent searches
 - [ ] Dict: recursive search (results are links in sentences at least)
 - [ ] Dict: 
 
