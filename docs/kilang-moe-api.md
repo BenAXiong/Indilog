@@ -1,14 +1,29 @@
-# Kilang / MoE shadow API reference
+# Kilang / MoE dictionary reference
 
-External, undocumented-upstream API that Indivore's dict search proxies for
-Amis word data. Notes below are empirical (verified via direct `curl` against
-the live endpoint and by reading a sibling project's working implementation)
-since there's no public API doc to link to.
+Amis word data, ported (2026-07-16) from YCM_Citadel's `amis_moe_test.db`
+SQLite export into Indivore's own Supabase — `kilang_entries` (flat word
+list, from `moe_entries`) and `kilang_hierarchy` (derivation tree, from
+`moe_hierarchy_moe`; `moe_hierarchy_plus`/`moe_hierarchy_star` are unused
+duplicates of the same word_ab/parent_word/ultimate_root/depth columns and
+were not ported). Indivore no longer calls the external
+`ycm-citadel.vercel.app/api/moe_shadow` proxy at request time — the notes
+below (response shape, `word_ab` markup quirks) describe the source data and
+are still accurate for the ported copy; the "query parameters" section
+describes the now-retired live endpoint, kept for historical/re-import
+reference.
 
-- **Endpoint:** `https://ycm-citadel.vercel.app/api/moe_shadow`
-- **Consumed in Indivore at:** `apps/web/app/api/dict/search/route.ts` (`fetchMoeWords`, `parseMoeExamples`)
+- **Ported into:** `kilang_entries` / `kilang_hierarchy` tables, migration `supabase/migrations/20260716010000_kilang_tables.sql`
+- **Consumed in Indivore at:** `apps/web/lib/corpus/kilang.ts` (`kilangFetch`, `parseMoeExamples`) via `apps/web/app/api/dict/search/route.ts` (`fetchMoeWords`)
 - **Amis-only** — Indivore only calls it when `glid === '01'`.
-- **Owning app:** YCM_Citadel (`portal/app/api/moe_shadow/route.ts`, `portal/components/views/kilang/`) — that's where the actual server-side query logic and DB assets live; treat this doc as a consumer-side reference, not the source of truth for their implementation.
+- **Original owning app:** YCM_Citadel (`portal/app/api/moe_shadow/route.ts`, `portal/components/views/kilang/`, DB at `portal/amis_moe_test.db`) — that's the source of truth for the underlying data and where a refreshed export would come from.
+
+## Re-import path (refreshing the data)
+
+1. Get a current `amis_moe_test.db` from YCM_Citadel (`portal/amis_moe_test.db`, or wherever it's fetched from — see that repo's build script / `portal/lib/db.ts`'s `getMoeDb`).
+2. Confirm the schema hasn't changed: `moe_entries` (`id, dict_code, word_ab, definition, examples_json, dialect_name, glid, stem`) and `moe_hierarchy_moe` (`word_ab, parent_word, ultimate_root, depth, sort_path, sources`) — if columns were added/renamed, update `scripts/import-kilang.mjs` and the migration to match.
+3. Install `better-sqlite3` **transiently** (it is deliberately not a persisted dependency — DEC-M3-03): `pnpm add -w -D better-sqlite3`.
+4. Run `node scripts/import-kilang.mjs [path/to/amis_moe_test.db]` — needs `scripts/perf/.api-keys.json` (see `scripts/perf/mint-session.mjs`'s header for how to fetch it). Upserts by `source_id` (entries) / `word_ab` (hierarchy), so re-running is idempotent and safe for a refresh — it will not create duplicates, but also won't remove rows deleted upstream.
+5. Remove the transient dependency: `pnpm remove -w better-sqlite3`. Confirm `git status` shows `package.json`/`pnpm-lock.yaml` unchanged.
 
 ## Reference implementation to consult before changing anything here
 
@@ -22,7 +37,13 @@ before reinventing fuzzy/recovery logic against this API — see
 `Indivore/plan-dict-v2.md` (if it still exists) for how that maps onto
 Indivore's own dict-search plan.
 
-## Query parameters (observed)
+## Query parameters (observed) — the retired live endpoint
+
+Grimoire still calls the live `ycm-citadel.vercel.app/api/moe_shadow`
+endpoint directly, so this section remains accurate for that consumer.
+Indivore itself no longer sends these params anywhere — `kilangFetch` in
+`apps/web/lib/corpus/kilang.ts` queries `kilang_entries` in Supabase instead,
+replicating the same `exact=true`/`exact=false` semantics locally.
 
 | Param | Values | Notes |
 |---|---|---|
