@@ -55,7 +55,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
   const [pickedLang,     setPickedLang]     = useState<string | null>(null)
   const [accountMenuOpen,setAccountMenuOpen]= useState(false)
   const [autoLookup,       setAutoLookup]       = useState(true)
-  const [dictSources,      setDictSources]      = useState<string[]>(['moe'])
+  const [dictSources,      setDictSources]      = useState<string[]>(['moe', 'klokah'])
   const [mergeMode,        setMergeMode]        = useState(true)
   const [mergeModeInfoOpen, setMergeModeInfoOpen] = useState(false)
   const [dictLangGlid,     setDictLangGlidRaw]  = useState('')

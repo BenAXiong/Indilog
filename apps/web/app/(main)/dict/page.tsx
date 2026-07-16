@@ -19,6 +19,8 @@ import PerfMark from '@/components/perf/PerfMark'
 // glottal/affix-strip tables don't exist for the other 15 languages. Matches
 // AMIS_GLID in apps/web/app/api/dict/search/route.ts.
 const AMIS_GLID = '01'
+const MAX_RECENT_STORED = 30
+const RECENT_PAGE_SIZE  = 10
 
 type WordResult = {
   id: number | string
@@ -111,7 +113,34 @@ function useWordExamples(word: string, glid: string, moeEnabled: boolean, klokah
   return { expanded, toggle, examples, loading }
 }
 
-function ExampleSentencesPanel({ loading, examples }: { loading: boolean; examples: SentenceResult[] | null }) {
+// Recursive search — click a word inside a sentence to search for it directly,
+// instead of retyping. Strips surrounding punctuation for the search value but
+// keeps it in the display text; apostrophe variants count as word-forming
+// (matches isWordBoundaryMatch in lib/corpus/dict.ts).
+function ClickableWords({ text, onWordClick }: { text: string; onWordClick: (word: string) => void }) {
+  const parts = text.split(/(\s+)/)
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part === '' || /^\s+$/.test(part)) return part
+        const clean = part.replace(/^[^a-zA-Z'\u2018\u2019\u02BC\uA78C]+|[^a-zA-Z'\u2018\u2019\u02BC\uA78C]+$/g, '')
+        if (!clean) return <span key={i}>{part}</span>
+        return (
+          <span
+            key={i}
+            onClick={e => { e.stopPropagation(); onWordClick(clean) }}
+            title={`Look up "${clean}"`}
+            style={{ cursor: 'pointer' }}
+          >
+            {part}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
+function ExampleSentencesPanel({ loading, examples, onWordClick }: { loading: boolean; examples: SentenceResult[] | null; onWordClick: (word: string) => void }) {
   if (loading) {
     return <div style={{ padding: '10px 14px', fontSize: 12, color: T.inkFaint }}>Loading examples…</div>
   }
@@ -123,7 +152,7 @@ function ExampleSentencesPanel({ loading, examples }: { loading: boolean; exampl
       {examples.map(ex => (
         <div key={ex.id}>
           <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontStyle: 'italic', fontSize: 13.5, color: T.ink, lineHeight: 1.4 }}>
-            {ex.ab}
+            <ClickableWords text={ex.ab} onWordClick={onWordClick} />
           </div>
           <div style={{ fontSize: 12, color: T.inkSoft, marginTop: 2 }}>{ex.zh}</div>
         </div>
@@ -150,13 +179,14 @@ function ExpandToggleButton({ expanded, onClick }: { expanded: boolean; onClick:
 }
 
 // ─── Word card (exact match) ──────────────────────────────────
-function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klokahEnabled }: {
+function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klokahEnabled, onWordClick }: {
   word: WordResult
   onSave: (w: WordResult) => void
   onCapture: (w: WordResult) => void
   saved?: boolean
   moeEnabled: boolean
   klokahEnabled: boolean
+  onWordClick: (word: string) => void
 }) {
   const { expanded, toggle, examples, loading } = useWordExamples(word.word_ab, word.glid, moeEnabled, klokahEnabled, word.dialect_name)
 
@@ -196,7 +226,7 @@ function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klo
         </div>
       </div>
 
-      {expanded && <ExampleSentencesPanel loading={loading} examples={examples} />}
+      {expanded && <ExampleSentencesPanel loading={loading} examples={examples} onWordClick={onWordClick} />}
 
       <div style={{
         padding: 12, borderTop: `1px solid ${T.lineSoft}`, background: T.paper,
@@ -293,11 +323,12 @@ function ExactMatchGroupCard({ entries, onSave, onCapture, savedWordMap }: {
 }
 
 // ─── Sentence card ────────────────────────────────────────────
-function SentenceCard({ s, onSave, onCapture, saved = false }: {
+function SentenceCard({ s, onSave, onCapture, saved = false, onWordClick }: {
   s: SentenceResult
   onSave: (s: SentenceResult) => void
   onCapture: (s: SentenceResult) => void
   saved?: boolean
+  onWordClick: (word: string) => void
 }) {
   function playAudio() {
     if (s.audio_url) new Audio(s.audio_url).play().catch(() => {})
@@ -316,7 +347,7 @@ function SentenceCard({ s, onSave, onCapture, saved = false }: {
       boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
     }}>
       <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 15, fontStyle: 'italic', color: T.ink, lineHeight: 1.45 }}>
-        {s.ab}
+        <ClickableWords text={s.ab} onWordClick={onWordClick} />
       </div>
       <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 4, lineHeight: 1.35 }}>{s.zh}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
@@ -358,13 +389,14 @@ type MergedEntry = {
   dialectSections: { dialect_name: string; defs: string[] }[]
 }
 
-function MergedEntryCard({ entry, onSave, onCapture, saved = false, moeEnabled, klokahEnabled }: {
+function MergedEntryCard({ entry, onSave, onCapture, saved = false, moeEnabled, klokahEnabled, onWordClick }: {
   entry: MergedEntry
   onSave: (ab: string, dialect: string, def: string, glid: string) => void
   onCapture: (ab: string, def: string) => void
   saved?: boolean
   moeEnabled: boolean
   klokahEnabled: boolean
+  onWordClick: (word: string) => void
 }) {
   const firstSection = entry.dialectSections[0]
   const primaryDef   = firstSection?.defs[0] ?? ''
@@ -445,7 +477,7 @@ function MergedEntryCard({ entry, onSave, onCapture, saved = false, moeEnabled, 
 
       {expanded && (
         <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
-          <ExampleSentencesPanel loading={loading} examples={examples} />
+          <ExampleSentencesPanel loading={loading} examples={examples} onWordClick={onWordClick} />
         </div>
       )}
     </div>
@@ -475,8 +507,10 @@ export default function DictionaryPage() {
   const [fuzzy, setFuzzy] = useState(false)
   const [altSpelling, setAltSpelling] = useState(false)
   const [moeEnabled,    setMoeEnabled]    = useState(true)
-  const [klokahEnabled, setKlokahEnabled] = useState(false)
+  const [klokahEnabled, setKlokahEnabled] = useState(true)
   const [mergeMode,     setMergeMode]     = useState(true)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [recentExpanded, setRecentExpanded] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const touchStartX = useRef<number | null>(null)
 
@@ -484,7 +518,7 @@ export default function DictionaryPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('ind_dict_sources')
-      const sources: string[] = stored ? JSON.parse(stored) : ['moe']
+      const sources: string[] = stored ? JSON.parse(stored) : ['moe', 'klokah']
       setMoeEnabled(sources.includes('moe'))
       setKlokahEnabled(sources.includes('klokah'))
     } catch {}
@@ -497,7 +531,28 @@ export default function DictionaryPage() {
       setDialectFilter(savedDialect)
       setUserChangedGlid(true)
     }
+    try {
+      const storedRecent = localStorage.getItem('ind_dict_recent_searches')
+      if (storedRecent) setRecentSearches(JSON.parse(storedRecent))
+    } catch {}
   }, [])
+
+  // Device-local only (localStorage) — search history isn't meant to sync
+  // across devices, and this avoids needing a DB write for it.
+  function recordRecentSearch(term: string) {
+    const trimmed = term.trim()
+    if (!trimmed) return
+    setRecentSearches(prev => {
+      const next = [trimmed, ...prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase())]
+        .slice(0, MAX_RECENT_STORED)
+      localStorage.setItem('ind_dict_recent_searches', JSON.stringify(next))
+      return next
+    })
+  }
+
+  function runRecentSearch(term: string) {
+    setQ(term)
+  }
 
   // Live-update glid + dialect when changed from Settings/Dict
   useEffect(() => {
@@ -576,6 +631,14 @@ export default function DictionaryPage() {
 
   const isPhrase = q.trim().includes(' ')
   const isCJK    = /[㐀-鿿]/.test(q)
+
+  // Multi-word queries are usually phrase/sentence searches, not single-word
+  // lookups — switch to Sentences automatically when crossing that threshold.
+  // Only fires on the false→true transition (dependency-gated), so a user who
+  // manually switches back to Words while still typing isn't fought.
+  useEffect(() => {
+    if (isPhrase) setActiveTab('sentences')
+  }, [isPhrase])
 
   // Pre-check which sentences are already saved in ind_items
   useEffect(() => {
@@ -767,6 +830,14 @@ export default function DictionaryPage() {
     router.push(`/capture?${params}`)
   }
 
+  // Recursive search — clicking a word inside a sentence or example looks it
+  // up directly instead of requiring the user to retype it.
+  function handleWordClick(word: string) {
+    setQ(word)
+    setActiveTab('words')
+    recordRecentSearch(word)
+  }
+
   // Multiple rows can be exact at once (e.g. the same short word defined in
   // several dialects) — group them into one dialect-sectioned card instead of
   // picking an arbitrary hero and burying the rest in "Also matches".
@@ -846,6 +917,8 @@ export default function DictionaryPage() {
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') recordRecentSearch(q) }}
+          onBlur={() => recordRecentSearch(q)}
           placeholder={searchPlaceholder}
           autoComplete="off"
           className="dict-search-input"
@@ -861,6 +934,40 @@ export default function DictionaryPage() {
           </button>
         )}
       </div>
+
+      {/* Recent searches — only before a query is active */}
+      {!searched && !q && recentSearches.length > 0 && (
+        <div>
+          <SectionHead title="Recent" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {recentSearches.slice(0, recentExpanded ? RECENT_PAGE_SIZE * 2 : RECENT_PAGE_SIZE).map(term => (
+              <button
+                key={term}
+                onClick={() => runRecentSearch(term)}
+                style={{
+                  padding: '6px 12px', borderRadius: 999,
+                  background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                  fontSize: 13, color: T.ink, cursor: 'pointer',
+                  fontFamily: '"JetBrains Mono", monospace',
+                }}
+              >
+                {term}
+              </button>
+            ))}
+          </div>
+          {!recentExpanded && recentSearches.length > RECENT_PAGE_SIZE && (
+            <button
+              onClick={() => setRecentExpanded(true)}
+              style={{
+                marginTop: 8, fontSize: 12, color: T.crimson,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              }}
+            >
+              Show more →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tab toggle — shown after first search */}
       {searched && (
@@ -956,6 +1063,7 @@ export default function DictionaryPage() {
                           saved={savedWordMap.has(wordKey(entry.rawAb, entry.dialectSections[0]?.dialect_name ?? ''))}
                           moeEnabled={moeEnabled}
                           klokahEnabled={klokahEnabled}
+                          onWordClick={handleWordClick}
                         />
                       ))}
                     </div>
@@ -982,7 +1090,7 @@ export default function DictionaryPage() {
                     </div>
                   )}
                   {exactWord && (
-                    <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} moeEnabled={moeEnabled} klokahEnabled={klokahEnabled} />
+                    <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} moeEnabled={moeEnabled} klokahEnabled={klokahEnabled} onWordClick={handleWordClick} />
                   )}
                   {exactGroup && (
                     <ExactMatchGroupCard entries={exactGroup} onSave={handleSave} onCapture={handleCapture} savedWordMap={savedWordMap} />
@@ -1068,7 +1176,7 @@ export default function DictionaryPage() {
                     return (
                       <Fragment key={s.id}>
                         {showDivider && <SectionHead title="Related" style={{ marginTop: 8 }} />}
-                        <SentenceCard s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} saved={savedAbSet.has(s.ab)} />
+                        <SentenceCard s={s} onSave={handleSaveSentence} onCapture={handleCaptureSentence} saved={savedAbSet.has(s.ab)} onWordClick={handleWordClick} />
                       </Fragment>
                     )
                   })}
