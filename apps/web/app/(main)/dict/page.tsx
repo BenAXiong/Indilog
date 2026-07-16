@@ -71,6 +71,22 @@ function wordKey(ab: string, dialect: string) {
   return `${dialect}|${ab}`
 }
 
+const SAVED_CHECK_CHUNK = 100
+
+// PostgREST's .in() embeds every value into the request URL — a search with
+// hundreds of results (e.g. a common phrase like "to kako" -> 241 sentences)
+// can build a URL long enough to 400. Chunk the lookup instead of sending it
+// as one request.
+async function fetchSavedByAb<T>(abs: string[], type: 'word' | 'sentence', selectCols: string): Promise<T[]> {
+  const db = createClient()
+  const chunks: string[][] = []
+  for (let i = 0; i < abs.length; i += SAVED_CHECK_CHUNK) chunks.push(abs.slice(i, i + SAVED_CHECK_CHUNK))
+  const results = await Promise.all(
+    chunks.map(chunk => db.from('ind_items').select(selectCols).in('ab', chunk).eq('type', type))
+  )
+  return results.flatMap(r => (r.data as T[] | null) ?? [])
+}
+
 // Word cards show dialect_name as a small label — Kilang always returns the
 // bare language name (e.g. "阿美語"), which just repeats what the header
 // already shows, so it's hidden entirely; ePark's real sub-dialects (e.g.
@@ -644,20 +660,16 @@ export default function DictionaryPage() {
   useEffect(() => {
     if (sentences.length === 0) { setSavedAbSet(new Map()); return }
     const abs = sentences.map(s => s.ab)
-    createClient().from('ind_items').select('id, ab').in('ab', abs).eq('type', 'sentence')
-      .then(({ data }) => {
-        if (data) setSavedAbSet(new Map(data.map((r: { id: string; ab: string }) => [r.ab, r.id])))
-      })
+    fetchSavedByAb<{ id: string; ab: string }>(abs, 'sentence', 'id, ab')
+      .then(data => setSavedAbSet(new Map(data.map(r => [r.ab, r.id]))))
   }, [sentences])
 
   // Pre-check which words are already saved in ind_items (keyed by ab+dialect — text alone collides across dialects)
   useEffect(() => {
     if (words.length === 0) { setSavedWordMap(new Map()); return }
     const abs = words.map(w => w.word_ab)
-    createClient().from('ind_items').select('id, ab, dialect').in('ab', abs).eq('type', 'word')
-      .then(({ data }) => {
-        if (data) setSavedWordMap(new Map(data.map((r: { id: string; ab: string; dialect: string | null }) => [wordKey(r.ab, r.dialect ?? ''), r.id])))
-      })
+    fetchSavedByAb<{ id: string; ab: string; dialect: string | null }>(abs, 'word', 'id, ab, dialect')
+      .then(data => setSavedWordMap(new Map(data.map(r => [wordKey(r.ab, r.dialect ?? ''), r.id]))))
   }, [words])
 
   useEffect(() => {
