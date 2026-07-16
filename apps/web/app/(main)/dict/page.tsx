@@ -31,6 +31,7 @@ type WordResult = {
   exact: boolean
   source?: 'epark' | 'moe'
   moeMatch?: 'contains' | 'similar' | 'altSpelling'
+  hasExamples?: boolean
 }
 
 // Small tag for how a Kilang/MoE row was found, beyond a literal headword match —
@@ -238,7 +239,7 @@ function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klo
           <div style={{ fontSize: 15.5, fontWeight: 500, color: T.ink, lineHeight: 1.4 }}>
             {word.word_ch}
           </div>
-          <ExpandToggleButton expanded={expanded} onClick={toggle} />
+          {word.hasExamples !== false && <ExpandToggleButton expanded={expanded} onClick={toggle} />}
         </div>
       </div>
 
@@ -402,6 +403,7 @@ type MergedEntry = {
   glid: string
   exact: boolean
   moeMatch?: 'contains' | 'similar' | 'altSpelling'
+  hasExamples: boolean
   dialectSections: { dialect_name: string; defs: string[] }[]
 }
 
@@ -463,7 +465,7 @@ function MergedEntryCard({ entry, onSave, onCapture, saved = false, moeEnabled, 
           <button onClick={() => onCapture(entry.ab, primaryDef)} title="Add context in Capture" style={btnStyle}>
             <Icon name="capture" size={14} strokeWidth={1.8} />
           </button>
-          <ExpandToggleButton expanded={expanded} onClick={toggle} />
+          {entry.hasExamples && <ExpandToggleButton expanded={expanded} onClick={toggle} />}
         </div>
       </div>
 
@@ -568,6 +570,14 @@ export default function DictionaryPage() {
 
   function runRecentSearch(term: string) {
     setQ(term)
+  }
+
+  function deleteRecentSearch(term: string) {
+    setRecentSearches(prev => {
+      const next = prev.filter(s => s !== term)
+      localStorage.setItem('ind_dict_recent_searches', JSON.stringify(next))
+      return next
+    })
   }
 
   // Live-update glid + dialect when changed from Settings/Dict
@@ -712,10 +722,11 @@ export default function DictionaryPage() {
     const map = new Map<string, MergedEntry>()
     for (const w of words) {
       const key = normKey(w.word_ab)
-      if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), rawAb: w.word_ab, glid: w.glid, exact: false, dialectSections: [] })
+      if (!map.has(key)) map.set(key, { ab: capitalize(w.word_ab), rawAb: w.word_ab, glid: w.glid, exact: false, hasExamples: false, dialectSections: [] })
       const e = map.get(key)!
       if (w.exact) e.exact = true
       if (w.moeMatch && !e.moeMatch) e.moeMatch = w.moeMatch
+      if (w.hasExamples) e.hasExamples = true
       let section = e.dialectSections.find(s => s.dialect_name === w.dialect_name)
       if (!section) {
         section = { dialect_name: w.dialect_name, defs: [] }
@@ -953,18 +964,37 @@ export default function DictionaryPage() {
           <SectionHead title="Recent" />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {recentSearches.slice(0, recentExpanded ? RECENT_PAGE_SIZE * 2 : RECENT_PAGE_SIZE).map(term => (
-              <button
+              <div
                 key={term}
-                onClick={() => runRecentSearch(term)}
                 style={{
-                  padding: '6px 12px', borderRadius: 999,
-                  background: T.paperHi, border: `1px solid ${T.lineSoft}`,
-                  fontSize: 13, color: T.ink, cursor: 'pointer',
-                  fontFamily: '"JetBrains Mono", monospace',
+                  display: 'flex', alignItems: 'center', gap: 2,
+                  borderRadius: 999, background: T.paperHi, border: `1px solid ${T.lineSoft}`,
+                  paddingRight: 4,
                 }}
               >
-                {term}
-              </button>
+                <button
+                  onClick={() => runRecentSearch(term)}
+                  style={{
+                    padding: '6px 4px 6px 12px', border: 'none', background: 'none',
+                    fontSize: 13, color: T.ink, cursor: 'pointer',
+                    fontFamily: '"JetBrains Mono", monospace',
+                  }}
+                >
+                  {term}
+                </button>
+                <button
+                  onClick={() => deleteRecentSearch(term)}
+                  title={`Remove "${term}" from recent searches`}
+                  aria-label={`Remove "${term}" from recent searches`}
+                  style={{
+                    width: 20, height: 20, borderRadius: 999, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: 'none', background: 'none', color: T.inkFaint, cursor: 'pointer',
+                  }}
+                >
+                  <Icon name="x" size={12} />
+                </button>
+              </div>
             ))}
           </div>
           {!recentExpanded && recentSearches.length > RECENT_PAGE_SIZE && (

@@ -80,6 +80,18 @@ export async function kilangFetch(keyword: string, exact: boolean): Promise<MoeR
     .map(toMoeRow)
 }
 
+// Cheap presence check (no cleanup/dedup) — used to decide whether a word's
+// expand chevron should show at all, without waiting on the full example fetch.
+export function moeRowHasExamples(row: MoeRow): boolean {
+  if (!row.examples_json) return false
+  try {
+    const parsed = JSON.parse(row.examples_json)
+    return Array.isArray(parsed) && parsed.length > 0
+  } catch {
+    return false
+  }
+}
+
 // MoE's own rows carry example sentences inline (examples_json) — id is the sentence
 // text itself so callers' own dedup-by-id naturally collapses the same example
 // when it's attached to several related word entries (e.g. a root and its derived forms).

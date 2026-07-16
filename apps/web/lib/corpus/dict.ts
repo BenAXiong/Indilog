@@ -12,6 +12,11 @@ export type WordRow = {
   // Kilang/MoE only — which mechanism found this row when it wasn't a literal
   // headword match. See docs/kilang-moe-api.md + apps/web/app/api/dict/search/route.ts.
   moeMatch?: 'contains' | 'similar' | 'altSpelling'
+  // Whether this word has any example sentences at all — lets the dict tab hide
+  // the expand chevron instead of showing it for every card regardless. `undefined`
+  // (not queried, e.g. searchWordsByCandidates) is treated as "unknown, show it"
+  // by callers, not as false.
+  hasExamples?: boolean
 }
 
 export type SentenceRow = {
@@ -56,7 +61,7 @@ export async function searchWords(
 
   let query = db
     .from('corpus_vocabulary')
-    .select('id, word_ab, word_ch, dialect_name, glid')
+    .select('id, word_ab, word_ch, dialect_name, glid, has_examples')
     .limit(200)
 
   const hasCJK = /[㐀-鿿]/.test(q)
@@ -90,6 +95,7 @@ export async function searchWords(
     dialect_name: row.dialect_name ?? '',
     glid:         row.glid ?? '',
     exact:        hasCJK ? (row.word_ch ?? '') === q : row.word_ab.toLowerCase() === qLower,
+    hasExamples:  row.has_examples ?? false,
   })).sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
 }
 

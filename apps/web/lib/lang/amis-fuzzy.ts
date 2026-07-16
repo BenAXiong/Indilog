@@ -46,6 +46,41 @@ export function makeMoeAltSpellings(word: string): string[] {
   return [...results]
 }
 
+// Amis casual romanization often drops (or adds) an epenthetic schwa /e/
+// between two consonants — e.g. "hemot" vs "hmot". Try both directions:
+// removing an existing e sitting between two consonants, and inserting one
+// into a consonant cluster. "ng" is a single consonant digraph, not a
+// cluster boundary, so it's excluded from both directions.
+const VOWELS = 'aeiou'
+function isConsonant(ch: string | undefined): ch is string {
+  return !!ch && !VOWELS.includes(ch) && ch !== "'"
+}
+function isNgDigraph(a: string, b: string): boolean {
+  return a === 'n' && b === 'g'
+}
+
+export function makeMoeSchwaVariants(word: string): string[] {
+  const chars = [...word]
+  const variants = new Set<string>()
+
+  // Omission: C-e-C -> CC
+  for (let i = 1; i < chars.length - 1; i++) {
+    if (chars[i] === 'e' && isConsonant(chars[i - 1]) && isConsonant(chars[i + 1])) {
+      variants.add(chars.slice(0, i).join('') + chars.slice(i + 1).join(''))
+    }
+  }
+
+  // Insertion: CC -> C-e-C
+  for (let i = 0; i < chars.length - 1; i++) {
+    if (isConsonant(chars[i]) && isConsonant(chars[i + 1]) && !isNgDigraph(chars[i], chars[i + 1])) {
+      variants.add(chars.slice(0, i + 1).join('') + 'e' + chars.slice(i + 1).join(''))
+    }
+  }
+
+  variants.delete(word)
+  return [...variants]
+}
+
 export function getMoeRecoveryLength(word: string): number {
   return word.replace(/'/g, '').length
 }
@@ -133,6 +168,10 @@ export function makeMoeFallbackCandidates(word: string): MoeCandidate[] {
     for (const repaired of makeMoeGlottalRepairs(baseWord)) add(repaired, baseScore + 2)
     for (const alt of alts) {
       for (const repaired of makeMoeGlottalRepairs(alt)) add(repaired, baseScore + 3)
+    }
+    for (const schwaVariant of makeMoeSchwaVariants(baseWord)) add(schwaVariant, baseScore + 2)
+    for (const alt of alts) {
+      for (const schwaVariant of makeMoeSchwaVariants(alt)) add(schwaVariant, baseScore + 3)
     }
   }
 

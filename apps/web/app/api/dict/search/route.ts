@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchWords, searchSentences, searchWordsByCandidates, isWordBoundaryMatch, type SentenceRow, type WordRow } from '@/lib/corpus/dict'
-import { kilangFetch, parseMoeExamples, stripAuthor, type MoeRow } from '@/lib/corpus/kilang'
+import { kilangFetch, parseMoeExamples, stripAuthor, moeRowHasExamples, type MoeRow } from '@/lib/corpus/kilang'
 import { makeMoeFallbackCandidates } from '@/lib/lang/amis-fuzzy'
 
 export const runtime = 'nodejs'
@@ -22,7 +22,7 @@ const cleanMoeDef = (s: string) =>
    .replace(/\s+/g, ' ').trim()
 
 type MoeMatchKind = 'contains' | 'similar' | 'altSpelling'
-type MoeMerged = { word_ab: string; defs: string[]; dialect_name: string; exact: boolean; matchKind?: MoeMatchKind }
+type MoeMerged = { word_ab: string; defs: string[]; dialect_name: string; exact: boolean; matchKind?: MoeMatchKind; hasExamples: boolean }
 
 function mergeMoeRow(merged: Map<string, MoeMerged>, row: MoeRow, qKey: string) {
   const ab = normMoeAb(row.word_ab)
@@ -34,12 +34,14 @@ function mergeMoeRow(merged: Map<string, MoeMerged>, row: MoeRow, qKey: string) 
     const def = row.definition ? cleanMoeDef(row.definition) : ''
     if (def && !entry.defs.includes(def)) entry.defs.push(def)
     if (isExact) entry.exact = true
+    if (moeRowHasExamples(row)) entry.hasExamples = true
   } else {
     merged.set(key, {
       word_ab: ab,
       defs: row.definition ? [cleanMoeDef(row.definition)] : [],
       dialect_name: stripAuthor(row.dialect_name),
       exact: isExact,
+      hasExamples: moeRowHasExamples(row),
     })
   }
 }
@@ -79,6 +81,7 @@ function toWordRows(entries: [string, MoeMerged][]): WordRow[] {
     exact:        e.exact,
     source:       'moe' as const,
     moeMatch:     e.matchKind,
+    hasExamples:  e.hasExamples,
   }))
 }
 
