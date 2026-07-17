@@ -27,11 +27,10 @@ type CardRowProps = {
   isSelected:        boolean
   onSelect:          () => void
   onLongPressSelect: () => void
-  isOverlayOpen:     boolean
   onOpenOverlay:     (mode: OverlayMode) => void
 }
 
-export function CardRow({ card, onUpdate, onRemove, selectionMode, isSelected, onSelect, onLongPressSelect, isOverlayOpen, onOpenOverlay }: CardRowProps) {
+export function CardRow({ card, onUpdate, onRemove, selectionMode, isSelected, onSelect, onLongPressSelect, onOpenOverlay }: CardRowProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
 
@@ -281,20 +280,6 @@ export function CardRow({ card, onUpdate, onRemove, selectionMode, isSelected, o
             </span>
           )}
         </div>
-      </button>
-
-      {/* Preview icon button — opens the overlay in recall mode */}
-      <button
-        onClick={e => { e.stopPropagation(); onOpenOverlay('recall') }}
-        style={{
-          flexShrink: 0, width: 40,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: isOverlayOpen ? T.ink : 'none', border: 'none',
-          borderLeft: `1px solid ${T.lineSoft}`,
-          cursor: 'pointer',
-        }}
-      >
-        <Icon name="card" size={14} strokeWidth={1.6} color={isOverlayOpen ? T.cream : T.inkMute} />
       </button>
 
       {/* Audio button — full height, crimson when available */}

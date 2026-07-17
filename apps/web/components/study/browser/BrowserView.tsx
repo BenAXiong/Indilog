@@ -278,7 +278,6 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
               isSelected={selectedIds.has(card.id)}
               onSelect={() => toggleSelect(card.id)}
               onLongPressSelect={() => { setSelectionMode(true); setSelectedIds(new Set([card.id])) }}
-              isOverlayOpen={overlayCardId === card.id}
               onOpenOverlay={mode => { setOverlayCardId(card.id); setOverlayMode(mode) }}
             />
           ))}
