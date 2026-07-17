@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import { FlagPicker } from '@/components/study/FlagPicker'
-import BrowserView from '@/components/study/BrowserView'
+import BrowserView from '@/components/study/browser/BrowserView'
 import { flagColorHex } from '@/lib/db/srs/flags'
 import {
   listVideoCollections, listCollectionVideoCards, mergeVideoCards,

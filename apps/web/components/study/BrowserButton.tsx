@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
-import BrowserView from './BrowserView'
+import BrowserView from './browser/BrowserView'
 
 export default function BrowserButton() {
   const [open, setOpen] = useState(false)
