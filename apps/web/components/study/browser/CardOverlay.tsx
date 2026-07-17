@@ -5,32 +5,36 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
   updateNoteFields, resetCardEase, deleteNote,
-  suspendCard, unsuspendCard, setFlagColor,
+  suspendCard, unsuspendCard, setFlagColor, batchSetDialect, batchSetSourceId,
   type BrowserCard,
 } from '@/lib/db/srs/browser'
 import { setTargetWord } from '@/lib/db/srs/flashcards'
 import { getLanguage } from '@/lib/languages'
+import { getGlid } from '@/lib/lang/lang-bridge'
+import { GLID_FAMILIES, shortDialectLabel } from '@/lib/lang/dialects'
 import { computeStrength, computeMasteryGrade } from '@/lib/db/srs/schedule'
-import { FlagPicker } from './pickers'
+import { getSessionUser } from '@/lib/supabase/session'
+import { createClient } from '@/lib/supabase/client'
+import { FlagPicker, ChipPicker } from './pickers'
 
 export type OverlayMode = 'recall' | 'edit'
 
 const SWIPE_NAV_PX = 60
 
 type CardOverlayProps = {
-  card:         BrowserCard
-  mode:         OverlayMode
-  onModeChange: (m: OverlayMode) => void
-  onClose:      () => void
-  hasPrev:      boolean
-  hasNext:      boolean
-  onNavigate:   (dir: -1 | 1) => void
-  onUpdate:     (patch: Partial<BrowserCard>) => void
-  onRemove:     () => void
-  sourceName?:  string
+  card:          BrowserCard
+  mode:          OverlayMode
+  onModeChange:  (m: OverlayMode) => void
+  onClose:       () => void
+  hasPrev:       boolean
+  hasNext:       boolean
+  onNavigate:    (dir: -1 | 1) => void
+  onUpdate:      (patch: Partial<BrowserCard>) => void
+  onRemove:      () => void
+  sourceOptions: { value: string; label: string }[]
 }
 
-export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNext, onNavigate, onUpdate, onRemove, sourceName }: CardOverlayProps) {
+export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNext, onNavigate, onUpdate, onRemove, sourceOptions }: CardOverlayProps) {
   // Edit-mode fields
   const [editFront,  setEditFront]  = useState(card.ab)
   const [editBack,   setEditBack]   = useState(card.zh ?? '')
@@ -53,7 +57,36 @@ export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNex
 
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
+  // Dialect / source / tags
+  const [editDialect,  setEditDialect]  = useState(card.dialect ?? '')
+  const [editSourceId, setEditSourceId] = useState(card.source_id ?? '')
+  const [editTags,     setEditTags]     = useState<string[]>(card.tags ?? [])
+  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [addingTag,     setAddingTag]     = useState(false)
+  const [newTagInput,   setNewTagInput]   = useState('')
+
+  // Audio re-recording — ported from Capture's recorder (app/(main)/capture/page.tsx),
+  // duplicated rather than shared since this codebase doesn't factor out its
+  // hand-rolled interaction code across screens (see e.g. the three independent
+  // swipe implementations elsewhere).
+  const [recording,       setRecording]       = useState(false)
+  const [hasRecording,    setHasRecording]    = useState(false) // a NEW local recording, not yet saved
+  const [audioBlobUrl,    setAudioBlobUrl]    = useState<string | null>(null)
+  const [audioRemoved,    setAudioRemoved]    = useState(false) // explicit clear of the EXISTING saved audio
+  const [audioUploadFail, setAudioUploadFail] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef   = useRef<Blob[]>([])
+  const audioBlobUrlRef  = useRef<string | null>(null)
+  const discardingRef    = useRef(false)
+
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    getSessionUser().then(u => setUserId(u?.id ?? null))
+    const stored = localStorage.getItem('ind_custom_tags')
+    if (stored) { try { setAvailableTags(JSON.parse(stored)) } catch {} }
+  }, [])
 
   // Re-seed edit fields when the underlying card identity changes (prev/next
   // nav while the overlay stays open) — not on every keystroke.
@@ -61,7 +94,10 @@ export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNex
     setEditFront(card.ab); setEditBack(card.zh ?? '')
     setEditNotes(card.notes ?? ''); setEditPlace(card.place_heard ?? '')
     setEditTarget(card.target_word ?? '')
+    setEditDialect(card.dialect ?? ''); setEditSourceId(card.source_id ?? '')
+    setEditTags(card.tags ?? [])
     setConfirmDelete(false); setLookupResults(null); setShowDiscardConfirm(false)
+    discardRecording(); setAudioRemoved(false)
   }, [card.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recall audio/video — reload whenever the card changes or recall mode is entered
@@ -82,13 +118,20 @@ export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNex
   useEffect(() => () => {
     audioRef.current?.pause()
     recallAudioRef.current?.pause()
+    if (audioBlobUrlRef.current) URL.revokeObjectURL(audioBlobUrlRef.current)
   }, [])
+
+  const tagsChanged = editTags.length !== (card.tags?.length ?? 0) || editTags.some(t => !card.tags?.includes(t))
 
   const dirty = editFront !== card.ab
     || editBack !== (card.zh ?? '')
     || editNotes !== (card.notes ?? '')
     || editPlace !== (card.place_heard ?? '')
     || editTarget !== (card.target_word ?? '')
+    || editDialect !== (card.dialect ?? '')
+    || editSourceId !== (card.source_id ?? '')
+    || tagsChanged
+    || hasRecording || audioRemoved
 
   function handleScrimClick() {
     if (dirty) { setShowDiscardConfirm(true); return }
@@ -99,36 +142,132 @@ export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNex
     const f = editFront.trim(), b = editBack.trim()
     if (!f) return
     setSaving(true)
-    const newTarget = editTarget.trim() || null
-    const targetChanged = newTarget !== (card.target_word || null)
-    await updateNoteFields(card.id, {
-      ab: f, zh: b || null,
-      notes: editNotes.trim() || null,
-      place_heard: editPlace.trim() || null,
-    })
-    const patch: Partial<BrowserCard> = {
+
+    const updatePayload: Parameters<typeof updateNoteFields>[1] = {
       ab: f, zh: b || null,
       notes: editNotes.trim() || null,
       place_heard: editPlace.trim() || null,
     }
-    if (targetChanged) {
+    const patch: Partial<BrowserCard> = { ...updatePayload }
+
+    const newTarget = editTarget.trim() || null
+    if (newTarget !== (card.target_word || null)) {
       await setTargetWord(card.id, newTarget)
       patch.target_word = newTarget
     }
+
+    if (tagsChanged) {
+      updatePayload.tags = editTags.length ? editTags : null
+      patch.tags = updatePayload.tags
+    }
+
+    if (hasRecording && audioBlobUrl && userId) {
+      try {
+        const supabase = createClient()
+        const resp = await fetch(audioBlobUrl)
+        const blob = await resp.blob()
+        const path = `${userId}/${Date.now()}.webm`
+        const { data: up, error: upErr } = await supabase.storage.from('ind-audio').upload(path, blob, { contentType: 'audio/webm' })
+        if (!upErr && up) {
+          const { data: { publicUrl } } = supabase.storage.from('ind-audio').getPublicUrl(up.path)
+          updatePayload.audio = publicUrl
+          patch.audio = publicUrl
+        } else {
+          setAudioUploadFail(true)
+        }
+      } catch { setAudioUploadFail(true) }
+    } else if (audioRemoved) {
+      updatePayload.audio = null
+      patch.audio = null
+    }
+
+    await updateNoteFields(card.id, updatePayload)
+
+    if (editDialect !== (card.dialect ?? '')) {
+      await batchSetDialect([card.id], editDialect || null)
+      patch.dialect = editDialect || null
+    }
+    if (editSourceId !== (card.source_id ?? '')) {
+      await batchSetSourceId([card.id], editSourceId || null)
+      patch.source_id = editSourceId || null
+    }
+
     onUpdate(patch)
+    setHasRecording(false); setAudioRemoved(false)
     setSaving(false)
   }
 
+  // Plays whichever audio is "current": a just-made local recording takes
+  // priority, else the saved audio (unless the user explicitly removed it).
+  const playbackUrl = hasRecording ? audioBlobUrl : (audioRemoved ? null : card.audio)
+
   function handleAudio() {
-    if (!card.audio) return
+    if (!playbackUrl) return
     if (playing && audioRef.current) {
       audioRef.current.pause(); audioRef.current.currentTime = 0; setPlaying(false); return
     }
-    const a = new Audio(card.audio)
+    const a = new Audio(playbackUrl)
     a.onended = () => setPlaying(false)
     a.play().catch(() => {})
     audioRef.current = a
     setPlaying(true)
+  }
+
+  async function startRecording() {
+    setAudioUploadFail(false)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioChunksRef.current = []
+      const mr = new MediaRecorder(stream)
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      mr.onstop = () => {
+        stream.getTracks().forEach(t => t.stop())
+        if (discardingRef.current) { discardingRef.current = false; return }
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        if (audioBlobUrlRef.current) URL.revokeObjectURL(audioBlobUrlRef.current)
+        audioBlobUrlRef.current = URL.createObjectURL(blob)
+        setAudioBlobUrl(audioBlobUrlRef.current)
+        setHasRecording(true)
+      }
+      mr.start()
+      mediaRecorderRef.current = mr
+      setRecording(true)
+    } catch {
+      // Mic permission denied or MediaRecorder unavailable
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop()
+    mediaRecorderRef.current = null
+    setRecording(false)
+  }
+
+  function discardRecording() {
+    discardingRef.current = true
+    mediaRecorderRef.current?.stop()
+    mediaRecorderRef.current = null
+    if (audioBlobUrlRef.current) { URL.revokeObjectURL(audioBlobUrlRef.current); audioBlobUrlRef.current = null }
+    setRecording(false)
+    setHasRecording(false)
+    setAudioBlobUrl(null)
+    setPlaying(false)
+  }
+
+  function toggleTag(tag: string) {
+    setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+  }
+
+  function addTagInline() {
+    const name = newTagInput.trim()
+    setNewTagInput(''); setAddingTag(false)
+    if (!name) return
+    if (!availableTags.includes(name)) {
+      const next = [...availableTags, name]
+      setAvailableTags(next)
+      localStorage.setItem('ind_custom_tags', JSON.stringify(next))
+    }
+    if (!editTags.includes(name)) setEditTags(prev => [...prev, name])
   }
 
   async function handleResetEase() {
@@ -197,6 +336,11 @@ export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNex
   }
 
   const isSuspended = !!card.suspended_at
+
+  // Canonical per-language dialect list (not the data-driven filter subset —
+  // editing needs the full set, including dialects no other card has yet)
+  const glid = getGlid(card.language) ?? '01'
+  const dialectOptions = (GLID_FAMILIES[glid] ?? []).map(d => ({ value: d, label: shortDialectLabel(d, glid) }))
 
   const navBtn = (enabled: boolean): React.CSSProperties => ({
     width: 40, height: 40, borderRadius: 999, border: 'none',
@@ -360,6 +504,95 @@ export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNex
                 />
               </div>
 
+              {/* Audio */}
+              <div>
+                <label style={labelStyle}>Audio</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {playbackUrl && (
+                    <button onClick={handleAudio} style={iconBtn}>
+                      <Icon name={playing ? 'stop' : 'speaker'} size={15} strokeWidth={1.8} color={T.crimson} />
+                    </button>
+                  )}
+                  {playbackUrl && (
+                    <button
+                      onClick={() => { if (hasRecording) discardRecording(); else setAudioRemoved(true) }}
+                      aria-label="Remove audio"
+                      style={iconBtn}
+                    >
+                      <Icon name="trash" size={14} strokeWidth={1.8} color={T.inkFaint} />
+                    </button>
+                  )}
+                  <button
+                    onClick={recording ? stopRecording : startRecording}
+                    aria-label={recording ? 'Stop recording' : playbackUrl ? 'Re-record' : 'Record audio'}
+                    style={{
+                      ...iconBtn,
+                      color:       recording ? T.crimson : hasRecording ? T.sage : T.inkSoft,
+                      borderColor: recording ? T.crimson : hasRecording ? '#D2D8AE' : T.lineSoft,
+                      background:  recording ? T.crimsonBg : hasRecording ? T.sageBg : T.paper,
+                    }}
+                  >
+                    <Icon name={recording ? 'stop' : 'mic'} size={15} strokeWidth={1.8}
+                      color={recording ? T.crimson : hasRecording ? T.sage : T.inkSoft} />
+                  </button>
+                </div>
+                {audioUploadFail && (
+                  <div style={{ fontSize: 11.5, color: T.crimson, background: T.crimsonBg, border: `1px solid #EFCAB8`, borderRadius: 8, padding: '5px 10px', marginTop: 6 }}>
+                    Audio upload failed — saved without audio. Re-record and save again.
+                  </div>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label style={labelStyle}>Tags</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+                  {availableTags.map(tag => {
+                    const sel = editTags.includes(tag)
+                    return (
+                      <button key={tag} onClick={() => toggleTag(tag)} style={{
+                        padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                        background: sel ? T.crimsonBg : T.paper, color: sel ? T.crimson : T.inkMute,
+                        border: `1px solid ${sel ? T.crimson : T.lineSoft}`,
+                      }}>{tag}</button>
+                    )
+                  })}
+                  {addingTag ? (
+                    <input
+                      autoFocus value={newTagInput} onChange={e => setNewTagInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') addTagInline(); if (e.key === 'Escape') { setNewTagInput(''); setAddingTag(false) } }}
+                      onBlur={addTagInline}
+                      placeholder="tag name…"
+                      style={{ border: `1px solid ${T.crimson}`, borderRadius: 999, padding: '3px 10px', fontSize: 12, color: T.ink, background: T.crimsonBg, outline: 'none', width: 90, fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    <button onClick={() => setAddingTag(true)} style={{
+                      display: 'flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 999,
+                      background: 'none', border: `1px dashed ${T.lineSoft}`, fontSize: 12, color: T.inkFaint, cursor: 'pointer',
+                    }}>
+                      <Icon name="plus" size={11} strokeWidth={2.2} color={T.inkFaint} /> Add
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Dialect — full canonical per-language list (not the data-driven
+                  filter subset), since you can set a dialect no other card has yet */}
+              {dialectOptions.length > 0 && (
+                <div>
+                  <label style={labelStyle}>Dialect</label>
+                  <ChipPicker options={dialectOptions} current={editDialect || null} onChange={v => setEditDialect(v ?? '')} />
+                </div>
+              )}
+
+              {/* Source */}
+              {sourceOptions.length > 0 && (
+                <div>
+                  <label style={labelStyle}>Source</label>
+                  <ChipPicker options={sourceOptions} current={editSourceId || null} onChange={v => setEditSourceId(v ?? '')} />
+                </div>
+              )}
+
               {/* Save / cancel */}
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={handleSave} disabled={saving} style={actionBtn(T.crimson, saving)}>
@@ -368,32 +601,15 @@ export function CardOverlay({ card, mode, onModeChange, onClose, hasPrev, hasNex
                 <button onClick={onClose} style={ghostBtn}>Cancel</button>
               </div>
 
-              {/* Info strip */}
+              {/* Info strip — structural, read-only (dialect/source/tags are
+                  editable above instead of duplicated here as static badges) */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>
-                {[getLanguage(card.language)?.name ?? card.language, card.dialect, card.note_type, card.note_source].filter(Boolean).map((v, i) => (
+                {[getLanguage(card.language)?.name ?? card.language, card.note_type, card.note_source].filter(Boolean).map((v, i) => (
                   <span key={i} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 6px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
                     {v}
                   </span>
                 ))}
-                {sourceName && (
-                  <span style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', padding: '2px 6px', borderRadius: 4, background: T.amberBg, color: T.amber, border: `1px solid ${T.amber}40` }}>
-                    {sourceName}
-                  </span>
-                )}
-                {card.tags?.map(t => (
-                  <span key={t} style={{ fontSize: 10, fontFamily: '"JetBrains Mono", monospace', color: T.inkMute, padding: '2px 6px', borderRadius: 4, background: T.paper, border: `1px solid ${T.lineSoft}` }}>
-                    {t}
-                  </span>
-                ))}
               </div>
-
-              {/* Audio */}
-              {card.audio && (
-                <button onClick={handleAudio} style={{ ...ghostBtn, display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content' }}>
-                  <Icon name={playing ? 'stop' : 'speaker'} size={13} strokeWidth={1.8} />
-                  {playing ? 'Stop' : 'Play audio'}
-                </button>
-              )}
 
               <div style={{ height: 1, background: T.lineSoft }} />
 
@@ -555,4 +771,10 @@ const ghostBtn: React.CSSProperties = {
   height: 34, padding: '0 12px', borderRadius: 8,
   border: `1px solid ${T.lineSoft}`, background: T.paperHi,
   color: T.inkSoft, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+}
+
+const iconBtn: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: 9,
+  background: T.paper, borderWidth: 1, borderStyle: 'solid', borderColor: T.lineSoft,
+  color: T.inkSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
 }

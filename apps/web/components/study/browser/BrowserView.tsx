@@ -299,7 +299,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
             onNavigate={dir => setOverlayCardId(filtered[overlayIndex + dir].id)}
             onUpdate={patch => updateCard(overlayCard.id, patch)}
             onRemove={() => removeCard(overlayCard.id)}
-            sourceName={overlayCard.source_id ? sourceNames.get(overlayCard.source_id) : undefined}
+            sourceOptions={batchSourceOptions}
           />
         )
       })()}
