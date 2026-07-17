@@ -60,9 +60,6 @@ const sectionLabelStyle: React.CSSProperties = {
 export type FilterBarProps = {
   search: string
   onSearchChange: (v: string) => void
-  selectionMode: boolean
-  onToggleSelection: () => void
-
   fSource: string
   onFSourceChange: (v: string) => void
   availSources: string[]
@@ -100,7 +97,7 @@ export type FilterBarProps = {
 
 export function FilterBar(props: FilterBarProps) {
   const {
-    search, onSearchChange, selectionMode, onToggleSelection,
+    search, onSearchChange,
     fSource, onFSourceChange, availSources, deckSortMode, onDeckSortModeChange,
     filtersOpen, onToggleFiltersOpen,
     fLanguages, onFLanguagesChange, availLanguages,
@@ -142,32 +139,21 @@ export function FilterBar(props: FilterBarProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-      {/* Search + Select */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <Icon name="search" size={15} color={T.inkMute} />
-          </div>
-          <input
-            placeholder="Search cards…"
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            style={{
-              width: '100%', padding: '10px 12px 10px 36px',
-              borderRadius: 10, background: T.paperHi, border: `1px solid ${T.line}`,
-              fontSize: 14, color: T.ink, fontFamily: 'inherit', boxSizing: 'border-box',
-            }}
-          />
+      {/* Search — long-press a row to select, see CardRow */}
+      <div style={{ position: 'relative' }}>
+        <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <Icon name="search" size={15} color={T.inkMute} />
         </div>
-        <button onClick={onToggleSelection} style={{
-          height: 40, padding: '0 12px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-          background: selectionMode ? T.ink : T.paperHi,
-          border: `1px solid ${selectionMode ? T.ink : T.line}`,
-          color: selectionMode ? T.cream : T.inkSoft,
-          cursor: 'pointer', flexShrink: 0,
-        }}>
-          {selectionMode ? 'Cancel' : 'Select'}
-        </button>
+        <input
+          placeholder="Search cards…"
+          value={search}
+          onChange={e => onSearchChange(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px 10px 36px',
+            borderRadius: 10, background: T.paperHi, border: `1px solid ${T.line}`,
+            fontSize: 14, color: T.ink, fontFamily: 'inherit', boxSizing: 'border-box',
+          }}
+        />
       </div>
 
       {/* Source/deck — always visible, promoted, with a companion sort-mode row */}

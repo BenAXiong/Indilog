@@ -14,23 +14,32 @@ import { formatDays, computeStrength, computeMasteryGrade } from '@/lib/db/srs/s
 import { flagColorHex } from '@/lib/db/srs/flags'
 import { FlagPicker } from './pickers'
 
+// ─── Row swipe / long-press gesture tuning ─────────────────────────────────────
+
+const LONG_PRESS_MS      = 480
+const JITTER_PX          = 10   // movement below this is still a tap/hold, not a drag
+const SWIPE_REVEAL_PX    = 70   // drag past this distance commits to open/closed
+const RIGHT_STRIP_WIDTH  = 108  // swipe-left reveals this (delete/suspend)
+const LEFT_STRIP_WIDTH   = 200  // swipe-right reveals this (flag picker — 5 colors + clear)
+
 // ─── Card row ─────────────────────────────────────────────────────────────────
 
 type CardRowProps = {
-  card:           BrowserCard
-  expanded:       boolean
-  onToggle:       () => void
-  onUpdate:       (patch: Partial<BrowserCard>) => void
-  onRemove:       () => void
-  selectionMode:  boolean
-  isSelected:     boolean
-  onSelect:       () => void
-  sourceName?:    string
-  isPreviewOpen:  boolean
-  onOpenPreview:  () => void
+  card:              BrowserCard
+  expanded:          boolean
+  onToggle:          () => void
+  onUpdate:          (patch: Partial<BrowserCard>) => void
+  onRemove:          () => void
+  selectionMode:     boolean
+  isSelected:        boolean
+  onSelect:          () => void
+  onLongPressSelect: () => void
+  sourceName?:       string
+  isPreviewOpen:     boolean
+  onOpenPreview:     () => void
 }
 
-export function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, isSelected, onSelect, sourceName, isPreviewOpen, onOpenPreview }: CardRowProps) {
+export function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, isSelected, onSelect, onLongPressSelect, sourceName, isPreviewOpen, onOpenPreview }: CardRowProps) {
   const [editFront,  setEditFront]  = useState(card.ab)
   const [editBack,   setEditBack]   = useState(card.zh ?? '')
   const [editNotes,  setEditNotes]  = useState(card.notes ?? '')
@@ -44,7 +53,99 @@ export function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectio
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
 
-  useEffect(() => () => { audioRef.current?.pause() }, [])
+  // Swipe-to-reveal (left → delete/suspend, right → flag) + long-press-to-select.
+  // `revealed` is the settled state; `liveX` is non-null only while a drag is in
+  // progress, so the foreground can track the finger without fighting the
+  // settle transition. Long-press fires from a ref-based timer so it isn't
+  // reset by the re-renders the drag itself causes.
+  const [revealed, setRevealed] = useState<'none' | 'left' | 'right'>('none')
+  const [liveX, setLiveX] = useState<number | null>(null)
+  const gestureRef = useRef({
+    startX: 0, startY: 0, baseX: 0, dragging: false, longPressFired: false,
+    longPressTimer: null as ReturnType<typeof setTimeout> | null,
+  })
+
+  useEffect(() => () => {
+    audioRef.current?.pause()
+    if (gestureRef.current.longPressTimer) clearTimeout(gestureRef.current.longPressTimer)
+  }, [])
+
+  // Entering selection mode (from a long-press on any row) hides every row's
+  // reveal strips — reset so a still-open row doesn't end up visually shifted
+  // with nothing behind it.
+  useEffect(() => {
+    if (selectionMode) { setRevealed('none'); setLiveX(null) }
+  }, [selectionMode])
+
+  function baseXFor(r: 'none' | 'left' | 'right') {
+    return r === 'left' ? -RIGHT_STRIP_WIDTH : r === 'right' ? LEFT_STRIP_WIDTH : 0
+  }
+
+  function gestureStart(x: number, y: number) {
+    if (selectionMode) return
+    gestureRef.current.startX = x
+    gestureRef.current.startY = y
+    gestureRef.current.baseX = baseXFor(revealed)
+    gestureRef.current.dragging = false
+    gestureRef.current.longPressFired = false
+    if (gestureRef.current.longPressTimer) clearTimeout(gestureRef.current.longPressTimer)
+    gestureRef.current.longPressTimer = setTimeout(() => {
+      gestureRef.current.longPressFired = true
+      gestureRef.current.longPressTimer = null
+      onLongPressSelect()
+    }, LONG_PRESS_MS)
+  }
+
+  function gestureMove(x: number, y: number) {
+    if (selectionMode) return
+    const dx = x - gestureRef.current.startX
+    const dy = y - gestureRef.current.startY
+    if (!gestureRef.current.dragging) {
+      if (Math.abs(dx) < JITTER_PX && Math.abs(dy) < JITTER_PX) return
+      if (Math.abs(dy) > Math.abs(dx)) return // vertical scroll — let it through, don't hijack
+      gestureRef.current.dragging = true
+      if (gestureRef.current.longPressTimer) { clearTimeout(gestureRef.current.longPressTimer); gestureRef.current.longPressTimer = null }
+    }
+    const raw = gestureRef.current.baseX + dx
+    setLiveX(Math.max(-RIGHT_STRIP_WIDTH - 20, Math.min(LEFT_STRIP_WIDTH + 20, raw)))
+  }
+
+  // `finalX` is read directly from the ending touch/mouse event rather than
+  // from `liveX` state — avoids depending on a state closure staying fresh
+  // across the touchmove → touchend handoff, matching the ref-based idiom
+  // the rest of the app's hand-rolled swipe code already uses.
+  function gestureEnd(finalX?: number, e?: { preventDefault?: () => void }) {
+    if (gestureRef.current.longPressTimer) { clearTimeout(gestureRef.current.longPressTimer); gestureRef.current.longPressTimer = null }
+    if (gestureRef.current.longPressFired) {
+      e?.preventDefault?.() // suppress the ghost click that follows a held touch
+      setLiveX(null)
+      return
+    }
+    if (gestureRef.current.dragging && finalX !== undefined) {
+      const raw = gestureRef.current.baseX + (finalX - gestureRef.current.startX)
+      const clamped = Math.max(-RIGHT_STRIP_WIDTH - 20, Math.min(LEFT_STRIP_WIDTH + 20, raw))
+      if (clamped <= -SWIPE_REVEAL_PX)      setRevealed('left')
+      else if (clamped >= SWIPE_REVEAL_PX)  setRevealed('right')
+      else                                   setRevealed('none')
+    }
+    setLiveX(null)
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    gestureStart(e.clientX, e.clientY)
+    const onMove = (ev: MouseEvent) => gestureMove(ev.clientX, ev.clientY)
+    const onUp = (ev: MouseEvent) => { gestureEnd(ev.clientX); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  function handleRowClick() {
+    if (gestureRef.current.longPressFired) { gestureRef.current.longPressFired = false; return }
+    if (revealed !== 'none') { setRevealed('none'); return }
+    selectionMode ? onSelect() : onToggle()
+  }
+
+  const displayX = liveX !== null ? liveX : baseXFor(revealed)
 
   useEffect(() => {
     if (expanded) {
@@ -143,17 +244,71 @@ export function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectio
     onUpdate({ flag_color: color })
   }
 
+  const rowBg = isSelected ? T.crimsonBg : isSuspended ? T.paper : T.paperHi
+
   return (
     <div style={{
-      background: isSelected ? T.crimsonBg : isSuspended ? T.paper : T.paperHi,
+      background: rowBg,
       border: `1px solid ${isSelected ? '#EFCAB8' : flagHex ? flagHex + '55' : isSuspended ? T.line : T.lineSoft}`,
       borderRadius: 12, overflow: 'hidden',
       boxShadow: '0 1px 0 rgba(255,255,255,0.5) inset',
       opacity: isSuspended ? 0.72 : 1,
     }}>
-      {/* Collapsed row */}
-      <div style={{ display: 'flex', alignItems: 'stretch' }}>
-      <button onClick={selectionMode ? onSelect : onToggle} style={{
+      {/* Gesture container — bounds the reveal strips to just the collapsed
+          row's height so they don't bleed behind the edit panel below it */}
+      <div style={{ position: 'relative' }}>
+      {/* Swipe-right reveal — inline flag picker */}
+      {!selectionMode && (
+        <div style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: LEFT_STRIP_WIDTH,
+          display: 'flex', alignItems: 'center', gap: 4, padding: '0 12px',
+          background: T.paperHi,
+        }}>
+          <FlagPicker current={card.flag_color} onChange={color => { handleFlagChange(color); setRevealed('none') }} />
+        </div>
+      )}
+
+      {/* Swipe-left reveal — delete / suspend */}
+      {!selectionMode && (
+        <div style={{
+          position: 'absolute', right: 0, top: 0, bottom: 0, width: RIGHT_STRIP_WIDTH,
+          display: 'flex', alignItems: 'stretch',
+        }}>
+          <button
+            onClick={() => { setRevealed('none'); handleSuspendToggle() }}
+            style={{
+              flex: 1, background: T.paperHi, border: 'none', cursor: 'pointer',
+              fontSize: 11.5, fontWeight: 600, color: T.inkSoft,
+            }}
+          >
+            {isSuspended ? 'Unsuspend' : 'Suspend'}
+          </button>
+          <button
+            onClick={() => { setRevealed('none'); if (!expanded) onToggle(); setConfirmDelete(true) }}
+            style={{
+              flex: 1, background: T.crimson, border: 'none', cursor: 'pointer',
+              fontSize: 11.5, fontWeight: 600, color: '#fff',
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+
+      {/* Collapsed row — foreground; slides to reveal the strips above */}
+      <div
+        onTouchStart={e => gestureStart(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchMove={e => gestureMove(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchEnd={e => gestureEnd(e.changedTouches[0]?.clientX, e)}
+        onMouseDown={handleMouseDown}
+        style={{
+          display: 'flex', alignItems: 'stretch', position: 'relative', background: rowBg,
+          transform: `translateX(${displayX}px)`,
+          transition: liveX !== null ? 'none' : 'transform 0.2s ease',
+          touchAction: 'pan-y',
+        }}
+      >
+      <button onClick={handleRowClick} style={{
         flex: 1, minWidth: 0, padding: '11px 12px',
         display: 'flex', alignItems: 'flex-start', gap: 9,
         background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -241,6 +396,7 @@ export function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectio
           color={card.audio ? (playing ? T.crimsonDp : T.crimson) : T.lineSoft}
         />
       </button>
+      </div>
       </div>
 
       {/* Edit panel */}

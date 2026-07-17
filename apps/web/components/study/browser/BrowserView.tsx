@@ -244,8 +244,6 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
 
       <FilterBar
         search={search} onSearchChange={setSearch}
-        selectionMode={selectionMode}
-        onToggleSelection={() => { setSelectionMode(v => !v); setSelectedIds(new Set()); setExpandedId(null) }}
         fSource={fSource} onFSourceChange={setFSource} availSources={availSources}
         deckSortMode={deckSortMode} onDeckSortModeChange={setDeckSortMode}
         filtersOpen={filtersOpen} onToggleFiltersOpen={() => setFiltersOpen(v => !v)}
@@ -306,6 +304,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
               selectionMode={selectionMode}
               isSelected={selectedIds.has(card.id)}
               onSelect={() => toggleSelect(card.id)}
+              onLongPressSelect={() => { setSelectionMode(true); setSelectedIds(new Set([card.id])) }}
               sourceName={card.source_id ? sourceNames.get(card.source_id) : undefined}
               isPreviewOpen={previewId === card.id}
               onOpenPreview={() => setPreviewId(card.id)}
@@ -470,6 +469,14 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px' }}>
+            {/* Exit selection mode entirely — long-press is now the only entry
+                point (no header toggle), so this is the only way back out */}
+            <button onClick={exitSelectionMode} style={{
+              fontSize: 12, fontWeight: 600, color: T.inkMute, background: 'none', border: 'none',
+              cursor: 'pointer', padding: 0, flexShrink: 0,
+            }}>
+              Done
+            </button>
             {/* Select all / count */}
             <button onClick={() => setSelectedIds(allSelected ? new Set() : new Set(filtered.map(c => c.id)))} style={{
               fontSize: 12, fontWeight: 600, color: T.crimson, background: 'none', border: 'none',
