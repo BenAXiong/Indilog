@@ -164,7 +164,10 @@ export function sortBrowserCards(cards: BrowserCard[], sort: BrowserSort): Brows
 
 export async function updateNoteFields(
   noteId: string,
-  patch: Partial<{ ab: string; zh: string | null; notes: string | null; place_heard: string | null }>
+  patch: Partial<{
+    ab: string; zh: string | null; notes: string | null; place_heard: string | null
+    audio: string | null; tags: string[] | null
+  }>
 ): Promise<void> {
   const supabase = createClient()
   const clean: Record<string, unknown> = {}
