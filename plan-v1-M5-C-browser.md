@@ -233,11 +233,12 @@ without waiting for that decision.
 | `plan-v1.md`: add all context fields, editable | **Yes** — row density/disclosure is exactly what Part 4 direction (A-D) constrains | Part 4 (density/disclosure question) + implementation phase after layout is picked |
 | `plan-v1.md`: swipe left/right for extended options | **Yes** — direction D makes swipe primary navigation, A/B/C make it a bonus layer | Part 4 direction D, or as a layer on top of A/B/C's row |
 | `plan-v1.md`: edit of any field, esp. audio | Partially — the audio-hook consolidation (Part 2) is independent; adding more fields to the edit panel is safest done after row density is settled, to avoid retrofitting | Part 2 (independent piece) + Part 4 (fields piece) |
-| `plan-v1.md`: **batch edit of any field, esp. dia & source** | **No** — batch edit operates within the existing selection-mode action bar regardless of which direction the surrounding list takes; dia/source are exactly the "one value applies to many notes" case flagged below | **Pull out of grill scope — build independently**, after the four fixes |
+| `plan-v1.md`: ~~batch edit of any field, esp. dia & source~~ **DONE 2026-07-17** | **No** — batch edit operates within the existing selection-mode action bar regardless of which direction the surrounding list takes; dia/source were exactly the "one value applies to many notes" case flagged below | Built independently, no grilling needed — `batchSetDialect`/`batchSetSourceId` in `browser.ts`, `ChipPicker` + Dialect/Source batch buttons in `BrowserView.tsx` |
 | New: UI reordering by most-used elements | **Yes** — this *is* Part 4 direction C | Part 4 direction C (or as a principle applied within B/D) |
 | New: filter reordering/styling | **Yes** — same as above | Part 4 direction C |
 | New: smart layout — deck selection, filter pills | **Yes** — the core question | Part 4 directions B and C are the two live candidates |
 
-**Net: after the four fixes, only "batch edit for dia & source" is ready to
-build without grilling.** Everything else either directly constitutes the
-Part 4 decision or is cheaper to build once that decision is made.
+**Net: batch edit for dia & source shipped ahead of the grill session.**
+Everything else remaining either directly constitutes the Part 4 decision or
+is cheaper to build once that decision is made — that's what's left to
+interview.
