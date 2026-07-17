@@ -86,3 +86,12 @@ A four-tier classification of a card's long-term retention strength, derived ent
 | **Blooming** | `interval_days >= 60` — longevity-only signal; no ease gate; aspirational, beyond simulation scope |
 
 _Avoid_: mature, mastered (legacy Stats label — now maps to Rooted)
+
+### Screens
+
+**Browser**:
+The screen for searching, inspecting, and batch-editing existing Notes and
+their Cards outside of a Learn/Review session. Deliberately a search/manage
+tool, not a skim/triage tool — Review already owns the job of going through
+cards in sequence.
+_Avoid_: browse mode, card manager

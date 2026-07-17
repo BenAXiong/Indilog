@@ -221,6 +221,73 @@ tool, or become a *skim/triage* tool closer to Review?) before committing.
 
 ---
 
+## Part 5 — Resolved spec (grill session 2026-07-17)
+
+Direction **C** chosen. Ruled out: D (skim/triage — Review already owns that
+job), A (doesn't fit the mobile-first shell). Full rationale:
+[DEC-BR01](docs/adr/DEC-BR01-layout-direction.md).
+
+### Surface model
+
+- Preview sheet and inline-edit converge into **one overlay** — most of the
+  viewport, not full `100dvh`, leaving a bottom gap to tap-outside-to-close.
+  Tapping outside closes immediately if the form is clean; if dirty, a
+  confirm ("Discard changes?") appears instead of closing outright.
+- Row tap → overlay opens in **edit** mode. Preview-icon tap → overlay opens
+  in **recall-check** mode. A toggle inside switches between the two either
+  way.
+- `CardRow`'s today inline expand-in-row is retired in favor of the overlay.
+
+### Filter bar (top → bottom)
+
+1. Search box — always visible (unchanged).
+2. Source/deck dropdown — always visible, promoted above the fold.
+   Companion sort-mode pill row: **Alpha (default) / Count / Recent**.
+3. Collapsible **"Filters"** toggle/panel (collapsed by default), most- to
+   least-used inside:
+   - Language pills — multi-select, horizontally scrollable (16 languages),
+     `All`/`None` reset. `All` = no language constraint, not 16 individual
+     selections.
+   - Dialect pills — shown only when exactly one language is selected.
+   - List sort — 3-pill segmented row: Due / Ease / Added.
+   - SRS-state (All/Due/New/Flagged/Suspended) — demoted here; usage turned
+     out lower than Part 4's draft assumed.
+   - Date range.
+   - Note type — lowest priority; the `type` word/sentence/note distinction
+     is already slated for removal per DEC-D02, not worth surfacing.
+4. Active-filter chips (removable, ✕ to clear) shown above the list whenever
+   the panel is collapsed but a filter from it is active.
+
+### Row gestures
+
+- Swipe left → reveal delete/suspend quick actions.
+- Swipe right → reveal flag-color picker.
+- Long-press → enter multi-select mode (replaces the explicit header
+  "Select" button — frees the header slot, avoids a swipe/select-button
+  gesture collision).
+- Inside the open overlay: swipe left/right → prev/next card in the
+  filtered set.
+
+### Fields added to the edit form (now inside the overlay)
+
+- Audio — re-record/replace/clear, reusing Capture's recorder
+  (`capture/page.tsx:248-258`, uploads to the `ind-audio` bucket).
+- Tags — reusing Capture's tag-chip picker.
+- Dialect, source — single-note pickers (batch versions already shipped).
+- `video_clip`, `note_type`, `language`, `note_source` stay read-only —
+  pipeline-owned or (for `note_type`) already dying.
+- All new fields live only in the expanded/overlay form — the collapsed row
+  is unchanged, no new badges added there.
+
+### Unblocked by this decision
+
+Part 2's "8 independent `useState` filters → reducer" refactor is now
+unblocked — the reducer's shape should match the filter-bar dimensions
+above (source, language, dialect, list-sort, SRS-state, date range, type,
+search, deck-sort-mode, panel-open, active-overlay-card/mode).
+
+---
+
 ## Mapping back to existing asks — what actually needs grilling
 
 Re-examined after the four straightforward fixes (2026-07-17): most of the
@@ -230,15 +297,17 @@ without waiting for that decision.
 
 | Ask | Blocked by layout decision? | Landed in |
 |---|---|---|
-| `plan-v1.md`: add all context fields, editable | **Yes** — row density/disclosure is exactly what Part 4 direction (A-D) constrains | Part 4 (density/disclosure question) + implementation phase after layout is picked |
-| `plan-v1.md`: swipe left/right for extended options | **Yes** — direction D makes swipe primary navigation, A/B/C make it a bonus layer | Part 4 direction D, or as a layer on top of A/B/C's row |
-| `plan-v1.md`: edit of any field, esp. audio | Partially — the audio-hook consolidation (Part 2) is independent; adding more fields to the edit panel is safest done after row density is settled, to avoid retrofitting | Part 2 (independent piece) + Part 4 (fields piece) |
+| `plan-v1.md`: ~~add all context fields, editable~~ **RESOLVED 2026-07-17** | Was yes | Part 5 "Fields added to the edit form" — audio/tags/dialect/source added, video_clip/note_type/language/note_source stay read-only, all live in the new overlay's edit mode only |
+| `plan-v1.md`: ~~swipe left/right for extended options~~ **RESOLVED 2026-07-17** | Was yes | Part 5 "Row gestures" — both row-level quick actions (left=delete/suspend, right=flag) and overlay prev/next navigation |
+| `plan-v1.md`: edit of any field, esp. audio | Partially — the audio-hook consolidation (Part 2) is independent | Part 2 (independent piece, still open) + Part 5 "Fields added to the edit form" (audio field itself, resolved) |
 | `plan-v1.md`: ~~batch edit of any field, esp. dia & source~~ **DONE 2026-07-17** | **No** — batch edit operates within the existing selection-mode action bar regardless of which direction the surrounding list takes; dia/source were exactly the "one value applies to many notes" case flagged below | Built independently, no grilling needed — `batchSetDialect`/`batchSetSourceId` in `browser.ts`, `ChipPicker` + Dialect/Source batch buttons in `BrowserView.tsx` |
-| New: UI reordering by most-used elements | **Yes** — this *is* Part 4 direction C | Part 4 direction C (or as a principle applied within B/D) |
-| New: filter reordering/styling | **Yes** — same as above | Part 4 direction C |
-| New: smart layout — deck selection, filter pills | **Yes** — the core question | Part 4 directions B and C are the two live candidates |
+| New: ~~UI reordering by most-used elements~~ **RESOLVED 2026-07-17** | Was yes — this *is* Part 4 direction C | Part 5 "Filter bar" — ranked by the user's actual usage, not the doc's original (wrong) assumption that SRS-state was highest-usage |
+| New: ~~filter reordering/styling~~ **RESOLVED 2026-07-17** | Was yes — same as above | Part 5 "Filter bar" |
+| New: ~~smart layout — deck selection, filter pills~~ **RESOLVED 2026-07-17** | Was yes — the core question | Direction C chosen over B; deck selection resolved as an always-visible dropdown (not a drill-down) with Alpha/Count/Recent sort pills — see Part 5 |
 
-**Net: batch edit for dia & source shipped ahead of the grill session.**
-Everything else remaining either directly constitutes the Part 4 decision or
-is cheaper to build once that decision is made — that's what's left to
-interview.
+**Net: everything in this table is resolved as of the 2026-07-17 grill
+session.** [DEC-BR01](docs/adr/DEC-BR01-layout-direction.md) records the
+architectural decision; Part 5 above is the implementation spec. Next step
+is building it — Part 1 fixes, Part 2 refactors, and Part 5 in whatever
+order makes sense (Part 3's virtualization note still applies: sequence it
+ahead of the fields expansion if adopted).

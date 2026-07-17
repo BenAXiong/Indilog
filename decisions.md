@@ -14,6 +14,7 @@ New ADRs: pick a prefix matching the feature area (e.g. `DEC-SRS`, `DEC-M5`, `DE
 | [DEC-ARCH02](docs/adr/DEC-ARCH02-unified-note-card-model.md) | Unified Note/Card model | accepted |
 | [DEC-ARCH03](docs/adr/DEC-ARCH03-postgrest-embed-filters-inner.md) | PostgREST embed filters require `!inner` | accepted |
 | [DEC-ARCH04](docs/adr/DEC-ARCH04-performance-architecture.md) | Performance architecture — 2026-07 campaign decisions | accepted |
+| [DEC-BR01](docs/adr/DEC-BR01-layout-direction.md) | Browser tab redesign — layout direction and surface model | accepted |
 | [DEC-DASH-01](docs/adr/DEC-DASH-01-duecount-divergence.md) | Dashboard dueCount vs session count divergence | resolved in Phase 2F of docs/archive/plan-v1-M5-srs.md |
 | [DEC-D01](docs/adr/DEC-D01-dict-word-dedup-normalisation.md) | Dictionary word dedup: space-stripping normalisation | accepted |
 | [DEC-D02](docs/adr/DEC-D02-capture-without-dict-entry.md) | Capture without a dict entry — scope, item type, language passthrough | accepted |
