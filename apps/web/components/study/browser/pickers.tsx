@@ -55,3 +55,34 @@ export function ChipPicker({ options, current, onChange }: {
     </div>
   )
 }
+
+// ─── Multi-select scrollable chip row (language filter — All/None reset) ──────
+
+export function MultiChipPicker({ options, selected, onChange }: {
+  options: { value: string; label: string }[]
+  selected: string[]
+  onChange: (v: string[]) => void
+}) {
+  const allActive = selected.length === 0
+  return (
+    <div style={{ display: 'flex', gap: 5, alignItems: 'center', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <button onClick={() => onChange([])} style={{
+        padding: '4px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer', flexShrink: 0,
+        background: allActive ? T.crimson : T.paperHi,
+        color: allActive ? '#fff' : T.inkSoft,
+        border: `1px solid ${allActive ? T.crimsonDp : T.line}`,
+      }}>All</button>
+      {options.map(o => {
+        const active = selected.includes(o.value)
+        return (
+          <button key={o.value} onClick={() => onChange(active ? selected.filter(v => v !== o.value) : [...selected, o.value])} style={{
+            padding: '4px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer', flexShrink: 0,
+            background: active ? T.crimson : T.paperHi,
+            color: active ? '#fff' : T.inkSoft,
+            border: `1px solid ${active ? T.crimsonDp : T.line}`,
+          }}>{o.label}</button>
+        )
+      })}
+    </div>
+  )
+}

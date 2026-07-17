@@ -15,20 +15,7 @@ import { DIALECT_TO_EN } from '@/lib/lang/dialects'
 import { flagColorHex } from '@/lib/db/srs/flags'
 import { CardRow } from './CardRow'
 import { FlagPicker, ChipPicker } from './pickers'
-
-const FILTERS: { value: BrowserFilter; label: string }[] = [
-  { value: 'all',       label: 'All'       },
-  { value: 'due',       label: 'Due'       },
-  { value: 'new',       label: 'New'       },
-  { value: 'flagged',   label: 'Flagged'   },
-  { value: 'suspended', label: 'Suspended' },
-]
-
-const SORT_OPTIONS: { value: BrowserSort; label: string }[] = [
-  { value: 'due',   label: 'Due date' },
-  { value: 'ease',  label: 'Ease'     },
-  { value: 'added', label: 'Added'    },
-]
+import { FilterBar, type DeckSortMode } from './FilterBar'
 
 // ─── Browser ──────────────────────────────────────────────────────────────────
 
@@ -43,10 +30,12 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   const [sourceNames,    setSourceNames]    = useState<Map<string, string>>(new Map())
   const [fType,          setFType]          = useState('')
   const [fSource,        setFSource]        = useState('')
-  const [fLanguage,      setFLanguage]      = useState('')
+  const [fLanguages,     setFLanguages]     = useState<string[]>([])
   const [fDialect,       setFDialect]       = useState('')
   const [fromDate,       setFromDate]       = useState('')
   const [toDate,         setToDate]         = useState('')
+  const [filtersOpen,    setFiltersOpen]    = useState(false)
+  const [deckSortMode,   setDeckSortMode]   = useState<DeckSortMode>('alpha')
   const [selectionMode,  setSelectionMode]  = useState(false)
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
   const [batchConfirm,   setBatchConfirm]   = useState(false)
@@ -103,18 +92,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
     setPreviewAudioPlaying(true)
   }, [previewId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const dropStyle: React.CSSProperties = {
-    height: 30, padding: '0 26px 0 10px', borderRadius: 8, fontSize: 12,
-    background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
-    fontFamily: 'inherit', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
-    maxWidth: 160,
-  }
-  const narrowDropStyle: React.CSSProperties = {
-    ...dropStyle, padding: '0 22px 0 8px', maxWidth: 108,
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-  }
   const availTypes     = useMemo(() => [...new Set(cards.map(c => c.note_type).filter(Boolean))].sort(), [cards])
-  const availSources   = useMemo(() => [...new Set(cards.map(c => c.source).filter(Boolean))].sort(), [cards])
   // Some legacy dict saves wrote the dialect name into the language column (fixed at the
   // source in dict/page.tsx) — guard against that stale data leaking dialect names in here.
   const availLanguages = useMemo(() => [...new Set(
@@ -124,14 +102,34 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   // when the true source sub-dialect isn't documented yet (GRMPTS_SOURCE_DIALECT) — filter
   // to our real dialect list so that placeholder doesn't show up as a selectable dialect.
   const availDialects  = useMemo(() => [...new Set(
-    cards.filter(c => !fLanguage || c.language === fLanguage)
+    cards.filter(c => fLanguages.length === 0 || fLanguages.includes(c.language))
       .map(c => c.dialect).filter((d): d is string => !!d && d in DIALECT_TO_EN)
-  )].sort(), [cards, fLanguage])
+  )].sort(), [cards, fLanguages])
 
   // Dialects are scoped to a language — drop a stale selection when it switches
   useEffect(() => {
     if (fDialect && !availDialects.includes(fDialect)) setFDialect('')
   }, [availDialects]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Source/deck dropdown ordering — Alpha (default) / Count / Recent, per-source
+  // stats derived client-side from the already-loaded `cards`, no extra query
+  const sourceStats = useMemo(() => {
+    const stats = new Map<string, { count: number; recent: string }>()
+    for (const c of cards) {
+      if (!c.source) continue
+      const s = stats.get(c.source) ?? { count: 0, recent: '' }
+      s.count++
+      if (c.created_at > s.recent) s.recent = c.created_at
+      stats.set(c.source, s)
+    }
+    return stats
+  }, [cards])
+  const availSources = useMemo(() => {
+    const list = [...new Set(cards.map(c => c.source).filter(Boolean))]
+    if (deckSortMode === 'count')  return list.sort((a, b) => (sourceStats.get(b)?.count ?? 0) - (sourceStats.get(a)?.count ?? 0))
+    if (deckSortMode === 'recent') return list.sort((a, b) => (sourceStats.get(b)?.recent ?? '').localeCompare(sourceStats.get(a)?.recent ?? ''))
+    return list.sort()
+  }, [cards, deckSortMode, sourceStats])
 
   // Options for the batch-edit pickers below (dialect reuses the filter's
   // language-scoped list; source is the ind_sources reference — a different
@@ -151,10 +149,10 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
       const q = search.toLowerCase()
       result = result.filter(c => c.ab.toLowerCase().includes(q) || (c.zh ?? '').toLowerCase().includes(q))
     }
-    if (fType)     result = result.filter(c => c.note_type === fType)
-    if (fSource)   result = result.filter(c => c.source === fSource)
-    if (fLanguage) result = result.filter(c => c.language === fLanguage)
-    if (fDialect)  result = result.filter(c => c.dialect === fDialect)
+    if (fType)               result = result.filter(c => c.note_type === fType)
+    if (fSource)             result = result.filter(c => c.source === fSource)
+    if (fLanguages.length)   result = result.filter(c => fLanguages.includes(c.language))
+    if (fDialect)            result = result.filter(c => c.dialect === fDialect)
     // fromDate/toDate are local calendar dates from <input type="date">; created_at is a
     // UTC timestamptz — parse the boundaries as local time (no zone suffix) so the compare
     // against the UTC string lines up with the user's actual local day, not UTC's.
@@ -167,7 +165,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
       result = result.filter(c => c.created_at <= toISO)
     }
     return result
-  }, [cards, sort, search, fType, fSource, fLanguage, fDialect, fromDate, toDate])
+  }, [cards, sort, search, fType, fSource, fLanguages, fDialect, fromDate, toDate])
 
   // -1 (not found) covers both "closed" and "the previewed card fell out of
   // `filtered`" (deleted, suspended, or filtered out by a search/filter change)
@@ -244,141 +242,21 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   return (
     <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-      {/* Search + Select */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <Icon name="search" size={15} color={T.inkMute} />
-          </div>
-          <input
-            placeholder="Search cards…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%', padding: '10px 12px 10px 36px',
-              borderRadius: 10, background: T.paperHi, border: `1px solid ${T.line}`,
-              fontSize: 14, color: T.ink, fontFamily: 'inherit', boxSizing: 'border-box',
-            }}
-          />
-        </div>
-        <button onClick={() => { setSelectionMode(v => !v); setSelectedIds(new Set()); setExpandedId(null) }} style={{
-          height: 40, padding: '0 12px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-          background: selectionMode ? T.ink : T.paperHi,
-          border: `1px solid ${selectionMode ? T.ink : T.line}`,
-          color: selectionMode ? T.cream : T.inkSoft,
-          cursor: 'pointer', flexShrink: 0,
-        }}>
-          {selectionMode ? 'Cancel' : 'Select'}
-        </button>
-      </div>
-
-      {/* Filter row 1: language | dialect | deck */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        {/* Language dropdown */}
-        {availLanguages.length > 1 && (
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <select value={fLanguage} onChange={e => setFLanguage(e.target.value)} style={narrowDropStyle}>
-              <option value="">All langs</option>
-              {availLanguages.map(l => <option key={l} value={l}>{getLanguage(l)?.name ?? l}</option>)}
-            </select>
-            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-              <Icon name="chev-d" size={11} strokeWidth={2} />
-            </div>
-          </div>
-        )}
-
-        {/* Dialect dropdown */}
-        {availDialects.length > 1 && (
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <select value={fDialect} onChange={e => setFDialect(e.target.value)} style={narrowDropStyle}>
-              <option value="">All dialects</option>
-              {availDialects.map(d => <option key={d} value={d}>{DIALECT_TO_EN[d] ?? d}</option>)}
-            </select>
-            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-              <Icon name="chev-d" size={11} strokeWidth={2} />
-            </div>
-          </div>
-        )}
-
-        {/* Source/deck dropdown */}
-        <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-          <select value={fSource} onChange={e => setFSource(e.target.value)} style={{ ...dropStyle, maxWidth: '100%', width: '100%' }}>
-            <option value="">All sources</option>
-            {availSources.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-            <Icon name="chev-d" size={11} strokeWidth={2} />
-          </div>
-        </div>
-      </div>
-
-      {/* Filter row 2: SRS state | type | sort */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        {/* SRS state dropdown */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <select value={filter} onChange={e => setFilter(e.target.value as BrowserFilter)} style={dropStyle}>
-            {FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-          </select>
-          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-            <Icon name="chev-d" size={11} strokeWidth={2} />
-          </div>
-        </div>
-
-        {/* Type dropdown */}
-        {availTypes.length > 1 && (
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <select value={fType} onChange={e => setFType(e.target.value)} style={dropStyle}>
-              <option value="">All types</option>
-              {availTypes.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-              <Icon name="chev-d" size={11} strokeWidth={2} />
-            </div>
-          </div>
-        )}
-
-        {/* Sort */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <select value={sort} onChange={e => setSort(e.target.value as BrowserSort)} style={dropStyle}>
-            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <div style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: T.inkMute }}>
-            <Icon name="chev-d" size={11} strokeWidth={2} />
-          </div>
-        </div>
-      </div>
-
-      {/* Date range row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 11, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>Added</span>
-        <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{
-          flex: 1, height: 28, padding: '0 8px', borderRadius: 7, fontSize: 12,
-          background: fromDate ? T.paperHi : T.paper,
-          border: `1px solid ${fromDate ? T.line : T.lineSoft}`,
-          color: fromDate ? T.ink : T.inkFaint, fontFamily: 'inherit', cursor: 'pointer',
-        }} />
-        <span style={{ fontSize: 11, color: T.inkFaint, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>→</span>
-        <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{
-          flex: 1, height: 28, padding: '0 8px', borderRadius: 7, fontSize: 12,
-          background: toDate ? T.paperHi : T.paper,
-          border: `1px solid ${toDate ? T.line : T.lineSoft}`,
-          color: toDate ? T.ink : T.inkFaint, fontFamily: 'inherit', cursor: 'pointer',
-        }} />
-        {(fromDate || toDate) && (
-          <button onClick={() => { setFromDate(''); setToDate('') }} style={{
-            height: 28, padding: '0 8px', borderRadius: 7, fontSize: 11, cursor: 'pointer',
-            background: 'none', border: `1px solid ${T.lineSoft}`, color: T.inkFaint, flexShrink: 0,
-          }}>✕</button>
-        )}
-      </div>
-
-      {/* Flag color sub-filter (when Flagged is selected) */}
-      {filter === 'flagged' && (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace' }}>Color:</span>
-          <FlagPicker current={flagColorFilter} onChange={setFlagColorFilter} />
-        </div>
-      )}
+      <FilterBar
+        search={search} onSearchChange={setSearch}
+        selectionMode={selectionMode}
+        onToggleSelection={() => { setSelectionMode(v => !v); setSelectedIds(new Set()); setExpandedId(null) }}
+        fSource={fSource} onFSourceChange={setFSource} availSources={availSources}
+        deckSortMode={deckSortMode} onDeckSortModeChange={setDeckSortMode}
+        filtersOpen={filtersOpen} onToggleFiltersOpen={() => setFiltersOpen(v => !v)}
+        fLanguages={fLanguages} onFLanguagesChange={setFLanguages} availLanguages={availLanguages}
+        fDialect={fDialect} onFDialectChange={setFDialect} availDialects={availDialects}
+        sort={sort} onSortChange={setSort}
+        filter={filter} onFilterChange={setFilter}
+        flagColorFilter={flagColorFilter} onFlagColorFilterChange={setFlagColorFilter}
+        fromDate={fromDate} onFromDateChange={setFromDate} toDate={toDate} onToDateChange={setToDate}
+        fType={fType} onFTypeChange={setFType} availTypes={availTypes}
+      />
 
       {/* Review flagged CTA */}
       {filter === 'flagged' && filtered.length > 0 && (
