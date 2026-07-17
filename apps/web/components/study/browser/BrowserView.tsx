@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
@@ -14,6 +14,7 @@ import { getLanguage } from '@/lib/languages'
 import { DIALECT_TO_EN } from '@/lib/lang/dialects'
 import { flagColorHex } from '@/lib/db/srs/flags'
 import { CardRow } from './CardRow'
+import { CardOverlay, type OverlayMode } from './CardOverlay'
 import { FlagPicker, ChipPicker } from './pickers'
 import { FilterBar, type DeckSortMode } from './FilterBar'
 
@@ -26,7 +27,6 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   const [search,          setSearch]          = useState('')
   const [cards,           setCards]           = useState<BrowserCard[]>([])
   const [loading,         setLoading]         = useState(true)
-  const [expandedId,      setExpandedId]      = useState<string | null>(null)
   const [sourceNames,    setSourceNames]    = useState<Map<string, string>>(new Map())
   const [fType,          setFType]          = useState('')
   const [fSource,        setFSource]        = useState('')
@@ -43,16 +43,11 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   const [showBatchDialect, setShowBatchDialect] = useState(false)
   const [showBatchSource,  setShowBatchSource]  = useState(false)
   // Identity, not position — tracking a raw index into `filtered` let the
-  // sheet desync (wrong card / stale audio) whenever filters changed or a
-  // card was removed while the preview was open. `previewIndex` below is
-  // derived from this id every render instead of being the source of truth.
-  const [previewId,           setPreviewId]           = useState<string | null>(null)
-  const [previewRevealed,     setPreviewRevealed]     = useState(false)
-  const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false)
-  const previewAudioRef = useRef<HTMLAudioElement | null>(null)
-  const previewVideoRef = useRef<HTMLVideoElement | null>(null)
-
-  useEffect(() => () => { previewAudioRef.current?.pause() }, [])
+  // overlay desync (wrong card / stale audio) whenever filters changed or a
+  // card was removed while it was open. `overlayIndex` below is derived from
+  // this id every render instead of being the source of truth.
+  const [overlayCardId, setOverlayCardId] = useState<string | null>(null)
+  const [overlayMode,   setOverlayMode]   = useState<OverlayMode>('edit')
 
   useEffect(() => {
     if (filter !== 'flagged') setFlagColorFilter(null)
@@ -60,7 +55,6 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
 
   useEffect(() => {
     setLoading(true)
-    setExpandedId(null)
     // Fetch always in 'added' (DB/created_at) order — 'due'/'ease' sort is
     // applied client-side below via sortBrowserCards so switching Sort
     // doesn't re-run the paginated query against ind_items.
@@ -73,24 +67,6 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
       setSourceNames(new Map(ss.map(s => [s.id, s.name])))
     })
   }, [])
-
-  useEffect(() => {
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause()
-      previewAudioRef.current.currentTime = 0
-      previewAudioRef.current = null
-      setPreviewAudioPlaying(false)
-    }
-    setPreviewRevealed(false)
-    if (!previewId) return
-    const pc = filtered.find(c => c.id === previewId)
-    if (!pc?.audio) return
-    const a = new Audio(pc.audio)
-    a.onended = () => setPreviewAudioPlaying(false)
-    a.play().catch(() => {})
-    previewAudioRef.current = a
-    setPreviewAudioPlaying(true)
-  }, [previewId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const availTypes     = useMemo(() => [...new Set(cards.map(c => c.note_type).filter(Boolean))].sort(), [cards])
   // Some legacy dict saves wrote the dialect name into the language column (fixed at the
@@ -167,16 +143,16 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
     return result
   }, [cards, sort, search, fType, fSource, fLanguages, fDialect, fromDate, toDate])
 
-  // -1 (not found) covers both "closed" and "the previewed card fell out of
+  // -1 (not found) covers both "closed" and "the overlaid card fell out of
   // `filtered`" (deleted, suspended, or filtered out by a search/filter change)
-  const previewIndex = useMemo(
-    () => previewId ? filtered.findIndex(c => c.id === previewId) : -1,
-    [previewId, filtered]
+  const overlayIndex = useMemo(
+    () => overlayCardId ? filtered.findIndex(c => c.id === overlayCardId) : -1,
+    [overlayCardId, filtered]
   )
 
   useEffect(() => {
-    if (previewId && previewIndex === -1) setPreviewId(null)
-  }, [previewId, previewIndex])
+    if (overlayCardId && overlayIndex === -1) setOverlayCardId(null)
+  }, [overlayCardId, overlayIndex])
 
   function updateCard(id: string, patch: Partial<BrowserCard>) {
     setCards(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
@@ -184,7 +160,6 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
 
   function removeCard(id: string) {
     setCards(prev => prev.filter(c => c.id !== id))
-    setExpandedId(null)
   }
 
   function exitSelectionMode() {
@@ -297,130 +272,35 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
             <CardRow
               key={card.id}
               card={card}
-              expanded={expandedId === card.id}
-              onToggle={() => setExpandedId(prev => prev === card.id ? null : card.id)}
               onUpdate={patch => updateCard(card.id, patch)}
               onRemove={() => removeCard(card.id)}
               selectionMode={selectionMode}
               isSelected={selectedIds.has(card.id)}
               onSelect={() => toggleSelect(card.id)}
               onLongPressSelect={() => { setSelectionMode(true); setSelectedIds(new Set([card.id])) }}
-              sourceName={card.source_id ? sourceNames.get(card.source_id) : undefined}
-              isPreviewOpen={previewId === card.id}
-              onOpenPreview={() => setPreviewId(card.id)}
+              isOverlayOpen={overlayCardId === card.id}
+              onOpenOverlay={mode => { setOverlayCardId(card.id); setOverlayMode(mode) }}
             />
           ))}
         </div>
       )}
 
-      {/* Preview bottom sheet */}
-      {previewIndex !== -1 && (() => {
-        const pc = filtered[previewIndex]
-        if (!pc) return null
-        const hasPrev = previewIndex > 0
-        const hasNext = previewIndex < filtered.length - 1
-        const navBtn = (enabled: boolean): React.CSSProperties => ({
-          width: 44, height: 44, borderRadius: 999, border: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: enabled ? T.paperHi : 'transparent',
-          cursor: enabled ? 'pointer' : 'default',
-          opacity: enabled ? 1 : 0.2, flexShrink: 0,
-        })
+      {/* Card overlay — converged recall-check / edit surface */}
+      {overlayIndex !== -1 && (() => {
+        const overlayCard = filtered[overlayIndex]
         return (
-          <>
-            <div
-              onClick={() => { setPreviewId(null) }}
-              style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(30,20,10,0.45)' }}
-            />
-            <div style={{
-              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 101,
-              background: T.paper, borderRadius: '20px 20px 0 0',
-              boxShadow: '0 -4px 32px rgba(30,20,10,0.18)',
-              paddingBottom: 'env(safe-area-inset-bottom)',
-            }}>
-              {/* Handle + nav */}
-              <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px 4px', gap: 8 }}>
-                <button
-                  disabled={!hasPrev}
-                  onClick={() => setPreviewId(filtered[previewIndex - 1].id)}
-                  style={navBtn(hasPrev)}
-                >
-                  <Icon name="arrow-l" size={18} strokeWidth={1.8} color={T.inkSoft} />
-                </button>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                  <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line }} />
-                </div>
-                <button
-                  disabled={!hasNext}
-                  onClick={() => setPreviewId(filtered[previewIndex + 1].id)}
-                  style={navBtn(hasNext)}
-                >
-                  <Icon name="arrow-r" size={18} strokeWidth={1.8} color={T.inkSoft} />
-                </button>
-              </div>
-
-              {/* Front */}
-              <div style={{ padding: '16px 24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-                <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 30, fontWeight: 500, color: T.ink, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                  {pc.ab}
-                </div>
-                {pc.audio && !pc.video_clip && (
-                  <button onClick={() => {
-                    const a = previewAudioRef.current
-                    if (!a) return
-                    if (previewAudioPlaying) { a.pause(); a.currentTime = 0; setPreviewAudioPlaying(false) }
-                    else { a.play().catch(() => {}); setPreviewAudioPlaying(true) }
-                  }} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 40, height: 40, borderRadius: 999,
-                    background: T.crimson, border: 'none', cursor: 'pointer',
-                    boxShadow: '0 2px 10px rgba(180,40,30,0.2)',
-                  }}>
-                    <Icon name={previewAudioPlaying ? 'stop' : 'speaker'} size={16} strokeWidth={1.6} color="#fff" />
-                  </button>
-                )}
-                {pc.video_clip && (
-                  <video
-                    key={pc.id}
-                    ref={previewVideoRef}
-                    src={pc.video_clip}
-                    autoPlay
-                    muted
-                    playsInline
-                    onClick={() => {
-                      const v = previewVideoRef.current
-                      const a = previewAudioRef.current
-                      if (!v) return
-                      if (v.paused) { v.play(); a?.play() }
-                      else          { v.pause(); a?.pause() }
-                    }}
-                    style={{ width: '100%', borderRadius: 12, maxHeight: 260, background: '#000', cursor: 'pointer' }}
-                  />
-                )}
-              </div>
-
-              {/* Reveal */}
-              <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
-                {previewRevealed ? (
-                  <div style={{ padding: '18px 24px 26px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 500, color: T.ink, lineHeight: 1.35, letterSpacing: '-0.01em' }}>
-                      {pc.zh || <span style={{ color: T.inkFaint, fontStyle: 'italic' }}>No back</span>}
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => setPreviewRevealed(true)} style={{
-                    width: '100%', padding: '16px 24px',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 600, color: T.inkMute,
-                    fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                  }}>
-                    Reveal
-                  </button>
-                )}
-              </div>
-            </div>
-          </>
+          <CardOverlay
+            card={overlayCard}
+            mode={overlayMode}
+            onModeChange={setOverlayMode}
+            onClose={() => setOverlayCardId(null)}
+            hasPrev={overlayIndex > 0}
+            hasNext={overlayIndex < filtered.length - 1}
+            onNavigate={dir => setOverlayCardId(filtered[overlayIndex + dir].id)}
+            onUpdate={patch => updateCard(overlayCard.id, patch)}
+            onRemove={() => removeCard(overlayCard.id)}
+            sourceName={overlayCard.source_id ? sourceNames.get(overlayCard.source_id) : undefined}
+          />
         )
       })()}
 
