@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
-  listBrowserCards, updateNoteFields, resetCardEase, deleteNote,
+  listBrowserCards, sortBrowserCards, updateNoteFields, resetCardEase, deleteNote,
   batchDeleteNotes, batchSuspendCards, batchSetFlag,
   suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
@@ -84,6 +84,8 @@ function CardRow({ card, expanded, onToggle, onUpdate, onRemove, selectionMode, 
   const [lookingUp,      setLookingUp]      = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
+
+  useEffect(() => () => { audioRef.current?.pause() }, [])
 
   useEffect(() => {
     if (expanded) {
@@ -509,11 +511,17 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
   const [batchConfirm,   setBatchConfirm]   = useState(false)
   const [showBatchFlag,  setShowBatchFlag]  = useState(false)
-  const [previewIndex,        setPreviewIndex]        = useState<number | null>(null)
+  // Identity, not position — tracking a raw index into `filtered` let the
+  // sheet desync (wrong card / stale audio) whenever filters changed or a
+  // card was removed while the preview was open. `previewIndex` below is
+  // derived from this id every render instead of being the source of truth.
+  const [previewId,           setPreviewId]           = useState<string | null>(null)
   const [previewRevealed,     setPreviewRevealed]     = useState(false)
   const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false)
   const previewAudioRef = useRef<HTMLAudioElement | null>(null)
   const previewVideoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => () => { previewAudioRef.current?.pause() }, [])
 
   useEffect(() => {
     if (filter !== 'flagged') setFlagColorFilter(null)
@@ -522,9 +530,12 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   useEffect(() => {
     setLoading(true)
     setExpandedId(null)
-    listBrowserCards(filter, sort, filter === 'flagged' ? flagColorFilter : undefined, videoOnly)
+    // Fetch always in 'added' (DB/created_at) order — 'due'/'ease' sort is
+    // applied client-side below via sortBrowserCards so switching Sort
+    // doesn't re-run the paginated query against ind_items.
+    listBrowserCards(filter, 'added', filter === 'flagged' ? flagColorFilter : undefined, videoOnly)
       .then(c => { setCards(c); setLoading(false) })
-  }, [filter, sort, flagColorFilter])
+  }, [filter, flagColorFilter, videoOnly])
 
   useEffect(() => {
     listSources().then(ss => {
@@ -540,15 +551,15 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
       setPreviewAudioPlaying(false)
     }
     setPreviewRevealed(false)
-    if (previewIndex === null) return
-    const pc = filtered[previewIndex]
+    if (!previewId) return
+    const pc = filtered.find(c => c.id === previewId)
     if (!pc?.audio) return
     const a = new Audio(pc.audio)
     a.onended = () => setPreviewAudioPlaying(false)
     a.play().catch(() => {})
     previewAudioRef.current = a
     setPreviewAudioPlaying(true)
-  }, [previewIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [previewId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dropStyle: React.CSSProperties = {
     height: 30, padding: '0 26px 0 10px', borderRadius: 8, fontSize: 12,
@@ -581,7 +592,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   }, [availDialects]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
-    let result = cards
+    let result = sortBrowserCards(cards, sort)
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(c => c.ab.toLowerCase().includes(q) || (c.zh ?? '').toLowerCase().includes(q))
@@ -602,7 +613,18 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
       result = result.filter(c => c.created_at <= toISO)
     }
     return result
-  }, [cards, search, fType, fSource, fLanguage, fDialect, fromDate, toDate])
+  }, [cards, sort, search, fType, fSource, fLanguage, fDialect, fromDate, toDate])
+
+  // -1 (not found) covers both "closed" and "the previewed card fell out of
+  // `filtered`" (deleted, suspended, or filtered out by a search/filter change)
+  const previewIndex = useMemo(
+    () => previewId ? filtered.findIndex(c => c.id === previewId) : -1,
+    [previewId, filtered]
+  )
+
+  useEffect(() => {
+    if (previewId && previewIndex === -1) setPreviewId(null)
+  }, [previewId, previewIndex])
 
   function updateCard(id: string, patch: Partial<BrowserCard>) {
     setCards(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
@@ -826,7 +848,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {filtered.map((card, idx) => (
+          {filtered.map(card => (
             <CardRow
               key={card.id}
               card={card}
@@ -838,15 +860,15 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
               isSelected={selectedIds.has(card.id)}
               onSelect={() => toggleSelect(card.id)}
               sourceName={card.source_id ? sourceNames.get(card.source_id) : undefined}
-              isPreviewOpen={previewIndex === idx}
-              onOpenPreview={() => setPreviewIndex(idx)}
+              isPreviewOpen={previewId === card.id}
+              onOpenPreview={() => setPreviewId(card.id)}
             />
           ))}
         </div>
       )}
 
       {/* Preview bottom sheet */}
-      {previewIndex !== null && (() => {
+      {previewIndex !== -1 && (() => {
         const pc = filtered[previewIndex]
         if (!pc) return null
         const hasPrev = previewIndex > 0
@@ -861,7 +883,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
         return (
           <>
             <div
-              onClick={() => { setPreviewIndex(null) }}
+              onClick={() => { setPreviewId(null) }}
               style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(30,20,10,0.45)' }}
             />
             <div style={{
@@ -874,7 +896,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
               <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px 4px', gap: 8 }}>
                 <button
                   disabled={!hasPrev}
-                  onClick={() => setPreviewIndex(i => i! - 1)}
+                  onClick={() => setPreviewId(filtered[previewIndex - 1].id)}
                   style={navBtn(hasPrev)}
                 >
                   <Icon name="arrow-l" size={18} strokeWidth={1.8} color={T.inkSoft} />
@@ -884,7 +906,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
                 </div>
                 <button
                   disabled={!hasNext}
-                  onClick={() => setPreviewIndex(i => i! + 1)}
+                  onClick={() => setPreviewId(filtered[previewIndex + 1].id)}
                   style={navBtn(hasNext)}
                 >
                   <Icon name="arrow-r" size={18} strokeWidth={1.8} color={T.inkSoft} />

@@ -140,8 +140,15 @@ export async function listBrowserCards(
     }
   })
 
-  // Sort — 'added' is already chronological from DB order; 'due' and 'ease' sort
-  // the O(result) set after transform (PostgREST can't ORDER BY embedded columns)
+  return sortBrowserCards(results, sort)
+}
+
+// 'added' is already chronological from DB order; 'due' and 'ease' sort the
+// O(result) set after transform (PostgREST can't ORDER BY embedded columns).
+// Exported standalone so callers can re-sort an already-fetched list — e.g.
+// the Browser view re-sorts in memory on Sort change instead of re-fetching.
+export function sortBrowserCards(cards: BrowserCard[], sort: BrowserSort): BrowserCard[] {
+  const results = [...cards]
   if (sort === 'due') {
     results.sort((a, b) => {
       if (!a.due_at && !b.due_at) return 0
@@ -152,7 +159,6 @@ export async function listBrowserCards(
   } else if (sort === 'ease') {
     results.sort((a, b) => a.ease_factor - b.ease_factor)
   }
-
   return results
 }
 
