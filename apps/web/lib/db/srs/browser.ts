@@ -185,6 +185,16 @@ export async function batchSuspendCards(noteIds: string[]): Promise<void> {
     .in('note_id', noteIds)
 }
 
+export async function batchSetDialect(noteIds: string[], dialect: string | null): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_items').update({ dialect }).in('id', noteIds)
+}
+
+export async function batchSetSourceId(noteIds: string[], sourceId: string | null): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ind_items').update({ source_id: sourceId }).in('id', noteIds)
+}
+
 export async function batchSetFlag(noteIds: string[], flagColor: string | null): Promise<void> {
   const supabase = createClient()
   await supabase.from('ind_flashcards').update({ flag_color: flagColor }).in('note_id', noteIds)

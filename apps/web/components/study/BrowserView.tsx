@@ -6,7 +6,7 @@ import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import {
   listBrowserCards, sortBrowserCards, updateNoteFields, resetCardEase, deleteNote,
-  batchDeleteNotes, batchSuspendCards, batchSetFlag,
+  batchDeleteNotes, batchSuspendCards, batchSetFlag, batchSetDialect, batchSetSourceId,
   suspendCard, unsuspendCard, setFlagColor,
   type BrowserCard, type BrowserFilter, type BrowserSort,
 } from '@/lib/db/srs/browser'
@@ -42,6 +42,35 @@ function FlagPicker({ current, onChange }: { current: string | null; onChange: (
           background: fc.color, cursor: 'pointer', flexShrink: 0,
           boxShadow: current === fc.key ? `0 0 0 2px #fff, 0 0 0 3.5px ${fc.color}` : 'none',
         }} />
+      ))}
+      {current && (
+        <button onClick={() => onChange(null)} style={{
+          width: 22, height: 22, borderRadius: 999,
+          border: `1.5px solid ${T.lineSoft}`, background: T.paper,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 700, color: T.inkMute, flexShrink: 0,
+        }}>×</button>
+      )}
+    </div>
+  )
+}
+
+// ─── Text/label chip picker (reusable — dialect, source) ──────────────────────
+
+function ChipPicker({ options, current, onChange }: {
+  options: { value: string; label: string }[]
+  current: string | null
+  onChange: (v: string | null) => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+      {options.map(o => (
+        <button key={o.value} onClick={() => onChange(current === o.value ? null : o.value)} style={{
+          padding: '4px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+          background: current === o.value ? T.crimson : T.paperHi,
+          color: current === o.value ? '#fff' : T.inkSoft,
+          border: `1px solid ${current === o.value ? T.crimsonDp : T.line}`,
+        }}>{o.label}</button>
       ))}
       {current && (
         <button onClick={() => onChange(null)} style={{
@@ -510,7 +539,9 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   const [selectionMode,  setSelectionMode]  = useState(false)
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
   const [batchConfirm,   setBatchConfirm]   = useState(false)
-  const [showBatchFlag,  setShowBatchFlag]  = useState(false)
+  const [showBatchFlag,    setShowBatchFlag]    = useState(false)
+  const [showBatchDialect, setShowBatchDialect] = useState(false)
+  const [showBatchSource,  setShowBatchSource]  = useState(false)
   // Identity, not position — tracking a raw index into `filtered` let the
   // sheet desync (wrong card / stale audio) whenever filters changed or a
   // card was removed while the preview was open. `previewIndex` below is
@@ -591,6 +622,18 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
     if (fDialect && !availDialects.includes(fDialect)) setFDialect('')
   }, [availDialects]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Options for the batch-edit pickers below (dialect reuses the filter's
+  // language-scoped list; source is the ind_sources reference — a different
+  // concept from `card.source` above, which is the deck/collection label)
+  const batchDialectOptions = useMemo(
+    () => availDialects.map(d => ({ value: d, label: DIALECT_TO_EN[d] ?? d })),
+    [availDialects]
+  )
+  const batchSourceOptions = useMemo(
+    () => [...sourceNames].map(([id, name]) => ({ value: id, label: name })),
+    [sourceNames]
+  )
+
   const filtered = useMemo(() => {
     let result = sortBrowserCards(cards, sort)
     if (search.trim()) {
@@ -638,6 +681,7 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   function exitSelectionMode() {
     setSelectionMode(false); setSelectedIds(new Set())
     setBatchConfirm(false);  setShowBatchFlag(false)
+    setShowBatchDialect(false); setShowBatchSource(false)
   }
 
   function toggleSelect(id: string) {
@@ -669,6 +713,20 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
     const ids = [...selectedIds]
     await batchSetFlag(ids, color)
     setCards(prev => prev.map(c => selectedIds.has(c.id) ? { ...c, flag_color: color } : c))
+    exitSelectionMode()
+  }
+
+  async function handleBatchDialect(dialect: string | null) {
+    const ids = [...selectedIds]
+    await batchSetDialect(ids, dialect)
+    setCards(prev => prev.map(c => selectedIds.has(c.id) ? { ...c, dialect } : c))
+    exitSelectionMode()
+  }
+
+  async function handleBatchSource(sourceId: string | null) {
+    const ids = [...selectedIds]
+    await batchSetSourceId(ids, sourceId)
+    setCards(prev => prev.map(c => selectedIds.has(c.id) ? { ...c, source_id: sourceId } : c))
     exitSelectionMode()
   }
 
@@ -996,6 +1054,26 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
               <FlagPicker current={null} onChange={color => { handleBatchFlag(color); setShowBatchFlag(false) }} />
             </div>
           )}
+          {/* Dialect picker row */}
+          {showBatchDialect && (
+            <div style={{ padding: '10px 18px 0', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace' }}>Dialect:</span>
+              {batchDialectOptions.length === 0
+                ? <span style={{ fontSize: 12, color: T.inkFaint }}>No dialects to pick from in this view</span>
+                : <ChipPicker options={batchDialectOptions} current={null} onChange={d => { handleBatchDialect(d); setShowBatchDialect(false) }} />
+              }
+            </div>
+          )}
+          {/* Source picker row */}
+          {showBatchSource && (
+            <div style={{ padding: '10px 18px 0', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace' }}>Source:</span>
+              {batchSourceOptions.length === 0
+                ? <span style={{ fontSize: 12, color: T.inkFaint }}>No sources yet — add one from the Sources page first</span>
+                : <ChipPicker options={batchSourceOptions} current={null} onChange={id => { handleBatchSource(id); setShowBatchSource(false) }} />
+              }
+            </div>
+          )}
           {/* Confirm delete row */}
           {batchConfirm && (
             <div style={{ padding: '10px 18px 0', fontSize: 12, color: T.crimson, fontWeight: 500 }}>
@@ -1010,39 +1088,54 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
             }}>
               {allSelected ? 'None' : 'All'}
             </button>
-            <span style={{ fontSize: 12, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', flex: 1 }}>
+            <span style={{ fontSize: 12, color: T.inkMute, fontFamily: '"JetBrains Mono", monospace', flexShrink: 0 }}>
               {selectedIds.size} selected
             </span>
+            {/* Action buttons scroll horizontally rather than squeezing/wrapping
+                as more batch actions get added (dialect/source alongside delete/
+                suspend/flag) */}
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', flex: 1, justifyContent: 'flex-end' }}>
             {!batchConfirm ? (
               <>
-                <button onClick={() => { setBatchConfirm(true); setShowBatchFlag(false) }} disabled={selectedIds.size === 0} style={{
-                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                <button onClick={() => { setBatchConfirm(true); setShowBatchFlag(false); setShowBatchDialect(false); setShowBatchSource(false) }} disabled={selectedIds.size === 0} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, flexShrink: 0,
                   background: T.crimsonBg, border: `1px solid #EFCAB8`, color: T.crimson,
                   cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
                 }}>Delete</button>
                 <button onClick={() => { handleBatchSuspend() }} disabled={selectedIds.size === 0} style={{
-                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, flexShrink: 0,
                   background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
                   cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
                 }}>Suspend</button>
-                <button onClick={() => { setShowBatchFlag(v => !v); setBatchConfirm(false) }} disabled={selectedIds.size === 0} style={{
-                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                <button onClick={() => { setShowBatchFlag(v => !v); setShowBatchDialect(false); setShowBatchSource(false); setBatchConfirm(false) }} disabled={selectedIds.size === 0} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, flexShrink: 0,
                   background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
                   cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
                 }}>Flag</button>
+                <button onClick={() => { setShowBatchDialect(v => !v); setShowBatchFlag(false); setShowBatchSource(false); setBatchConfirm(false) }} disabled={selectedIds.size === 0} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, flexShrink: 0,
+                  background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
+                  cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
+                }}>Dialect</button>
+                <button onClick={() => { setShowBatchSource(v => !v); setShowBatchFlag(false); setShowBatchDialect(false); setBatchConfirm(false) }} disabled={selectedIds.size === 0} style={{
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, flexShrink: 0,
+                  background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft,
+                  cursor: selectedIds.size === 0 ? 'default' : 'pointer', opacity: selectedIds.size === 0 ? 0.4 : 1,
+                }}>Source</button>
               </>
             ) : (
               <>
                 <button onClick={handleBatchDelete} style={{
-                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, flexShrink: 0,
                   background: T.crimson, border: 'none', color: '#fff', cursor: 'pointer',
                 }}>Confirm</button>
                 <button onClick={() => setBatchConfirm(false)} style={{
-                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12,
+                  height: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, flexShrink: 0,
                   background: T.paperHi, border: `1px solid ${T.line}`, color: T.inkSoft, cursor: 'pointer',
                 }}>Cancel</button>
               </>
             )}
+            </div>
           </div>
         </div>
       )}
