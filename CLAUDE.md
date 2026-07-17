@@ -1,9 +1,9 @@
 # Indivore — Claude Code Instructions
 
 ## At the start of every session
-- Read `agents.md`, `plan-v1.md`, `decisions.md` (ADR index — individual ADRs in `docs/adr/`) to orient (also skim `plan-v0.md` for v0 history if needed; `docs/archive/plan-srs.md` for completed SRS work)
+- Read `agents.md`, `plan-v1.md`, `decisions.md` (ADR index — individual ADRs in `docs/adr/`) to orient (also skim `plan-v0.md` for v0 history if needed; `docs/archive/plan-srs.md` and `docs/archive/plan-v1-M5-srs.md` for completed SRS work)
 - Skim `design-questions.md` (cross-cutting open questions) and `plan-v+.md` (beyond-v1 ideas) to avoid re-raising settled deferrals
-- If working on M5-B SRS overhaul (Learn/Review split, priority list, GoalSheet, mastery grades): read `plan-v1-M5-srs.md` and `CONTEXT.md` before starting
+- The M5-B SRS overhaul (Learn/Review split, priority list, GoalSheet, mastery grades) is complete — see `docs/archive/plan-v1-M5-srs.md` and `CONTEXT.md` for the design record if touching that code
 - If touching `ind_items`, `ind_flashcards`, or any query/type layer: read `architecture.md` first
 
 ## Pushing
