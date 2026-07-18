@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
-import { suspendCard, unsuspendCard, setFlagColor, type BrowserCard } from '@/lib/db/srs/browser'
+import { suspendCard, unsuspendCard, setFlagColor, deleteNote, type BrowserCard } from '@/lib/db/srs/browser'
 import { formatDays } from '@/lib/db/srs/schedule'
 import { flagColorHex } from '@/lib/db/srs/flags'
 import { FlagPicker } from './pickers'
@@ -41,6 +41,8 @@ export function CardRow({ card, onUpdate, onRemove, selectionMode, isSelected, o
   // reset by the re-renders the drag itself causes.
   const [revealed, setRevealed] = useState<'none' | 'left' | 'right'>('none')
   const [liveX, setLiveX] = useState<number | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const gestureRef = useRef({
     startX: 0, startY: 0, baseX: 0, dragging: false, longPressFired: false,
     longPressTimer: null as ReturnType<typeof setTimeout> | null,
@@ -57,6 +59,13 @@ export function CardRow({ card, onUpdate, onRemove, selectionMode, isSelected, o
   useEffect(() => {
     if (selectionMode) { setRevealed('none'); setLiveX(null) }
   }, [selectionMode])
+
+  // Drop the pending delete-confirm if the strip closes for any reason
+  // (swipes back shut, flips to the other side, selection mode takes over)
+  // so it doesn't silently reappear armed next time the strip opens.
+  useEffect(() => {
+    if (revealed !== 'left') setConfirmingDelete(false)
+  }, [revealed])
 
   function baseXFor(r: 'none' | 'left' | 'right') {
     return r === 'left' ? -RIGHT_STRIP_WIDTH : r === 'right' ? LEFT_STRIP_WIDTH : 0
@@ -163,6 +172,12 @@ export function CardRow({ card, onUpdate, onRemove, selectionMode, isSelected, o
     onUpdate({ flag_color: color })
   }
 
+  async function handleConfirmedDelete() {
+    setDeleting(true)
+    await deleteNote(card.id)
+    onRemove()
+  }
+
   const rowBg = isSelected ? T.crimsonBg : isSuspended ? T.paper : T.paperHi
 
   return (
@@ -186,30 +201,58 @@ export function CardRow({ card, onUpdate, onRemove, selectionMode, isSelected, o
         </div>
       )}
 
-      {/* Swipe-left reveal — delete / suspend */}
+      {/* Swipe-left reveal — delete / suspend, delete arms an inline confirm
+          in the same strip rather than detouring through the overlay */}
       {!selectionMode && (
         <div style={{
           position: 'absolute', right: 0, top: 0, bottom: 0, width: RIGHT_STRIP_WIDTH,
           display: 'flex', alignItems: 'stretch',
         }}>
-          <button
-            onClick={() => { setRevealed('none'); handleSuspendToggle() }}
-            style={{
-              flex: 1, background: T.paperHi, border: 'none', cursor: 'pointer',
-              fontSize: 11.5, fontWeight: 600, color: T.inkSoft,
-            }}
-          >
-            {isSuspended ? 'Unsuspend' : 'Suspend'}
-          </button>
-          <button
-            onClick={() => { setRevealed('none'); onOpenOverlay('edit') }}
-            style={{
-              flex: 1, background: T.crimson, border: 'none', cursor: 'pointer',
-              fontSize: 11.5, fontWeight: 600, color: '#fff',
-            }}
-          >
-            Delete
-          </button>
+          {confirmingDelete ? (
+            <>
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleting}
+                style={{
+                  flex: 1, background: T.paperHi, border: 'none', cursor: deleting ? 'default' : 'pointer',
+                  fontSize: 11.5, fontWeight: 600, color: T.inkSoft,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmedDelete}
+                disabled={deleting}
+                style={{
+                  flex: 1, background: T.crimson, border: 'none', cursor: deleting ? 'default' : 'pointer',
+                  fontSize: 11.5, fontWeight: 600, color: '#fff', opacity: deleting ? 0.7 : 1,
+                }}
+              >
+                {deleting ? '…' : 'Confirm'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => { setRevealed('none'); handleSuspendToggle() }}
+                style={{
+                  flex: 1, background: T.paperHi, border: 'none', cursor: 'pointer',
+                  fontSize: 11.5, fontWeight: 600, color: T.inkSoft,
+                }}
+              >
+                {isSuspended ? 'Unsuspend' : 'Suspend'}
+              </button>
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                style={{
+                  flex: 1, background: T.crimson, border: 'none', cursor: 'pointer',
+                  fontSize: 11.5, fontWeight: 600, color: '#fff',
+                }}
+              >
+                Delete
+              </button>
+            </>
+          )}
         </div>
       )}
 
