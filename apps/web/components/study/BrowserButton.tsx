@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { T } from '@/lib/tokens'
 import { Icon } from '@/components/ui'
 import BrowserView from './browser/BrowserView'
@@ -8,10 +8,35 @@ import BrowserView from './browser/BrowserView'
 export default function BrowserButton() {
   const [open, setOpen] = useState(false)
 
+  // The overlay opens via plain state, not a route change, so by default the
+  // phone's back button doesn't know about it — it just navigates the whole
+  // page back to wherever history already pointed (e.g. dashboard). Pushing
+  // a marker entry on open and listening for popstate makes back close the
+  // overlay first, like a native sheet.
+  function openBrowser() {
+    history.pushState({ browserOverlay: true }, '')
+    setOpen(true)
+  }
+
+  // UI-triggered close (X / backdrop) goes through history.back() too, so
+  // the entry we pushed on open gets consumed — otherwise closing via the X
+  // would leave a now-inert entry behind, and back would need pressing
+  // twice (once for that leftover, once to actually leave) instead of once.
+  function closeBrowser() {
+    history.back()
+  }
+
+  useEffect(() => {
+    if (!open) return
+    function onPopState() { setOpen(false) }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [open])
+
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={openBrowser}
         aria-label="Card browser"
         style={{
           width: 36, height: 36, borderRadius: 999,
@@ -26,7 +51,7 @@ export default function BrowserButton() {
       {open && (
         <>
           <div
-            onClick={() => setOpen(false)}
+            onClick={closeBrowser}
             style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(43,34,26,0.35)' }}
           />
           <div style={{
@@ -47,7 +72,7 @@ export default function BrowserButton() {
                 Browser
               </div>
               <button
-                onClick={() => setOpen(false)}
+                onClick={closeBrowser}
                 aria-label="Close"
                 style={{
                   width: 30, height: 30, borderRadius: 999, background: 'none', border: 'none',
