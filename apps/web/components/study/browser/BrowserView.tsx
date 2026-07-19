@@ -169,11 +169,12 @@ export default function BrowserView({ videoOnly }: { videoOnly?: boolean } = {})
   }
 
   function toggleSelect(id: string) {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+    const next = new Set(selectedIds)
+    next.has(id) ? next.delete(id) : next.add(id)
+    // Deselecting the last card leaves selection mode with nothing to act on
+    // — exit it rather than stranding the user in an empty batch bar.
+    if (next.size === 0) { exitSelectionMode(); return }
+    setSelectedIds(next)
   }
 
   const allSelected = selectedIds.size > 0 && selectedIds.size === filtered.length
