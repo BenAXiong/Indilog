@@ -6,6 +6,7 @@ import Icon from '@/components/ui/Icon'
 import {
   GRMPTS_LEVEL_NAMES, LESSON_DIFFICULTIES, ESSAY_GROUP_LABELS, shortCurriculumTitle,
 } from '@/lib/lang/dialects'
+import { useBackButtonClose } from '@/lib/hooks/useBackButtonClose'
 
 // Slots per difficulty level differ by source:
 //   essays:    8 slots/level (L1-L4 → 3+3+1+1, same for L5-L8 and L9-L12)
@@ -67,6 +68,7 @@ const numSort = (a: string, b: string) => Number.parseInt(a.slice(1)) - Number.p
 
 export default function ContentSheet(props: Props) {
   const { open, onClose, completions } = props
+  const requestClose = useBackButtonClose(open, onClose)
 
   const [twelveGeo, setTwelveGeo] = useState<TwelveGeo | null>(null)
   const [grmptsGeo, setGrmptsGeo] = useState<GrmptsGeo | null>(null)
@@ -102,7 +104,7 @@ export default function ContentSheet(props: Props) {
 
   return (
     <>
-      <div onClick={onClose} style={{
+      <div onClick={requestClose} style={{
         position: 'fixed', inset: 0,
         background: 'rgba(30,18,10,0.35)', zIndex: 70,
       }} />
@@ -127,7 +129,7 @@ export default function ContentSheet(props: Props) {
             fontFamily: 'Newsreader, Georgia, serif',
             fontSize: 18, fontWeight: 500, color: T.ink,
           }}>{name}</span>
-          <button onClick={onClose} style={{
+          <button onClick={requestClose} style={{
             width: 28, height: 28, borderRadius: 999,
             background: T.paperHi, border: `1px solid ${T.lineSoft}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -148,7 +150,7 @@ export default function ContentSheet(props: Props) {
               activeLevel={activeLevel}
               setActiveLevel={setActiveLevel}
               completions={completions}
-              onSelect={(l, s) => { props.onSelect(l, s); onClose() }}
+              onSelect={(l, s) => { props.onSelect(l, s); requestClose() }}
             />
           )}
           {props.source === 'grmpts' && (
@@ -159,7 +161,7 @@ export default function ContentSheet(props: Props) {
               activeLevel={activeLevel}
               setActiveLevel={setActiveLevel}
               completions={completions}
-              onSelect={(l, p) => { props.onSelect(l, p); onClose() }}
+              onSelect={(l, p) => { props.onSelect(l, p); requestClose() }}
             />
           )}
           {(props.source === 'essay' || props.source === 'dialogue' || props.source === 'con_practice') && (
@@ -170,7 +172,7 @@ export default function ContentSheet(props: Props) {
               activeGroup={activeGroup}
               setActiveGroup={setActiveGroup}
               completions={completions}
-              onSelect={titleZh => { props.onSelect(titleZh); onClose() }}
+              onSelect={titleZh => { props.onSelect(titleZh); requestClose() }}
             />
           )}
         </div>

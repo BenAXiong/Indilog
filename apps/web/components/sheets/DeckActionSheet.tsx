@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/progress/collections'
 import { resetCollectionSRS, resetCapturesSRS } from '@/lib/db/srs/flashcards'
 import { setCapturesIncludeInReview } from '@/lib/db/profile/client'
+import { useBackButtonClose } from '@/lib/hooks/useBackButtonClose'
 
 export const CAPTURES_DECK_ID = '__captures__'
 
@@ -38,15 +39,18 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
   const [view, setView] = useState<View>('menu')
   const [name, setName] = useState(deck.name)
   const [busy, setBusy]     = useState(false)
+  // No open prop — this component only exists in the tree while visible,
+  // so it's open for its whole mounted lifetime.
+  const requestClose = useBackButtonClose(true, onClose)
 
   async function handleRename() {
     const trimmed = name.trim()
-    if (!trimmed || trimmed === deck.name) { onClose(); return }
+    if (!trimmed || trimmed === deck.name) { requestClose(); return }
     setBusy(true)
     await renameCollection(deck.id, trimmed)
     onRenamed(deck.id, trimmed)
     setBusy(false)
-    onClose()
+    requestClose()
   }
 
   async function handleExport() {
@@ -61,7 +65,7 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
     a.click()
     URL.revokeObjectURL(url)
     setBusy(false)
-    onClose()
+    requestClose()
   }
 
   async function handleShare() {
@@ -70,7 +74,7 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
       if (navigator.share) await navigator.share({ title: deck.name, text })
       else await navigator.clipboard.writeText(text)
     } catch {}
-    onClose()
+    requestClose()
   }
 
   async function handleDelete() {
@@ -78,7 +82,7 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
     await deleteCollection(deck.id)
     onDeleted(deck.id)
     setBusy(false)
-    onClose()
+    requestClose()
   }
 
   function handleIncludeToggle() {
@@ -86,7 +90,7 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
     if (isCaptures(deck.id)) setCapturesIncludeInReview(next)
     else setIncludeInReview(deck.id, next)
     onIncludeToggled?.(deck.id, next)
-    onClose()
+    requestClose()
   }
 
   async function handleReset() {
@@ -95,7 +99,7 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
     else                      await resetCollectionSRS(deck.id)
     onReset?.()
     setBusy(false)
-    onClose()
+    requestClose()
   }
 
   const actionRow = (onClick: () => void, icon: React.ReactNode, label: string, danger = false) => (
@@ -117,8 +121,8 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
   return (
     <>
       <div
-        onClick={onClose}
-        onKeyDown={e => { if (e.key === 'Escape') onClose() }}
+        onClick={requestClose}
+        onKeyDown={e => { if (e.key === 'Escape') requestClose() }}
         role="button"
         tabIndex={-1}
         aria-label="Close"
@@ -145,7 +149,7 @@ export default function DeckActionSheet({ deck, onClose, onRenamed, onDeleted, o
           }}>
             {deck.name}
           </span>
-          <button onClick={onClose} style={{
+          <button onClick={requestClose} style={{
             width: 28, height: 28, borderRadius: 999,
             background: T.paperHi, border: `1px solid ${T.lineSoft}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',

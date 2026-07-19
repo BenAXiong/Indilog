@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react'
 import { T } from '@/lib/tokens'
+import { useBackButtonClose } from '@/lib/hooks/useBackButtonClose'
 
 export function SessionOptionsSheet({
   onClose,
@@ -10,6 +11,10 @@ export function SessionOptionsSheet({
   onClose:  () => void
   children: ReactNode
 }) {
+  // No open prop — this component only exists in the tree while visible,
+  // so it's open for its whole mounted lifetime.
+  const requestClose = useBackButtonClose(true, onClose)
+
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -18,7 +23,7 @@ export function SessionOptionsSheet({
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(30,22,16,0.32)', zIndex: 20 }} />
+      <div onClick={requestClose} style={{ position: 'absolute', inset: 0, background: 'rgba(30,22,16,0.32)', zIndex: 20 }} />
       <div style={{
         position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 21,
         background: T.cream, borderRadius: '22px 22px 0 0',

@@ -13,6 +13,7 @@ import { listUserLanguages, getStudyDate } from '@/lib/db/srs/flashcards'
 import { savePreferences, DEFAULT_PREFERENCES, type UserPreferences } from '@/lib/db/profile/preferences'
 import type { User } from '@supabase/supabase-js'
 import { getSessionUser } from '@/lib/supabase/session'
+import { useBackButtonClose } from '@/lib/hooks/useBackButtonClose'
 
 // ── Settings sheet ────────────────────────────────────────────────────────────
 
@@ -931,6 +932,8 @@ export default function SettingsButton({
     router.refresh()
   }
 
+  const requestClose = useBackButtonClose(open, handleClose)
+
   return (
     <>
       {variant === 'gear' && (
@@ -963,7 +966,7 @@ export default function SettingsButton({
           Settings
         </button>
       )}
-      {open && <SettingsSheet onClose={handleClose} initialTab={initialTab} />}
+      {open && <SettingsSheet onClose={requestClose} initialTab={initialTab} />}
     </>
   )
 }

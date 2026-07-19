@@ -16,6 +16,7 @@ import { listCollections, type CollectionMeta } from '@/lib/db/progress/collecti
 import { projectSimulation, buildCurveFromDays, type SimulationCurve, type TodayTarget } from '@/lib/db/srs/simulation-client'
 import { createClient } from '@/lib/supabase/client'
 import { getSessionUser } from '@/lib/supabase/session'
+import { useBackButtonClose } from '@/lib/hooks/useBackButtonClose'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,6 +84,7 @@ function ProgressBar({ pct, color }: { pct: number; color: string }) {
 // ─── GoalSheet ─────────────────────────────────────────────────────────────────
 
 export default function GoalSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const requestClose = useBackButtonClose(open, onClose)
   const [tab,          setTab]          = useState<Tab>('goals')
   const [mode,         setMode]         = useState<GoalMode>('manual')
   const [learnTarget,  setLearnTargetRaw]  = useState(10)
@@ -1074,7 +1076,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,10,0.35)', zIndex: 70 }} />
+      <div onClick={requestClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,10,0.35)', zIndex: 70 }} />
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         top: topOffset ?? 'env(safe-area-inset-top)',
@@ -1094,7 +1096,7 @@ export default function GoalSheet({ open, onClose }: { open: boolean; onClose: (
           <span style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 18, fontWeight: 500, color: T.ink }}>
             Goals
           </span>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.lineSoft}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.inkMute }}>
+          <button onClick={requestClose} style={{ width: 28, height: 28, borderRadius: 999, background: T.paperHi, border: `1px solid ${T.lineSoft}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.inkMute }}>
             <Icon name="x" size={14} strokeWidth={2} />
           </button>
         </div>
