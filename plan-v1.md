@@ -200,6 +200,7 @@ Personal library of sources (people, media, references) linked to captured items
 - [x] Study/Capture: expanded sub-decks
 - [ ] Session: minor mods, see screenshots
 
+- [ ] Dict: improve result card UI, esp cehvron
 - [ ] Dash: add counter to goal widget
 - [ ] Dash/prio: add counters to each deck
 
@@ -243,17 +244,27 @@ Personal library of sources (people, media, references) linked to captured items
             eg "icep" shouldn't return "micepo" in exact mode sentences
 - [x] Dict: enable capture +-context if no results
 - [x] Dict: expand words to show sentences
-- [ ] Dict: show sentence tab by def if 2+ words are entered
-- [ ] Dict: recent searches
-- [ ] Dict: recursive search (results are links in sentences at least)
-- [ ] Dict: 
+- [x] Dict: hide chevron when no sentences
+- [x] Dict: show sentence tab by def if 2+ words are entered
+- [x] Dict: recent searches + delete
+- [x] Dict: recursive search (results are links in sentences at least)
+- [x] Dict: add shwa to alts
+- [x] FIX: "already saved" pre-check in dict/page.tsx builds a huge .in()
 
-- [ ] Browser: add all context fields, editable
-- [ ] Browser: enable swipe left/right for extanded options
-- [ ] Browser: edit of any field esp audio
-- [ ] Browser: batch edit of any field esp dia & source
+- [-] Browser: rework cards UI
+- [-] Browser: add all context fields, editable
+- [-] Browser: enable swipe left/right for extanded options
+- [-] Browser: edit of any field esp audio
+- [-] Browser: batch edit of any field esp dia & source
+- [ ] Browser: fix overlay's sheet appearance
 - [ ] Browser: 
-- [ ] Browser: 
+
+- [ ] Dict: recheck result quality - both directions
+- [ ] Dict: merge AI translate
+- [ ] Dict: separate ab--zh directions????
+- [ ] 3: ?????????????
+- [ ] Dict: single words in sentence tab, eg podac
+- [ ] Dict: add marker on word card when contained in saved sentence
 
 ---
 
