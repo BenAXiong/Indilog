@@ -29,7 +29,7 @@ type WordResult = {
   dialect_name: string
   glid: string
   exact: boolean
-  source?: 'epark' | 'moe'
+  source?: 'epark' | 'moe' | 'ilrdf'
   moeMatch?: 'contains' | 'similar' | 'altSpelling'
   hasExamples?: boolean
 }
@@ -101,9 +101,9 @@ function shortChineseDialect(dialectName: string, glid: string): string {
 
 // Tap-to-expand example sentences on a word card (plan-dict-v2.md Phase 4
 // base test) — lazily fetched on first expand, cached for the card's lifetime.
-// moeEnabled/klokahEnabled must mirror the same source toggles the main
-// search used, so a source disabled everywhere else doesn't reappear here.
-function useWordExamples(word: string, glid: string, moeEnabled: boolean, klokahEnabled: boolean, dialect?: string) {
+// moeEnabled/klokahEnabled/ytdEnabled must mirror the same source toggles the
+// main search used, so a source disabled everywhere else doesn't reappear here.
+function useWordExamples(word: string, glid: string, moeEnabled: boolean, klokahEnabled: boolean, ytdEnabled: boolean, dialect?: string) {
   const [expanded, setExpanded] = useState(false)
   const [examples, setExamples] = useState<SentenceResult[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -117,6 +117,7 @@ function useWordExamples(word: string, glid: string, moeEnabled: boolean, klokah
         if (dialect)       params.set('dialect', dialect)
         if (moeEnabled)    params.set('moe', '1')
         if (klokahEnabled) params.set('klokah', '1')
+        if (ytdEnabled)    params.set('ytd', '1')
         fetch(`/api/dict/word-sentences?${params}`)
           .then(r => r.json())
           .then(data => setExamples(data.sentences ?? []))
@@ -196,16 +197,17 @@ function ExpandToggleButton({ expanded, onClick }: { expanded: boolean; onClick:
 }
 
 // ─── Word card (exact match) ──────────────────────────────────
-function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klokahEnabled, onWordClick }: {
+function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klokahEnabled, ytdEnabled, onWordClick }: {
   word: WordResult
   onSave: (w: WordResult) => void
   onCapture: (w: WordResult) => void
   saved?: boolean
   moeEnabled: boolean
   klokahEnabled: boolean
+  ytdEnabled: boolean
   onWordClick: (word: string) => void
 }) {
-  const { expanded, toggle, examples, loading } = useWordExamples(word.word_ab, word.glid, moeEnabled, klokahEnabled, word.dialect_name)
+  const { expanded, toggle, examples, loading } = useWordExamples(word.word_ab, word.glid, moeEnabled, klokahEnabled, ytdEnabled, word.dialect_name)
 
   return (
     <Card raised pad={0} style={{ overflow: 'hidden' }}>
@@ -221,6 +223,9 @@ function ExactWordCard({ word, onSave, onCapture, saved = false, moeEnabled, klo
               )}
               {word.source === 'moe' && (
                 <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
+              )}
+              {word.source === 'ilrdf' && (
+                <span title="ILRDF dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#9B7EDE', flexShrink: 0, display: 'inline-block' }} />
               )}
             </div>
           </div>
@@ -407,19 +412,20 @@ type MergedEntry = {
   dialectSections: { dialect_name: string; defs: string[] }[]
 }
 
-function MergedEntryCard({ entry, onSave, onCapture, saved = false, moeEnabled, klokahEnabled, onWordClick }: {
+function MergedEntryCard({ entry, onSave, onCapture, saved = false, moeEnabled, klokahEnabled, ytdEnabled, onWordClick }: {
   entry: MergedEntry
   onSave: (ab: string, dialect: string, def: string, glid: string) => void
   onCapture: (ab: string, def: string) => void
   saved?: boolean
   moeEnabled: boolean
   klokahEnabled: boolean
+  ytdEnabled: boolean
   onWordClick: (word: string) => void
 }) {
   const firstSection = entry.dialectSections[0]
   const primaryDef   = firstSection?.defs[0] ?? ''
   const primaryDialect = firstSection?.dialect_name ?? ''
-  const { expanded, toggle, examples, loading } = useWordExamples(entry.rawAb, entry.glid, moeEnabled, klokahEnabled)
+  const { expanded, toggle, examples, loading } = useWordExamples(entry.rawAb, entry.glid, moeEnabled, klokahEnabled, ytdEnabled)
 
   const btnStyle: React.CSSProperties = {
     width: 30, height: 30, borderRadius: 8,
@@ -526,6 +532,7 @@ export default function DictionaryPage() {
   const [altSpelling, setAltSpelling] = useState(false)
   const [moeEnabled,    setMoeEnabled]    = useState(true)
   const [klokahEnabled, setKlokahEnabled] = useState(true)
+  const [ytdEnabled,    setYtdEnabled]    = useState(false)
   const [mergeMode,     setMergeMode]     = useState(true)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [recentExpanded, setRecentExpanded] = useState(false)
@@ -539,6 +546,7 @@ export default function DictionaryPage() {
       const sources: string[] = stored ? JSON.parse(stored) : ['moe', 'klokah']
       setMoeEnabled(sources.includes('moe'))
       setKlokahEnabled(sources.includes('klokah'))
+      setYtdEnabled(sources.includes('ytd'))
     } catch {}
     const storedMerge = localStorage.getItem('ind_dict_merge_mode')
     if (storedMerge !== null) setMergeMode(storedMerge === 'true')
@@ -598,6 +606,7 @@ export default function DictionaryPage() {
       const sources = (e as CustomEvent<string[]>).detail
       setMoeEnabled(sources.includes('moe'))
       setKlokahEnabled(sources.includes('klokah'))
+      setYtdEnabled(sources.includes('ytd'))
     }
     window.addEventListener('ind-dict-sources-changed', onSourcesChange)
     return () => window.removeEventListener('ind-dict-sources-changed', onSourcesChange)
@@ -632,7 +641,7 @@ export default function DictionaryPage() {
     }
   }, [lang, dialects, userChangedGlid])
 
-  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean, withKlokah: boolean, withAltSpelling: boolean) => {
+  const runSearch = useCallback(async (term: string, glidFilter: string, dialectF: string, isFuzzy: boolean, withMoe: boolean, withKlokah: boolean, withYtd: boolean, withAltSpelling: boolean) => {
     const trimmed = term.trim()
     // 2 chars is enough to fire the request — the API exact-matches word search
     // below its own 3-char prefix-search floor, so a 2-char query still finds words.
@@ -646,6 +655,7 @@ export default function DictionaryPage() {
     if (isFuzzy)         params.set('fuzzy', '1')
     if (withMoe)         params.set('moe', '1')
     if (withKlokah)      params.set('klokah', '1')
+    if (withYtd)         params.set('ytd', '1')
     if (withAltSpelling) params.set('altspelling', '1')
     const res = await fetch(`/api/dict/search?${params}`)
     const data = await res.json()
@@ -685,9 +695,9 @@ export default function DictionaryPage() {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     // phrases + CJK: always fuzzy so they match mid-sentence / mid-definition
-    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy, moeEnabled, klokahEnabled, altSpelling), 320)
+    debounceRef.current = setTimeout(() => runSearch(q, glid, dialectFilter, isPhrase || isCJK || fuzzy, moeEnabled, klokahEnabled, ytdEnabled, altSpelling), 320)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q, glid, dialectFilter, fuzzy, altSpelling, isPhrase, isCJK, moeEnabled, klokahEnabled, runSearch])
+  }, [q, glid, dialectFilter, fuzzy, altSpelling, isPhrase, isCJK, moeEnabled, klokahEnabled, ytdEnabled, runSearch])
 
   // Merge words-only by (word_ab case-insensitive, dialect_name),
   // parsing numbered definitions and deduplicating via substring inclusion.
@@ -1105,6 +1115,7 @@ export default function DictionaryPage() {
                           saved={savedWordMap.has(wordKey(entry.rawAb, entry.dialectSections[0]?.dialect_name ?? ''))}
                           moeEnabled={moeEnabled}
                           klokahEnabled={klokahEnabled}
+                          ytdEnabled={ytdEnabled}
                           onWordClick={handleWordClick}
                         />
                       ))}
@@ -1132,7 +1143,7 @@ export default function DictionaryPage() {
                     </div>
                   )}
                   {exactWord && (
-                    <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} moeEnabled={moeEnabled} klokahEnabled={klokahEnabled} onWordClick={handleWordClick} />
+                    <ExactWordCard word={exactWord} onSave={handleSave} onCapture={handleCapture} saved={savedWordMap.has(wordKey(exactWord.word_ab, exactWord.dialect_name))} moeEnabled={moeEnabled} klokahEnabled={klokahEnabled} ytdEnabled={ytdEnabled} onWordClick={handleWordClick} />
                   )}
                   {exactGroup && (
                     <ExactMatchGroupCard entries={exactGroup} onSave={handleSave} onCapture={handleCapture} savedWordMap={savedWordMap} />
@@ -1158,6 +1169,9 @@ export default function DictionaryPage() {
                                 )}
                                 {w.source === 'moe' && (
                                   <span title="MoE dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#7094AA', flexShrink: 0, display: 'inline-block' }} />
+                                )}
+                                {w.source === 'ilrdf' && (
+                                  <span title="ILRDF dict" style={{ width: 5, height: 5, borderRadius: 999, background: '#9B7EDE', flexShrink: 0, display: 'inline-block' }} />
                                 )}
                                 <MoeMatchTag kind={w.moeMatch} />
                               </div>

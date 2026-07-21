@@ -744,7 +744,7 @@ function SettingsSheet({ onClose, initialTab = 'general' }: { onClose: () => voi
                       {([
                         { id: 'klokah', label: 'ePark',   disabled: false },
                         { id: 'moe',    label: 'Kilang',  disabled: false },
-                        { id: 'ytd',    label: '族語辭典', disabled: true  },
+                        { id: 'ytd',    label: '族語辭典', disabled: false },
                       ] as const).map(o => (
                         <button key={o.id} disabled={o.disabled}
                           onClick={() => { if (!o.disabled) toggleDictSource(o.id) }}

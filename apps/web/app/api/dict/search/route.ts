@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchWords, searchSentences, searchWordsByCandidates, isWordBoundaryMatch, type SentenceRow, type WordRow } from '@/lib/corpus/dict'
 import { kilangFetch, parseMoeExamples, stripAuthor, moeRowHasExamples, type MoeRow } from '@/lib/corpus/kilang'
+import { ilrdfFetch, parseIlrdfExamples, ilrdfRowHasExamples, type IlrdfRow } from '@/lib/corpus/ilrdf'
 import { makeMoeFallbackCandidates } from '@/lib/lang/amis-fuzzy'
 
 export const runtime = 'nodejs'
@@ -146,6 +147,80 @@ async function fetchMoeWords(q: string, hasCJK: boolean, fuzzy: boolean, altSpel
   }
 }
 
+// ─── ILRDF v2 (原住民族語言線上辭典 etc, the 'ytd' toggle) ──────────────────
+// Same shape as Kilang's merge — one word can have entries across several of
+// the 6 aggregated dictionaries (蔡中涵/方敏英/學習詞表 per dialect/吳明義/
+// 博利亞/ILRDF), collapsed into one card. Simpler than fetchMoeWords: no
+// altSpelling/fuzzy-candidate reuse (yet) — see docs/ilrdf-v2-source.md.
+type IlrdfMerged = { word_ab: string; defs: string[]; dialect_name: string; exact: boolean; hasExamples: boolean }
+
+function mergeIlrdfRow(merged: Map<string, IlrdfMerged>, row: IlrdfRow, qKey: string) {
+  const ab = row.word_ab.trim()
+  if (!ab) return
+  const key     = normMoeKey(ab)
+  const isExact = key === qKey
+  const entry   = merged.get(key)
+  if (entry) {
+    const def = row.definition ? cleanMoeDef(row.definition) : ''
+    if (def && !entry.defs.includes(def)) entry.defs.push(def)
+    if (isExact) entry.exact = true
+    if (ilrdfRowHasExamples(row)) entry.hasExamples = true
+  } else {
+    merged.set(key, {
+      word_ab: ab,
+      defs: row.definition ? [cleanMoeDef(row.definition)] : [],
+      dialect_name: row.dialect_name,
+      exact: isExact,
+      hasExamples: ilrdfRowHasExamples(row),
+    })
+  }
+}
+
+function toIlrdfWordRows(entries: [string, IlrdfMerged][]): WordRow[] {
+  return entries.map(([, e], i) => ({
+    id:           `ilrdf-${i}`,
+    word_ab:      e.word_ab,
+    word_ch:      e.defs.join(' · '),
+    dialect_name: e.dialect_name,
+    glid:         AMIS_GLID,
+    exact:        e.exact,
+    source:       'ilrdf' as const,
+    hasExamples:  e.hasExamples,
+  }))
+}
+
+async function fetchIlrdfWords(q: string, hasCJK: boolean, fuzzy: boolean): Promise<{ words: WordRow[]; sentences: SentenceRow[] }> {
+  try {
+    const rawRows = await ilrdfFetch(q, false)
+    const qKey    = normMoeKey(q)
+    const merged  = new Map<string, IlrdfMerged>()
+    const sentences: SentenceRow[] = []
+    for (const row of rawRows) {
+      mergeIlrdfRow(merged, row, qKey)
+      sentences.push(...parseIlrdfExamples(row, row.dialect_name))
+    }
+
+    if (hasCJK) {
+      const qLower = q.toLowerCase()
+      const matchingSentences = sentences.filter(s => s.zh.toLowerCase().includes(qLower))
+      return { words: toIlrdfWordRows(Array.from(merged.entries())), sentences: matchingSentences }
+    }
+
+    const maxDist = q.length <= 5 ? 1 : 2
+    const entries = Array.from(merged.entries()).filter(([, e]) => {
+      if (e.exact) return true
+      const ab = normMoeKey(e.word_ab)
+      if (ab.includes(qKey)) return true
+      if (fuzzy && levenshtein(ab, qKey) <= maxDist) return true
+      return false
+    })
+
+    return { words: toIlrdfWordRows(entries), sentences }
+  } catch {
+    return { words: [], sentences: [] }
+  }
+}
+
 // Dedup ePark words — corpus has "mafana'to" and "mafana' to" as separate entries;
 // keep the longest among duplicates (spaced form is the correct romanisation).
 function normWordKey(ab: string): string {
@@ -205,6 +280,7 @@ export async function GET(req: NextRequest) {
   const fuzzy         = searchParams.get('fuzzy')   === '1'
   const includeMoe    = searchParams.get('moe')     === '1'
   const includeKlokah = searchParams.get('klokah')  === '1'
+  const includeYtd    = searchParams.get('ytd')     === '1'
   const altSpelling   = searchParams.get('altspelling') === '1'
 
   const hasCJK = /[㐀-鿿]/.test(q)
@@ -219,6 +295,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const moeActive = includeMoe && q.length >= minLenMoe && (!glid || glid === AMIS_GLID)
+    // ILRDF v2 is Amis-only (confirmed empirically — see docs/ilrdf-v2-source.md),
+    // same gating as Kilang/MoE.
+    const ytdActive = includeYtd && q.length >= minLenMoe && (!glid || glid === AMIS_GLID)
     // "Swaps" toggle only ever applies to Amis (curated tables don't cover the
     // other 15 languages) — skip entirely if the query is CJK-direction
     // (candidate generation is an AB-direction spelling-recovery mechanism) or
@@ -230,19 +309,21 @@ export async function GET(req: NextRequest) {
     const altSpellingMoe    = altSpellingWanted && moeActive
     const altSpellingEpark  = altSpellingWanted && includeKlokah
     const altCandidates = altSpellingWanted ? makeMoeFallbackCandidates(q).map(c => c.word) : []
-    const [rawWords, rawSentences, moeResult, altEparkWords] = await Promise.all([
+    const [rawWords, rawSentences, moeResult, altEparkWords, ytdResult] = await Promise.all([
       includeKlokah    ? searchWords(q, glid, dialect, fuzzy)                       : Promise.resolve([]),
       includeKlokah    ? searchSentences(q, glid, dialect, fuzzy)                    : Promise.resolve([]),
       moeActive        ? fetchMoeWords(q, hasCJK, fuzzy, altSpellingMoe)             : Promise.resolve({ words: [] as WordRow[], sentences: [] as SentenceRow[] }),
       altSpellingEpark ? searchWordsByCandidates(altCandidates, AMIS_GLID, dialect)  : Promise.resolve([] as WordRow[]),
+      ytdActive        ? fetchIlrdfWords(q, hasCJK, fuzzy)                          : Promise.resolve({ words: [] as WordRow[], sentences: [] as SentenceRow[] }),
     ])
     const { words: moeWords, sentences: moeSentences } = moeResult
+    const { words: ytdWords, sentences: ytdSentences } = ytdResult
 
     const eparkWords = mergeEparkWords(rawWords, altEparkWords)
-    const words = [...eparkWords, ...moeWords]
+    const words = [...eparkWords, ...moeWords, ...ytdWords]
       .sort((a, b) => (b.exact ? 1 : 0) - (a.exact ? 1 : 0) || a.word_ab.length - b.word_ab.length)
 
-    const sentences = mergeAndRankSentences(rawSentences, moeSentences, q, hasCJK)
+    const sentences = mergeAndRankSentences(rawSentences, [...moeSentences, ...ytdSentences], q, hasCJK)
 
     return NextResponse.json({ words, sentences })
   } catch (err) {
