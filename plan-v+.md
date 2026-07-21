@@ -4,6 +4,8 @@ Ideas, deferred features, and future directions not yet scoped into a milestone.
 
 **Known bugs awaiting diagnosis/fix → [`docs/bugs.md`](docs/bugs.md)**
 
+- **Before publicizing the app**: verify licensing/authorization for ILRDF-sourced dictionary content pulled via `new-amis.moedict.tw`'s `/api/v2/terms/{word}` API (2026-07-19/20 harvest — see `docs/ilrdf-v2-source.md` for the source writeup and `plan-ilrdf-harvest.md` for live task status; data currently staged at `scrap/analysis/ilrdf_v2_harvest/ilrdf_v2.db`). That API re-serves 原住民族語言線上辭典 (official ILRDF) content — including copyrighted example sentences — through a friendlier, unauthenticated g0v-adjacent endpoint, but no explicit license/authorization for this specific re-serving was found (unlike the v1 `g0v/amis-moedict` repo, which has clear per-dictionary licenses in its README). The official ILRDF site (`e-dictionary.ilrdf.org.tw`) itself has a copyright notice requiring the Foundation's consent for reuse beyond narrow personal/citation use, and is Cloudflare-Turnstile-protected. Bulk-imported for personal testing only; do not ship/publicize without resolving this (ideally by contacting 財團法人原住民族語言研究發展基金會 directly, or finding g0v's actual license for the v2 aggregator).
+
 - Refactor (see skill and doc)
 
 - make own rich html with https://web.klokah.tw/guide/

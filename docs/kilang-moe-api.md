@@ -79,7 +79,12 @@ candidate list instead).
   definition: string      // gloss; English + Chinese often concatenated, e.g.
                           // "￹￺wine * intoxicating drink￻酒，酒精製品飲料"
   dialect_name: string    // observed as always "阿美語 (MOE)" — no sub-dialect granularity, unlike ePark
-  dict_code: string
+  dict_code: string       // s: 蔡中涵大辭典 (Safolu, 57,627 entries) · p: 博利亞潘世光阿漢/阿法字典 (Poinsot, 6,085)
+                          // · m: Manoel Fey (French, 101) — NOT Wu Ming-yi, an earlier YCM_Citadel session
+                          // misidentified this; corrected in brain/AMIS_MOE_DICT_INFILTRATION_LOG.md 2026-05.
+                          // · old-s: 3, older Safolu snapshot · separately: 吳明義阿美族語辭典 (8 rows, added
+                          // manually, not part of the s/p/m/old-s bulk import) — confirmed via exact row-count
+                          // match against Citadel's brain/AMIS_MOE_DICT_INFILTRATION_LOG.md, 2026-07-20.
   stem?: string           // immediate parent form, when word_ab is a derived form
   ultimate_root?: string  // root of the derivation chain; equals word_ab itself for root entries
   examples_json?: string  // JSON-encoded string (not a real array) — array of { ab, zh, en }
